@@ -1,0 +1,32 @@
+import os
+
+Import('env')
+env = env.Clone()
+env.Append(CPPDEFINES = ['_USE_MATH_DEFINES'])
+env.Append(CCFLAGS = ['/FI"msvc_recommended_pragmas.h"'])
+
+env.IncludeBoost()
+env.IncludeGlib()
+
+livarotsrcs = Glob(r"*.cpp")
+livarotincs = Glob(r"*.h")
+
+livarot = env.StaticLibrary(target="livarot", source=livarotsrcs)
+
+livarotsrcs = [str(s) for s in livarotsrcs]
+livarotincs = [str(s) for s in livarotincs]
+livarotlocalincs = []
+livarotresources = []
+livarotmisc = ['SConscript']
+
+buildtarget = [s for s in livarot if str(s).endswith('lib')]
+livarot_vs_proj = env.MSVSProject(target = 'livarot' + env['MSVSPROJECTSUFFIX'],
+                               srcs = livarotsrcs,
+                               incs = livarotincs,
+                               localincs = livarotlocalincs,
+                               resources = livarotresources,
+                               misc = livarotmisc,
+                               buildtarget = buildtarget,
+                               variant = env['VS_VARIANT'])
+
+Return('livarot', 'livarot_vs_proj')

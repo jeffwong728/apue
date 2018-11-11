@@ -1,0 +1,41 @@
+import os
+import cons
+
+Import('env')
+env = env.Clone()
+
+env.Append(CPPDEFINES = ['_WINDOWS', '_UNICODE', 'UNICODE'])
+env.Append(LINKFLAGS = [r'/SUBSYSTEM:WINDOWS', r'/MACHINE:X64', r'/MANIFEST'])
+env.Append(CPPDEFINES = [('PY_MAJOR_VERSION', 2)])
+env.Append(CPPDEFINES = [('PY_MINOR_VERSION', 7)])
+env.Append(CPPDEFINES = ['BOOST_ALL_NO_LIB', 'BOOST_PYTHON_STATIC_MODULE', 'BOOST_PYTHON_STATIC_LIB'])
+env.IncludePython2()
+env.IncludeBoost()
+
+if env['BUILD_TYPE']==cons.LINK_DEBUG:
+    env.Append(LIBS = ['libboost_python27-vc141-mt-gd-x64-1_67'])
+elif env['BUILD_TYPE']==cons.LINK_RELEASE:
+    env.Append(LIBS = ['libboost_python27-vc141-mt-x64-1_67'])
+
+boostpy = env.SharedLibrary(target="boostpy", SHLIBSUFFIX='.pyd', source=Glob("*.cpp"))
+boostpy_install = env.Install('#', boostpy)
+
+boostpysrcs = Glob(r"*.cpp")
+boostpyincs = Glob(r"*.h")
+boostpysrcs = [str(s) for s in boostpysrcs]
+boostpyincs = [str(s) for s in boostpyincs]
+boostpylocalincs = []
+boostpyresources = []
+boostpymisc = ['SConscript']
+
+buildtarget = [s for s in boostpy if str(s).endswith('lib')]
+boostpy_vs_proj = env.MSVSProject(target = 'boostpy' + env['MSVSPROJECTSUFFIX'],
+                               srcs = boostpysrcs,
+                               incs = boostpyincs,
+                               localincs = boostpylocalincs,
+                               resources = boostpyresources,
+                               misc = boostpymisc,
+                               buildtarget = buildtarget,
+                               variant = env['VS_VARIANT'])
+
+Return('boostpy', 'boostpy_install', 'boostpy_vs_proj')

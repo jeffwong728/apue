@@ -1,0 +1,41 @@
+macro(spam_export_pack_component pack_name comp_name)
+  if(NOT TARGET ${pack_name}::${comp_name})
+      add_library(${pack_name}::${comp_name} UNKNOWN IMPORTED)
+      set_target_properties(${pack_name}::${comp_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${${pack_name}_INCLUDE_DIRS}")
+
+      if(${pack_name}_${comp_name}_LIBRARY_RELEASE)
+        set_property(TARGET ${pack_name}::${comp_name} APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+        set_target_properties(${pack_name}::${comp_name} PROPERTIES IMPORTED_LOCATION_RELEASE "${${pack_name}_${comp_name}_LIBRARY_RELEASE}")
+      endif()
+
+      if(${pack_name}_${comp_name}_LIBRARY_DEBUG)
+        set_property(TARGET ${pack_name}::${comp_name} APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
+        set_target_properties(${pack_name}::${comp_name} PROPERTIES IMPORTED_LOCATION_DEBUG "${${pack_name}_${comp_name}_LIBRARY_DEBUG}")
+      endif()
+
+      if(NOT ${pack_name}_${comp_name}_LIBRARY_RELEASE AND NOT ${pack_name}_${comp_name}_LIBRARY_DEBUG)
+        set_property(TARGET ${pack_name}::${comp_name} APPEND PROPERTY IMPORTED_LOCATION "${${pack_name}_${comp_name}_LIBRARY}")
+      endif()
+  endif()
+endmacro(spam_export_pack_component)
+
+macro(spam_export_pack pack_name)
+  if(NOT TARGET ${pack_name}::${pack_name})
+      add_library(${pack_name}::${pack_name} UNKNOWN IMPORTED)
+      set_target_properties(${pack_name}::${pack_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${${pack_name}_INCLUDE_DIRS}")
+
+      if(${pack_name}_LIBRARY_RELEASE)
+        set_property(TARGET ${pack_name}::${pack_name} APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+        set_target_properties(${pack_name}::${pack_name} PROPERTIES IMPORTED_LOCATION_RELEASE "${${pack_name}_LIBRARY_RELEASE}")
+      endif()
+
+      if(${pack_name}_LIBRARY_DEBUG)
+        set_property(TARGET ${pack_name}::${pack_name} APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)
+        set_target_properties(${pack_name}::${pack_name} PROPERTIES IMPORTED_LOCATION_DEBUG "${${pack_name}_LIBRARY_DEBUG}")
+      endif()
+
+      if(NOT ${pack_name}_LIBRARY_RELEASE AND NOT ${pack_name}_LIBRARY_DEBUG)
+        set_property(TARGET ${pack_name}::${pack_name} APPEND PROPERTY IMPORTED_LOCATION "${${pack_name}_LIBRARY}")
+      endif()
+  endif()
+endmacro(spam_export_pack)

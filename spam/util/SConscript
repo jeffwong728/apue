@@ -1,0 +1,32 @@
+import os
+
+Import('env')
+env = env.Clone()
+#env.Append(CPPDEFINES = ['_USE_MATH_DEFINES', 'HAVE_GSL', 'CAIRO_WIN32_STATIC_BUILD'])
+
+env.IncludeBoost()
+env.IncludeGlib()
+env.IncludeGlibMM()
+
+utilsrcs = Glob(r"*.cpp")
+utilincs = Glob(r"*.h")
+
+util = env.StaticLibrary(target="util", source=utilsrcs)
+
+utilsrcs = [str(s) for s in utilsrcs]
+utilincs = [str(s) for s in utilincs]
+utillocalincs = []
+utilresources = []
+utilmisc = ['SConscript']
+
+buildtarget = [s for s in util if str(s).endswith('lib')]
+util_vs_proj = env.MSVSProject(target = 'util' + env['MSVSPROJECTSUFFIX'],
+                               srcs = utilsrcs,
+                               incs = utilincs,
+                               localincs = utillocalincs,
+                               resources = utilresources,
+                               misc = utilmisc,
+                               buildtarget = buildtarget,
+                               variant = env['VS_VARIANT'])
+
+Return('util', 'util_vs_proj')

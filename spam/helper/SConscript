@@ -1,0 +1,35 @@
+import os
+import cons
+
+Import('env')
+env = env.Clone()
+#env.Append(CPPDEFINES = ['_USE_MATH_DEFINES', 'HAVE_GSL', 'CAIRO_WIN32_STATIC_BUILD'])
+
+env.IncludeBoost()
+env.IncludeGlib()
+env.IncludeGlibMM()
+env.IncludeHDF5()
+env.IncludewxWidgets(cons.LINK_STATIC)
+
+helpersrcs = Glob(r"*.cpp")
+helperincs = Glob(r"*.h")
+
+helper = env.StaticLibrary(target="helper", source=helpersrcs)
+
+helpersrcs = [str(s) for s in helpersrcs]
+helperincs = [str(s) for s in helperincs]
+helperlocalincs = []
+helperresources = []
+helpermisc = ['SConscript']
+
+buildtarget = [s for s in helper if str(s).endswith('lib')]
+helper_vs_proj = env.MSVSProject(target = 'helper' + env['MSVSPROJECTSUFFIX'],
+                               srcs = helpersrcs,
+                               incs = helperincs,
+                               localincs = helperlocalincs,
+                               resources = helperresources,
+                               misc = helpermisc,
+                               buildtarget = buildtarget,
+                               variant = env['VS_VARIANT'])
+
+Return('helper', 'helper_vs_proj')

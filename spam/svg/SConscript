@@ -1,0 +1,33 @@
+import os
+
+Import('env')
+env = env.Clone()
+#env.Append(CPPDEFINES = ['_USE_MATH_DEFINES', 'HAVE_GSL', 'CAIRO_WIN32_STATIC_BUILD'])
+env.Append(CCFLAGS = ['/FI"msvc_recommended_pragmas.h"'])
+
+env.IncludeBoost()
+env.IncludeGlib()
+env.IncludeGlibMM()
+
+svgsrcs = Glob(r"*.cpp")
+svgincs = Glob(r"*.h")
+
+svg = env.StaticLibrary(target="svg", source=svgsrcs)
+
+svgsrcs = [str(s) for s in svgsrcs]
+svgincs = [str(s) for s in svgincs]
+svglocalincs = []
+svgresources = []
+svgmisc = ['SConscript']
+
+buildtarget = [s for s in svg if str(s).endswith('lib')]
+svg_vs_proj = env.MSVSProject(target = 'svg' + env['MSVSPROJECTSUFFIX'],
+                               srcs = svgsrcs,
+                               incs = svgincs,
+                               localincs = svglocalincs,
+                               resources = svgresources,
+                               misc = svgmisc,
+                               buildtarget = buildtarget,
+                               variant = env['VS_VARIANT'])
+
+Return('svg', 'svg_vs_proj')

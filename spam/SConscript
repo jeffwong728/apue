@@ -1,0 +1,40 @@
+import os
+import cons
+
+Import('env')
+env = env.Clone()
+
+env.Append(CPPPATH = [os.path.abspath('.')])
+env.Append(LIBS = ['winmm', 'comctl32', 'rpcrt4', 'wsock32', 'wininet', 'kernel32', 'user32', 'gdi32', 'winspool', 'version'])
+env.Append(LIBS = ['comdlg32', 'advapi32', 'shell32', 'ole32', 'oleaut32', 'uuid', 'odbc32', 'odbccp32', 'shlwapi', 'Ws2_32'])
+env.Append(CPPDEFINES = ['_WINDOWS', '_UNICODE', 'UNICODE'])
+env.Append(LINKFLAGS = [r'/SUBSYSTEM:WINDOWS', r'/MACHINE:X64', r'/MANIFEST'])
+
+env.Append(CPPPATH = [r'D:\apue\libintl\include'])
+if env['BUILD_TYPE']==cons.LINK_DEBUG:
+    env.Append(LIBPATH = [r'D:\apue\libintl\lib'])
+elif env['BUILD_TYPE']==cons.LINK_RELEASE:
+    env.Append(LIBPATH = [r'D:\apue\libintl\lib'])
+env.Append(LIBS = ['intl'])
+
+w2geom = SConscript(r'2geom\SConscript', variant_dir=os.path.join(r'#build\spam\2geom', env['VARIANT_SUFFIX']), exports='env', duplicate=0)
+livarot = SConscript(r'livarot\SConscript', variant_dir=os.path.join(r'#build\spam\livarot', env['VARIANT_SUFFIX']), exports='env', duplicate=0)
+svg = SConscript(r'svg\SConscript', variant_dir=os.path.join(r'#build\spam\svg', env['VARIANT_SUFFIX']), exports='env', duplicate=0)
+util = SConscript(r'util\SConscript', variant_dir=os.path.join(r'#build\spam\util', env['VARIANT_SUFFIX']), exports='env', duplicate=0)
+helper = SConscript(r'helper\SConscript', variant_dir=os.path.join(r'#build\spam\helper', env['VARIANT_SUFFIX']), exports='env', duplicate=0)
+
+env = env.Clone()
+env.Append(LIBS = ['2geom', 'livarot', 'svg', 'util', 'helper'])
+env.Append(LIBPATH = os.path.join(r'#build\spam\2geom', env['VARIANT_SUFFIX']))
+env.Append(LIBPATH = os.path.join(r'#build\spam\livarot', env['VARIANT_SUFFIX']))
+env.Append(LIBPATH = os.path.join(r'#build\spam\svg', env['VARIANT_SUFFIX']))
+env.Append(LIBPATH = os.path.join(r'#build\spam\util', env['VARIANT_SUFFIX']))
+env.Append(LIBPATH = os.path.join(r'#build\spam\helper', env['VARIANT_SUFFIX']))
+spam = SConscript(r'ui\SConscript', variant_dir=os.path.join(r'#build\spam\ui', env['VARIANT_SUFFIX']), exports='env', duplicate=0)
+Depends(spam, w2geom)
+Depends(spam, livarot)
+Depends(spam, svg)
+Depends(spam, util)
+Depends(spam, helper)
+
+Return('spam', 'w2geom', 'livarot', 'svg', 'util', 'helper')

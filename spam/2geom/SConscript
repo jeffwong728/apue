@@ -1,0 +1,33 @@
+import os
+
+Import('env')
+env = env.Clone()
+env.Append(CPPDEFINES = ['_USE_MATH_DEFINES', 'HAVE_GSL', 'CAIRO_WIN32_STATIC_BUILD'])
+env.Append(CCFLAGS = ['/FI"msvc_recommended_pragmas.h"'])
+
+env.IncludeBoost()
+env.IncludeGsl()
+env.IncludeCairo()
+
+w2geomsrcs = Glob(r"*.cpp")+Glob(r"numeric/*.cpp")
+w2geomincs = Glob(r"*.h")+Glob(r"numeric/*.h")
+
+w2geom = env.StaticLibrary(target="2geom", source=w2geomsrcs)
+
+w2geomsrcs = [str(s) for s in w2geomsrcs]
+w2geomincs = [str(s) for s in w2geomincs]
+w2geomlocalincs = []
+w2geomresources = []
+w2geommisc = ['SConscript']
+
+buildtarget = [s for s in w2geom if str(s).endswith('lib')]
+w2geom_vs_proj = env.MSVSProject(target = '2geom' + env['MSVSPROJECTSUFFIX'],
+                               srcs = w2geomsrcs,
+                               incs = w2geomincs,
+                               localincs = w2geomlocalincs,
+                               resources = w2geomresources,
+                               misc = w2geommisc,
+                               buildtarget = buildtarget,
+                               variant = env['VS_VARIANT'])
+
+Return('w2geom', 'w2geom_vs_proj')

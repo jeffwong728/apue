@@ -1,0 +1,10 @@
+include (BundleUtilities)
+include(GNUInstallDirs)
+
+set (bundle "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/spam@CMAKE_EXECUTABLE_SUFFIX@")
+set (other_libs "")
+set (dirs "@LIBRARY_OUTPUT_PATH@")
+get_filename_component(ICU_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" DIRECTORY)
+list (APPEND dirs "${ICU_INSTALL_PREFIX}/icu/bin64")
+
+fixup_bundle ("${bundle}" "${other_libs}" "${dirs}")

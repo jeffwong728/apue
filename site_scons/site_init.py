@@ -1,0 +1,28 @@
+import tbb
+import gsl
+import glib
+import glibmm
+import msvc
+import boost
+import python2
+import opencv
+import wxwidgets
+import cairo
+import freetype
+import hdf5
+import icu
+
+def AddLibs(env):
+    env.AddMethod(tbb.IncludeTBB,              "IncludeTBB")
+    env.AddMethod(boost.IncludeBoost,          "IncludeBoost")
+    env.AddMethod(gsl.IncludeGsl,              "IncludeGsl")
+    env.AddMethod(glib.IncludeGlib,            "IncludeGlib")
+    env.AddMethod(glibmm.IncludeGlibMM,        "IncludeGlibMM")
+    env.AddMethod(opencv.IncludeOpenCV,        "IncludeOpenCV")
+    env.AddMethod(wxwidgets.IncludewxWidgets,  "IncludewxWidgets")
+    env.AddMethod(python2.IncludePython2,      "IncludePython2")
+    env.AddMethod(msvc.ConfigVSBuild,          "ConfigVSBuild")
+    env.AddMethod(cairo.IncludeCairo,          "IncludeCairo")
+    env.AddMethod(freetype.IncludeFreeType,    "IncludeFreeType")
+    env.AddMethod(hdf5.IncludeHDF5,            "IncludeHDF5")
+    env.AddMethod(icu.IncludeICU,              "IncludeICU")
