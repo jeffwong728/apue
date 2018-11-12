@@ -68,6 +68,7 @@ public:
     void AddPolygon(const PolygonData &pd);
     SPStationNode GetStation();
     SPDrawableNode FindDrawable(const Geom::Point &pt);
+    SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
 
 private:

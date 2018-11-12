@@ -21,8 +21,10 @@ public:
     void BuildPath(Geom::PathVector &pv) const override;
     void BuildCorners(const Geom::PathVector &pv, Geom::Point(&corners)[4]) const override;
     SelectionData HitTest(const Geom::Point &pt) const override;
+    SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const override;
     bool IsIntersection(const Geom::Rect &box) const override;
     void Translate(const double dx, const double dy) override;
+    void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy) override;
     void InitData();
 
 public:

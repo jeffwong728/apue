@@ -32,16 +32,20 @@ struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, Tr
     void OnCanvasLeave(const EvCanvasLeave &e);
     void OnSafari(const EvMouseMove &e);
 
+    void ClearSelection();
+
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, TransformTool>,
         boost::statechart::in_state_reaction<EvCanvasEnter, TransformTool, &TransformTool::OnCanvasEnter>,
         boost::statechart::in_state_reaction<EvCanvasLeave, TransformTool, &TransformTool::OnCanvasLeave>> reactions;
 
     Geom::Point anchor;
+    Geom::Point last;
     Geom::OptRect rect;
     SPDrawableNode highlight;
 
     SPDrawableNodeVector selEnts;
+    std::vector<SelectionState> selStates;
 };
 
 struct TransformIdle : boost::statechart::simple_state<TransformIdle, TransformTool>

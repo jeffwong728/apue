@@ -43,8 +43,20 @@ typedef std::vector<WPStationNode>       WPStationNodeVector;
 enum class SelectionState
 {
     kSelNone,
+    kSelState,
     kSelScale,
     kSelRotateAndSkew
+};
+
+enum class HitState
+{
+    kHsNone,
+    kHsNode,
+    kHsEdge,
+    kHsFace,
+    kHsScaleHandle,
+    kHsRotateHandle,
+    kHsSkewHandle
 };
 
 enum class HighlightState
@@ -53,7 +65,9 @@ enum class HighlightState
     kHlNode,
     kHlEdge,
     kHlFace,
-    kHlHandle
+    kHlScaleHandle,
+    kHlRotateHandle,
+    kHlSkewHandle
 };
 
 enum class EntitySigType
@@ -93,6 +107,7 @@ struct HighlightData
 struct SelectionData
 {
     SelectionState ss;
+    HitState       hs;
     int id;
     int subid;
 };

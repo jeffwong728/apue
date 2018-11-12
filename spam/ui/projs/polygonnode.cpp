@@ -48,18 +48,23 @@ void PolygonNode::BuildPath(Geom::PathVector &pv) const
 
 SelectionData PolygonNode::HitTest(const Geom::Point &pt) const
 {
-    SelectionData sd{ SelectionState::kSelNone , -1, -1};
+    SelectionData sd{ selData_.ss , HitState ::kHsNone, -1, -1};
     Geom::PathVector pv;
     BuildPath(pv);
 
     if (Geom::contains(pv.front(), pt))
     {
-        sd.ss    = SelectionState::kSelScale;
+        sd.hs    = HitState::kHsFace;
         sd.id    = 0;
         sd.subid = 0;
     }
 
     return sd;
+}
+
+SelectionData PolygonNode::HitTest(const Geom::Point &pt, const double sx, const double sy) const
+{
+    return DrawableNode::HitTest(pt, sx, sy);
 }
 
 bool PolygonNode::IsIntersection(const Geom::Rect &box) const
@@ -77,6 +82,15 @@ bool PolygonNode::IsIntersection(const Geom::Rect &box) const
 }
 
 void PolygonNode::Translate(const double dx, const double dy)
+{
+    for (auto &pt : data_.points)
+    {
+        pt[0] += dx;
+        pt[1] += dy;
+    }
+}
+
+void PolygonNode::Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
 {
     for (auto &pt : data_.points)
     {

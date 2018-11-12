@@ -120,7 +120,7 @@ void RectNode::BuildCorners(const Geom::PathVector &pv, Geom::Point(&corners)[4]
 
 SelectionData RectNode::HitTest(const Geom::Point &pt) const
 {
-    SelectionData sd{ SelectionState::kSelNone , -1, -1};
+    SelectionData sd{ selData_.ss, HitState::kHsNone, -1, -1};
     Geom::PathVector pv;
     BuildPath(pv);
 
@@ -128,13 +128,18 @@ SelectionData RectNode::HitTest(const Geom::Point &pt) const
     {
         if (Geom::contains(pv.front(), pt))
         {
-            sd.ss = SelectionState::kSelScale;
+            sd.hs = HitState::kHsFace;
             sd.id = 0;
             sd.subid = 0;
         }
     }
 
     return sd;
+}
+
+SelectionData RectNode::HitTest(const Geom::Point &pt, const double sx, const double sy) const
+{
+    return DrawableNode::HitTest(pt, sx, sy);
 }
 
 bool RectNode::IsIntersection(const Geom::Rect &box) const
@@ -152,6 +157,15 @@ bool RectNode::IsIntersection(const Geom::Rect &box) const
 }
 
 void RectNode::Translate(const double dx, const double dy)
+{
+    for (auto &pt : data_.points)
+    {
+        pt[0] += dx;
+        pt[1] += dy;
+    }
+}
+
+void RectNode::Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
 {
     for (auto &pt : data_.points)
     {

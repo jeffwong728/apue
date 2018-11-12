@@ -436,6 +436,22 @@ SPDrawableNode CairoCanvas::FindDrawable(const Geom::Point &pt)
     return SPDrawableNode();
 }
 
+SPDrawableNode CairoCanvas::FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd)
+{
+    sd.ss = SelectionState::kSelNone;
+    sd.hs = HitState::kHsNone;
+    sd.id = -1;
+    sd.subid = -1;
+
+    SPStationNode sn = GetStation();
+    if (sn)
+    {
+        return sn->FindDrawable(pt, sx, sy, sd);
+    }
+
+    return SPDrawableNode();
+}
+
 void CairoCanvas::SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents)
 {
     SPStationNode sn = GetStation();

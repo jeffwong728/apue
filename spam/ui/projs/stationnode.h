@@ -31,6 +31,7 @@ public:
     const cv::Mat &GetImage() const { return img_; }
     cv::Mat &GetImage() { return img_; }
     SPDrawableNode FindDrawable(const Geom::Point &pt);
+    SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
 
 public:

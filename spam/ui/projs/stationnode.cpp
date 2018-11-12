@@ -30,8 +30,29 @@ SPDrawableNode StationNode::FindDrawable(const Geom::Point &pt)
     {
         auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
         auto hl = drawable->HitTest(pt);
-        if (hl.ss != SelectionState::kSelNone)
+        if (hl.hs != HitState::kHsNone)
         {
+            return drawable;
+        }
+    }
+
+    return SPDrawableNode();
+}
+
+SPDrawableNode StationNode::FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd)
+{
+    sd.ss = SelectionState::kSelNone;
+    sd.hs = HitState::kHsNone;
+    sd.id = -1;
+    sd.subid = -1;
+
+    for (auto &c : GetChildren())
+    {
+        auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
+        auto ht = drawable->HitTest(pt, sx, sy);
+        if (ht.hs != HitState::kHsNone)
+        {
+            sd = ht;
             return drawable;
         }
     }
