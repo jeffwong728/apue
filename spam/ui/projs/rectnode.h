@@ -10,22 +10,34 @@ namespace Geom {
 
 class RectNode : public GeomNode
 {
+    struct Memento
+    {
+        DrawStyle style;
+        RectData  data;
+        long      rank;
+        bool      visible;
+        bool      locked;
+    };
+
 public:
-    RectNode() : GeomNode() { InitData(); }
-    RectNode(const SPModelNode &parent) : GeomNode(parent) { InitData(); }
+    RectNode() : GeomNode() { InitData(data_); }
+    RectNode(const SPModelNode &parent) : GeomNode(parent) { InitData(data_); }
     RectNode(const SPModelNode &parent, const wxString &title);
     ~RectNode();
 
 public:
     bool IsContainer() const override { return false; }
     void BuildPath(Geom::PathVector &pv) const override;
-    void BuildCorners(const Geom::PathVector &pv, Geom::Point(&corners)[4]) const override;
     SelectionData HitTest(const Geom::Point &pt) const override;
     SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const override;
     bool IsIntersection(const Geom::Rect &box) const override;
-    void Translate(const double dx, const double dy) override;
-    void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy) override;
-    void InitData();
+    void DoTransform(const Geom::Affine &aff, const double dx, const double dy) override;
+    void StartTransform() override;
+    void EndTransform() override;
+    void ResetTransform() override;
+    boost::any CreateMemento() const override;
+    bool RestoreFromMemento(const boost::any &memento) override;
+    void InitData(RectData &data);
 
 public:
     void Save(const H5::Group &g) const override;
@@ -39,6 +51,7 @@ public:
 
 public:
     RectData data_;
+    RectData base_;
 };
 
 #endif //SPAM_UI_PROJS_STATION_NODE_H

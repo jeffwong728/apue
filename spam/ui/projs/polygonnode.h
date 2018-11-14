@@ -3,12 +3,18 @@
 #include "modelfwd.h"
 #include "modelnode.h"
 #include "geomnode.h"
-namespace Geom {
-    class PathVector;
-}
 
 class PolygonNode : public GeomNode
 {
+    struct Memento
+    {
+        DrawStyle    style;
+        PolygonData  data;
+        long         rank;
+        bool         visible;
+        bool         locked;
+    };
+
 public:
     PolygonNode() : GeomNode() {}
     PolygonNode(const SPModelNode &parent) : GeomNode(parent) {}
@@ -21,8 +27,12 @@ public:
     SelectionData HitTest(const Geom::Point &pt) const override;
     SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const override;
     bool IsIntersection(const Geom::Rect &box) const override;
-    void Translate(const double dx, const double dy) override;
-    void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy) override;
+    void DoTransform(const Geom::Affine &aff, const double dx, const double dy) override;
+    void StartTransform() override;
+    void EndTransform() override;
+    void ResetTransform() override;
+    boost::any CreateMemento() const override;
+    bool RestoreFromMemento(const boost::any &memento) override;
     int GetNumCorners() const { return static_cast<int>(data_.points.size()); }
     void AddCorner(const Geom::Point &pt);
     void PopCorner();
@@ -42,6 +52,7 @@ public:
 
 public:
     PolygonData data_;
+    PolygonData base_;
 };
 
 #endif //SPAM_UI_PROJS_POLYGON_NODE_H

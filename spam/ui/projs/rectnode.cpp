@@ -13,7 +13,7 @@
 RectNode::RectNode(const SPModelNode &parent, const wxString &title)
     : GeomNode(parent, title)
 {
-    InitData();
+    InitData(data_);
 }
 
 RectNode::~RectNode()
@@ -110,14 +110,6 @@ void RectNode::BuildPath(Geom::PathVector &pv) const
     }
 }
 
-void RectNode::BuildCorners(const Geom::PathVector &pv, Geom::Point(&corners)[4]) const
-{
-    corners[0] = { data_.points[0][0], data_.points[0][1] };
-    corners[1] = { data_.points[1][0], data_.points[1][1] };
-    corners[2] = { data_.points[2][0], data_.points[2][1] };
-    corners[3] = { data_.points[3][0], data_.points[3][1] };
-}
-
 SelectionData RectNode::HitTest(const Geom::Point &pt) const
 {
     SelectionData sd{ selData_.ss, HitState::kHsNone, -1, -1};
@@ -156,34 +148,94 @@ bool RectNode::IsIntersection(const Geom::Rect &box) const
     return false;
 }
 
-void RectNode::Translate(const double dx, const double dy)
+void RectNode::DoTransform(const Geom::Affine &aff, const double dx, const double dy)
 {
-    for (auto &pt : data_.points)
+    if (HitState::kHsFace == selData_.hs)
     {
-        pt[0] += dx;
-        pt[1] += dy;
+        for (auto &pt : data_.points)
+        {
+            pt[0] += dx;
+            pt[1] += dy;
+        }
+    }
+    else
+    {
+        if (!aff.isIdentity())
+        {
+            for (int i = 0; i<static_cast<int>(base_.points.size()); ++i)
+            {
+                Geom::Point pt2{ base_.points[i][0], base_.points[i][1] };
+                pt2 *= aff;
+                data_.points[i][0] = pt2.x();
+                data_.points[i][1] = pt2.y();
+            }
+        }
     }
 }
 
-void RectNode::Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+void RectNode::StartTransform()
 {
-    for (auto &pt : data_.points)
+    base_ = data_;
+    DrawableNode::StartTransform();
+}
+
+void RectNode::EndTransform()
+{
+    InitData(base_);
+    DrawableNode::EndTransform();
+}
+
+void RectNode::ResetTransform()
+{
+    InitData(base_);
+    DrawableNode::EndTransform();
+}
+
+boost::any RectNode::CreateMemento() const
+{
+    auto mem = std::make_shared<Memento>();
+    mem->style   = drawStyle_;
+    mem->data    = data_;
+    mem->rank    = rank_;
+    mem->visible = visible_;
+    mem->locked  = locked_;
+
+    return mem;
+}
+
+bool RectNode::RestoreFromMemento(const boost::any &memento)
+{
+    try
     {
-        pt[0] += dx;
-        pt[1] += dy;
+        auto mem = boost::any_cast<std::shared_ptr<Memento>>(memento);
+
+        if (mem)
+        {
+            drawStyle_ = mem->style;
+            data_      = mem->data;
+            rank_      = mem->rank;
+            visible_   = mem->visible;
+            locked_    = mem->locked;
+        }
+
+        return true;
+    }
+    catch (const boost::bad_any_cast &)
+    {
+        return false;
     }
 }
 
-void RectNode::InitData()
+void RectNode::InitData(RectData &data)
 {
     Geom::Affine ide = Geom::Affine::identity();
-    for (int i = 0; i < data_.transform.size(); ++i)
+    for (int i = 0; i < data.transform.size(); ++i)
     {
-        data_.transform[i] = ide[i];
+        data.transform[i] = ide[i];
     }
 
-    data_.points.fill({ 0, 0 });
-    data_.radii.fill({ 0, 0 });
+    data.points.fill({ 0, 0 });
+    data.radii.fill({ 0, 0 });
 }
 
 void RectNode::Save(const H5::Group &g) const

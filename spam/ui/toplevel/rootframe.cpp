@@ -88,6 +88,7 @@ RootFrame::RootFrame()
         m->sig_StationDelete.connect(std::bind(&RootFrame::OnDeleteStations, this, std::placeholders::_1));
         m->sig_GeomAdd.connect(std::bind(&RootFrame::OnAddGeoms, this, std::placeholders::_1));
         m->sig_GeomDelete.connect(std::bind(&RootFrame::OnDeleteGeoms, this, std::placeholders::_1));
+        m->sig_DrawableShapeChange.connect(std::bind(&RootFrame::OnDrawableShapeChange, this, std::placeholders::_1, std::placeholders::_2));
     }
 
     auto p = GetProjPanel();
@@ -244,6 +245,29 @@ ProjTreeModel *RootFrame::GetProjTreeModel()
     if (projPanel)
     {
         return projPanel->GetProjTreeModel();
+    }
+
+    return nullptr;
+}
+
+CairoCanvas *RootFrame::FindCanvasByUUID(const std::string &uuidTag) const
+{
+    auto stationNB = GetStationNotebook();
+    if (stationNB)
+    {
+        int cPages = static_cast<int>(stationNB->GetPageCount());
+        for (int i=0; i<cPages; ++i)
+        {
+            wxWindow *page = stationNB->GetPage(i);
+            if (page && (page->GetName() == uuidTag))
+            {
+                CVImagePanel *panel = dynamic_cast<CVImagePanel *>(page);
+                if (panel)
+                {
+                    return panel->GetCanvas();
+                }
+            }
+        }
     }
 
     return nullptr;
@@ -483,6 +507,36 @@ void RootFrame::OnAddGeoms(const SPModelNodeVector &geoms)
 void RootFrame::OnDeleteGeoms(const SPModelNodeVector &geoms)
 {
     UpdateGeoms(&CairoCanvas::EraseDrawables, geoms);
+}
+
+void RootFrame::OnDrawableShapeChange(const SPDrawableNodeVector &drawables, const Geom::OptRect &rect)
+{
+    if (!drawables.empty())
+    {
+        auto station = drawables.front()->GetParent();
+        if (station)
+        {
+            if (std::all_of(drawables.cbegin(), drawables.cend(), [&station](const SPModelNode &mn) { return mn->GetParent() == station; }))
+            {
+                CairoCanvas *cav = FindCanvasByUUID(station->GetUUIDTag());
+                if (cav)
+                {
+                    Geom::OptRect ivalRect;
+                    Geom::PathVector npv;
+                    ivalRect.unionWith(rect);
+                    for (const auto &drawable : drawables)
+                    {
+                        Geom::PathVector pv;
+                        drawable->BuildPath(pv);
+                        ivalRect.unionWith(pv.boundsFast());
+                        npv.insert(npv.end(), pv.begin(), pv.end());
+                    }
+
+                    cav->DrawPathVector(npv, ivalRect);
+                }
+            }
+        }
+    }
 }
 
 void RootFrame::OnGlowGeom(const SPModelNode &geom)
@@ -1107,7 +1161,6 @@ void RootFrame::UpdateGeoms(void (CairoCanvas::*updateFun)(const SPDrawableNodeV
                         canv.second.push_back(std::dynamic_pointer_cast<DrawableNode>(geom));
                     }
                 }
-
             }
         }
     }

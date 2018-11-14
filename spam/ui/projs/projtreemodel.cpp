@@ -8,6 +8,11 @@
 #include <ui/spam.h>
 #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
+#pragma warning( push )
+#pragma warning( disable : 4819 4003 )
+#include <2geom/2geom.h>
+#include <2geom/path-intersection.h>
+#pragma warning( pop )
 
 ProjTreeModel::ProjTreeModel()
     : ProjTreeModel(wxT("项目1"))
@@ -430,6 +435,39 @@ SPStationNode ProjTreeModel::FindStationByUUID(const std::string &uuidTag) const
     }
 
     return SPStationNode();
+}
+
+void ProjTreeModel::RestoreTransform(SPDrawableNodeVector &drawables, const SpamMany &mementos, const bool fireEvent)
+{
+    if (drawables.size() == mementos.size())
+    {
+        Geom::OptRect rect;
+        SPDrawableNodeVector changedDrawables;
+
+        int numDrawables = static_cast<int>(drawables.size());
+        for (int i=0; i<numDrawables; ++i)
+        {
+            auto &drawable = drawables[i];
+            const auto &memento  = mementos[i];
+
+            if (drawable)
+            {
+                Geom::PathVector pv;
+                drawable->BuildPath(pv);
+                rect.unionWith(pv.boundsFast());
+
+                if (drawable->RestoreFromMemento(memento))
+                {
+                    changedDrawables.push_back(drawable);
+                }
+            }
+        }
+
+        if (fireEvent)
+        {
+            sig_DrawableShapeChange(changedDrawables, rect);
+        }
+    }
 }
 
 wxString ProjTreeModel::GetColumnType(unsigned int col) const

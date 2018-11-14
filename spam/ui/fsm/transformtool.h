@@ -6,10 +6,17 @@
 #pragma warning( disable : 4819 4003 )
 #include <2geom/path.h>
 #pragma warning( pop )
+#include <unordered_map>
 
 struct TransformIdle;
 struct TransformBoxSelecting;
 struct Transforming;
+
+struct EntitySelection
+{
+    SPDrawableNodeVector ents;
+    std::vector<SelectionState> states;
+};
 
 struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, TransformIdle>
 {
@@ -32,7 +39,13 @@ struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, Tr
     void OnCanvasLeave(const EvCanvasLeave &e);
     void OnSafari(const EvMouseMove &e);
 
-    void ClearSelection();
+    void ClearSelection(const std::string &uuid);
+    void ClearHighlightData() 
+    {
+        hlData.hls = HighlightState::kHlNone;
+        hlData.id = -1;
+        hlData.subid = -1;
+    }
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, TransformTool>,
@@ -43,9 +56,9 @@ struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, Tr
     Geom::Point last;
     Geom::OptRect rect;
     SPDrawableNode highlight;
+    HighlightData  hlData;
 
-    SPDrawableNodeVector selEnts;
-    std::vector<SelectionState> selStates;
+    std::unordered_map<std::string, EntitySelection> selData;
 };
 
 struct TransformIdle : boost::statechart::simple_state<TransformIdle, TransformTool>

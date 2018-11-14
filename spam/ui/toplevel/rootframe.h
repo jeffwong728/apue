@@ -25,6 +25,11 @@ namespace cv
     class Mat;
 }
 
+namespace Geom 
+{
+    class OptRect;
+}
+
 class RootFrame : public wxFrame
 {
     enum {
@@ -48,6 +53,7 @@ public:
     ProjPanel *GetProjPanel();
     wxAuiNotebook *GetStationNotebook() const;
     ProjTreeModel *GetProjTreeModel();
+    CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
     void SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page);
 
 private:
@@ -61,6 +67,7 @@ private:
     void OnDeleteStations(const SPModelNodeVector &stations);
     void OnAddGeoms(const SPModelNodeVector &geoms);
     void OnDeleteGeoms(const SPModelNodeVector &geoms);
+    void OnDrawableShapeChange(const SPDrawableNodeVector &drawables, const Geom::OptRect &rect);
     void OnGlowGeom(const SPModelNode &geom);
     void OnDimGeom(const SPModelNode &geom);
     void OnNewProject(ModelEvent& e);

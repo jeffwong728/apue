@@ -12,11 +12,10 @@
 #undef WINDING
 #endif
 #include <cairomm/cairomm.h>
-namespace Geom {
-    class Point;
-    class Rect;
-    class PathVector;
-}
+#pragma warning( push )
+#pragma warning( disable : 4819 4003 )
+#include <2geom/path.h>
+#pragma warning( pop )
 
 class DrawableNode : public ModelNode
 {
@@ -38,20 +37,40 @@ public:
     virtual SelectionData HitTest(const Geom::Point &pt) const = 0;
     virtual SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const;
     virtual bool IsIntersection(const Geom::Rect &box) const = 0;
-    virtual void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy) = 0;
+    virtual void StartTransform();
+    virtual void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy);
+    virtual void DoTransform(const Geom::Affine &aff, const double dx, const double dy) = 0;
+    virtual void EndTransform();
+    virtual void ResetTransform() = 0;
+    virtual boost::any CreateMemento() const = 0;
+    virtual bool RestoreFromMemento(const boost::any &memento) = 0;
     void Draw(Cairo::RefPtr<Cairo::Context> &cr) const;
     void DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const;
     void SetHighlightData(const HighlightData hd) { hlData_ = hd; }
     HighlightData GetHighlightData() const { return hlData_; }
     void ClearSelection();
     void ClearHighlight();
+    void SetHighlight(const HighlightData &hlData) { hlData_ = hlData; }
     void HighlightFace();
     void SelectEntity();
     void SwitchSelectionState();
+    static HighlightData MapSelectionToHighlight(const SelectionData &sd);
+    static bool IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr);
+
+private:
+    void DrawHighlightFace(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &fpv, const double ux, const double ax) const;
+    void DrawHighlightScaleHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &spv, const double ux, const double ax) const;
+    void DrawHighlightSkewHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &spv, const double ux, const double ax) const;
+    void DrawHighlightRotateHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &rpv, const double ux, const double ax) const;
+    void DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &rpv, const HighlightState hs, const double ux, const double ax) const;
+    void BuildRotateMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
+    void BuildScaleMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
+    void BuildSkewMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
 
 public:
     SelectionData selData_;
     HighlightData hlData_;
+    Geom::Rect  baseRect_;
 };
 
 #endif //SPAM_UI_PROJS_DRAWABLE_NODE_H

@@ -42,7 +42,7 @@ void DrawableNode::BuildScaleHandle(const Geom::Point(&corners)[4], const double
         const double tol = 1e-9;
 
         Geom::Path straightArrow = Geom::parse_svg_path("m -7,0 3,-4 v 2 h 8 v -2 l 3,4 -3,4 v -2 h -8 v 2 l -3,-4").front();
-        straightArrow *= Geom::Scale(sx*0.6, sy*0.6);
+        straightArrow *= Geom::Scale(sx*0.8, sy*0.8);
         const double breathDist = 10 * (sx + sy) / 2;
 
         const int idx[4][2] = { { 0, 1 },{ 1, 2 },{ 2, 3 },{ 3, 0 } };
@@ -97,7 +97,7 @@ void DrawableNode::BuildSkewHandle(const Geom::Point(&corners)[4], const double 
         const double tol = 1e-9;
 
         Geom::Path straightArrow = Geom::parse_svg_path("m -7,0 3,-4 v 2 h 8 v -2 l 3,4 -3,4 v -2 h -8 v 2 l -3,-4").front();
-        straightArrow *= Geom::Scale(sx*0.6, sy*0.6);
+        straightArrow *= Geom::Scale(sx*0.8, sy*0.8);
         const double breathDist = 10 * (sx + sy) / 2;
 
         const int idx[4][2] = { { 0, 1 },{ 1, 2 },{ 2, 3 },{ 3, 0 } };
@@ -160,8 +160,12 @@ void DrawableNode::BuildRotateHandle(const Geom::Point(&corners)[4], const doubl
 
 void DrawableNode::BuildBox(const Geom::Point(&corners)[4], Geom::PathVector &bpv) const
 {
-    Geom::Rect boxRect(corners[0], corners[2]);
-    bpv.push_back(Geom::Path(boxRect));
+    Geom::PathBuilder pb(bpv);
+    pb.moveTo(corners[0]);
+    pb.lineTo(corners[1]);
+    pb.lineTo(corners[2]);
+    pb.lineTo(corners[3]);
+    pb.closePath();
 }
 
 void DrawableNode::BuildCorners(const Geom::PathVector &pv, Geom::Point(&corners)[4]) const
@@ -259,64 +263,50 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
     return sd;
 }
 
-void DrawableNode::Draw(Cairo::RefPtr<Cairo::Context> &cr) const
+void DrawableNode::StartTransform()
 {
-    if (HighlightState::kHlFace == hlData_.hls)
+    baseRect_ = Geom::Rect();
+
+    Geom::PathVector pv;
+    BuildPath(pv);
+    auto rect = pv.boundsFast();
+    if (rect)
     {
-        DrawHighlight(cr);
+        baseRect_ = *rect;
+    }
+}
+
+void DrawableNode::Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+{
+    Geom::Affine aff = Geom::Affine::identity();
+    if (HitState::kHsRotateHandle == selData_.hs)
+    {
+        BuildRotateMat(anchorPt, freePt, aff);
+    }
+    else if (HitState::kHsScaleHandle == selData_.hs)
+    {
+        BuildScaleMat(anchorPt, freePt, aff);
+    }
+    else if (HitState::kHsSkewHandle == selData_.hs)
+    {
+        BuildSkewMat(anchorPt, freePt, aff);
     }
     else
     {
-        Geom::PathVector pv;
-        BuildPath(pv);
-        pv *= Geom::Translate(0.5, 0.5);
-
-        const wxColour &strokeColor = drawStyle_.strokeColor_;
-        const wxColour &fillColor = drawStyle_.fillColor_;
-
-        double ux = drawStyle_.strokeWidth_;
-        double uy = drawStyle_.strokeWidth_;
-        cr->device_to_user_distance(ux, uy);
-        if (ux < uy) ux = uy;
-
-        cr->save();
-        Geom::CairoPathSink cairoPathSink(cr->cobj());
-        cairoPathSink.feed(pv);
-        cr->set_source_rgba(fillColor.Red() / 255.0, fillColor.Green() / 255.0, fillColor.Blue() / 255.0, fillColor.Alpha() / 255.0);
-        cr->fill_preserve();
-        cr->set_line_width(ux);
-        cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0);
-        cr->stroke();
-
-        if (selData_.ss != SelectionState::kSelNone)
-        {
-            Geom::Point corners[4];
-            Geom::PathVector hpv;
-
-            double sx = 1;
-            double sy = 1;
-            cr->device_to_user_distance(sx, sy);
-
-            BuildCorners(pv, corners);
-            BuildHandle(corners, sx, sy, hpv);
-
-            cairoPathSink.feed(hpv);
-            cr->set_source_rgba(1.0, 0.0, 0.0, 0.2);
-            cr->fill_preserve();
-            cr->set_source_rgba(1.0, 0.0, 0.0, strokeColor.Alpha() / 255.0);
-            cr->stroke();
-
-            Geom::PathVector bpv;
-            BuildBox(corners, bpv);
-            cairoPathSink.feed(bpv);
-            cr->set_dash(std::vector<double>(1, 2*sx), 0);
-            cr->set_line_width(sx);
-            cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0);
-            cr->stroke();
-        }
-
-        cr->restore();
+        aff *= Geom::Translate(dx, dy);
     }
+
+    DoTransform(aff, dx, dy);
+}
+
+void DrawableNode::EndTransform()
+{
+    baseRect_ = Geom::Rect();
+}
+
+void DrawableNode::Draw(Cairo::RefPtr<Cairo::Context> &cr) const
+{
+    DrawHighlight(cr);
 }
 
 void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
@@ -324,9 +314,6 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
     Geom::PathVector pv;
     BuildPath(pv);
     pv *= Geom::Translate(0.5, 0.5);
-
-    const wxColour strokeColor(0xF9, 0xA6, 0x02);
-    const wxColour &fillColor = strokeColor;
 
     double ux = drawStyle_.strokeWidth_;
     double uy = drawStyle_.strokeWidth_;
@@ -339,41 +326,40 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
     if (ax < ay) ax = ay;
 
     cr->save();
-    Geom::CairoPathSink cairoPathSink(cr->cobj());
-    cairoPathSink.feed(pv);
-    cr->set_source_rgba(fillColor.Red() / 255.0, fillColor.Green() / 255.0, fillColor.Blue() / 255.0, fillColor.Alpha() / 255.0 / 4);
-    cr->fill_preserve();
-    cr->set_line_width(ax);
-    cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0 / 4);
-    cr->stroke_preserve();
-    cr->set_line_width(ux);
-    cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0);
-    cr->stroke();
+    DrawHighlightFace(cr, pv, ux, ax);
 
     if (selData_.ss != SelectionState::kSelNone)
     {
         Geom::Point corners[4];
-        Geom::PathVector hpv;
+        Geom::PathVector spv;
+        Geom::PathVector skpv;
+        Geom::PathVector rpv;
 
         double sx = 1;
         double sy = 1;
         cr->device_to_user_distance(sx, sy);
 
-        BuildCorners(pv, corners);
-        BuildHandle(corners, sx, sy, hpv);
+        double hx = 3;
+        double hy = 3;
+        cr->device_to_user_distance(hx, hy);
 
-        cairoPathSink.feed(hpv);
-        cr->set_source_rgba(1.0, 0.0, 0.0, 0.2);
-        cr->fill_preserve();
-        cr->set_source_rgba(1.0, 0.0, 0.0, strokeColor.Alpha() / 255.0);
-        cr->stroke();
+        BuildCorners(pv, corners);
+        BuildScaleHandle(corners, sx, sy, spv);
+        BuildSkewHandle(corners, sx, sy, skpv);
+        BuildRotateHandle(corners, sx, sy, rpv);
+        DrawHighlightScaleHandle(cr, spv, sx, hx);
+        DrawHighlightSkewHandle(cr, skpv, sx, hx);
+        DrawHighlightRotateHandle(cr, rpv, sx, hx);
 
         Geom::PathVector bpv;
         BuildBox(corners, bpv);
+
+        const wxColour sc(0xF9, 0xA6, 0x02);
+        Geom::CairoPathSink cairoPathSink(cr->cobj());
         cairoPathSink.feed(bpv);
         cr->set_dash(std::vector<double>(1, 2 * sx), 0);
         cr->set_line_width(sx);
-        cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0);
+        cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0);
         cr->stroke();
     }
 
@@ -428,4 +414,274 @@ void DrawableNode::SwitchSelectionState()
 
     default: break;
     }
+}
+
+HighlightData DrawableNode::MapSelectionToHighlight(const SelectionData &sd)
+{
+    HighlightState hss[] = 
+    { 
+        HighlightState::kHlNone,
+        HighlightState::kHlNode,
+        HighlightState::kHlEdge,
+        HighlightState::kHlFace,
+        HighlightState::kHlScaleHandle,
+        HighlightState::kHlRotateHandle,
+        HighlightState::kHlSkewHandle
+    };
+
+    return { hss[static_cast<int>(sd.hs)], sd.id, sd.subid };
+}
+
+bool DrawableNode::IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr)
+{
+    return hdl.hls != hdr.hls || hdl.id != hdr.id || hdl.subid != hdr.subid;
+}
+
+void DrawableNode::DrawHighlightFace(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &fpv, const double ux, const double ax) const
+{
+    Geom::CairoPathSink cairoPathSink(cr->cobj());
+    if (HighlightState::kHlFace == hlData_.hls)
+    {
+        const wxColour sc(0xF9, 0xA6, 0x02);
+        const wxColour &fc = sc;
+
+        cairoPathSink.feed(fpv);
+        cr->set_source_rgba(fc.Red() / 255.0, fc.Green() / 255.0, fc.Blue() / 255.0, fc.Alpha() / 255.0 / 4);
+        cr->fill_preserve();
+        cr->set_line_width(ax);
+        cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0 / 4);
+        cr->stroke_preserve();
+        cr->set_line_width(ux);
+        cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0);
+        cr->stroke();
+    }
+    else
+    {
+        const wxColour &sc = drawStyle_.strokeColor_;
+        const wxColour &fc = drawStyle_.fillColor_;
+
+        cairoPathSink.feed(fpv);
+        cr->set_source_rgba(fc.Red() / 255.0, fc.Green() / 255.0, fc.Blue() / 255.0, fc.Alpha() / 255.0);
+        cr->fill_preserve();
+        cr->set_line_width(ux);
+        cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0);
+        cr->stroke();
+    }
+}
+
+void DrawableNode::DrawHighlightScaleHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &spv, const double ux, const double ax) const
+{
+    DrawHighlightHandle(cr, spv, HighlightState::kHlScaleHandle, ux, ax);
+}
+
+void DrawableNode::DrawHighlightSkewHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &spv, const double ux, const double ax) const
+{
+    DrawHighlightHandle(cr, spv, HighlightState::kHlSkewHandle, ux, ax);
+}
+
+void DrawableNode::DrawHighlightRotateHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &rpv, const double ux, const double ax) const
+{
+    DrawHighlightHandle(cr, rpv, HighlightState::kHlRotateHandle, ux, ax);
+}
+
+void DrawableNode::DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &pv, const HighlightState hs, const double ux, const double ax) const
+{
+    Geom::CairoPathSink cairoPathSink(cr->cobj());
+    for (int p = 0; p<static_cast<int>(pv.size()); ++p)
+    {
+        if (hs == hlData_.hls && hlData_.id == p)
+        {
+            const wxColour sc(0xF9, 0xA6, 0x02);
+            const wxColour &fc = sc;
+
+            cairoPathSink.feed(pv[p]);
+            cr->set_source_rgba(fc.Red() / 255.0, fc.Green() / 255.0, fc.Blue() / 255.0, fc.Alpha() / 255.0 / 4);
+            cr->fill_preserve();
+            cr->set_line_width(ax);
+            cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0 / 4);
+            cr->stroke_preserve();
+            cr->set_line_width(ux);
+            cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0);
+            cr->stroke();
+        }
+        else
+        {
+            const wxColour &sc = drawStyle_.strokeColor_;
+            const wxColour &fc = drawStyle_.fillColor_;
+
+            cairoPathSink.feed(pv[p]);
+            cr->set_source_rgba(1.0, 0.0, 0.0, 0.2);
+            cr->fill_preserve();
+            cr->set_line_width(ux);
+            cr->set_source_rgba(1.0, 0.0, 0.0, sc.Alpha() / 255.0);
+            cr->stroke();
+        }
+    }
+}
+
+void DrawableNode::BuildRotateMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff)
+{
+    Geom::Point cp = baseRect_.midpoint();
+    Geom::Point ap = anchorPt - cp;
+    Geom::Point fp = freePt - cp;
+
+    aff *= Geom::Translate(-cp);
+    aff *= Geom::Rotate(Geom::angle_between(ap, fp));
+    aff *= Geom::Translate(cp);
+}
+
+void DrawableNode::BuildScaleMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff)
+{
+    double tx = 0;
+    double ty = 0;
+    double axDist = 0;
+    double ayDist = 0;
+    double fxDist = 0;
+    double fyDist = 0;
+
+    switch (selData_.id)
+    {
+    case 0:
+        ty = baseRect_.bottom();
+        ayDist = baseRect_.height();
+        fyDist = baseRect_.height() - (freePt.y() - anchorPt.y());
+        break;
+
+    case 1:
+        tx = baseRect_.left();
+        axDist = baseRect_.width();
+        fxDist = baseRect_.width() + (freePt.x() - anchorPt.x());
+        break;
+
+    case 2:
+        ty = baseRect_.top();
+        ayDist = baseRect_.height();
+        fyDist = baseRect_.height() + (freePt.y() - anchorPt.y());
+        break;
+
+    case 3:
+        tx = baseRect_.right();
+        axDist = baseRect_.width();
+        fxDist = baseRect_.width() - (freePt.x() - anchorPt.x());
+        break;
+
+    case 4:
+        tx = baseRect_.right();
+        ty = baseRect_.bottom();
+        axDist = baseRect_.width();
+        ayDist = baseRect_.height();
+        fxDist = baseRect_.width() - (freePt.x() - anchorPt.x());
+        fyDist = baseRect_.height() - (freePt.y() - anchorPt.y());
+        break;
+
+    case 5:
+        tx = baseRect_.left();
+        ty = baseRect_.bottom();
+        axDist = baseRect_.width();
+        ayDist = baseRect_.height();
+        fxDist = baseRect_.width() + (freePt.x() - anchorPt.x());
+        fyDist = baseRect_.height() - (freePt.y() - anchorPt.y());
+        break;
+
+    case 6:
+        tx = baseRect_.left();
+        ty = baseRect_.top();
+        axDist = baseRect_.width();
+        ayDist = baseRect_.height();
+        fxDist = baseRect_.width() + (freePt.x() - anchorPt.x());
+        fyDist = baseRect_.height() + (freePt.y() - anchorPt.y());
+        break;
+
+    case 7:
+        tx = baseRect_.right();
+        ty = baseRect_.top();
+        axDist = baseRect_.width();
+        ayDist = baseRect_.height();
+        fxDist = baseRect_.width() - (freePt.x() - anchorPt.x());
+        fyDist = baseRect_.height() + (freePt.y() - anchorPt.y());
+        break;
+
+    default:
+        break;
+    }
+
+    axDist = std::max(0.0, axDist);
+    ayDist = std::max(0.0, ayDist);
+    fxDist = std::max(0.0, fxDist);
+    fyDist = std::max(0.0, fyDist);
+
+    double sx = 1.0;
+    double sy = 1.0;
+
+    if (fxDist > Geom::EPSILON && axDist > Geom::EPSILON)
+    {
+        sx = fxDist / axDist;
+    }
+
+    if (fyDist > Geom::EPSILON && ayDist > Geom::EPSILON)
+    {
+        sy = fyDist / ayDist;
+    }
+
+    aff *= Geom::Translate(-tx, -ty);
+    aff *= Geom::Scale(sx, sy);
+    aff *= Geom::Translate(tx, ty);
+}
+
+void DrawableNode::BuildSkewMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff)
+{
+    double tx = 0;
+    double ty = 0;
+    double axDist = 0;
+    double ayDist = 0;
+    double fxDist = 0;
+    double fyDist = 0;
+
+    switch (selData_.id)
+    {
+    case 0:
+        tx = baseRect_.left();
+        ty = baseRect_.bottom();
+        fxDist = anchorPt.x() - freePt.x();
+        break;
+
+    case 1:
+        tx = baseRect_.left();
+        ty = baseRect_.top();
+        fyDist = freePt.y() - anchorPt.y();
+        break;
+
+    case 2:
+        tx = baseRect_.left();
+        ty = baseRect_.top();
+        fxDist = freePt.x() - anchorPt.x();
+        break;
+
+    case 3:
+        tx = baseRect_.right();
+        ty = baseRect_.top();
+        fyDist = anchorPt.y() - freePt.y();
+        break;
+
+    default:
+        break;
+    }
+
+    double mx = 0;
+    double my = 0;
+
+    if (baseRect_.height() > Geom::EPSILON)
+    {
+        mx = fxDist / baseRect_.height();
+    }
+
+    if (baseRect_.width() > Geom::EPSILON)
+    {
+        my = fyDist / baseRect_.width();
+    }
+ 
+    aff *= Geom::Translate(-tx, -ty);
+    aff *= Geom::HShear(mx);
+    aff *= Geom::VShear(my);
+    aff *= Geom::Translate(tx, ty);
 }

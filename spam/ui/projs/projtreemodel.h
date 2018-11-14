@@ -36,6 +36,7 @@ public:
     bs2::signal_type<void(const SPModelNodeVector &), bs2_dummy_mutex>::type sig_GeomCreate;
     bs2::signal_type<void(const SPModelNodeVector &), bs2_dummy_mutex>::type sig_GeomAdd;
     bs2::signal_type<void(const SPModelNodeVector &), bs2_dummy_mutex>::type sig_GeomDelete;
+    bs2::signal_type<void(const SPDrawableNodeVector &, const Geom::OptRect &rect), bs2_dummy_mutex>::type sig_DrawableShapeChange;
 
 public:
     ProjTreeModel();
@@ -67,6 +68,8 @@ public:
     bool IsModified() const { return modified_; }
     SPStationNodeVector GetAllStations() const;
     SPStationNode FindStationByUUID(const std::string &uuidTag) const;
+
+    void RestoreTransform(SPDrawableNodeVector &drawables, const SpamMany &mementos, const bool fireEvent);
 
 public:
     unsigned int GetColumnCount() const wxOVERRIDE { return kStation_GUARD_COL; }

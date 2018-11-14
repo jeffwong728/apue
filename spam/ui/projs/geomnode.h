@@ -16,9 +16,6 @@ public:
     ~GeomNode();
 
 public:
-    virtual void Translate(const double dx, const double dy) = 0;
-
-public:
     bool IsContainer() const wxOVERRIDE { return false; }
 
 public:

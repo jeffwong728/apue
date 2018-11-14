@@ -8,6 +8,7 @@
 #endif
 #include <array>
 #include <vector>
+#include <boost/any.hpp>
 
 class NodeFactory;
 class ModelNode;
@@ -39,6 +40,7 @@ typedef std::vector<SPDrawableNode>      SPDrawableNodeVector;
 typedef std::vector<WPModelNode>         WPModelNodeVector;
 typedef std::vector<WPProjNode>          WPProjNodeVector;
 typedef std::vector<WPStationNode>       WPStationNodeVector;
+typedef std::vector<boost::any>          SpamMany;
 
 enum class SelectionState
 {

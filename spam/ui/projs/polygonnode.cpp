@@ -9,6 +9,7 @@
 #include <2geom/path-intersection.h>
 #include <2geom/svg-path-parser.h>
 #pragma warning( pop )
+#include <algorithm>
 
 PolygonNode::PolygonNode(const SPModelNode &parent, const wxString &title)
     : GeomNode(parent, title)
@@ -81,21 +82,86 @@ bool PolygonNode::IsIntersection(const Geom::Rect &box) const
     return false;
 }
 
-void PolygonNode::Translate(const double dx, const double dy)
+void PolygonNode::DoTransform(const Geom::Affine &aff, const double dx, const double dy)
 {
-    for (auto &pt : data_.points)
+    if (HitState::kHsFace == selData_.hs)
     {
-        pt[0] += dx;
-        pt[1] += dy;
+        for (auto &pt : data_.points)
+        {
+            pt[0] += dx;
+            pt[1] += dy;
+        }
+    }
+    else
+    {
+        if (!aff.isIdentity())
+        {
+            for (int i = 0; i<static_cast<int>(base_.points.size()); ++i)
+            {
+                Geom::Point pt2{ base_.points[i][0], base_.points[i][1] };
+                pt2 *= aff;
+                data_.points[i][0] = pt2.x();
+                data_.points[i][1] = pt2.y();
+            }
+        }
     }
 }
 
-void PolygonNode::Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+void PolygonNode::StartTransform()
 {
-    for (auto &pt : data_.points)
+    base_ = data_;
+    DrawableNode::StartTransform();
+}
+
+void PolygonNode::EndTransform()
+{
+    base_.points.clear();
+    Geom::Affine ide = Geom::Affine::identity();
+    for (int i = 0; i < data_.transform.size(); ++i)
     {
-        pt[0] += dx;
-        pt[1] += dy;
+        base_.transform[i] = ide[i];
+    }
+
+    DrawableNode::EndTransform();
+}
+
+void PolygonNode::ResetTransform()
+{
+    PolygonNode::EndTransform();
+}
+
+boost::any PolygonNode::CreateMemento() const
+{
+    auto mem = std::make_shared<Memento>();
+    mem->style   = drawStyle_;
+    mem->data    = data_;
+    mem->rank    = rank_;
+    mem->visible = visible_;
+    mem->locked  = locked_;
+
+    return mem;
+}
+
+bool PolygonNode::RestoreFromMemento(const boost::any &memento)
+{
+    try
+    {
+        auto mem = boost::any_cast<std::shared_ptr<Memento>>(memento);
+
+        if (mem)
+        {
+            drawStyle_ = mem->style;
+            data_      = mem->data;
+            rank_      = mem->rank;
+            visible_   = mem->visible;
+            locked_    = mem->locked;
+        }
+
+        return true;
+    }
+    catch (const boost::bad_any_cast &)
+    {
+        return false;
     }
 }
 

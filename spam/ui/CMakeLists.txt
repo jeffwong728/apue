@@ -5,6 +5,7 @@ set(ui_core_SRCS
   cmds/spamcmd.cpp
   cmds/stationcmd.cpp
   cmds/geomcmd.cpp
+  cmds/transcmd.cpp
   cv/cairocanvas.cpp
   cv/cvimagepanel.cpp
   cv/cvtilepanel.cpp
@@ -49,6 +50,7 @@ set(ui_core_HEADERS
   cmds/spamcmd.h
   cmds/stationcmd.h
   cmds/geomcmd.h
+  cmds/transcmd.h
   cv/cairocanvas.h
   cv/cvimagepanel.h
   cv/cvtilepanel.h

@@ -70,6 +70,7 @@ public:
     SPDrawableNode FindDrawable(const Geom::Point &pt);
     SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
+    std::string GetUUID() const { return stationUUID_.ToStdString(); }
 
 private:
     void OnSize(wxSizeEvent& event);

@@ -2,6 +2,7 @@
 #include <wx/log.h>
 #include <wx/dcgraph.h>
 #include <ui/spam.h>
+#include <ui/toplevel/rootframe.h>
 #include <ui/cv/cairocanvas.h>
 #include <ui/projs/drawablenode.h>
 #include <ui/projs/geomnode.h>
@@ -14,6 +15,29 @@ TransformTool::TransformTool()
 TransformTool::~TransformTool()
 {
     wxLogMessage(wxT("TransformTool Quit."));
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (frame)
+    {
+        for (auto &selEnts : selData)
+        {
+            const std::string &uuid = selEnts.first;
+            CairoCanvas *cav = frame->FindCanvasByUUID(uuid);
+            if (cav)
+            {
+                Geom::OptRect refreshRect;
+                for (SPDrawableNode &selEnt : selEnts.second.ents)
+                {
+                    selEnt->ClearSelection();
+
+                    Geom::PathVector pv;
+                    selEnt->BuildPath(pv);
+                    refreshRect.unionWith(pv.boundsFast());
+                }
+
+                cav->DrawPathVector(Geom::PathVector(), refreshRect);
+            }
+        }
+    }
 }
 
 void TransformTool::OnBoxingStart(const EvLMouseDown &e)
@@ -54,6 +78,9 @@ void TransformTool::OnBoxingEnd(const EvLMouseUp &e)
         {
             cav->ReleaseMouse();
         }
+
+        EntitySelection &es = selData[cav->GetUUID()];
+        SPDrawableNodeVector &selEnts = es.ents;
 
         if (!rect.empty())
         {
@@ -132,6 +159,7 @@ void TransformTool::OnCanvasLeave(const EvCanvasLeave &e)
 
     context<Spamer>().sig_EntityDim(highlight);
     highlight.reset();
+    ClearHighlightData();
 }
 
 void TransformTool::OnSafari(const EvMouseMove &e)
@@ -142,10 +170,13 @@ void TransformTool::OnSafari(const EvMouseMove &e)
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
 
-        auto drawable = cav->FindDrawable(freePt);
+        auto s = 1/cav->GetMatScale();
+        SelectionData sd{ SelectionState::kSelNone, HitState::kHsNone, -1, -1 };
+        auto drawable = cav->FindDrawable(freePt, s, s, sd);
+        auto hlState  = DrawableNode::MapSelectionToHighlight(sd);
         if (drawable)
         {
-            if (drawable != highlight)
+            if (drawable != highlight || DrawableNode::IsHighlightChanged(hlState, hlData))
             {
                 if (highlight)
                 {
@@ -154,7 +185,7 @@ void TransformTool::OnSafari(const EvMouseMove &e)
                     context<Spamer>().sig_EntityDim(highlight);
                 }
 
-                drawable->HighlightFace();
+                drawable->SetHighlight(hlState);
                 cav->HighlightDrawable(drawable);
                 context<Spamer>().sig_EntityGlow(drawable);
             }
@@ -170,11 +201,16 @@ void TransformTool::OnSafari(const EvMouseMove &e)
         }
 
         highlight = drawable;
+        hlData    = hlState;
     }
 }
 
-void TransformTool::ClearSelection()
+void TransformTool::ClearSelection(const std::string &uuid)
 {
+    EntitySelection &es = selData[uuid];
+    auto &selEnts = es.ents;
+    auto &selStates = es.states;
+
     for (SPDrawableNode &selEnt : selEnts)
     {
         selEnt->selData_.ss = SelectionState::kSelNone;
@@ -216,6 +252,7 @@ void TransformTool::OnBoxingReset(const EvReset &e)
 
     rect = Geom::OptRect();
     highlight.reset();
+    ClearHighlightData();
 }
 
 void TransformTool::OnTransformingStart(const EvLMouseDown &e)
@@ -228,10 +265,18 @@ void TransformTool::OnTransformingStart(const EvLMouseDown &e)
             cav->CaptureMouse();
         }
 
+        EntitySelection &es = selData[cav->GetUUID()];
+        SPDrawableNodeVector &selEnts = es.ents;
+
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         anchor = Geom::Point(imgPt.x, imgPt.y);
         last = anchor;
         rect = Geom::OptRect();
+
+        for (SPDrawableNode &selEnt : selEnts)
+        {
+            selEnt->StartTransform();
+        }
     }
 }
 
@@ -244,6 +289,9 @@ void TransformTool::OnTransforming(const EvMouseMove &e)
         Geom::Point freePt(imgPt.x, imgPt.y);
         Geom::Rect newRect{ anchor , freePt };
         Geom::Point deltPt = freePt - last;
+
+        EntitySelection &es = selData[cav->GetUUID()];
+        SPDrawableNodeVector &selEnts = es.ents;
 
         Geom::OptRect refreshRect;
         for (SPDrawableNode &selEnt : selEnts)
@@ -278,8 +326,9 @@ void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
             cav->ReleaseMouse();
         }
 
-        auto &selEnts = context<TransformTool>().selEnts;
-        auto &selStates = context<TransformTool>().selStates;
+        EntitySelection &es = selData[cav->GetUUID()];
+        auto &selEnts = es.ents;
+        auto &selStates = es.states;
 
         int s = 0;
         Geom::OptRect refreshRect;
@@ -293,6 +342,8 @@ void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
             Geom::PathVector pv;
             selEnt->BuildPath(pv);
             refreshRect.unionWith(pv.boundsFast());
+
+            selEnt->EndTransform();
         }
 
         if (rect.empty())
@@ -311,7 +362,17 @@ void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
 
 void TransformTool::OnTransformingReset(const EvReset &e)
 {
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
+    if (cav)
+    {
+        EntitySelection &es = selData[cav->GetUUID()];
+        auto &selEnts = es.ents;
 
+        for (SPDrawableNode &selEnt : selEnts)
+        {
+            selEnt->ResetTransform();
+        }
+    }
 }
 
 TransformIdle::TransformIdle()
@@ -337,14 +398,16 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
 
-        auto s = cav->GetMatScale();
+        auto s = 1/cav->GetMatScale();
         SelectionData sd{ SelectionState::kSelNone, HitState::kHsNone, -1, -1 };
         SPDrawableNode drawable = cav->FindDrawable(freePt, s, s, sd);
 
         if (drawable)
         {
-            auto &selEnts   = context<TransformTool>().selEnts;
-            auto &selStates = context<TransformTool>().selStates;
+            const std::string &uuid = cav->GetUUID();
+            EntitySelection &es = context<TransformTool>().selData[uuid];
+            auto &selEnts = es.ents;
+            auto &selStates = es.states;
 
             Geom::PathVector dpv;
             drawable->BuildPath(dpv);
@@ -369,7 +432,7 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
 
                 if (newSel)
                 {
-                    context<TransformTool>().ClearSelection();
+                    context<TransformTool>().ClearSelection(uuid);
                     selEnts.push_back(drawable);
                     selStates.push_back(SelectionState::kSelScale);
                 }
@@ -392,7 +455,7 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
             }
             else
             {
-                context<TransformTool>().ClearSelection();
+                context<TransformTool>().ClearSelection(uuid);
                 selEnts.push_back(drawable);
                 selStates.push_back(sd.ss);
 
