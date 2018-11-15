@@ -53,6 +53,7 @@ public:
     static void PopupPyError();
     static void ClearPyOutput();
     static void LogPyOutput();
+    static SPDrawableNodeVector Difference(const SPDrawableNodeVector& lseq, SPDrawableNodeVector& rseq);
 };
 
 class SpamUndoRedo : private boost::noncopyable

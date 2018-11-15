@@ -33,6 +33,8 @@ public:
     void CreateStation();
     void GlowEntity(const SPModelNode &de);
     void DimEntity(const SPModelNode &de);
+    void SelectEntity(const SPDrawableNodeVector &des);
+    void DeselectEntity(const SPDrawableNodeVector &des);
 
 private:
     void AddToolBarButton(wxToolBar *tb, const wxString& label, const wxString& artid);

@@ -15,6 +15,7 @@ struct Transforming;
 struct EntitySelection
 {
     SPDrawableNodeVector ents;
+    SpamMany  mementos;
     std::vector<SelectionState> states;
 };
 
@@ -38,6 +39,7 @@ struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, Tr
     void OnCanvasEnter(const EvCanvasEnter &e);
     void OnCanvasLeave(const EvCanvasLeave &e);
     void OnSafari(const EvMouseMove &e);
+    void OnAppQuit(const EvAppQuit &e);
 
     void ClearSelection(const std::string &uuid);
     void ClearHighlightData() 
@@ -49,6 +51,7 @@ struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, Tr
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, TransformTool>,
+        boost::statechart::in_state_reaction<EvAppQuit, TransformTool, &TransformTool::OnAppQuit>,
         boost::statechart::in_state_reaction<EvCanvasEnter, TransformTool, &TransformTool::OnCanvasEnter>,
         boost::statechart::in_state_reaction<EvCanvasLeave, TransformTool, &TransformTool::OnCanvasLeave>> reactions;
 

@@ -99,6 +99,8 @@ RootFrame::RootFrame()
 
         spamer_->sig_EntityDim.connect(std::bind(&ProjPanel::DimEntity, p, std::placeholders::_1));
         spamer_->sig_EntityGlow.connect(std::bind(&ProjPanel::GlowEntity, p, std::placeholders::_1));
+        spamer_->sig_EntitySel.connect(std::bind(&ProjPanel::SelectEntity, p, std::placeholders::_1));
+        spamer_->sig_EntityDesel.connect(std::bind(&ProjPanel::DeselectEntity, p, std::placeholders::_1));
     }
 }
 
@@ -312,6 +314,8 @@ void RootFrame::OnClose(wxCloseEvent& e)
     {
         e.Skip();
     }
+
+    spamer_->OnAppQuit();
 }
 
 void RootFrame::OnAbout(wxCommandEvent& event)
@@ -522,17 +526,15 @@ void RootFrame::OnDrawableShapeChange(const SPDrawableNodeVector &drawables, con
                 if (cav)
                 {
                     Geom::OptRect ivalRect;
-                    Geom::PathVector npv;
                     ivalRect.unionWith(rect);
                     for (const auto &drawable : drawables)
                     {
                         Geom::PathVector pv;
                         drawable->BuildPath(pv);
                         ivalRect.unionWith(pv.boundsFast());
-                        npv.insert(npv.end(), pv.begin(), pv.end());
                     }
 
-                    cav->DrawPathVector(npv, ivalRect);
+                    cav->DrawPathVector(Geom::PathVector(), ivalRect);
                 }
             }
         }
@@ -548,6 +550,7 @@ void RootFrame::OnGlowGeom(const SPModelNode &geom)
         auto imgPanel = FindImagePanelByStation(station);
         if (imgPanel)
         {
+            drawable->HighlightFace();
             imgPanel->GetCanvas()->HighlightDrawable(drawable);
         }
     }
@@ -562,6 +565,7 @@ void RootFrame::OnDimGeom(const SPModelNode &geom)
         auto imgPanel = FindImagePanelByStation(station);
         if (imgPanel)
         {
+            drawable->ClearHighlight();
             imgPanel->GetCanvas()->DimDrawable(drawable);
         }
     }

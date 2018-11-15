@@ -26,6 +26,7 @@ public:
     ~DrawableNode();
 
 public:
+    bool IsSelected() const { return SelectionState::kSelNone!=selData_.ss; }
     bool IsContainer() const override { return false; }
     virtual void BuildPath(Geom::PathVector &pv) const = 0;
     virtual void BuildHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
@@ -53,6 +54,7 @@ public:
     void SetHighlight(const HighlightData &hlData) { hlData_ = hlData; }
     void HighlightFace();
     void SelectEntity();
+    void SelectFace();
     void SwitchSelectionState();
     static HighlightData MapSelectionToHighlight(const SelectionData &sd);
     static bool IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr);

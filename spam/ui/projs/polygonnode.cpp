@@ -127,6 +127,7 @@ void PolygonNode::EndTransform()
 
 void PolygonNode::ResetTransform()
 {
+    data_ = base_;
     PolygonNode::EndTransform();
 }
 

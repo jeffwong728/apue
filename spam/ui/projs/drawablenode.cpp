@@ -396,6 +396,14 @@ void DrawableNode::SelectEntity()
     selData_.subid = -1;
 }
 
+void DrawableNode::SelectFace()
+{
+    selData_.ss = SelectionState::kSelState;
+    selData_.hs = HitState::kHsNone;
+    selData_.id = -1;
+    selData_.subid = -1;
+}
+
 void DrawableNode::SwitchSelectionState()
 {
     switch (selData_.ss)

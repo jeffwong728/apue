@@ -6,8 +6,10 @@
 #include "transformtool.h"
 #include "polygontool.h"
 #include <wx/log.h>
+#include <ui/spam.h>
 #include <ui/cv/cairocanvas.h>
 #include <ui/projs/drawablenode.h>
+#include <ui/toplevel/rootframe.h>
 
 Spamer::Spamer()
 {
@@ -15,6 +17,11 @@ Spamer::Spamer()
 
 Spamer::~Spamer()
 {
+}
+
+void Spamer::OnAppQuit()
+{
+    process_event(EvAppQuit());
 }
 
 void Spamer::OnToolEnter(int toolId)
@@ -88,6 +95,30 @@ NoTool::NoTool()
 NoTool::~NoTool()
 {
     wxLogMessage(wxT("NoTool Quit."));
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (frame)
+    {
+        for (auto &selEnts : selData)
+        {
+            const std::string &uuid = selEnts.first;
+            CairoCanvas *cav = frame->FindCanvasByUUID(uuid);
+            if (cav)
+            {
+                Geom::OptRect refreshRect;
+                for (SPDrawableNode &selEnt : selEnts.second)
+                {
+                    selEnt->ClearSelection();
+
+                    Geom::PathVector pv;
+                    selEnt->BuildPath(pv);
+                    refreshRect.unionWith(pv.boundsFast());
+                }
+
+                context<Spamer>().sig_EntityDesel(selEnts.second);
+                cav->DrawPathVector(Geom::PathVector(), refreshRect);
+            }
+        }
+    }
 }
 
 void NoTool::OnStartDraging(const EvLMouseDown &e)
@@ -129,10 +160,44 @@ void NoTool::OnEndDraging(const EvLMouseUp &e)
             cav->ReleaseMouse();
         }
 
+        SPDrawableNodeVector &selEnts = selData[cav->GetUUID()];
+
+        Geom::OptRect oldRect;
+        for (SPDrawableNode &selEnt : selEnts)
+        {
+            Geom::PathVector pv;
+            selEnt->BuildPath(pv);
+            oldRect.unionWith(pv.boundsFast());
+            selEnt->ClearSelection();
+        }
+
+        SPDrawableNodeVector newSelEnts;
         if (!rect.empty())
         {
-            cav->DrawBox(rect, Geom::OptRect());
+            cav->SelectDrawable(*rect, newSelEnts);
         }
+        else
+        {
+            auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
+            Geom::Point freePt(imgPt.x, imgPt.y);
+            auto fEnt = cav->FindDrawable(freePt);
+            if (fEnt) newSelEnts.push_back(fEnt);
+        }
+
+        for (SPDrawableNode &selEnt : newSelEnts)
+        {
+            Geom::PathVector pv;
+            selEnt->BuildPath(pv);
+            oldRect.unionWith(pv.boundsFast());
+            selEnt->SelectFace();
+        }
+
+        context<Spamer>().sig_EntityDesel(Spam::Difference(selEnts, newSelEnts));
+        context<Spamer>().sig_EntitySel(Spam::Difference(newSelEnts, selEnts));
+
+        selEnts.swap(newSelEnts);
+        rect.unionWith(oldRect);
+        cav->DrawBox(rect, Geom::OptRect());
     }
 
     rect = Geom::OptRect();
@@ -219,6 +284,11 @@ void NoTool::OnCanvasLeave(const EvCanvasLeave &e)
     }
 
     highlight_.reset();
+}
+
+void NoTool::OnAppQuit(const EvAppQuit &e)
+{
+    selData.clear();
 }
 
 NoToolIdle::NoToolIdle()

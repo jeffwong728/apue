@@ -51,6 +51,8 @@ struct EvReset : boost::statechart::event<EvReset>
     wxKeyEvent evData;
 };
 
+struct EvAppQuit : boost::statechart::event<EvAppQuit> {};
+
 struct EvToolEnter : boost::statechart::event<EvToolEnter>
 {
     EvToolEnter(const int id) : toolId(id) {}

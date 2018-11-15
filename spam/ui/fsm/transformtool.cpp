@@ -34,6 +34,7 @@ TransformTool::~TransformTool()
                     refreshRect.unionWith(pv.boundsFast());
                 }
 
+                context<Spamer>().sig_EntityDesel(selEnts.second.ents);
                 cav->DrawPathVector(Geom::PathVector(), refreshRect);
             }
         }
@@ -82,62 +83,45 @@ void TransformTool::OnBoxingEnd(const EvLMouseUp &e)
         EntitySelection &es = selData[cav->GetUUID()];
         SPDrawableNodeVector &selEnts = es.ents;
 
+        Geom::OptRect oldRect;
+        for (SPDrawableNode &selEnt : selEnts)
+        {
+            Geom::PathVector pv;
+            selEnt->BuildPath(pv);
+            oldRect.unionWith(pv.boundsFast());
+            selEnt->ClearSelection();
+        }
+
+        SPDrawableNodeVector newSelEnts;
         if (!rect.empty())
         {
-            Geom::OptRect oldRect;
-            for (SPDrawableNode &selEnt : selEnts)
-            {
-                Geom::PathVector pv;
-                selEnt->BuildPath(pv);
-                oldRect.unionWith(pv.boundsFast());
-                selEnt->ClearSelection();
-            }
-
-            selEnts.clear();
-            cav->SelectDrawable(*rect, selEnts);
-
-            for (SPDrawableNode &selEnt : selEnts)
-            {
-                Geom::PathVector pv;
-                selEnt->BuildPath(pv);
-                oldRect.unionWith(pv.boundsFast());
-                selEnt->SelectEntity();
-            }
-
-            rect.unionWith(oldRect);
-            cav->DrawBox(rect, Geom::OptRect());
+            cav->SelectDrawable(*rect, newSelEnts);
         }
         else
         {
-            Geom::OptRect oldRect;
-            for (SPDrawableNode &selEnt : selEnts)
-            {
-                Geom::PathVector pv;
-                selEnt->BuildPath(pv);
-                oldRect.unionWith(pv.boundsFast());
-                selEnt->ClearSelection();
-            }
-
-            selEnts.clear();
             auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
             Geom::Point freePt(imgPt.x, imgPt.y);
             auto fEnt = cav->FindDrawable(freePt);
             if (fEnt)
             {
-                selEnts.push_back(fEnt);
+                newSelEnts.push_back(fEnt);
             }
-
-            for (SPDrawableNode &selEnt : selEnts)
-            {
-                Geom::PathVector pv;
-                selEnt->BuildPath(pv);
-                oldRect.unionWith(pv.boundsFast());
-                selEnt->SelectEntity();
-            }
-
-            rect.unionWith(oldRect);
-            cav->DrawBox(rect, Geom::OptRect());
         }
+
+        for (SPDrawableNode &selEnt : newSelEnts)
+        {
+            Geom::PathVector pv;
+            selEnt->BuildPath(pv);
+            oldRect.unionWith(pv.boundsFast());
+            selEnt->SelectEntity();
+        }
+
+        context<Spamer>().sig_EntityDesel(Spam::Difference(selEnts, newSelEnts));
+        context<Spamer>().sig_EntitySel(Spam::Difference(newSelEnts, selEnts));
+
+        selEnts.swap(newSelEnts);
+        rect.unionWith(oldRect);
+        cav->DrawBox(rect, Geom::OptRect());
     }
 
     rect = Geom::OptRect();
@@ -205,6 +189,11 @@ void TransformTool::OnSafari(const EvMouseMove &e)
     }
 }
 
+void TransformTool::OnAppQuit(const EvAppQuit &e)
+{
+    selData.clear();
+}
+
 void TransformTool::ClearSelection(const std::string &uuid)
 {
     EntitySelection &es = selData[uuid];
@@ -267,6 +256,8 @@ void TransformTool::OnTransformingStart(const EvLMouseDown &e)
 
         EntitySelection &es = selData[cav->GetUUID()];
         SPDrawableNodeVector &selEnts = es.ents;
+        SpamMany             &selmementos = es.mementos;
+        selmementos.clear();
 
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         anchor = Geom::Point(imgPt.x, imgPt.y);
@@ -275,6 +266,7 @@ void TransformTool::OnTransformingStart(const EvLMouseDown &e)
 
         for (SPDrawableNode &selEnt : selEnts)
         {
+            selmementos.push_back(selEnt->CreateMemento());
             selEnt->StartTransform();
         }
     }
@@ -327,8 +319,9 @@ void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
         }
 
         EntitySelection &es = selData[cav->GetUUID()];
-        auto &selEnts = es.ents;
-        auto &selStates = es.states;
+        auto &selEnts     = es.ents;
+        auto &selStates   = es.states;
+        auto &selMementos = es.mementos;
 
         int s = 0;
         Geom::OptRect refreshRect;
@@ -353,6 +346,10 @@ void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
                 selEnt->SwitchSelectionState();
             }
         }
+        else
+        {
+            cav->DoTransform(selEnts, selMementos);
+        }
 
         cav->DrawPathVector(Geom::PathVector(), refreshRect);
     }
@@ -366,12 +363,29 @@ void TransformTool::OnTransformingReset(const EvReset &e)
     if (cav)
     {
         EntitySelection &es = selData[cav->GetUUID()];
-        auto &selEnts = es.ents;
+        auto &selEnts   = es.ents;
+        auto &selStates = es.states;
 
+        int s = 0;
+        Geom::OptRect refreshRect;
         for (SPDrawableNode &selEnt : selEnts)
         {
+            Geom::PathVector cpv;
+            selEnt->BuildPath(cpv);
+            refreshRect.unionWith(cpv.boundsFast());
+
+            selEnt->selData_.ss = selStates[s++];
+            selEnt->selData_.hs = HitState::kHsNone;
+            selEnt->selData_.id = -1;
+            selEnt->selData_.subid = -1;
             selEnt->ResetTransform();
+
+            Geom::PathVector opv;
+            selEnt->BuildPath(opv);
+            refreshRect.unionWith(opv.boundsFast());
         }
+
+        cav->DrawPathVector(Geom::PathVector(), refreshRect);
     }
 }
 
@@ -408,6 +422,7 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
             EntitySelection &es = context<TransformTool>().selData[uuid];
             auto &selEnts = es.ents;
             auto &selStates = es.states;
+            SPDrawableNodeVector oldEnts = selEnts;
 
             Geom::PathVector dpv;
             drawable->BuildPath(dpv);
@@ -461,6 +476,9 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
 
                 drawable->selData_ = sd;
             }
+
+            context<Spamer>().sig_EntityDesel(Spam::Difference(oldEnts, selEnts));
+            context<Spamer>().sig_EntitySel(Spam::Difference(selEnts, oldEnts));
 
             cav->DrawPathVector(Geom::PathVector(), refreshRect);
             return transit<Transforming>(&TransformTool::OnTransformingStart, e);

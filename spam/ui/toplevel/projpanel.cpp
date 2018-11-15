@@ -142,6 +142,45 @@ void ProjPanel::GlowEntity(const SPModelNode &de)
     }
 }
 
+void ProjPanel::SelectEntity(const SPDrawableNodeVector &des)
+{
+    auto projView = GetProjView();
+    auto model = GetProjTreeModel();
+
+    if (projView && model)
+    {
+        wxDataViewItemArray items;
+        for (const auto &de : des)
+        {
+            auto dvi = wxDataViewItem(de.get());
+            projView->EnsureVisible(dvi);
+            items.Add(dvi);
+        }
+
+        wxDataViewItemArray sel;
+        projView->GetSelections(sel);
+        sel.insert(sel.begin(), items.cbegin(), items.cend());
+        projView->SetSelections(sel);
+    }
+    wxLogMessage(wxT("Select %zd Entities."), des.size());
+}
+
+void ProjPanel::DeselectEntity(const SPDrawableNodeVector &des)
+{
+    auto projView = GetProjView();
+    auto model = GetProjTreeModel();
+
+    if (projView && model)
+    {
+        for (const auto &de : des)
+        {
+            auto dvi = wxDataViewItem(de.get());
+            projView->Unselect(dvi);
+        }
+    }
+    wxLogMessage(wxT("Deselect %zd Entities."), des.size());
+}
+
 void ProjPanel::DimEntity(const SPModelNode &de)
 {
     auto projView = GetProjView();

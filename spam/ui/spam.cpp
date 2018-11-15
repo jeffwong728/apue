@@ -20,6 +20,7 @@
 #include <boost/python/def.hpp>
 #pragma warning( pop )
 #include <boost/algorithm/string.hpp>
+#include <ui/projs/drawablenode.h>
 
 struct GUILogerTempSwitcher
 {
@@ -269,6 +270,31 @@ void Spam::LogPyOutput()
             wxLogMessage(wxString(l));
         }
     }
+}
+
+SPDrawableNodeVector Spam::Difference(const SPDrawableNodeVector& lseq, SPDrawableNodeVector& rseq)
+{
+    SPDrawableNodeVector result;
+
+    for (const auto &l : lseq)
+    {
+        bool reserve = true;
+        for (const auto &r : rseq)
+        {
+            if (l->GetUUIDTag() == r->GetUUIDTag())
+            {
+                reserve = false;
+                break;
+            }
+        }
+
+        if (reserve)
+        {
+            result.push_back(l);
+        }
+    }
+
+    return result;
 }
 
 void SpamUndoRedo::AddCommand(const std::shared_ptr<SpamCmd> &cmd)

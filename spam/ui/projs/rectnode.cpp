@@ -187,6 +187,7 @@ void RectNode::EndTransform()
 
 void RectNode::ResetTransform()
 {
+    data_ = base_;
     InitData(base_);
     DrawableNode::EndTransform();
 }

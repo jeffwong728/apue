@@ -27,6 +27,7 @@ struct Spamer : boost::statechart::state_machine<Spamer, NoTool>
     Spamer();
     ~Spamer();
 
+    void OnAppQuit();
     void OnToolEnter(int toolId);
     void OnToolQuit(int toolId);
     void OnCanvasEnter(wxMouseEvent &e);
@@ -43,6 +44,8 @@ struct Spamer : boost::statechart::state_machine<Spamer, NoTool>
     typedef bs2::keywords::mutex_type<bs2::dummy_mutex> bs2_dummy_mutex;
     bs2::signal_type<void(const SPModelNode &), bs2_dummy_mutex>::type sig_EntityGlow;
     bs2::signal_type<void(const SPModelNode &), bs2_dummy_mutex>::type sig_EntityDim;
+    bs2::signal_type<void(const SPDrawableNodeVector &), bs2_dummy_mutex>::type sig_EntitySel;
+    bs2::signal_type<void(const SPDrawableNodeVector &), bs2_dummy_mutex>::type sig_EntityDesel;
 };
 
 struct NoTool : boost::statechart::simple_state<NoTool, Spamer, NoToolIdle>
@@ -56,14 +59,17 @@ struct NoTool : boost::statechart::simple_state<NoTool, Spamer, NoToolIdle>
     void OnReset(const EvReset &e);
     void OnSafari(const EvMouseMove &e);
     void OnCanvasLeave(const EvCanvasLeave &e);
+    void OnAppQuit(const EvAppQuit &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, NoTool>,
+        boost::statechart::in_state_reaction<EvAppQuit, NoTool, &NoTool::OnAppQuit>,
         boost::statechart::in_state_reaction<EvCanvasLeave, NoTool, &NoTool::OnCanvasLeave>> reactions;
 
     Geom::Point anchor;
     Geom::OptRect rect;
     SPDrawableNode highlight_;
+    std::unordered_map<std::string, SPDrawableNodeVector> selData;
 };
 
 struct NoToolIdle : boost::statechart::simple_state<NoToolIdle, NoTool>

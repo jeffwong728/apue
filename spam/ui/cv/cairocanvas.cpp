@@ -5,6 +5,7 @@
 #include <ui/projs/drawablenode.h>
 #include <ui/projs/projtreemodel.h>
 #include <ui/cmds/geomcmd.h>
+#include <ui/cmds/transcmd.h>
 #include <wx/graphics.h>
 #include <algorithm>
 #include <cairomm/win32_surface.h>
@@ -32,6 +33,7 @@ CairoCanvas::CairoCanvas(wxWindow* parent, const std::string &cvWinName, const w
     Bind(wxEVT_MIDDLE_DOWN,      &CairoCanvas::OnMiddleDown,      this, wxID_ANY);
     Bind(wxEVT_PAINT,            &CairoCanvas::OnPaint,           this, wxID_ANY);
     Bind(wxEVT_ERASE_BACKGROUND, &CairoCanvas::OnEraseBackground, this, wxID_ANY);
+    Bind(wxEVT_CONTEXT_MENU,     &CairoCanvas::OnContextMenu,     this, wxID_ANY);
 
     SetDropTarget(new DnDImageFile(parent));
 }
@@ -414,6 +416,22 @@ void CairoCanvas::AddPolygon(const PolygonData &pd)
     }
 }
 
+void CairoCanvas::DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            auto cmd = std::make_shared<TransformCmd>(model, station, selEnts, mementos);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            wxLogStatus(cmd->GetDescription());
+        }
+    }
+}
+
 SPStationNode CairoCanvas::GetStation()
 {
     auto model = Spam::GetModel();
@@ -486,9 +504,6 @@ void CairoCanvas::OnLeftMouseDown(wxMouseEvent &e)
     {
         SetFocus();
     }
-    wxLogMessage(wxT("Device: (%d, %d)"), e.GetPosition().x, e.GetPosition().y);
-    auto imgPt = ScreenToImage(e.GetPosition());
-    wxLogMessage(wxT("Device: (%f, %f)"), imgPt.x, imgPt.y);
     sig_LeftMouseDown(e);
 }
 
@@ -567,6 +582,31 @@ void CairoCanvas::OnPaint(wxPaintEvent& e)
 
 void CairoCanvas::OnEraseBackground(wxEraseEvent &e)
 {
+}
+
+void CairoCanvas::OnContextMenu(wxContextMenuEvent& e)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            int numSel = station->GetNumSelected();
+            int numDra = station->GetNumDrawable();
+
+            wxMenu menu;
+            menu.Append(kSpamID_DELETE_ENTITIES, wxT("Delete"))->Enable(numSel);
+            menu.AppendSeparator();
+            menu.Append(kSpamID_HIDE_ENTITIES, wxT("Hide"))->Enable(numSel);
+            menu.Append(kSpamID_SHOW_ONLY_ENTITIES, wxT("Show Only"))->Enable(numSel);
+            menu.Append(kSpamID_SHOW_REVERSE_ENTITIES, wxT("Show Reverse"))->Enable(numDra);
+            menu.Append(kSpamID_SHOW_ALL_ENTITIES, wxT("Show All"))->Enable(numDra);
+            menu.Append(kSpamID_HIDE_ALL_ENTITIES, wxT("Hide All"))->Enable(numDra);
+
+            PopupMenu(&menu);
+        }
+    }
 }
 
 void CairoCanvas::Draw(wxDC &dc, const Geom::OptRect &rect)

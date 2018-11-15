@@ -24,6 +24,36 @@ EntitySigType StationNode::GetDeleteSigType() const
     return EntitySigType::kStationDelete;
 }
 
+int StationNode::GetNumSelected() const
+{
+    int numSel = 0;
+    for (auto &c : GetChildren())
+    {
+        auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
+        if (drawable && drawable->IsSelected())
+        {
+            numSel += 1;
+        }
+    }
+
+    return numSel;
+}
+
+int StationNode::GetNumDrawable() const
+{
+    int numDra = 0;
+    for (auto &c : GetChildren())
+    {
+        auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
+        if (drawable)
+        {
+            numDra += 1;
+        }
+    }
+
+    return numDra;
+}
+
 SPDrawableNode StationNode::FindDrawable(const Geom::Point &pt)
 {
     for (auto &c : GetChildren())

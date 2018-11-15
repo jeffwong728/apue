@@ -22,6 +22,8 @@ public:
     bool IsCurrentStation() const override { return current_; }
     EntitySigType GetAddSigType() const wxOVERRIDE;
     EntitySigType GetDeleteSigType() const wxOVERRIDE;
+    int GetNumSelected() const;
+    int GetNumDrawable() const;
 
     void SetTaberName(const std::string &taberName) { tabContainerName_ = taberName; }
     const std::string &GetTaberName() const { return tabContainerName_; }

@@ -66,6 +66,7 @@ public:
     void DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
     void AddRect(const RectData &rd);
     void AddPolygon(const PolygonData &pd);
+    void DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     SPStationNode GetStation();
     SPDrawableNode FindDrawable(const Geom::Point &pt);
     SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
@@ -86,6 +87,7 @@ private:
     void OnChar(wxKeyEvent &e);
     void OnPaint(wxPaintEvent& e);
     void OnEraseBackground(wxEraseEvent &e);
+    void OnContextMenu(wxContextMenuEvent& e);
     void Draw(wxDC &dc, const Geom::OptRect &rect);
     void Draw(wxDC &dc, const Geom::Path &pth);
     void DrawBox(wxDC &dc, const Geom::Path &pth);

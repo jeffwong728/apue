@@ -13,7 +13,7 @@ class ProjTreeModel;
 class TransformCmd : public SpamCmd
 {
 public:
-    TransformCmd(ProjTreeModel *model, SPStationNode &station, SPDrawableNodeVector &drawables, SpamMany &mementos);
+    TransformCmd(ProjTreeModel *model, SPStationNode &station, const SPDrawableNodeVector &drawables, const SpamMany &mementos);
 
 public:
     void Do() wxOVERRIDE;
