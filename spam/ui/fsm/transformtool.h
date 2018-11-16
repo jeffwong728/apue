@@ -40,6 +40,8 @@ struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, Tr
     void OnCanvasLeave(const EvCanvasLeave &e);
     void OnSafari(const EvMouseMove &e);
     void OnAppQuit(const EvAppQuit &e);
+    void OnDrawableDelete(const EvDrawableDelete &e);
+    void OnDrawableSelect(const EvDrawableSelect &e);
 
     void ClearSelection(const std::string &uuid);
     void ClearHighlightData() 
@@ -52,6 +54,8 @@ struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, Tr
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, TransformTool>,
         boost::statechart::in_state_reaction<EvAppQuit, TransformTool, &TransformTool::OnAppQuit>,
+        boost::statechart::in_state_reaction<EvDrawableDelete, TransformTool, &TransformTool::OnDrawableDelete>,
+        boost::statechart::in_state_reaction<EvDrawableSelect, TransformTool, &TransformTool::OnDrawableSelect>,
         boost::statechart::in_state_reaction<EvCanvasEnter, TransformTool, &TransformTool::OnCanvasEnter>,
         boost::statechart::in_state_reaction<EvCanvasLeave, TransformTool, &TransformTool::OnCanvasLeave>> reactions;
 

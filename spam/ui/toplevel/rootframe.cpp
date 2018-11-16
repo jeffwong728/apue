@@ -88,6 +88,7 @@ RootFrame::RootFrame()
         m->sig_StationDelete.connect(std::bind(&RootFrame::OnDeleteStations, this, std::placeholders::_1));
         m->sig_GeomAdd.connect(std::bind(&RootFrame::OnAddGeoms, this, std::placeholders::_1));
         m->sig_GeomDelete.connect(std::bind(&RootFrame::OnDeleteGeoms, this, std::placeholders::_1));
+        m->sig_GeomDelete.connect(std::bind(&Spamer::OnGeomDelete, spamer_.get(), std::placeholders::_1));
         m->sig_DrawableShapeChange.connect(std::bind(&RootFrame::OnDrawableShapeChange, this, std::placeholders::_1, std::placeholders::_2));
     }
 
@@ -96,6 +97,7 @@ RootFrame::RootFrame()
     {
         p->sig_EntityGlow.connect(std::bind(&RootFrame::OnGlowGeom, this, std::placeholders::_1));
         p->sig_EntityDim.connect(std::bind(&RootFrame::OnDimGeom, this, std::placeholders::_1));
+        p->sig_EntitySelect.connect(std::bind(&Spamer::OnDrawableSelect, spamer_.get(), std::placeholders::_1));
 
         spamer_->sig_EntityDim.connect(std::bind(&ProjPanel::DimEntity, p, std::placeholders::_1));
         spamer_->sig_EntityGlow.connect(std::bind(&ProjPanel::GlowEntity, p, std::placeholders::_1));

@@ -40,6 +40,8 @@ struct Spamer : boost::statechart::state_machine<Spamer, NoTool>
     void OnCanvasKeyDown(wxKeyEvent &e);
     void OnCanvasKeyUp(wxKeyEvent &e);
     void OnCanvasChar(wxKeyEvent &e);
+    void OnGeomDelete(const SPModelNodeVector &geoms);
+    void OnDrawableSelect(const SPDrawableNodeVector &dras);
 
     typedef bs2::keywords::mutex_type<bs2::dummy_mutex> bs2_dummy_mutex;
     bs2::signal_type<void(const SPModelNode &), bs2_dummy_mutex>::type sig_EntityGlow;
@@ -60,10 +62,14 @@ struct NoTool : boost::statechart::simple_state<NoTool, Spamer, NoToolIdle>
     void OnSafari(const EvMouseMove &e);
     void OnCanvasLeave(const EvCanvasLeave &e);
     void OnAppQuit(const EvAppQuit &e);
+    void OnDrawableDelete(const EvDrawableDelete &e);
+    void OnDrawableSelect(const EvDrawableSelect &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, NoTool>,
         boost::statechart::in_state_reaction<EvAppQuit, NoTool, &NoTool::OnAppQuit>,
+        boost::statechart::in_state_reaction<EvDrawableDelete, NoTool, &NoTool::OnDrawableDelete>,
+        boost::statechart::in_state_reaction<EvDrawableSelect, NoTool, &NoTool::OnDrawableSelect>,
         boost::statechart::in_state_reaction<EvCanvasLeave, NoTool, &NoTool::OnCanvasLeave>> reactions;
 
     Geom::Point anchor;

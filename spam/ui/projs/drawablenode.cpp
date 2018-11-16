@@ -304,6 +304,18 @@ void DrawableNode::EndTransform()
     baseRect_ = Geom::Rect();
 }
 
+void DrawableNode::StartNodeEdit()
+{
+}
+
+void DrawableNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+{
+}
+
+void DrawableNode::EndNodeEdit()
+{
+}
+
 void DrawableNode::Draw(Cairo::RefPtr<Cairo::Context> &cr) const
 {
     DrawHighlight(cr);

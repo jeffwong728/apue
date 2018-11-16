@@ -192,6 +192,11 @@ void RectNode::ResetTransform()
     DrawableNode::EndTransform();
 }
 
+void RectNode::ResetNodeEdit()
+{
+
+}
+
 boost::any RectNode::CreateMemento() const
 {
     auto mem = std::make_shared<Memento>();

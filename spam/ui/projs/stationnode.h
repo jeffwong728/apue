@@ -22,6 +22,7 @@ public:
     bool IsCurrentStation() const override { return current_; }
     EntitySigType GetAddSigType() const wxOVERRIDE;
     EntitySigType GetDeleteSigType() const wxOVERRIDE;
+    SPDrawableNodeVector GeSelected() const;
     int GetNumSelected() const;
     int GetNumDrawable() const;
 

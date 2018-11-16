@@ -247,7 +247,8 @@ wxDataViewCtrl *ProjPanel::MakeProjView()
     col3->SetBitmap(wxBitmap(circle_small_xpm));
     projView->AppendColumn(col3);
 
-    //wxEVT_DATAVIEW_ITEM_CONTEXT_MENU
+    //wxEVT_DATAVIEW_ITEM_CONTEXT_MENU wxEVT_DATAVIEW_SELECTION_CHANGED
+    projView->Bind(wxEVT_DATAVIEW_SELECTION_CHANGED, &ProjPanel::OnSelectionChanged, this, wxID_ANY);
     projView->Bind(wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, &ProjPanel::OnContextMenu, this, wxID_ANY);
     projView->GetMainWindow()->Bind(wxEVT_LEAVE_WINDOW, &ProjPanel::OnLeaveModelBrowser, this, wxID_ANY);
     projView->GetMainWindow()->Bind(wxEVT_MOTION, &ProjPanel::OnModelBrowserMouseMotion, this, wxID_ANY);
@@ -392,6 +393,33 @@ void ProjPanel::OnExpandNode(const SPModelNodeVector &nodes)
                 }
             }
         }
+    }
+}
+
+void ProjPanel::OnSelectionChanged(wxDataViewEvent &e)
+{
+    auto projView = GetProjView();
+    auto model = GetProjTreeModel();
+    if (projView && model)
+    {
+        wxDataViewItemArray sels;
+        projView->GetSelections(sels);
+
+        SPDrawableNodeVector drawables;
+        for (const auto &sel : sels)
+        {
+            auto node = static_cast<ModelNode*>(sel.GetID());
+            if (node && node->GetParent())
+            {
+                auto drawable = std::dynamic_pointer_cast<DrawableNode>(node->GetParent()->FindChild(node));
+                if (drawable)
+                {
+                    drawables.push_back(drawable);
+                }
+            }
+        }
+
+        sig_EntitySelect(drawables);
     }
 }
 

@@ -1,4 +1,4 @@
-#include "transformtool.h"
+#include "nodeedittool.h"
 #include <wx/log.h>
 #include <wx/dcgraph.h>
 #include <ui/spam.h>
@@ -7,14 +7,14 @@
 #include <ui/projs/drawablenode.h>
 #include <ui/projs/geomnode.h>
 
-TransformTool::TransformTool()
+NodeEditTool::NodeEditTool()
 {
-    wxLogMessage(wxT("TransformTool Enter."));
+    wxLogMessage(wxT("NodeEditTool Enter."));
 }
 
-TransformTool::~TransformTool()
+NodeEditTool::~NodeEditTool()
 {
-    wxLogMessage(wxT("TransformTool Quit."));
+    wxLogMessage(wxT("NodeEditTool Quit."));
     auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
     if (frame)
     {
@@ -41,7 +41,7 @@ TransformTool::~TransformTool()
     }
 }
 
-void TransformTool::OnBoxingStart(const EvLMouseDown &e)
+void NodeEditTool::OnBoxingStart(const EvLMouseDown &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -57,7 +57,7 @@ void TransformTool::OnBoxingStart(const EvLMouseDown &e)
     }
 }
 
-void TransformTool::OnBoxing(const EvMouseMove &e)
+void NodeEditTool::OnBoxing(const EvMouseMove &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -70,7 +70,7 @@ void TransformTool::OnBoxing(const EvMouseMove &e)
     }
 }
 
-void TransformTool::OnBoxingEnd(const EvLMouseUp &e)
+void NodeEditTool::OnBoxingEnd(const EvLMouseUp &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -127,12 +127,12 @@ void TransformTool::OnBoxingEnd(const EvLMouseUp &e)
     rect = Geom::OptRect();
 }
 
-void TransformTool::OnCanvasEnter(const EvCanvasEnter &e)
+void NodeEditTool::OnCanvasEnter(const EvCanvasEnter &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
 }
 
-void TransformTool::OnCanvasLeave(const EvCanvasLeave &e)
+void NodeEditTool::OnCanvasLeave(const EvCanvasLeave &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav && highlight)
@@ -146,7 +146,7 @@ void TransformTool::OnCanvasLeave(const EvCanvasLeave &e)
     ClearHighlightData();
 }
 
-void TransformTool::OnSafari(const EvMouseMove &e)
+void NodeEditTool::OnSafari(const EvMouseMove &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -189,12 +189,12 @@ void TransformTool::OnSafari(const EvMouseMove &e)
     }
 }
 
-void TransformTool::OnAppQuit(const EvAppQuit &e)
+void NodeEditTool::OnAppQuit(const EvAppQuit &e)
 {
     selData.clear();
 }
 
-void TransformTool::OnDrawableDelete(const EvDrawableDelete &e)
+void NodeEditTool::OnDrawableDelete(const EvDrawableDelete &e)
 {
     auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
     if (frame)
@@ -220,7 +220,7 @@ void TransformTool::OnDrawableDelete(const EvDrawableDelete &e)
     }
 }
 
-void TransformTool::OnDrawableSelect(const EvDrawableSelect &e)
+void NodeEditTool::OnDrawableSelect(const EvDrawableSelect &e)
 {
     auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
     if (frame)
@@ -275,7 +275,7 @@ void TransformTool::OnDrawableSelect(const EvDrawableSelect &e)
     }
 }
 
-void TransformTool::ClearSelection(const std::string &uuid)
+void NodeEditTool::ClearSelection(const std::string &uuid)
 {
     EntitySelection &es = selData[uuid];
     auto &selEnts = es.ents;
@@ -293,7 +293,7 @@ void TransformTool::ClearSelection(const std::string &uuid)
     selStates.clear();
 }
 
-void TransformTool::OnBoxingReset(const EvReset &e)
+void NodeEditTool::OnBoxingReset(const EvReset &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -325,7 +325,7 @@ void TransformTool::OnBoxingReset(const EvReset &e)
     ClearHighlightData();
 }
 
-void TransformTool::OnTransformingStart(const EvLMouseDown &e)
+void NodeEditTool::OnNodeEditingStart(const EvLMouseDown &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -348,12 +348,12 @@ void TransformTool::OnTransformingStart(const EvLMouseDown &e)
         for (SPDrawableNode &selEnt : selEnts)
         {
             selmementos.push_back(selEnt->CreateMemento());
-            selEnt->StartTransform();
+            selEnt->StartNodeEdit();
         }
     }
 }
 
-void TransformTool::OnTransforming(const EvMouseMove &e)
+void NodeEditTool::OnNodeEditing(const EvMouseMove &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -372,7 +372,7 @@ void TransformTool::OnTransforming(const EvMouseMove &e)
             Geom::PathVector pv;
             selEnt->BuildPath(pv);
             refreshRect.unionWith(pv.boundsFast());
-            selEnt->Transform(anchor, freePt, deltPt.x(), deltPt.y());
+            selEnt->NodeEdit(anchor, freePt, deltPt.x(), deltPt.y());
         }
 
         for (SPDrawableNode &selEnt : selEnts)
@@ -389,7 +389,7 @@ void TransformTool::OnTransforming(const EvMouseMove &e)
     }
 }
 
-void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
+void NodeEditTool::OnNodeEditingEnd(const EvLMouseUp &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -417,7 +417,7 @@ void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
             selEnt->BuildPath(pv);
             refreshRect.unionWith(pv.boundsFast());
 
-            selEnt->EndTransform();
+            selEnt->EndNodeEdit();
         }
 
         if (rect.empty())
@@ -429,7 +429,7 @@ void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
         }
         else
         {
-            cav->DoTransform(selEnts, selMementos);
+            cav->DoNodeEdit(selEnts, selMementos);
         }
 
         selStates.clear();
@@ -441,7 +441,7 @@ void TransformTool::OnTransformingEnd(const EvLMouseUp &e)
     rect = Geom::OptRect();
 }
 
-void TransformTool::OnTransformingReset(const EvReset &e)
+void NodeEditTool::OnNodeEditingReset(const EvReset &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -463,7 +463,7 @@ void TransformTool::OnTransformingReset(const EvReset &e)
             selEnt->selData_.hs = HitState::kHsNone;
             selEnt->selData_.id = -1;
             selEnt->selData_.subid = -1;
-            selEnt->ResetTransform();
+            selEnt->ResetNodeEdit();
 
             Geom::PathVector opv;
             selEnt->BuildPath(opv);
@@ -477,22 +477,22 @@ void TransformTool::OnTransformingReset(const EvReset &e)
     }
 }
 
-TransformIdle::TransformIdle()
+NodeEditIdle::NodeEditIdle()
 {
-    wxLogMessage(wxT("TransformIdle Enter."));
+    wxLogMessage(wxT("NodeEditIdle Enter."));
 }
 
-TransformIdle::~TransformIdle()
+NodeEditIdle::~NodeEditIdle()
 {
-    wxLogMessage(wxT("TransformIdle Quit."));
+    wxLogMessage(wxT("NodeEditIdle Quit."));
 }
 
-sc::result TransformIdle::react(const EvToolQuit &e)
+sc::result NodeEditIdle::react(const EvToolQuit &e)
 {
     return transit<NoTool>();
 }
 
-sc::result TransformIdle::react(const EvLMouseDown &e)
+sc::result NodeEditIdle::react(const EvLMouseDown &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
@@ -507,7 +507,7 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
         if (drawable)
         {
             const std::string &uuid = cav->GetUUID();
-            EntitySelection &es = context<TransformTool>().selData[uuid];
+            EntitySelection &es = context<NodeEditTool>().selData[uuid];
             auto &selEnts = es.ents;
             auto &selStates = es.states;
             SPDrawableNodeVector oldEnts = selEnts;
@@ -535,7 +535,7 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
 
                 if (newSel)
                 {
-                    context<TransformTool>().ClearSelection(uuid);
+                    context<NodeEditTool>().ClearSelection(uuid);
                     selEnts.push_back(drawable);
                     selStates.push_back(SelectionState::kSelScale);
                 }
@@ -558,7 +558,7 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
             }
             else
             {
-                context<TransformTool>().ClearSelection(uuid);
+                context<NodeEditTool>().ClearSelection(uuid);
                 selEnts.push_back(drawable);
                 selStates.push_back(sd.ss);
 
@@ -569,11 +569,11 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
             context<Spamer>().sig_EntitySel(Spam::Difference(selEnts, oldEnts));
 
             cav->DrawPathVector(Geom::PathVector(), refreshRect);
-            return transit<Transforming>(&TransformTool::OnTransformingStart, e);
+            return transit<NodeEditing>(&NodeEditTool::OnNodeEditingStart, e);
         }
         else
         {
-            return transit<TransformBoxSelecting>(&TransformTool::OnBoxingStart, e);
+            return transit<NodeEditBoxSelecting>(&NodeEditTool::OnBoxingStart, e);
         }
     }
     else
@@ -582,22 +582,22 @@ sc::result TransformIdle::react(const EvLMouseDown &e)
     }
 }
 
-TransformBoxSelecting::TransformBoxSelecting()
+NodeEditBoxSelecting::NodeEditBoxSelecting()
 {
-    wxLogMessage(wxT("TransformDraging Enter."));
+    wxLogMessage(wxT("NodeEditDraging Enter."));
 }
 
-TransformBoxSelecting::~TransformBoxSelecting()
+NodeEditBoxSelecting::~NodeEditBoxSelecting()
 {
-    wxLogMessage(wxT("TransformDraging Quit."));
+    wxLogMessage(wxT("NodeEditDraging Quit."));
 }
 
-Transforming::Transforming()
+NodeEditing::NodeEditing()
 {
-    wxLogMessage(wxT("Transforming Enter."));
+    wxLogMessage(wxT("NodeEditing Enter."));
 }
 
-Transforming::~Transforming()
+NodeEditing::~NodeEditing()
 {
-    wxLogMessage(wxT("Transforming Quit."));
+    wxLogMessage(wxT("NodeEditing Quit."));
 }

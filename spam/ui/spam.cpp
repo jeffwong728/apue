@@ -272,7 +272,7 @@ void Spam::LogPyOutput()
     }
 }
 
-SPDrawableNodeVector Spam::Difference(const SPDrawableNodeVector& lseq, SPDrawableNodeVector& rseq)
+SPDrawableNodeVector Spam::Difference(const SPDrawableNodeVector& lseq, const SPDrawableNodeVector& rseq)
 {
     SPDrawableNodeVector result;
 
@@ -284,6 +284,31 @@ SPDrawableNodeVector Spam::Difference(const SPDrawableNodeVector& lseq, SPDrawab
             if (l->GetUUIDTag() == r->GetUUIDTag())
             {
                 reserve = false;
+                break;
+            }
+        }
+
+        if (reserve)
+        {
+            result.push_back(l);
+        }
+    }
+
+    return result;
+}
+
+SPDrawableNodeVector Spam::Intersection(const SPDrawableNodeVector& lseq, const SPDrawableNodeVector& rseq)
+{
+    SPDrawableNodeVector result;
+
+    for (const auto &l : lseq)
+    {
+        bool reserve = false;
+        for (const auto &r : rseq)
+        {
+            if (l->GetUUIDTag() == r->GetUUIDTag())
+            {
+                reserve = true;
                 break;
             }
         }

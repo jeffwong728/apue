@@ -38,11 +38,20 @@ public:
     virtual SelectionData HitTest(const Geom::Point &pt) const = 0;
     virtual SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const;
     virtual bool IsIntersection(const Geom::Rect &box) const = 0;
+
+    // Transform
     virtual void StartTransform();
     virtual void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy);
     virtual void DoTransform(const Geom::Affine &aff, const double dx, const double dy) = 0;
     virtual void EndTransform();
     virtual void ResetTransform() = 0;
+
+    // Edit node
+    virtual void StartNodeEdit();
+    virtual void NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy);
+    virtual void EndNodeEdit();
+    virtual void ResetNodeEdit() = 0;
+
     virtual boost::any CreateMemento() const = 0;
     virtual bool RestoreFromMemento(const boost::any &memento) = 0;
     void Draw(Cairo::RefPtr<Cairo::Context> &cr) const;

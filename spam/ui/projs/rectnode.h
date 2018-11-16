@@ -35,6 +35,7 @@ public:
     void StartTransform() override;
     void EndTransform() override;
     void ResetTransform() override;
+    void ResetNodeEdit() override;
     boost::any CreateMemento() const override;
     bool RestoreFromMemento(const boost::any &memento) override;
     void InitData(RectData &data);

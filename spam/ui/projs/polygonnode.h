@@ -31,6 +31,7 @@ public:
     void StartTransform() override;
     void EndTransform() override;
     void ResetTransform() override;
+    void ResetNodeEdit() override;
     boost::any CreateMemento() const override;
     bool RestoreFromMemento(const boost::any &memento) override;
     int GetNumCorners() const { return static_cast<int>(data_.points.size()); }

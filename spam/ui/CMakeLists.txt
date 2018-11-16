@@ -39,6 +39,7 @@ set(ui_core_SRCS
   fsm/recttool.cpp
   fsm/spamer.cpp
   fsm/transformtool.cpp
+  fsm/nodeedittool.cpp
   fsm/polygontool.cpp
 )
 
@@ -85,6 +86,7 @@ set(ui_core_HEADERS
   fsm/recttool.h
   fsm/spamer.h
   fsm/transformtool.h
+  fsm/nodeedittool.h
   fsm/polygontool.h
   fsm/events.h
 )

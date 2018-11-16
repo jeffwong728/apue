@@ -8,6 +8,7 @@
 #include <wx/log.h>
 #include <ui/spam.h>
 #include <ui/cv/cairocanvas.h>
+#include <ui/projs/geomnode.h>
 #include <ui/projs/drawablenode.h>
 #include <ui/toplevel/rootframe.h>
 
@@ -85,6 +86,25 @@ void Spamer::OnCanvasChar(wxKeyEvent &e)
     {
         process_event(EvReset(e));
     }
+}
+
+void Spamer::OnGeomDelete(const SPModelNodeVector &geoms)
+{
+    SPDrawableNodeVector dras;
+    for (const auto &geom : geoms)
+    {
+        auto dra = std::dynamic_pointer_cast<DrawableNode>(geom);
+        if (dra)
+        {
+            dras.push_back(dra);
+        }
+    }
+    process_event(EvDrawableDelete(dras));
+}
+
+void Spamer::OnDrawableSelect(const SPDrawableNodeVector &dras)
+{
+    process_event(EvDrawableSelect(dras));
 }
 
 NoTool::NoTool() 
@@ -289,6 +309,87 @@ void NoTool::OnCanvasLeave(const EvCanvasLeave &e)
 void NoTool::OnAppQuit(const EvAppQuit &e)
 {
     selData.clear();
+}
+
+void NoTool::OnDrawableDelete(const EvDrawableDelete &e)
+{
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (frame)
+    {
+        for (auto &selEnts : selData)
+        {
+            const std::string &uuid = selEnts.first;
+            CairoCanvas *cav = frame->FindCanvasByUUID(uuid);
+            if (cav)
+            {
+                SPDrawableNodeVector &ents = selEnts.second;
+                SPDrawableNodeVector residualEnts = Spam::Difference(ents, e.drawables);
+                SPDrawableNodeVector deleteEnts = Spam::Difference(ents, residualEnts);
+
+                for (SPDrawableNode &delEnt : deleteEnts)
+                {
+                    delEnt->ClearSelection();
+                }
+
+                ents.swap(residualEnts);
+            }
+        }
+    }
+}
+
+void NoTool::OnDrawableSelect(const EvDrawableSelect &e)
+{
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (frame)
+    {
+        for (const auto &dra : e.drawables)
+        {
+            selData[dra->GetParent()->GetUUIDTag()];
+        }
+
+        for (auto &selEnts : selData)
+        {
+            const std::string &uuid = selEnts.first;
+            CairoCanvas *cav = frame->FindCanvasByUUID(uuid);
+            if (cav)
+            {
+                SPDrawableNodeVector thisSelEnts;
+                for (const auto &dra : e.drawables)
+                {
+                    if (dra->GetParent()->GetUUIDTag() == uuid)
+                    {
+                        thisSelEnts.push_back(dra);
+                    }
+                }
+
+                SPDrawableNodeVector &ents = selEnts.second;
+                SPDrawableNodeVector deSelEnts = Spam::Difference(ents, e.drawables);
+                SPDrawableNodeVector stillSelEnts = Spam::Intersection(ents, deSelEnts);
+                SPDrawableNodeVector newSelEnts = Spam::Difference(thisSelEnts, stillSelEnts);
+
+                Geom::OptRect refreshRect;
+                for (SPDrawableNode &deSelEnt : deSelEnts)
+                {
+                    deSelEnt->ClearSelection();
+
+                    Geom::PathVector pv;
+                    deSelEnt->BuildPath(pv);
+                    refreshRect.unionWith(pv.boundsFast());
+                }
+
+                for (SPDrawableNode &newSelEnt : newSelEnts)
+                {
+                    newSelEnt->SelectFace();
+
+                    Geom::PathVector pv;
+                    newSelEnt->BuildPath(pv);
+                    refreshRect.unionWith(pv.boundsFast());
+                }
+                ents.swap(thisSelEnts);
+                cav->DrawPathVector(Geom::PathVector(), refreshRect);
+            }
+        }
+    }
 }
 
 NoToolIdle::NoToolIdle()

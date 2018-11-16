@@ -2,6 +2,7 @@
 #include <ui/cmndef.h>
 #include <ui/spam.h>
 #include <ui/projs/stationnode.h>
+#include <ui/projs/geomnode.h>
 #include <ui/projs/drawablenode.h>
 #include <ui/projs/projtreemodel.h>
 #include <ui/cmds/geomcmd.h>
@@ -34,6 +35,7 @@ CairoCanvas::CairoCanvas(wxWindow* parent, const std::string &cvWinName, const w
     Bind(wxEVT_PAINT,            &CairoCanvas::OnPaint,           this, wxID_ANY);
     Bind(wxEVT_ERASE_BACKGROUND, &CairoCanvas::OnEraseBackground, this, wxID_ANY);
     Bind(wxEVT_CONTEXT_MENU,     &CairoCanvas::OnContextMenu,     this, wxID_ANY);
+    Bind(wxEVT_MENU,             &CairoCanvas::OnDeleteEntities,  this, kSpamID_DELETE_ENTITIES);
 
     SetDropTarget(new DnDImageFile(parent));
 }
@@ -300,13 +302,13 @@ void CairoCanvas::DimDrawable(const SPDrawableNode &de)
 
 void CairoCanvas::DrawPathVector(const Geom::PathVector &pth, const Geom::OptRect &rect)
 {
-    wxClientDC dc(this);
-    PrepareDC(dc);
-
-    auto wxhdc = dc.GetHDC();
-    if (wxhdc)
+    if (!rect.empty())
     {
-        if (!rect.empty())
+        wxClientDC dc(this);
+        PrepareDC(dc);
+
+        auto wxhdc = dc.GetHDC();
+        if (wxhdc)
         {
             int x = wxRound(rect.get().left()*GetMatScale());
             int y = wxRound(rect.get().top()*GetMatScale());
@@ -318,7 +320,7 @@ void CairoCanvas::DrawPathVector(const Geom::PathVector &pth, const Geom::OptRec
 
             auto dstPtr = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
             auto srcPtr = disMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            for (int r = invalidRect.GetTop(); r<=invalidRect.GetBottom(); ++r)
+            for (int r = invalidRect.GetTop(); r <= invalidRect.GetBottom(); ++r)
             {
                 ::memcpy(dstPtr, srcPtr, scrMat_.elemSize()*invalidRect.GetWidth());
                 dstPtr += scrMat_.step1();
@@ -428,6 +430,18 @@ void CairoCanvas::DoTransform(const SPDrawableNodeVector &selEnts, const SpamMan
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
             wxLogStatus(cmd->GetDescription());
+        }
+    }
+}
+
+void CairoCanvas::DoNodeEdit(const SPDrawableNodeVector &selEnts, const SpamMany &mementos)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
         }
     }
 }
@@ -605,6 +619,36 @@ void CairoCanvas::OnContextMenu(wxContextMenuEvent& e)
             menu.Append(kSpamID_HIDE_ALL_ENTITIES, wxT("Hide All"))->Enable(numDra);
 
             PopupMenu(&menu);
+        }
+    }
+}
+
+void CairoCanvas::OnDeleteEntities(wxCommandEvent &cmd)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            SPDrawableNodeVector drawables = station->GeSelected();
+            SPGeomNodeVector delGeoms;
+            for (const auto &drawable : drawables)
+            {
+                auto geom = std::dynamic_pointer_cast<GeomNode>(drawable);
+                if (geom)
+                {
+                    delGeoms.push_back(geom);
+                }
+            }
+
+            if (!delGeoms.empty())
+            {
+                auto cmd = std::make_shared<DeleteGeomsCmd>(Spam::GetModel(), delGeoms);
+                cmd->Do();
+                SpamUndoRedo::AddCommand(cmd);
+                wxLogStatus(cmd->GetDescription());
+            }
         }
     }
 }

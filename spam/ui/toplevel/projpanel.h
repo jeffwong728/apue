@@ -18,6 +18,7 @@ public:
     typedef bs2::keywords::mutex_type<bs2::dummy_mutex> bs2_dummy_mutex;
     bs2::signal_type<void(const SPModelNode &), bs2_dummy_mutex>::type sig_EntityGlow;
     bs2::signal_type<void(const SPModelNode &), bs2_dummy_mutex>::type sig_EntityDim;
+    bs2::signal_type<void(const SPDrawableNodeVector &), bs2_dummy_mutex>::type sig_EntitySelect;
 
 public:
     ProjPanel(wxWindow* parent);
@@ -52,6 +53,7 @@ private:
     void OnShowAllEntities(wxCommandEvent &cmd);
     void OnHideAllEntities(wxCommandEvent &cmd);
     void OnExpandNode(const SPModelNodeVector &nodes);
+    void OnSelectionChanged(wxDataViewEvent &e);
     void OnContextMenu(wxDataViewEvent &e);
     void OnModelBrowserMouseMotion(wxMouseEvent &e);
     void OnLeaveModelBrowser(wxMouseEvent &e);

@@ -24,6 +24,21 @@ EntitySigType StationNode::GetDeleteSigType() const
     return EntitySigType::kStationDelete;
 }
 
+SPDrawableNodeVector StationNode::GeSelected() const
+{
+    SPDrawableNodeVector sels;
+    for (auto &c : GetChildren())
+    {
+        auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
+        if (drawable && drawable->IsSelected())
+        {
+            sels.push_back(drawable);
+        }
+    }
+
+    return sels;
+}
+
 int StationNode::GetNumSelected() const
 {
     int numSel = 0;

@@ -131,6 +131,10 @@ void PolygonNode::ResetTransform()
     PolygonNode::EndTransform();
 }
 
+void PolygonNode::ResetNodeEdit()
+{
+}
+
 boost::any PolygonNode::CreateMemento() const
 {
     auto mem = std::make_shared<Memento>();
