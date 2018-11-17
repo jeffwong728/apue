@@ -1,1 +1,6 @@
 /site_scons/__pycache__
+3rdparty
+build
+msvs
+install
+config
