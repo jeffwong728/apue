@@ -5,10 +5,10 @@
 #include <wx/wxhtml.h>
 
 GeomBox::GeomBox(wxWindow* parent)
-: ToolBox(parent, kSpamID_TOOLPAGE_GEOM, wxT("Geometries"), kSpamID_TOOLBOX_GEOM_GUARD- kSpamID_TOOLBOX_GEOM_SELECT, kSpamID_TOOLBOX_GEOM_SELECT)
+: ToolBox(parent, kSpamID_TOOLPAGE_GEOM, wxT("Geometries"), kSpamID_TOOLBOX_GEOM_GUARD- kSpamID_TOOLBOX_GEOM_TRANSFORM, kSpamID_TOOLBOX_GEOM_TRANSFORM)
 {
     wxWindowID toolIds[] = {   
-        kSpamID_TOOLBOX_GEOM_SELECT,
+        kSpamID_TOOLBOX_GEOM_TRANSFORM,
         kSpamID_TOOLBOX_GEOM_EDIT,
         kSpamID_TOOLBOX_GEOM_RECT,
         kSpamID_TOOLBOX_GEOM_ELLIPSE,
@@ -58,7 +58,7 @@ GeomBox::~GeomBox()
 
 wxPanel *GeomBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 {
-    constexpr int numTools = kSpamID_TOOLBOX_GEOM_GUARD - kSpamID_TOOLBOX_GEOM_SELECT;
+    constexpr int numTools = kSpamID_TOOLBOX_GEOM_GUARD - kSpamID_TOOLBOX_GEOM_TRANSFORM;
     wxPanel *(GeomBox::*createOption[numTools])(wxWindow *parent) = { nullptr, nullptr, &GeomBox::CreateRectOption };
 
     if (createOption[toolIndex])

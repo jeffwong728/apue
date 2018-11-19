@@ -29,6 +29,7 @@ public:
     bool IsSelected() const { return SelectionState::kSelNone!=selData_.ss; }
     bool IsContainer() const override { return false; }
     virtual void BuildPath(Geom::PathVector &pv) const = 0;
+    virtual void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const = 0;
     virtual void BuildHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
     virtual void BuildScaleHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
     virtual void BuildSkewHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
@@ -39,10 +40,14 @@ public:
     virtual SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const;
     virtual bool IsIntersection(const Geom::Rect &box) const = 0;
 
+    void StartEdit(const int toolId);
+    void Edit(const int toolId, const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy);
+    void EndEdit(const int toolId);
+    void ResetEdit(const int toolId);
+
     // Transform
     virtual void StartTransform();
     virtual void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy);
-    virtual void DoTransform(const Geom::Affine &aff, const double dx, const double dy) = 0;
     virtual void EndTransform();
     virtual void ResetTransform() = 0;
 
@@ -56,27 +61,32 @@ public:
     virtual bool RestoreFromMemento(const boost::any &memento) = 0;
     void Draw(Cairo::RefPtr<Cairo::Context> &cr) const;
     void DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const;
-    void SetHighlightData(const HighlightData hd) { hlData_ = hd; }
+    void SetHighlightData(const HighlightData &hd) { hlData_ = hd; }
     HighlightData GetHighlightData() const { return hlData_; }
     void ClearSelection();
     void ClearHighlight();
-    void SetHighlight(const HighlightData &hlData) { hlData_ = hlData; }
     void HighlightFace();
-    void SelectEntity();
-    void SelectFace();
-    void SwitchSelectionState();
+    void Select(int toolId);
+    void SwitchSelectionState(int toolId);
     static HighlightData MapSelectionToHighlight(const SelectionData &sd);
     static bool IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr);
+    static SelectionState GetInitialSelectState(const int toolId);
+
+protected:
+    virtual void DoTransform(const Geom::Affine &aff, const double dx, const double dy) = 0;
 
 private:
     void DrawHighlightFace(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &fpv, const double ux, const double ax) const;
     void DrawHighlightScaleHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &spv, const double ux, const double ax) const;
     void DrawHighlightSkewHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &spv, const double ux, const double ax) const;
     void DrawHighlightRotateHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &rpv, const double ux, const double ax) const;
+    void DrawHighlightNode(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &npv, const NodeIdVector &ids, const double ux, const double ax) const;
     void DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &rpv, const HighlightState hs, const double ux, const double ax) const;
     void BuildRotateMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
     void BuildScaleMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
     void BuildSkewMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
+    void SwitchTransformState();
+    void SwitchNodeEditState();
 
 public:
     SelectionData selData_;

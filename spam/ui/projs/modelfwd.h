@@ -47,7 +47,8 @@ enum class SelectionState
     kSelNone,
     kSelState,
     kSelScale,
-    kSelRotateAndSkew
+    kSelRotateAndSkew,
+    kSelNodeEdit
 };
 
 enum class HitState
@@ -113,5 +114,13 @@ struct SelectionData
     int id;
     int subid;
 };
+
+struct NodeId
+{
+    int id;
+    int subid;
+};
+
+using NodeIdVector = std::vector<NodeId>;
 
 #endif //SPAM_UI_PROJS_MODEL_FWD_H

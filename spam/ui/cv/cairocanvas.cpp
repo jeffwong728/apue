@@ -401,6 +401,16 @@ void CairoCanvas::AddRect(const RectData &rd)
     }
 }
 
+void CairoCanvas::DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, const SpamMany &mementos)
+{
+    switch (toolId)
+    {
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM: DoTransform(selEnts, mementos); break;
+    case kSpamID_TOOLBOX_GEOM_EDIT:      DoNodeEdit(selEnts, mementos);  break;
+    default: break;
+    }
+}
+
 void CairoCanvas::AddPolygon(const PolygonData &pd)
 {
     auto model = Spam::GetModel();

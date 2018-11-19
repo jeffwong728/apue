@@ -1,6 +1,7 @@
 #ifndef SPAM_UI_FSM_TRANSFORM_TOOL_H
 #define SPAM_UI_FSM_TRANSFORM_TOOL_H
 #include "spamer.h"
+#include "edittool.h"
 #include <ui/projs/modelfwd.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
@@ -12,95 +13,59 @@ struct TransformIdle;
 struct TransformBoxSelecting;
 struct Transforming;
 
-struct EntitySelection
+struct TransformTool : sc::simple_state<TransformTool, Spamer, TransformIdle>, EditTool<TransformTool, kSpamID_TOOLBOX_GEOM_TRANSFORM>
 {
-    SPDrawableNodeVector ents;
-    SpamMany  mementos;
-    std::vector<SelectionState> states;
-};
+    using BoxToolT = BoxTool<TransformTool, kSpamID_TOOLBOX_GEOM_TRANSFORM>;
+    using EditToolT = EditTool<TransformTool, kSpamID_TOOLBOX_GEOM_TRANSFORM>;
 
-struct TransformTool : boost::statechart::simple_state<TransformTool, Spamer, TransformIdle>
-{
     TransformTool();
     ~TransformTool();
 
-    // Box selecting actions
-    void OnBoxingStart(const EvLMouseDown &e);
-    void OnBoxing(const EvMouseMove &e);
-    void OnBoxingEnd(const EvLMouseUp &e);
-    void OnBoxingReset(const EvReset &e);
-
-    // Transforming actions
-    void OnTransformingStart(const EvLMouseDown &e);
-    void OnTransforming(const EvMouseMove &e);
-    void OnTransformingEnd(const EvLMouseUp &e);
-    void OnTransformingReset(const EvReset &e);
-
-    void OnCanvasEnter(const EvCanvasEnter &e);
-    void OnCanvasLeave(const EvCanvasLeave &e);
-    void OnSafari(const EvMouseMove &e);
-    void OnAppQuit(const EvAppQuit &e);
-    void OnDrawableDelete(const EvDrawableDelete &e);
-    void OnDrawableSelect(const EvDrawableSelect &e);
-
-    void ClearSelection(const std::string &uuid);
-    void ClearHighlightData() 
-    {
-        hlData.hls = HighlightState::kHlNone;
-        hlData.id = -1;
-        hlData.subid = -1;
-    }
-
     typedef boost::mpl::list<
-        boost::statechart::transition<EvReset, TransformTool>,
-        boost::statechart::in_state_reaction<EvAppQuit, TransformTool, &TransformTool::OnAppQuit>,
-        boost::statechart::in_state_reaction<EvDrawableDelete, TransformTool, &TransformTool::OnDrawableDelete>,
-        boost::statechart::in_state_reaction<EvDrawableSelect, TransformTool, &TransformTool::OnDrawableSelect>,
-        boost::statechart::in_state_reaction<EvCanvasEnter, TransformTool, &TransformTool::OnCanvasEnter>,
-        boost::statechart::in_state_reaction<EvCanvasLeave, TransformTool, &TransformTool::OnCanvasLeave>> reactions;
-
-    Geom::Point anchor;
-    Geom::Point last;
-    Geom::OptRect rect;
-    SPDrawableNode highlight;
-    HighlightData  hlData;
-
-    std::unordered_map<std::string, EntitySelection> selData;
+        sc::transition<EvReset, TransformTool>,
+        sc::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
+        sc::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
+        sc::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
+        sc::in_state_reaction<EvCanvasEnter, BoxToolT, &BoxToolT::EnterCanvas>,
+        sc::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
 };
 
-struct TransformIdle : boost::statechart::simple_state<TransformIdle, TransformTool>
+struct TransformIdle : sc::simple_state<TransformIdle, TransformTool>, EditIdle<TransformIdle, TransformTool, Transforming, TransformBoxSelecting, kSpamID_TOOLBOX_GEOM_TRANSFORM>
 {
+    using IdleT = EditIdle<TransformIdle, TransformTool, Transforming, TransformBoxSelecting, kSpamID_TOOLBOX_GEOM_TRANSFORM>;
+
     TransformIdle();
     ~TransformIdle();
+
     typedef boost::mpl::list<
-        boost::statechart::custom_reaction<EvLMouseDown>,
-        boost::statechart::custom_reaction<EvToolQuit>,
-        boost::statechart::in_state_reaction<EvMouseMove, TransformTool, &TransformTool::OnSafari>> reactions;
+        sc::custom_reaction<EvLMouseDown>,
+        sc::custom_reaction<EvToolQuit>,
+        sc::in_state_reaction<EvMouseMove, TransformTool::BoxToolT, &TransformTool::BoxToolT::Safari>> reactions;
 
     sc::result react(const EvToolQuit &e);
     sc::result react(const EvLMouseDown &e);
 };
 
-struct TransformBoxSelecting : boost::statechart::simple_state<TransformBoxSelecting, TransformTool>
+struct TransformBoxSelecting : sc::simple_state<TransformBoxSelecting, TransformTool>
 {
     TransformBoxSelecting();
     ~TransformBoxSelecting();
 
     typedef boost::mpl::list<
-        boost::statechart::transition<EvLMouseUp, TransformIdle, TransformTool, &TransformTool::OnBoxingEnd>,
-        boost::statechart::transition<EvReset, TransformIdle, TransformTool, &TransformTool::OnBoxingReset>,
-        boost::statechart::in_state_reaction<EvMouseMove, TransformTool, &TransformTool::OnBoxing>> reactions;
+        sc::transition<EvLMouseUp, TransformIdle, TransformTool::BoxToolT, &TransformTool::BoxToolT::EndBoxing>,
+        sc::transition<EvReset, TransformIdle, TransformTool::BoxToolT, &TransformTool::BoxToolT::ResetBoxing>,
+        sc::in_state_reaction<EvMouseMove, TransformTool::BoxToolT, &TransformTool::BoxToolT::ContinueBoxing>> reactions;
 };
 
-struct Transforming : boost::statechart::simple_state<Transforming, TransformTool>
+struct Transforming : sc::simple_state<Transforming, TransformTool>
 {
     Transforming();
     ~Transforming();
 
     typedef boost::mpl::list<
-        boost::statechart::transition<EvLMouseUp, TransformIdle, TransformTool, &TransformTool::OnTransformingEnd>,
-        boost::statechart::transition<EvReset, TransformIdle, TransformTool, &TransformTool::OnTransformingReset>,
-        boost::statechart::in_state_reaction<EvMouseMove, TransformTool, &TransformTool::OnTransforming>> reactions;
+        sc::transition<EvLMouseUp, TransformIdle, TransformTool::EditToolT, &TransformTool::EditToolT::EndEditing>,
+        sc::transition<EvReset, TransformIdle, TransformTool::EditToolT, &TransformTool::EditToolT::ResetEditing>,
+        sc::in_state_reaction<EvMouseMove, TransformTool::EditToolT, &TransformTool::EditToolT::ContinueEditing>> reactions;
 };
 
 #endif //SPAM_UI_FSM_TRANSFORM_TOOL_H

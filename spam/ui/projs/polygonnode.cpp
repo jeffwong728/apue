@@ -47,6 +47,21 @@ void PolygonNode::BuildPath(Geom::PathVector &pv) const
     }
 }
 
+void PolygonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
+{
+    if (selData_.ss == SelectionState::kSelNodeEdit)
+    {
+        for (int c = 0; c<GetNumCorners(); ++c)
+        {
+            Geom::Point pt{ data_.points[c][0], data_.points[c][1] };
+            Geom::Point a = pt + Geom::Point(-3, -3);
+            Geom::Point b = pt + Geom::Point(3, 3);
+            pv.push_back(Geom::Path(Geom::Rect(a, b)));
+            ids.push_back({ c, 0 });
+        }
+    }
+}
+
 SelectionData PolygonNode::HitTest(const Geom::Point &pt) const
 {
     SelectionData sd{ selData_.ss , HitState ::kHsNone, -1, -1};
@@ -82,31 +97,6 @@ bool PolygonNode::IsIntersection(const Geom::Rect &box) const
     return false;
 }
 
-void PolygonNode::DoTransform(const Geom::Affine &aff, const double dx, const double dy)
-{
-    if (HitState::kHsFace == selData_.hs)
-    {
-        for (auto &pt : data_.points)
-        {
-            pt[0] += dx;
-            pt[1] += dy;
-        }
-    }
-    else
-    {
-        if (!aff.isIdentity())
-        {
-            for (int i = 0; i<static_cast<int>(base_.points.size()); ++i)
-            {
-                Geom::Point pt2{ base_.points[i][0], base_.points[i][1] };
-                pt2 *= aff;
-                data_.points[i][0] = pt2.x();
-                data_.points[i][1] = pt2.y();
-            }
-        }
-    }
-}
-
 void PolygonNode::StartTransform()
 {
     base_ = data_;
@@ -129,6 +119,24 @@ void PolygonNode::ResetTransform()
 {
     data_ = base_;
     PolygonNode::EndTransform();
+}
+
+void PolygonNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+{
+    if (HitState::kHsNode == selData_.hs)
+    {
+        if (selData_.id>-1 && selData_.id<GetNumCorners())
+        {
+            data_.points[selData_.id][0] += dx;
+            data_.points[selData_.id][1] += dy;
+        }
+    }
+    else
+    {
+        Geom::Affine aff = Geom::Affine::identity();
+        aff *= Geom::Translate(dx, dy);
+        PolygonNode::DoTransform(aff, dx, dy);
+    }
 }
 
 void PolygonNode::ResetNodeEdit()
@@ -229,4 +237,29 @@ void PolygonNode::Load(const H5::Group &g, const NodeFactory &nf, const SPModelN
     H5DB::Load(g, std::string("Transform"), data_.transform);
 
     ModelNode::Load(g, nf, me);
+}
+
+void PolygonNode::DoTransform(const Geom::Affine &aff, const double dx, const double dy)
+{
+    if (HitState::kHsFace == selData_.hs)
+    {
+        for (auto &pt : data_.points)
+        {
+            pt[0] += dx;
+            pt[1] += dy;
+        }
+    }
+    else
+    {
+        if (!aff.isIdentity())
+        {
+            for (int i = 0; i<static_cast<int>(base_.points.size()); ++i)
+            {
+                Geom::Point pt2{ base_.points[i][0], base_.points[i][1] };
+                pt2 *= aff;
+                data_.points[i][0] = pt2.x();
+                data_.points[i][1] = pt2.y();
+            }
+        }
+    }
 }

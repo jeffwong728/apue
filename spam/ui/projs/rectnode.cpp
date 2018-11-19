@@ -110,6 +110,53 @@ void RectNode::BuildPath(Geom::PathVector &pv) const
     }
 }
 
+void RectNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
+{
+    if (selData_.ss == SelectionState::kSelNodeEdit)
+    {
+        Geom::Point pts[] = {
+            Geom::Point(data_.points[0][0], data_.points[0][1]),
+            Geom::Point(data_.points[1][0], data_.points[1][1]),
+            Geom::Point(data_.points[2][0], data_.points[2][1]),
+            Geom::Point(data_.points[3][0], data_.points[3][1])
+        };
+
+
+        const double w = Geom::distance(pts[0], pts[1]);
+        const double h = Geom::distance(pts[0], pts[3]);
+
+        const int indices[4][2] = { { 3, 1 },{ 0, 2 },{ 1, 3 },{ 2, 0 } };
+        const double lens[4][2] = { { h, w },{ w, h },{ h, w },{ w, h } };
+        const double radi[4][2] = {
+            { data_.radii[0][1], data_.radii[0][0] },
+        { data_.radii[1][0], data_.radii[1][1] },
+        { data_.radii[2][1], data_.radii[2][0] },
+        { data_.radii[3][0], data_.radii[3][1] }
+        };
+
+        int state = 0;
+        for (int c = 0; c<4; ++c)
+        {
+            if (state == c)
+            {
+                Geom::Point r0 = Geom::lerp(radi[c][0] / lens[c][0], pts[c], pts[indices[c][0]]);
+                Geom::Point r1 = Geom::lerp(radi[c][1] / lens[c][1], pts[c], pts[indices[c][1]]);
+                pv.push_back(Geom::Path(Geom::Circle(r0, 3)));
+                pv.push_back(Geom::Path(Geom::Circle(r1, 3)));
+                ids.push_back({ c, 1 });
+                ids.push_back({ c, 2 });
+            }
+            else
+            {
+                Geom::Point a = pts[c] + Geom::Point(-3, -3);
+                Geom::Point b = pts[c] + Geom::Point(3, 3);
+                pv.push_back(Geom::Path(Geom::Rect(a, b)));
+                ids.push_back({ c, 0 });
+            }
+        }
+    }
+}
+
 SelectionData RectNode::HitTest(const Geom::Point &pt) const
 {
     SelectionData sd{ selData_.ss, HitState::kHsNone, -1, -1};
@@ -146,31 +193,6 @@ bool RectNode::IsIntersection(const Geom::Rect &box) const
     }
 
     return false;
-}
-
-void RectNode::DoTransform(const Geom::Affine &aff, const double dx, const double dy)
-{
-    if (HitState::kHsFace == selData_.hs)
-    {
-        for (auto &pt : data_.points)
-        {
-            pt[0] += dx;
-            pt[1] += dy;
-        }
-    }
-    else
-    {
-        if (!aff.isIdentity())
-        {
-            for (int i = 0; i<static_cast<int>(base_.points.size()); ++i)
-            {
-                Geom::Point pt2{ base_.points[i][0], base_.points[i][1] };
-                pt2 *= aff;
-                data_.points[i][0] = pt2.x();
-                data_.points[i][1] = pt2.y();
-            }
-        }
-    }
 }
 
 void RectNode::StartTransform()
@@ -283,4 +305,29 @@ void RectNode::Load(const H5::Group &g, const NodeFactory &nf, const SPModelNode
     }
 
     ModelNode::Load(g, nf, me);
+}
+
+void RectNode::DoTransform(const Geom::Affine &aff, const double dx, const double dy)
+{
+    if (HitState::kHsFace == selData_.hs)
+    {
+        for (auto &pt : data_.points)
+        {
+            pt[0] += dx;
+            pt[1] += dy;
+        }
+    }
+    else
+    {
+        if (!aff.isIdentity())
+        {
+            for (int i = 0; i<static_cast<int>(base_.points.size()); ++i)
+            {
+                Geom::Point pt2{ base_.points[i][0], base_.points[i][1] };
+                pt2 *= aff;
+                data_.points[i][0] = pt2.x();
+                data_.points[i][1] = pt2.y();
+            }
+        }
+    }
 }

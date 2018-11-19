@@ -1,5 +1,6 @@
 #include "drawablenode.h"
 #include <ui/evts.h>
+#include <ui/cmndef.h>
 #include <helper/h5db.h>
 #include <helper/commondef.h>
 #pragma warning( push )
@@ -196,6 +197,25 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
 
     if (!pv.empty())
     {
+        if (selData_.ss == SelectionState::kSelNodeEdit)
+        {
+            Geom::PathVector npv;
+            NodeIdVector nids;
+            BuildNode(npv, nids);
+
+            for (int n = 0; n < static_cast<int>(npv.size()); ++n)
+            {
+                if (Geom::contains(npv[n], pt))
+                {
+                    sd.hs = HitState::kHsNode;
+                    sd.id = nids[n].id;
+                    sd.subid = nids[n].subid;
+
+                    return sd;
+                }
+            }
+        }
+
         if (Geom::contains(pv.front(), pt))
         {
             sd.hs = HitState::kHsFace;
@@ -263,6 +283,46 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
     return sd;
 }
 
+void DrawableNode::StartEdit(const int toolId)
+{
+    switch (toolId)
+    {
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM: StartTransform(); break;
+    case kSpamID_TOOLBOX_GEOM_EDIT:      StartNodeEdit();  break;
+    default: break;
+    }
+}
+
+void DrawableNode::Edit(const int toolId, const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+{
+    switch (toolId)
+    {
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM: Transform(anchorPt, freePt, dx, dy); break;
+    case kSpamID_TOOLBOX_GEOM_EDIT:      NodeEdit(anchorPt, freePt, dx, dy);  break;
+    default: break;
+    }
+}
+
+void DrawableNode::EndEdit(const int toolId)
+{
+    switch (toolId)
+    {
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM: EndTransform(); break;
+    case kSpamID_TOOLBOX_GEOM_EDIT:      EndNodeEdit();  break;
+    default: break;
+    }
+}
+
+void DrawableNode::ResetEdit(const int toolId)
+{
+    switch (toolId)
+    {
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM: ResetTransform(); break;
+    case kSpamID_TOOLBOX_GEOM_EDIT:      ResetNodeEdit();  break;
+    default: break;
+    }
+}
+
 void DrawableNode::StartTransform()
 {
     baseRect_ = Geom::Rect();
@@ -310,6 +370,12 @@ void DrawableNode::StartNodeEdit()
 
 void DrawableNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
 {
+    Geom::Affine aff = Geom::Affine::identity();
+    if (HitState::kHsFace == selData_.hs)
+    {
+        aff *= Geom::Translate(dx, dy);
+        DoTransform(aff, dx, dy);
+    }
 }
 
 void DrawableNode::EndNodeEdit()
@@ -346,6 +412,8 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
         Geom::PathVector spv;
         Geom::PathVector skpv;
         Geom::PathVector rpv;
+        Geom::PathVector npv;
+        NodeIdVector     nids;
 
         double sx = 1;
         double sy = 1;
@@ -362,6 +430,9 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
         DrawHighlightScaleHandle(cr, spv, sx, hx);
         DrawHighlightSkewHandle(cr, skpv, sx, hx);
         DrawHighlightRotateHandle(cr, rpv, sx, hx);
+
+        BuildNode(npv, nids);
+        DrawHighlightNode(cr, npv, nids, sx, hx);
 
         Geom::PathVector bpv;
         BuildBox(corners, bpv);
@@ -400,38 +471,34 @@ void DrawableNode::HighlightFace()
     hlData_.subid = 0;
 }
 
-void DrawableNode::SelectEntity()
+void DrawableNode::Select(int toolId)
 {
-    selData_.ss = SelectionState::kSelScale;
-    selData_.hs = HitState::kHsNone;
-    selData_.id = -1;
-    selData_.subid = -1;
-}
-
-void DrawableNode::SelectFace()
-{
-    selData_.ss = SelectionState::kSelState;
-    selData_.hs = HitState::kHsNone;
-    selData_.id = -1;
-    selData_.subid = -1;
-}
-
-void DrawableNode::SwitchSelectionState()
-{
-    switch (selData_.ss)
+    switch (toolId)
     {
-    case SelectionState::kSelNone:
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM:
         selData_.ss = SelectionState::kSelScale;
         break;
 
-    case SelectionState::kSelScale:
-        selData_.ss = SelectionState::kSelRotateAndSkew;
+    case kSpamID_TOOLBOX_GEOM_EDIT:
+        selData_.ss = SelectionState::kSelNodeEdit;
         break;
 
-    case SelectionState::kSelRotateAndSkew:
-        selData_.ss = SelectionState::kSelScale;
+    default:
+        selData_.ss = SelectionState::kSelState;
         break;
+    }
 
+    selData_.hs = HitState::kHsNone;
+    selData_.id = -1;
+    selData_.subid = -1;
+}
+
+void DrawableNode::SwitchSelectionState(int toolId)
+{
+    switch (toolId)
+    {
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM: SwitchTransformState(); break;
+    case kSpamID_TOOLBOX_GEOM_EDIT:      SwitchNodeEditState();  break;
     default: break;
     }
 }
@@ -455,6 +522,16 @@ HighlightData DrawableNode::MapSelectionToHighlight(const SelectionData &sd)
 bool DrawableNode::IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr)
 {
     return hdl.hls != hdr.hls || hdl.id != hdr.id || hdl.subid != hdr.subid;
+}
+
+SelectionState DrawableNode::GetInitialSelectState(const int toolId)
+{
+    switch (toolId)
+    {
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM: return SelectionState::kSelScale;
+    case kSpamID_TOOLBOX_GEOM_EDIT:      return SelectionState::kSelNodeEdit;
+    default: return SelectionState::kSelState;
+    }
 }
 
 void DrawableNode::DrawHighlightFace(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &fpv, const double ux, const double ax) const
@@ -504,11 +581,58 @@ void DrawableNode::DrawHighlightRotateHandle(Cairo::RefPtr<Cairo::Context> &cr, 
     DrawHighlightHandle(cr, rpv, HighlightState::kHlRotateHandle, ux, ax);
 }
 
+void DrawableNode::DrawHighlightNode(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &npv, const NodeIdVector &ids, const double ux, const double ax) const
+{
+    Geom::CairoPathSink cairoPathSink(cr->cobj());
+    for (int p = 0; p<static_cast<int>(npv.size()); ++p)
+    {
+        if (npv[p].empty())
+        {
+            continue;
+        }
+
+        if (HighlightState::kHlNode == hlData_.hls &&
+            hlData_.id == ids[p].id &&
+            hlData_.subid == ids[p].subid)
+        {
+            const wxColour sc(0xF9, 0xA6, 0x02);
+            const wxColour &fc = sc;
+
+            cairoPathSink.feed(npv[p]);
+            cr->set_source_rgba(fc.Red() / 255.0, fc.Green() / 255.0, fc.Blue() / 255.0, fc.Alpha() / 255.0 / 4);
+            cr->fill_preserve();
+            cr->set_line_width(ax);
+            cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0 / 4);
+            cr->stroke_preserve();
+            cr->set_line_width(ux);
+            cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0);
+            cr->stroke();
+        }
+        else
+        {
+            const wxColour &sc = drawStyle_.strokeColor_;
+            const wxColour &fc = drawStyle_.fillColor_;
+
+            cairoPathSink.feed(npv[p]);
+            cr->set_source_rgba(1.0, 0.0, 0.0, 0.2);
+            cr->fill_preserve();
+            cr->set_line_width(ux);
+            cr->set_source_rgba(1.0, 0.0, 0.0, sc.Alpha() / 255.0);
+            cr->stroke();
+        }
+    }
+}
+
 void DrawableNode::DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &pv, const HighlightState hs, const double ux, const double ax) const
 {
     Geom::CairoPathSink cairoPathSink(cr->cobj());
     for (int p = 0; p<static_cast<int>(pv.size()); ++p)
     {
+        if (pv[p].empty())
+        {
+            continue;
+        }
+
         if (hs == hlData_.hls && hlData_.id == p)
         {
             const wxColour sc(0xF9, 0xA6, 0x02);
@@ -704,4 +828,36 @@ void DrawableNode::BuildSkewMat(const Geom::Point &anchorPt, const Geom::Point &
     aff *= Geom::HShear(mx);
     aff *= Geom::VShear(my);
     aff *= Geom::Translate(tx, ty);
+}
+
+void DrawableNode::SwitchTransformState()
+{
+    switch (selData_.ss)
+    {
+    case SelectionState::kSelNone:
+        selData_.ss = SelectionState::kSelScale;
+        break;
+
+    case SelectionState::kSelScale:
+        selData_.ss = SelectionState::kSelRotateAndSkew;
+        break;
+
+    case SelectionState::kSelRotateAndSkew:
+        selData_.ss = SelectionState::kSelScale;
+        break;
+
+    default: break;
+    }
+}
+
+void DrawableNode::SwitchNodeEditState()
+{
+    switch (selData_.ss)
+    {
+    case SelectionState::kSelNone:
+        selData_.ss = SelectionState::kSelNodeEdit;
+        break;
+
+    default: break;
+    }
 }

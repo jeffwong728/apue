@@ -82,6 +82,8 @@ set(ui_core_HEADERS
   toolbox/probebox.h
   toolbox/matchbox.h
   toolbox/geombox.h
+  fsm/boxtool.h
+  fsm/edittool.h
   fsm/probetool.h
   fsm/recttool.h
   fsm/spamer.h

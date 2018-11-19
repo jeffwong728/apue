@@ -4,6 +4,7 @@
 #include "probetool.h"
 #include "recttool.h"
 #include "transformtool.h"
+#include "nodeedittool.h"
 #include "polygontool.h"
 #include <wx/log.h>
 #include <ui/spam.h>
@@ -209,7 +210,7 @@ void NoTool::OnEndDraging(const EvLMouseUp &e)
             Geom::PathVector pv;
             selEnt->BuildPath(pv);
             oldRect.unionWith(pv.boundsFast());
-            selEnt->SelectFace();
+            selEnt->Select(-1);
         }
 
         context<Spamer>().sig_EntityDesel(Spam::Difference(selEnts, newSelEnts));
@@ -379,7 +380,7 @@ void NoTool::OnDrawableSelect(const EvDrawableSelect &e)
 
                 for (SPDrawableNode &newSelEnt : newSelEnts)
                 {
-                    newSelEnt->SelectFace();
+                    newSelEnt->Select(-1);
 
                     Geom::PathVector pv;
                     newSelEnt->BuildPath(pv);
@@ -416,9 +417,13 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     {
         return transit<PolygonTool>();
     }
-    if (kSpamID_TOOLBOX_GEOM_SELECT == e.toolId)
+    if (kSpamID_TOOLBOX_GEOM_TRANSFORM == e.toolId)
     {
         return transit<TransformTool>();
+    }
+    if (kSpamID_TOOLBOX_GEOM_EDIT == e.toolId)
+    {
+        return transit<NodeEditTool>();
     }
     else
     {

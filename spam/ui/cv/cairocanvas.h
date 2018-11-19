@@ -66,6 +66,7 @@ public:
     void DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
     void AddRect(const RectData &rd);
     void AddPolygon(const PolygonData &pd);
+    void DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoNodeEdit(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     SPStationNode GetStation();
