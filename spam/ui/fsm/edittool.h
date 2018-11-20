@@ -91,10 +91,7 @@ struct EditTool : BoxTool<ToolT, ToolId>
             Geom::OptRect refreshRect;
             for (SPDrawableNode &selEnt : selEnts)
             {
-                selEnt->selData_.ss = selStates[s++];
-                selEnt->selData_.hs = HitState::kHsNone;
-                selEnt->selData_.id = -1;
-                selEnt->selData_.subid = -1;
+                selEnt->SetSelectionData(selStates[s++]);
 
                 Geom::PathVector pv;
                 selEnt->BuildPath(pv);
@@ -142,10 +139,7 @@ struct EditTool : BoxTool<ToolT, ToolId>
                 selEnt->BuildPath(cpv);
                 refreshRect.unionWith(cpv.boundsFast());
 
-                selEnt->selData_.ss = selStates[s++];
-                selEnt->selData_.hs = HitState::kHsNone;
-                selEnt->selData_.id = -1;
-                selEnt->selData_.subid = -1;
+                selEnt->SetSelectionData(selStates[s++]);
                 selEnt->ResetEdit(ToolId);
 
                 Geom::PathVector opv;
@@ -177,7 +171,7 @@ struct EditIdle
             Geom::Point freePt(imgPt.x, imgPt.y);
 
             auto s = 1 / cav->GetMatScale();
-            SelectionData sd{ SelectionState::kSelNone, HitState::kHsNone, -1, -1 };
+            SelectionData sd{ SelectionState::kSelNone, HitState::kHsNone, -1, -1, 0 };
             SPDrawableNode drawable = cav->FindDrawable(freePt, s, s, sd);
 
             if (drawable)
@@ -213,32 +207,30 @@ struct EditIdle
                     {
                         idle.context<ToolT>().ClearSelection(uuid);
                         selEnts.push_back(drawable);
-                        selStates.push_back(DrawableNode::GetInitialSelectState(ToolId));
+                        selStates.push_back({ DrawableNode::GetInitialSelectState(ToolId), HitState::kHsFace, 0, 0, 0 });
                     }
                     else
                     {
                         selStates.clear();
                         for (const SPDrawableNode &selEnt : selEnts)
                         {
-                            selStates.push_back(selEnt->selData_.ss);
+                            selStates.push_back(selEnt->GetSelectionData());
                         }
                     }
 
                     for (SPDrawableNode &selEnt : selEnts)
                     {
-                        selEnt->selData_.ss = SelectionState::kSelState;
-                        selEnt->selData_.hs = HitState::kHsFace;
-                        selEnt->selData_.id = 0;
-                        selEnt->selData_.subid = 0;
+                        selEnt->SetSelectionData({ SelectionState::kSelState, HitState::kHsFace, 0, 0, 0 });
                     }
                 }
                 else
                 {
+                    sd.master = drawable->GetSelectionData().master;
                     idle.context<ToolT>().ClearSelection(uuid);
                     selEnts.push_back(drawable);
-                    selStates.push_back(sd.ss);
+                    selStates.push_back(sd);
 
-                    drawable->selData_ = sd;
+                    drawable->SetSelectionData(sd);
                 }
 
                 idle.context<Spamer>().sig_EntityDesel(Spam::Difference(oldEnts, selEnts));

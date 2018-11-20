@@ -484,6 +484,7 @@ SPDrawableNode CairoCanvas::FindDrawable(const Geom::Point &pt, const double sx,
     sd.hs = HitState::kHsNone;
     sd.id = -1;
     sd.subid = -1;
+    sd.master = 0;
 
     SPStationNode sn = GetStation();
     if (sn)

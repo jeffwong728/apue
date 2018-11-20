@@ -210,6 +210,7 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
                     sd.hs = HitState::kHsNode;
                     sd.id = nids[n].id;
                     sd.subid = nids[n].subid;
+                    sd.master = sd.id;
 
                     return sd;
                 }
@@ -221,6 +222,7 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
             sd.hs = HitState::kHsFace;
             sd.id = 0;
             sd.subid = 0;
+            sd.master = 0;
 
             return sd;
         }
@@ -240,6 +242,7 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
                     sd.hs = HitState::kHsScaleHandle;
                     sd.id = s;
                     sd.subid = 0;
+                    sd.master = 0;
 
                     return sd;
                 }
@@ -258,6 +261,7 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
                     sd.hs = HitState::kHsRotateHandle;
                     sd.id = r;
                     sd.subid = 0;
+                    sd.master = 0;
 
                     return sd;
                 }
@@ -273,6 +277,7 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
                     sd.hs = HitState::kHsSkewHandle;
                     sd.id = sk;
                     sd.subid = 0;
+                    sd.master = 0;
 
                     return sd;
                 }
@@ -455,6 +460,7 @@ void DrawableNode::ClearSelection()
     selData_.hs    = HitState::kHsNone;
     selData_.id    = -1;
     selData_.subid = -1;
+    selData_.master = 0;
 }
 
 void DrawableNode::ClearHighlight()
@@ -491,6 +497,7 @@ void DrawableNode::Select(int toolId)
     selData_.hs = HitState::kHsNone;
     selData_.id = -1;
     selData_.subid = -1;
+    selData_.master = 0;
 }
 
 void DrawableNode::SwitchSelectionState(int toolId)
@@ -501,6 +508,11 @@ void DrawableNode::SwitchSelectionState(int toolId)
     case kSpamID_TOOLBOX_GEOM_EDIT:      SwitchNodeEditState();  break;
     default: break;
     }
+}
+
+void DrawableNode::SetSelectionData(const SelectionData &selData)
+{
+    selData_ = selData;
 }
 
 HighlightData DrawableNode::MapSelectionToHighlight(const SelectionData &sd)
@@ -860,4 +872,6 @@ void DrawableNode::SwitchNodeEditState()
 
     default: break;
     }
+
+    selData_.master = std::max(0, selData_.id);
 }

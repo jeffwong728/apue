@@ -8,6 +8,7 @@
 #include <ui/spam.h>
 #include <ui/evts.h>
 #include <ui/fsm/spamer.h>
+#include <ui/fsm/notool.h>
 #include <ui/cv/cvimagepanel.h>
 #include <ui/cv/cairocanvas.h>
 #include <ui/projs/stationnode.h>

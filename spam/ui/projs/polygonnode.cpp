@@ -73,6 +73,7 @@ SelectionData PolygonNode::HitTest(const Geom::Point &pt) const
         sd.hs    = HitState::kHsFace;
         sd.id    = 0;
         sd.subid = 0;
+        sd.master = 0;
     }
 
     return sd;

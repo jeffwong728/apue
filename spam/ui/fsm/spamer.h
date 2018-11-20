@@ -19,8 +19,6 @@ namespace sc = boost::statechart;
 
 class RootFrame;
 struct NoTool;
-struct NoToolIdle;
-struct NoToolDraging;
 
 struct Spamer : boost::statechart::state_machine<Spamer, NoTool>
 {
@@ -48,58 +46,6 @@ struct Spamer : boost::statechart::state_machine<Spamer, NoTool>
     bs2::signal_type<void(const SPModelNode &), bs2_dummy_mutex>::type sig_EntityDim;
     bs2::signal_type<void(const SPDrawableNodeVector &), bs2_dummy_mutex>::type sig_EntitySel;
     bs2::signal_type<void(const SPDrawableNodeVector &), bs2_dummy_mutex>::type sig_EntityDesel;
-};
-
-struct NoTool : boost::statechart::simple_state<NoTool, Spamer, NoToolIdle>
-{
-    NoTool();
-    ~NoTool();
-
-    void OnStartDraging(const EvLMouseDown &e);
-    void OnDraging(const EvMouseMove &e);
-    void OnEndDraging(const EvLMouseUp &e);
-    void OnReset(const EvReset &e);
-    void OnSafari(const EvMouseMove &e);
-    void OnCanvasLeave(const EvCanvasLeave &e);
-    void OnAppQuit(const EvAppQuit &e);
-    void OnDrawableDelete(const EvDrawableDelete &e);
-    void OnDrawableSelect(const EvDrawableSelect &e);
-
-    typedef boost::mpl::list<
-        boost::statechart::transition<EvReset, NoTool>,
-        boost::statechart::in_state_reaction<EvAppQuit, NoTool, &NoTool::OnAppQuit>,
-        boost::statechart::in_state_reaction<EvDrawableDelete, NoTool, &NoTool::OnDrawableDelete>,
-        boost::statechart::in_state_reaction<EvDrawableSelect, NoTool, &NoTool::OnDrawableSelect>,
-        boost::statechart::in_state_reaction<EvCanvasLeave, NoTool, &NoTool::OnCanvasLeave>> reactions;
-
-    Geom::Point anchor;
-    Geom::OptRect rect;
-    SPDrawableNode highlight_;
-    std::unordered_map<std::string, SPDrawableNodeVector> selData;
-};
-
-struct NoToolIdle : boost::statechart::simple_state<NoToolIdle, NoTool>
-{
-    NoToolIdle();
-    ~NoToolIdle();
-
-    typedef boost::mpl::list<
-        boost::statechart::transition<EvLMouseDown, NoToolDraging, NoTool, &NoTool::OnStartDraging>,
-        boost::statechart::in_state_reaction<EvMouseMove, NoTool, &NoTool::OnSafari>,
-        boost::statechart::custom_reaction<EvToolEnter>> reactions;
-
-    sc::result react(const EvToolEnter &e);
-};
-
-struct NoToolDraging : boost::statechart::simple_state<NoToolDraging, NoTool>
-{
-    NoToolDraging();
-    ~NoToolDraging();
-
-    typedef boost::mpl::list<
-        boost::statechart::transition<EvLMouseUp, NoToolIdle, NoTool, &NoTool::OnEndDraging>,
-        boost::statechart::transition<EvReset, NoToolIdle, NoTool, &NoTool::OnReset>,
-        boost::statechart::in_state_reaction<EvMouseMove, NoTool, &NoTool::OnDraging>> reactions;
 };
 
 #endif //SPAM_UI_FSM_SPAMER_H

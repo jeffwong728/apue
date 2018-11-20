@@ -41,6 +41,8 @@ public:
     void GetCorner(int pos, Geom::Point &corner) const;
     void Clear() { data_.points.clear(); }
     void BuildOpenPath(Geom::PathVector &pv);
+    void SetData(const PolygonData &data) { data_ = data; }
+    const PolygonData& GetData() const { return data_; }
 
 public:
     void Save(const H5::Group &g) const override;
@@ -55,7 +57,7 @@ public:
 protected:
     void DoTransform(const Geom::Affine &aff, const double dx, const double dy) override;
 
-public:
+private:
     PolygonData data_;
     PolygonData base_;
 };

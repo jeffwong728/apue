@@ -68,6 +68,8 @@ public:
     void HighlightFace();
     void Select(int toolId);
     void SwitchSelectionState(int toolId);
+    void SetSelectionData(const SelectionData &selData);
+    const SelectionData &GetSelectionData() const { return selData_; }
     static HighlightData MapSelectionToHighlight(const SelectionData &sd);
     static bool IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr);
     static SelectionState GetInitialSelectState(const int toolId);
@@ -88,7 +90,7 @@ private:
     void SwitchTransformState();
     void SwitchNodeEditState();
 
-public:
+protected:
     SelectionData selData_;
     HighlightData hlData_;
     Geom::Rect  baseRect_;

@@ -87,7 +87,7 @@ void PolygonTool::EndTracing(const wxMouseEvent &e)
 
         if (polygon->GetNumCorners()>2)
         {
-            cav->AddPolygon(polygon->data_);
+            cav->AddPolygon(polygon->GetData());
         }
     }
 

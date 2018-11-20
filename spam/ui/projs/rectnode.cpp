@@ -129,15 +129,14 @@ void RectNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
         const double lens[4][2] = { { h, w },{ w, h },{ h, w },{ w, h } };
         const double radi[4][2] = {
             { data_.radii[0][1], data_.radii[0][0] },
-        { data_.radii[1][0], data_.radii[1][1] },
-        { data_.radii[2][1], data_.radii[2][0] },
-        { data_.radii[3][0], data_.radii[3][1] }
+            { data_.radii[1][0], data_.radii[1][1] },
+            { data_.radii[2][1], data_.radii[2][0] },
+            { data_.radii[3][0], data_.radii[3][1] }
         };
 
-        int state = 0;
         for (int c = 0; c<4; ++c)
         {
-            if (state == c)
+            if (selData_.master == c)
             {
                 Geom::Point r0 = Geom::lerp(radi[c][0] / lens[c][0], pts[c], pts[indices[c][0]]);
                 Geom::Point r1 = Geom::lerp(radi[c][1] / lens[c][1], pts[c], pts[indices[c][1]]);
@@ -170,6 +169,7 @@ SelectionData RectNode::HitTest(const Geom::Point &pt) const
             sd.hs = HitState::kHsFace;
             sd.id = 0;
             sd.subid = 0;
+            sd.master = 0;
         }
     }
 
@@ -214,9 +214,71 @@ void RectNode::ResetTransform()
     DrawableNode::EndTransform();
 }
 
+void RectNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+{
+    if (HitState::kHsNode == selData_.hs)
+    {
+        if (selData_.id>-1 && selData_.id<4)
+        {
+            if ((1 == selData_.subid || 2 == selData_.subid))
+            {
+                const int indices[4][2] = { { 3, 1 },{ 0, 2 },{ 1, 3 },{ 2, 0 } };
+                Geom::Point spt{ data_.points[selData_.id][0], data_.points[selData_.id][1] };
+                Geom::Point ept{ data_.points[indices[selData_.id][selData_.subid - 1]][0], data_.points[indices[selData_.id][selData_.subid - 1]][1] };
+
+                Geom::Line ln{ spt, ept };
+                Geom::Coord t = std::max(.0, std::min(0.5, ln.timeAtProjection(freePt)));
+                Geom::Point r = Geom::lerp(t, spt, ept);
+
+                const double radi[4][2] = { { 1, 0 },{ 0, 1 },{ 1, 0 },{ 0, 1 } };
+                data_.radii[selData_.id][radi[selData_.id][selData_.subid - 1]] = Geom::distance(r, spt);
+            }
+            else
+            {
+                Geom::Point pts[] = {
+                    Geom::Point(data_.points[0][0], data_.points[0][1]),
+                    Geom::Point(data_.points[1][0], data_.points[1][1]),
+                    Geom::Point(data_.points[2][0], data_.points[2][1]),
+                    Geom::Point(data_.points[3][0], data_.points[3][1])
+                };
+
+                const int oindices[4] = { 2, 3, 0, 1 };
+                const int sindices[4] = { 3, 0, 1, 2 };
+                const int rindices[4] = { 1, 2, 3, 0 };
+                const int lindices[4][4] = { {1, 2, 3, 0}, {2, 3, 1, 0}, {0, 3, 1, 2}, {1, 0, 2, 3} };
+                Geom::Point mpt{ data_.points[selData_.id][0] + dx,  data_.points[selData_.id][1] + dy };
+                Geom::Point opt{ data_.points[oindices[selData_.id]][0],  data_.points[oindices[selData_.id]][1] };
+                Geom::Line sln{ pts[lindices[selData_.id][0]], pts[lindices[selData_.id][1]] };
+                Geom::Line eln{ pts[lindices[selData_.id][2]], pts[lindices[selData_.id][3]] };
+                Geom::Point sp = Geom::projection(mpt, sln);
+                Geom::Point ep = Geom::projection(mpt, eln);
+                Geom::Line pln{ sp, ep };
+                Geom::Coord t = pln.timeAt(mpt);
+
+                Geom::Point spt = Geom::lerp(t, pts[oindices[selData_.id]], pts[sindices[selData_.id]]);
+                Geom::Point cpt = Geom::lerp(0.5, mpt, pts[oindices[selData_.id]]);
+                Geom::Point rpt = Geom::lerp(2, spt, cpt);
+
+                data_.points[selData_.id][0] = mpt.x();
+                data_.points[selData_.id][1] = mpt.y();
+                data_.points[sindices[selData_.id]][0] = spt.x();
+                data_.points[sindices[selData_.id]][1] = spt.y();
+                data_.points[rindices[selData_.id]][0] = rpt.x();
+                data_.points[rindices[selData_.id]][1] = rpt.y();
+                ConstrainRadii();
+            }
+        }
+    }
+    else
+    {
+        Geom::Affine aff = Geom::Affine::identity();
+        aff *= Geom::Translate(dx, dy);
+        RectNode::DoTransform(aff, dx, dy);
+    }
+}
+
 void RectNode::ResetNodeEdit()
 {
-
 }
 
 boost::any RectNode::CreateMemento() const
@@ -328,6 +390,26 @@ void RectNode::DoTransform(const Geom::Affine &aff, const double dx, const doubl
                 data_.points[i][0] = pt2.x();
                 data_.points[i][1] = pt2.y();
             }
+
+            ConstrainRadii();
         }
+    }
+}
+
+void RectNode::ConstrainRadii()
+{
+    Geom::Point p0{ data_.points[0][0], data_.points[0][1] };
+    Geom::Point p1{ data_.points[1][0], data_.points[1][1] };
+    Geom::Point p2{ data_.points[2][0], data_.points[2][1] };
+    Geom::Point p3{ data_.points[3][0], data_.points[3][1] };
+
+    const double w = Geom::distance(p0, p1);
+    const double h = Geom::distance(p0, p3);
+    const double w2 = w / 2;
+    const double h2 = h / 2;
+    for (auto &r : data_.radii)
+    {
+        r[0] = std::min(w2, r[0]);
+        r[1] = std::min(h2, r[1]);
     }
 }

@@ -1,6 +1,7 @@
 #ifndef SPAM_UI_FSM_NODE_EDIT_TOOL_H
 #define SPAM_UI_FSM_NODE_EDIT_TOOL_H
 #include "spamer.h"
+#include "notool.h"
 #include "edittool.h"
 #include <ui/projs/modelfwd.h>
 #pragma warning( push )

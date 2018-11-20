@@ -19,7 +19,7 @@ struct EntitySelection
 {
     SPDrawableNodeVector ents;
     SpamMany  mementos;
-    std::vector<SelectionState> states;
+    std::vector<SelectionData> states;
 };
 
 using Selections = std::unordered_map<std::string, EntitySelection>;
@@ -198,7 +198,7 @@ struct BoxTool
             Geom::Point freePt(imgPt.x, imgPt.y);
 
             auto s = 1 / cav->GetMatScale();
-            SelectionData sd{ SelectionState::kSelNone, HitState::kHsNone, -1, -1 };
+            SelectionData sd{ SelectionState::kSelNone, HitState::kHsNone, -1, -1, 0 };
             auto drawable = cav->FindDrawable(freePt, s, s, sd);
             auto hlState = DrawableNode::MapSelectionToHighlight(sd);
             if (drawable)
@@ -326,10 +326,7 @@ struct BoxTool
 
         for (SPDrawableNode &selEnt : selEnts)
         {
-            selEnt->selData_.ss = SelectionState::kSelNone;
-            selEnt->selData_.hs = HitState::kHsNone;
-            selEnt->selData_.id = -1;
-            selEnt->selData_.subid = -1;
+            selEnt->ClearSelection();
         }
 
         selEnts.clear();

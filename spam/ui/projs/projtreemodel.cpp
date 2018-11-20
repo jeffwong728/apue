@@ -202,7 +202,7 @@ void ProjTreeModel::AddToStations(SPStationNode &station, SPGeomNodeVector &geom
 SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const RectData &rd)
 {
     SPRectNode newRect = std::make_shared<RectNode>(station, GetUnusedName(station, wxT("rect")));
-    newRect->data_ = rd;
+    newRect->SetData(rd);
     newRect->drawStyle_.strokeWidth_ = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
     newRect->drawStyle_.strokeColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
     newRect->drawStyle_.fillColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxYELLOW->GetRGBA()));
@@ -222,7 +222,7 @@ SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const RectData
 SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const PolygonData &pd)
 {
     SPPolygonNode newPg = std::make_shared<PolygonNode>(station, GetUnusedName(station, wxT("polygon")));
-    newPg->data_ = pd;
+    newPg->SetData(pd);
     newPg->drawStyle_.strokeWidth_ = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
     newPg->drawStyle_.strokeColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
     newPg->drawStyle_.fillColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxYELLOW->GetRGBA()));

@@ -90,6 +90,7 @@ SPDrawableNode StationNode::FindDrawable(const Geom::Point &pt, const double sx,
     sd.hs = HitState::kHsNone;
     sd.id = -1;
     sd.subid = -1;
+    sd.master = 0;
 
     for (auto &c : GetChildren())
     {

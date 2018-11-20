@@ -1,6 +1,7 @@
 #ifndef SPAM_UI_FSM_POLYGON_TOOL_H
 #define SPAM_UI_FSM_POLYGON_TOOL_H
 #include "spamer.h"
+#include "notool.h"
 #include <ui/projs/modelfwd.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )

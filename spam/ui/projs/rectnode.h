@@ -35,10 +35,13 @@ public:
     void StartTransform() override;
     void EndTransform() override;
     void ResetTransform() override;
+    void NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy) override;
     void ResetNodeEdit() override;
     boost::any CreateMemento() const override;
     bool RestoreFromMemento(const boost::any &memento) override;
     void InitData(RectData &data);
+    void SetData(const RectData &data) { data_ = data; }
+    const RectData& GetData() const { return data_; }
 
 public:
     void Save(const H5::Group &g) const override;
@@ -52,8 +55,9 @@ public:
 
 protected:
     void DoTransform(const Geom::Affine &aff, const double dx, const double dy) override;
+    void ConstrainRadii();
 
-public:
+private:
     RectData data_;
     RectData base_;
 };

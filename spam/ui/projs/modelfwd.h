@@ -113,6 +113,7 @@ struct SelectionData
     HitState       hs;
     int id;
     int subid;
+    int master;
 };
 
 struct NodeId

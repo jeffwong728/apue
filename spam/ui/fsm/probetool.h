@@ -1,6 +1,7 @@
 #ifndef SPAM_UI_TOOLBOX_PROBE_MACHINE_H
 #define SPAM_UI_TOOLBOX_PROBE_MACHINE_H
 #include "spamer.h"
+#include "notool.h"
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
 #include <2geom/path.h>

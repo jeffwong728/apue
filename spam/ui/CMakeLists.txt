@@ -35,6 +35,7 @@ set(ui_core_SRCS
   toolbox/probebox.cpp
   toolbox/matchbox.cpp
   toolbox/geombox.cpp
+  fsm/notool.cpp
   fsm/probetool.cpp
   fsm/recttool.cpp
   fsm/spamer.cpp
@@ -84,6 +85,7 @@ set(ui_core_HEADERS
   toolbox/geombox.h
   fsm/boxtool.h
   fsm/edittool.h
+  fsm/notool.h
   fsm/probetool.h
   fsm/recttool.h
   fsm/spamer.h
