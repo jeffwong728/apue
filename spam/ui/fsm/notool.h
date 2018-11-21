@@ -10,10 +10,11 @@
 
 struct NoToolIdle;
 struct NoToolDraging;
+using NoBoxTool = BoxTool<NoTool, -1>;
 
-struct NoTool : boost::statechart::simple_state<NoTool, Spamer, NoToolIdle>, BoxTool<NoTool, -1>
+struct NoTool : boost::statechart::simple_state<NoTool, Spamer, NoToolIdle>, NoBoxTool
 {
-    using BoxToolT = BoxTool<NoTool, -1>;
+    using BoxToolT = BoxToolImpl;
     NoTool();
     ~NoTool();
 

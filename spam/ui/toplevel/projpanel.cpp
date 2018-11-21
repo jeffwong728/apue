@@ -124,7 +124,7 @@ void ProjPanel::CreateStation()
     }
 }
 
-void ProjPanel::GlowEntity(const SPModelNode &de)
+void ProjPanel::GlowEntity(const SPDrawableNode &de)
 {
     auto projView = GetProjView();
     auto model = GetProjTreeModel();
@@ -181,7 +181,7 @@ void ProjPanel::DeselectEntity(const SPDrawableNodeVector &des)
     wxLogMessage(wxT("Deselect %zd Entities."), des.size());
 }
 
-void ProjPanel::DimEntity(const SPModelNode &de)
+void ProjPanel::DimEntity(const SPDrawableNode &de)
 {
     auto projView = GetProjView();
     auto model = GetProjTreeModel();

@@ -42,8 +42,8 @@ struct Spamer : boost::statechart::state_machine<Spamer, NoTool>
     void OnDrawableSelect(const SPDrawableNodeVector &dras);
 
     typedef bs2::keywords::mutex_type<bs2::dummy_mutex> bs2_dummy_mutex;
-    bs2::signal_type<void(const SPModelNode &), bs2_dummy_mutex>::type sig_EntityGlow;
-    bs2::signal_type<void(const SPModelNode &), bs2_dummy_mutex>::type sig_EntityDim;
+    bs2::signal_type<void(const SPDrawableNode &), bs2_dummy_mutex>::type sig_EntityGlow;
+    bs2::signal_type<void(const SPDrawableNode &), bs2_dummy_mutex>::type sig_EntityDim;
     bs2::signal_type<void(const SPDrawableNodeVector &), bs2_dummy_mutex>::type sig_EntitySel;
     bs2::signal_type<void(const SPDrawableNodeVector &), bs2_dummy_mutex>::type sig_EntityDesel;
 };

@@ -20,6 +20,7 @@ set(ui_core_SRCS
   projs/projnode.cpp
   projs/projtreemodel.cpp
   projs/stationnode.cpp
+  projs/ellipsenode.cpp
   projs/rectnode.cpp
   projs/geomnode.cpp
   projs/drawablenode.cpp
@@ -35,6 +36,8 @@ set(ui_core_SRCS
   toolbox/probebox.cpp
   toolbox/matchbox.cpp
   toolbox/geombox.cpp
+  fsm/boxtool.cpp
+  fsm/edittool.cpp
   fsm/notool.cpp
   fsm/probetool.cpp
   fsm/recttool.cpp
@@ -71,6 +74,7 @@ set(ui_core_HEADERS
   projs/drawablenode.h
   projs/polygonnode.h
   projs/rectnode.h
+  projs/ellipsenode.h
   projs/geomnode.h
   projs/stylecellrenderer.h
   toplevel/logpanel.h

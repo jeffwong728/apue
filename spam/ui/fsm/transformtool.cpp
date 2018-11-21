@@ -8,7 +8,7 @@
 #include <ui/projs/geomnode.h>
 
 TransformTool::TransformTool()
-    : EditToolT(*this)
+    : TransformEditTool(*this)
 {
     wxLogMessage(wxT("TransformTool Enter."));
 }
@@ -26,11 +26,6 @@ TransformIdle::TransformIdle()
 TransformIdle::~TransformIdle()
 {
     wxLogMessage(wxT("TransformIdle Quit."));
-}
-
-sc::result TransformIdle::react(const EvToolQuit &e)
-{
-    return transit<NoTool>();
 }
 
 sc::result TransformIdle::react(const EvLMouseDown &e)

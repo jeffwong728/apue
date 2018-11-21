@@ -37,3 +37,8 @@ wxString TransformCmd::GetDescription() const
 {
     return wxString(wxT("Transform Entities"));
 }
+
+wxString NodeEditCmd::GetDescription() const
+{
+    return wxString(wxT("Edit Entity Node"));
+}

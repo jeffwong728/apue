@@ -3,27 +3,26 @@
 #include "spamer.h"
 #include "notool.h"
 #include "edittool.h"
-#include <ui/projs/modelfwd.h>
-#pragma warning( push )
-#pragma warning( disable : 4819 4003 )
-#include <2geom/path.h>
-#pragma warning( pop )
-#include <unordered_map>
 
 struct TransformIdle;
 struct TransformBoxSelecting;
 struct Transforming;
+struct TransformTool;
 
-struct TransformTool : sc::simple_state<TransformTool, Spamer, TransformIdle>, EditTool<TransformTool, kSpamID_TOOLBOX_GEOM_TRANSFORM>
+using  TransformEditTool = EditTool<TransformTool, kSpamID_TOOLBOX_GEOM_TRANSFORM>;
+using  TransformEditIdle = EditIdle<TransformIdle, TransformTool, Transforming, TransformBoxSelecting, kSpamID_TOOLBOX_GEOM_TRANSFORM>;
+
+struct TransformTool : sc::simple_state<TransformTool, Spamer, TransformIdle>, TransformEditTool
 {
-    using BoxToolT = BoxTool<TransformTool, kSpamID_TOOLBOX_GEOM_TRANSFORM>;
-    using EditToolT = EditTool<TransformTool, kSpamID_TOOLBOX_GEOM_TRANSFORM>;
+    using BoxToolT = BoxToolImpl;
+    using EditToolT = EditToolImpl;
 
     TransformTool();
     ~TransformTool();
 
     typedef boost::mpl::list<
         sc::transition<EvReset, TransformTool>,
+        sc::transition<EvToolQuit, NoTool>,
         sc::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         sc::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         sc::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
@@ -31,7 +30,7 @@ struct TransformTool : sc::simple_state<TransformTool, Spamer, TransformIdle>, E
         sc::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
 };
 
-struct TransformIdle : sc::simple_state<TransformIdle, TransformTool>, EditIdle<TransformIdle, TransformTool, Transforming, TransformBoxSelecting, kSpamID_TOOLBOX_GEOM_TRANSFORM>
+struct TransformIdle : sc::simple_state<TransformIdle, TransformTool>, TransformEditIdle
 {
     using IdleT = EditIdle<TransformIdle, TransformTool, Transforming, TransformBoxSelecting, kSpamID_TOOLBOX_GEOM_TRANSFORM>;
 
@@ -40,10 +39,8 @@ struct TransformIdle : sc::simple_state<TransformIdle, TransformTool>, EditIdle<
 
     typedef boost::mpl::list<
         sc::custom_reaction<EvLMouseDown>,
-        sc::custom_reaction<EvToolQuit>,
         sc::in_state_reaction<EvMouseMove, TransformTool::BoxToolT, &TransformTool::BoxToolT::Safari>> reactions;
 
-    sc::result react(const EvToolQuit &e);
     sc::result react(const EvLMouseDown &e);
 };
 

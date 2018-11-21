@@ -30,4 +30,14 @@ private:
     SpamMany mementos_;
 };
 
+class NodeEditCmd : public TransformCmd
+{
+public:
+    NodeEditCmd(ProjTreeModel *model, SPStationNode &station, const SPDrawableNodeVector &drawables, const SpamMany &mementos)
+    : TransformCmd(model, station, drawables, mementos) {}
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+};
+
 #endif //SPAM_UI_CMDS_TRANSFORM_CMD_H

@@ -8,7 +8,7 @@
 #include <ui/projs/geomnode.h>
 
 NodeEditTool::NodeEditTool()
-    : EditToolT(*this)
+    : NodeEditToolImpl(*this)
 {
     wxLogMessage(wxT("NodeEditTool Enter."));
 }
@@ -26,11 +26,6 @@ NodeEditIdle::NodeEditIdle()
 NodeEditIdle::~NodeEditIdle()
 {
     wxLogMessage(wxT("NodeEditIdle Quit."));
-}
-
-sc::result NodeEditIdle::react(const EvToolQuit &e)
-{
-    return transit<NoTool>();
 }
 
 sc::result NodeEditIdle::react(const EvLMouseDown &e)

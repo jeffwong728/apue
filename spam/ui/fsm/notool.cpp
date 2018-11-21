@@ -12,7 +12,7 @@
 #include <ui/toplevel/rootframe.h>
 
 NoTool::NoTool()
-    : BoxToolT(*this)
+    : NoBoxTool(*this)
 {
     wxLogMessage(wxT("NoTool Enter."));
 }

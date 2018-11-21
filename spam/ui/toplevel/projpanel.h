@@ -32,8 +32,8 @@ public:
     void SetProjectModified(bool modified=true);
     bool IsProjectModified() const;
     void CreateStation();
-    void GlowEntity(const SPModelNode &de);
-    void DimEntity(const SPModelNode &de);
+    void GlowEntity(const SPDrawableNode &de);
+    void DimEntity(const SPDrawableNode &de);
     void SelectEntity(const SPDrawableNodeVector &des);
     void DeselectEntity(const SPDrawableNodeVector &des);
 

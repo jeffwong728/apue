@@ -13,17 +13,22 @@
 struct NodeEditIdle;
 struct NodeEditBoxSelecting;
 struct NodeEditing;
+struct NodeEditTool;
 
-struct NodeEditTool : sc::simple_state<NodeEditTool, Spamer, NodeEditIdle>, EditTool<NodeEditTool, kSpamID_TOOLBOX_GEOM_EDIT>
+using NodeEditToolImpl = EditTool<NodeEditTool, kSpamID_TOOLBOX_GEOM_EDIT>;
+using NodeEditIdleImpl = EditIdle<NodeEditIdle, NodeEditTool, NodeEditing, NodeEditBoxSelecting, kSpamID_TOOLBOX_GEOM_EDIT>;
+
+struct NodeEditTool : sc::simple_state<NodeEditTool, Spamer, NodeEditIdle>, NodeEditToolImpl
 {
-    using BoxToolT  = BoxTool<NodeEditTool, kSpamID_TOOLBOX_GEOM_EDIT>;
-    using EditToolT = EditTool<NodeEditTool, kSpamID_TOOLBOX_GEOM_EDIT>;
+    using BoxToolT  = BoxToolImpl;
+    using EditToolT = EditToolImpl;
 
     NodeEditTool();
     ~NodeEditTool();
 
     typedef boost::mpl::list<
         sc::transition<EvReset, NodeEditTool>,
+        sc::transition<EvToolQuit, NoTool>,
         sc::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         sc::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         sc::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
@@ -31,18 +36,16 @@ struct NodeEditTool : sc::simple_state<NodeEditTool, Spamer, NodeEditIdle>, Edit
         sc::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
 };
 
-struct NodeEditIdle : sc::simple_state<NodeEditIdle, NodeEditTool>, EditIdle<NodeEditIdle, NodeEditTool, NodeEditing, NodeEditBoxSelecting, kSpamID_TOOLBOX_GEOM_EDIT>
+struct NodeEditIdle : sc::simple_state<NodeEditIdle, NodeEditTool>, NodeEditIdleImpl
 {
-    using EditIdleT = EditIdle<NodeEditIdle, NodeEditTool, NodeEditing, NodeEditBoxSelecting, kSpamID_TOOLBOX_GEOM_EDIT>;
+    using EditIdleT = NodeEditIdleImpl;
 
     NodeEditIdle();
     ~NodeEditIdle();
     typedef boost::mpl::list<
         sc::custom_reaction<EvLMouseDown>,
-        sc::custom_reaction<EvToolQuit>,
         sc::in_state_reaction<EvMouseMove, NodeEditTool::BoxToolT, &NodeEditTool::BoxToolT::Safari>> reactions;
 
-    sc::result react(const EvToolQuit &e);
     sc::result react(const EvLMouseDown &e);
 };
 

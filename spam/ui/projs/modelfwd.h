@@ -87,6 +87,12 @@ enum class EntitySigType
     kGuard
 };
 
+enum class GenericEllipseArcType {
+    kAtSlice,
+    kAtChord,
+    kAtArc
+};
+
 struct RectData
 {
     std::array<std::array<double, 2>, 4> points;
@@ -98,6 +104,14 @@ struct PolygonData
 {
     std::vector<std::array<double, 2>> points;
     std::array<double, 6> transform;
+};
+
+struct GenericEllipseArcData
+{
+    std::array<std::array<double, 2>, 4> points;
+    std::array<double, 2> angles;
+    std::array<double, 6> transform;
+    GenericEllipseArcType type;
 };
 
 struct HighlightData

@@ -452,6 +452,10 @@ void CairoCanvas::DoNodeEdit(const SPDrawableNodeVector &selEnts, const SpamMany
         auto station = model->FindStationByUUID(stationUUID_);
         if (station)
         {
+            auto cmd = std::make_shared<NodeEditCmd>(model, station, selEnts, mementos);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            wxLogStatus(cmd->GetDescription());
         }
     }
 }
