@@ -41,19 +41,19 @@ public:
     virtual bool IsIntersection(const Geom::Rect &box) const = 0;
 
     void StartEdit(const int toolId);
-    void Edit(const int toolId, const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy);
+    void Edit(const int toolId, const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt);
     void EndEdit(const int toolId);
     void ResetEdit(const int toolId);
 
     // Transform
     virtual void StartTransform();
-    virtual void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy);
+    virtual void Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt);
     virtual void EndTransform();
     virtual void ResetTransform() = 0;
 
     // Edit node
     virtual void StartNodeEdit();
-    virtual void NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy);
+    virtual void NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt);
     virtual void EndNodeEdit();
     virtual void ResetNodeEdit() = 0;
 

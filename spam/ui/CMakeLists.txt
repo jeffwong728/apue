@@ -41,6 +41,7 @@ set(ui_core_SRCS
   fsm/notool.cpp
   fsm/probetool.cpp
   fsm/recttool.cpp
+  fsm/ellipsetool.cpp
   fsm/spamer.cpp
   fsm/transformtool.cpp
   fsm/nodeedittool.cpp
@@ -92,6 +93,7 @@ set(ui_core_HEADERS
   fsm/notool.h
   fsm/probetool.h
   fsm/recttool.h
+  fsm/ellipsetool.h
   fsm/spamer.h
   fsm/transformtool.h
   fsm/nodeedittool.h

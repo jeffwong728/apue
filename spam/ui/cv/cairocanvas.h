@@ -65,6 +65,7 @@ public:
     void DrawBox(const Geom::Path &pth);
     void DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
     void AddRect(const RectData &rd);
+    void AddEllipse(const GenericEllipseArcData &ed);
     void AddPolygon(const PolygonData &pd);
     void DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
@@ -113,7 +114,8 @@ private:
     cv::Mat scrMat_;
     int anchorX_;
     int anchorY_;
-    int cRect_{0};
+    int cRect_{ 0 };
+    int cEllipse_{0};
     int cPolygon_{0};
 };
 

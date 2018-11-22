@@ -298,12 +298,12 @@ void DrawableNode::StartEdit(const int toolId)
     }
 }
 
-void DrawableNode::Edit(const int toolId, const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+void DrawableNode::Edit(const int toolId, const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt)
 {
     switch (toolId)
     {
-    case kSpamID_TOOLBOX_GEOM_TRANSFORM: Transform(anchorPt, freePt, dx, dy); break;
-    case kSpamID_TOOLBOX_GEOM_EDIT:      NodeEdit(anchorPt, freePt, dx, dy);  break;
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM: Transform(anchorPt, freePt, lastPt); break;
+    case kSpamID_TOOLBOX_GEOM_EDIT:      NodeEdit(anchorPt, freePt, lastPt);  break;
     default: break;
     }
 }
@@ -341,8 +341,10 @@ void DrawableNode::StartTransform()
     }
 }
 
-void DrawableNode::Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+void DrawableNode::Transform(const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt)
 {
+    Geom::Coord dx = freePt.x() - lastPt.x();
+    Geom::Coord dy = freePt.y() - lastPt.y();
     Geom::Affine aff = Geom::Affine::identity();
     if (HitState::kHsRotateHandle == selData_.hs)
     {
@@ -373,8 +375,10 @@ void DrawableNode::StartNodeEdit()
 {
 }
 
-void DrawableNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+void DrawableNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt)
 {
+    Geom::Coord dx = freePt.x() - lastPt.x();
+    Geom::Coord dy = freePt.y() - lastPt.y();
     Geom::Affine aff = Geom::Affine::identity();
     if (HitState::kHsFace == selData_.hs)
     {

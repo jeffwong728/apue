@@ -1,6 +1,7 @@
 ﻿#include "projtreemodel.h"
 #include "projnode.h"
 #include "rectnode.h"
+#include "ellipsenode.h"
 #include "polygonnode.h"
 #include "nodefactory.h"
 #include <ui/cmndef.h>
@@ -217,6 +218,26 @@ SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const RectData
     sig_GeomCreate(geoms);
 
     return newRect;
+}
+
+SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const GenericEllipseArcData &ed)
+{
+    SPGenericEllipseArcNode newEllip = std::make_shared<GenericEllipseArcNode>(station, GetUnusedName(station, wxT("ellipse")));
+    newEllip->SetData(ed);
+    newEllip->drawStyle_.strokeWidth_ = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
+    newEllip->drawStyle_.strokeColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
+    newEllip->drawStyle_.fillColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxYELLOW->GetRGBA()));
+    station->Append(newEllip);
+
+    wxDataViewItem child(newEllip.get());
+    wxDataViewItem parent(station.get());
+    ItemAdded(parent, child);
+    SetModified();
+
+    SPModelNodeVector geoms(1, newEllip);
+    sig_GeomCreate(geoms);
+
+    return newEllip;
 }
 
 SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const PolygonData &pd)

@@ -46,7 +46,6 @@ void EditToolImpl::ContinueEditing(const EvMouseMove &e)
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
         Geom::Rect newRect{ anchor , freePt };
-        Geom::Point deltPt = freePt - last;
 
         EntitySelection &es = selData[cav->GetUUID()];
         SPDrawableNodeVector &selEnts = es.ents;
@@ -57,7 +56,7 @@ void EditToolImpl::ContinueEditing(const EvMouseMove &e)
             Geom::PathVector pv;
             selEnt->BuildPath(pv);
             refreshRect.unionWith(pv.boundsFast());
-            selEnt->Edit(toolId, anchor, freePt, deltPt.x(), deltPt.y());
+            selEnt->Edit(toolId, anchor, freePt, last);
         }
 
         for (SPDrawableNode &selEnt : selEnts)

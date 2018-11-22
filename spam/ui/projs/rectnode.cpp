@@ -214,8 +214,10 @@ void RectNode::ResetTransform()
     DrawableNode::EndTransform();
 }
 
-void RectNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const double dx, const double dy)
+void RectNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt)
 {
+    Geom::Coord dx = freePt.x() - lastPt.x();
+    Geom::Coord dy = freePt.y() - lastPt.y();
     if (HitState::kHsNode == selData_.hs)
     {
         if (selData_.id>-1 && selData_.id<4)

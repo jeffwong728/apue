@@ -22,13 +22,13 @@ private:
 public:
     static void Save(const H5::Group &g, const std::string &n, const wxColour &c);
     static void Save(const H5::Group &g, const std::string &n, const std::vector<std::array<double, 2>> &points);
-    static void Save(const H5::Group &g, const std::string &n, const std::array<double, 6> &transformMat);
     static bool Load(const H5::Group &g, const std::string &n, std::vector<std::array<double, 2>> &points);
-    static bool Load(const H5::Group &g, const std::string &n, std::array<double, 6> &transformMat);
     static void SetAttribute(const H5::H5Object &o, const std::string &n, const wxColour &c);
     static void SetAttribute(const H5::H5Object &o, const std::string &n, const std::string &v);
     template<typename T> static H5::PredType NativeType();  
     template<typename T> static void Save(const H5::Group &g, const std::string &n, const T &v);
+    template<std::size_t Dim> static void Save(const H5::Group &g, const std::string &n, const std::array<double, Dim> &arr);
+    template<std::size_t Dim> static bool Load(const H5::Group &g, const std::string &n, std::array<double, Dim> &arr);
     template<typename T> static T Load(const H5::Group &g, const std::string &n);
     template<typename T> static void SetAttribute(const H5::H5Object &o, const std::string &n, const T &v);
     template<typename T> static T GetAttribute(const H5::H5Object &o, const std::string &n);
@@ -135,6 +135,54 @@ template<typename T>
 T H5DB::GetAttribute(const H5::H5Object &o, const std::string &n)
 {
     return GetAttribute_impl<T>(o, n, std::is_pod<T>());
+}
+
+template<std::size_t Dim> 
+void H5DB::Save(const H5::Group &g, const std::string &n, const std::array<double, Dim> &arr)
+{
+    if (g.nameExists(n))
+    {
+        H5Ldelete(g.getId(), n.data(), H5P_DEFAULT);
+    }
+
+    if (!g.nameExists(n))
+    {
+        hsize_t dimsm[1] = { Dim };
+        H5::DataSpace dataSpace(1, dimsm);
+        H5::DataSet dataSet = g.createDataSet(n, H5::PredType::NATIVE_DOUBLE, dataSpace);
+
+        dataSet.write(arr.data(), H5::PredType::NATIVE_DOUBLE);
+    }
+}
+
+template<std::size_t Dim> 
+bool H5DB::Load(const H5::Group &g, const std::string &n, std::array<double, Dim> &arr)
+{
+    if (g.nameExists(n))
+    {
+        H5::DataSet dataset = g.openDataSet(n);
+        H5::DataType datatype = dataset.getDataType();
+
+        hsize_t dims[1] = { Dim };
+        const H5::PredType &elemType = H5::PredType::NATIVE_DOUBLE;
+        if (datatype.getClass() == elemType.getClass())
+        {
+            H5::DataSpace s = dataset.getSpace();
+            if (H5S_SIMPLE == s.getSimpleExtentType() &&
+                1 == s.getSimpleExtentNdims())
+            {
+                hsize_t dims[1] = { 0 };
+                s.getSimpleExtentDims(dims);
+                if (Dim == dims[0])
+                {
+                    dataset.read(arr.data(), elemType);
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 #endif  // SPAM_HELPER_H5DB_H

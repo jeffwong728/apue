@@ -98,23 +98,6 @@ void H5DB::Save(const H5::Group &g, const std::string &n, const std::vector<std:
     }
 }
 
-void H5DB::Save(const H5::Group &g, const std::string &n, const std::array<double, 6> &transformMat)
-{
-    if (g.nameExists(n))
-    {
-        H5Ldelete(g.getId(), n.data(), H5P_DEFAULT);
-    }
-
-    if (!g.nameExists(n))
-    {
-        hsize_t dimsm[1] = { 6 };
-        H5::DataSpace dataSpace(1, dimsm);
-        H5::DataSet dataSet = g.createDataSet(n, H5::PredType::NATIVE_DOUBLE, dataSpace);
-
-        dataSet.write(transformMat.data(), H5::PredType::NATIVE_DOUBLE);
-    }
-}
-
 bool H5DB::Load(const H5::Group &g, const std::string &n, std::vector<std::array<double, 2>> &points)
 {
     points.clear();
@@ -144,35 +127,6 @@ bool H5DB::Load(const H5::Group &g, const std::string &n, std::vector<std::array
                         dataset.read(points.data()->data(), aType);
                         return true;
                     }
-                }
-            }
-        }
-    }
-
-    return false;
-}
-
-bool H5DB::Load(const H5::Group &g, const std::string &n, std::array<double, 6> &transformMat)
-{
-    if (g.nameExists(n))
-    {
-        H5::DataSet dataset = g.openDataSet(n);
-        H5::DataType datatype = dataset.getDataType();
-
-        hsize_t dims[1] = { 6 };
-        const H5::PredType &elemType = H5::PredType::NATIVE_DOUBLE;
-        if (datatype.getClass() == elemType.getClass())
-        {
-            H5::DataSpace s = dataset.getSpace();
-            if (H5S_SIMPLE == s.getSimpleExtentType() &&
-                1 == s.getSimpleExtentNdims())
-            {
-                hsize_t dims[1] = { 0 };
-                s.getSimpleExtentDims(dims);
-                if (6 == dims[0])
-                {
-                    dataset.read(transformMat.data(), elemType);
-                    return true;
                 }
             }
         }

@@ -76,4 +76,22 @@ private:
     PolygonData data_;
 };
 
+class CreateEllipseCmd : public GeomCmd
+{
+public:
+    CreateEllipseCmd(ProjTreeModel *model, SPStationNode &station, const wxString &wouldTitle, const GenericEllipseArcData &data);
+
+public:
+    void Do() wxOVERRIDE;
+    void Undo() wxOVERRIDE;
+    void Redo() wxOVERRIDE;
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+
+private:
+    wxString wouldTitle_;
+    GenericEllipseArcData data_;
+};
+
 #endif //SPAM_UI_CMDS_GEOM_CMD_H

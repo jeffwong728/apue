@@ -2,13 +2,15 @@
 #include "projnode.h"
 #include "stationnode.h"
 #include "rectnode.h"
+#include "ellipsenode.h"
 #include "polygonnode.h"
 
 NodeFactory::NodeFactory()
 {
     nodeMakers_[ProjNode::GetTypeName()]    = ProjNode::Create;
     nodeMakers_[StationNode::GetTypeName()] = StationNode::Create;
-    nodeMakers_[RectNode::GetTypeName()]    = RectNode::Create;
+    nodeMakers_[RectNode::GetTypeName()] = RectNode::Create;
+    nodeMakers_[GenericEllipseArcNode::GetTypeName()]    = GenericEllipseArcNode::Create;
     nodeMakers_[PolygonNode::GetTypeName()] = PolygonNode::Create;
 }
 

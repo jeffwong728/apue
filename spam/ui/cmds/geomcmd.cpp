@@ -146,3 +146,39 @@ wxString CreatePolygonCmd::GetDescription() const
 {
     return wxString(wxT("Create polygon ") + geom_->GetTitle());
 }
+
+CreateEllipseCmd::CreateEllipseCmd(ProjTreeModel *model, SPStationNode &station, const wxString &wouldTitle, const GenericEllipseArcData &data)
+    : GeomCmd(model, station)
+    , wouldTitle_(wouldTitle)
+    , data_(data)
+{
+}
+
+void CreateEllipseCmd::Do()
+{
+    if (model_ && station_)
+    {
+        geom_ = model_->CreateToStation(station_, data_);
+    }
+}
+
+void CreateEllipseCmd::Undo()
+{
+    if (model_ && geom_)
+    {
+        model_->Delete(wxDataViewItem(geom_.get()), true);
+    }
+}
+
+void CreateEllipseCmd::Redo()
+{
+    if (model_ && station_ && geom_)
+    {
+        model_->AddToStation(station_, geom_, true);
+    }
+}
+
+wxString CreateEllipseCmd::GetDescription() const
+{
+    return wxString(wxT("Create ellipse ") + geom_->GetTitle());
+}

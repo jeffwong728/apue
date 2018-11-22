@@ -1,6 +1,7 @@
 #include "notool.h"
 #include "probetool.h"
 #include "recttool.h"
+#include "ellipsetool.h"
 #include "transformtool.h"
 #include "nodeedittool.h"
 #include "polygontool.h"
@@ -41,6 +42,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     if (kSpamID_TOOLBOX_GEOM_RECT == e.toolId)
     {
         return transit<RectTool>();
+    }
+    if (kSpamID_TOOLBOX_GEOM_ELLIPSE == e.toolId)
+    {
+        return transit<EllipseTool>();
     }
     if (kSpamID_TOOLBOX_GEOM_POLYGON == e.toolId)
     {

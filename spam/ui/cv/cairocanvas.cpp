@@ -401,6 +401,23 @@ void CairoCanvas::AddRect(const RectData &rd)
     }
 }
 
+void CairoCanvas::AddEllipse(const GenericEllipseArcData &ed)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            wxString title = wxString::Format(wxT("ellipse%d"), cEllipse_++);
+            auto cmd = std::make_shared<CreateEllipseCmd>(model, station, title, ed);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            wxLogStatus(cmd->GetDescription());
+        }
+    }
+}
+
 void CairoCanvas::DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, const SpamMany &mementos)
 {
     switch (toolId)
