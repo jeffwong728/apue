@@ -180,6 +180,28 @@ bool GenericEllipseArcNode::IsIntersection(const Geom::Rect &box) const
     return false;
 }
 
+Geom::OptRect GenericEllipseArcNode::GetBoundingBox() const
+{
+    Geom::Point  p0{ data_.points[0][0], data_.points[0][1] };
+    Geom::Point  p1{ data_.points[1][0], data_.points[1][1] };
+    Geom::Point  p2{ data_.points[2][0], data_.points[2][1] };
+    Geom::Point  p3{ data_.points[3][0], data_.points[3][1] };
+
+    Geom::PathBuilder pb;
+    pb.moveTo(p0);
+    pb.lineTo(p1);
+    pb.lineTo(p2);
+    pb.lineTo(p3);
+    pb.closePath();
+
+    return pb.peek().boundsFast();
+}
+
+Geom::OptRect GenericEllipseArcNode::GetBoundingBox(const Geom::PathVector &pv) const
+{
+    return GenericEllipseArcNode::GetBoundingBox();
+}
+
 void GenericEllipseArcNode::StartTransform()
 {
     base_ = data_;
@@ -264,17 +286,17 @@ void GenericEllipseArcNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Po
                 Geom::Point deltaPt = rFreePt - rLastPt;
                 if (selData_.subid == 0)
                 {
-                    rp0.y() += deltaPt.y();
-                    rp1.y() += deltaPt.y();
-                    rp2.y() -= deltaPt.y();
-                    rp3.y() -= deltaPt.y();
+                    rp0.y() = std::min(-1.0, rp0.y() + deltaPt.y());
+                    rp1.y() = std::min(-1.0, rp1.y() + deltaPt.y());
+                    rp2.y() = std::max(1.0, rp2.y() - deltaPt.y());
+                    rp3.y() = std::max(1.0, rp3.y() - deltaPt.y());
                 }
                 else
                 {
-                    rp0.x() += deltaPt.x();
-                    rp3.x() += deltaPt.x();
-                    rp1.x() -= deltaPt.x();
-                    rp2.x() -= deltaPt.x();
+                    rp0.x() = std::min(-1.0, rp0.x() + deltaPt.x());
+                    rp3.x() = std::min(-1.0, rp3.x() + deltaPt.x());
+                    rp1.x() = std::max(1.0, rp1.x() - deltaPt.x());
+                    rp2.x() = std::max(1.0, rp2.x() - deltaPt.x());
                 }
 
                 Geom::Affine raff = aff.inverse();

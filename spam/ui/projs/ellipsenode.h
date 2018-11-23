@@ -32,6 +32,8 @@ public:
     SelectionData HitTest(const Geom::Point &pt) const override;
     SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const override;
     bool IsIntersection(const Geom::Rect &box) const override;
+    Geom::OptRect GetBoundingBox() const override;
+    Geom::OptRect GetBoundingBox(const Geom::PathVector &pv) const override;
     void StartTransform() override;
     void EndTransform() override;
     void ResetTransform() override;

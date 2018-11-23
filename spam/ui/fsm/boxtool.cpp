@@ -59,9 +59,7 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
         Geom::OptRect oldRect;
         for (SPDrawableNode &selEnt : selEnts)
         {
-            Geom::PathVector pv;
-            selEnt->BuildPath(pv);
-            oldRect.unionWith(pv.boundsFast());
+            oldRect.unionWith(selEnt->GetBoundingBox());
         }
 
         SPDrawableNodeVector newSelEnts;
@@ -82,9 +80,7 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
 
         for (SPDrawableNode &selEnt : newSelEnts)
         {
-            Geom::PathVector pv;
-            selEnt->BuildPath(pv);
-            oldRect.unionWith(pv.boundsFast());
+            oldRect.unionWith(selEnt->GetBoundingBox());
         }
 
         if (e.evData.ControlDown())
@@ -151,9 +147,7 @@ void BoxToolImpl::ResetBoxing(const EvReset &e)
         if (highlight)
         {
             highlight->ClearHighlight();
-            Geom::PathVector pv;
-            highlight->BuildPath(pv);
-            hlRect = pv.boundsFast();
+            hlRect = highlight->GetBoundingBox();
             FireDimEntity(highlight);
         }
 
@@ -251,10 +245,7 @@ void BoxToolImpl::QuitTool(const EvToolQuit &e)
                 for (SPDrawableNode &selEnt : selEnts.second.ents)
                 {
                     selEnt->ClearSelection();
-
-                    Geom::PathVector pv;
-                    selEnt->BuildPath(pv);
-                    refreshRect.unionWith(pv.boundsFast());
+                    refreshRect.unionWith(selEnt->GetBoundingBox());
                 }
 
                 FireDeselectEntity(selEnts.second.ents);
@@ -324,19 +315,13 @@ void BoxToolImpl::SelectDrawable(const EvDrawableSelect &e)
                 for (SPDrawableNode &deSelEnt : deSelEnts)
                 {
                     deSelEnt->ClearSelection();
-
-                    Geom::PathVector pv;
-                    deSelEnt->BuildPath(pv);
-                    refreshRect.unionWith(pv.boundsFast());
+                    refreshRect.unionWith(deSelEnt->GetBoundingBox());
                 }
 
                 for (SPDrawableNode &newSelEnt : newSelEnts)
                 {
                     newSelEnt->Select(toolId);
-
-                    Geom::PathVector pv;
-                    newSelEnt->BuildPath(pv);
-                    refreshRect.unionWith(pv.boundsFast());
+                    refreshRect.unionWith(newSelEnt->GetBoundingBox());
                 }
                 ents.swap(thisSelEnts);
                 cav->DrawPathVector(Geom::PathVector(), refreshRect);

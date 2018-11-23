@@ -116,6 +116,12 @@ struct GenericEllipseArcData
     GenericEllipseArcType type;
 };
 
+struct BezierData
+{
+    std::vector<std::array<double, 7>> points;
+    std::array<double, 6> transform;
+};
+
 struct HighlightData
 {
     HighlightState hls;

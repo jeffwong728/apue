@@ -82,7 +82,7 @@ void PolygonTool::EndTracing(const wxMouseEvent &e)
         Geom::PathVector pv;
         polygon->BuildPath(pv);
 
-        auto rect = pv.boundsFast();
+        auto rect = polygon->GetBoundingBox(pv);
         cav->DrawPathVector(pv, rect);
 
         if (polygon->GetNumCorners()>2)

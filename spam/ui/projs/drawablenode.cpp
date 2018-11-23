@@ -217,7 +217,7 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
             }
         }
 
-        if (Geom::contains(pv.front(), pt))
+        if (Geom::contains(pv.front(), pt, false))
         {
             sd.hs = HitState::kHsFace;
             sd.id = 0;
@@ -286,6 +286,18 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
     }
 
     return sd;
+}
+
+Geom::OptRect DrawableNode::GetBoundingBox() const
+{
+    Geom::PathVector pv;
+    BuildPath(pv);
+    return pv.boundsFast();
+}
+
+Geom::OptRect DrawableNode::GetBoundingBox(const Geom::PathVector &pv) const
+{
+    return pv.boundsFast();
 }
 
 void DrawableNode::StartEdit(const int toolId)

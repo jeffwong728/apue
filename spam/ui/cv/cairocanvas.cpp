@@ -204,9 +204,7 @@ void CairoCanvas::EraseDrawables(const SPDrawableNodeVector &des)
         {
             if (de)
             {
-                Geom::PathVector pv;
-                de->BuildPath(pv);
-                boundRect.unionWith(pv.boundsFast());
+                boundRect.unionWith(de->GetBoundingBox());
             }
         }
 
@@ -255,10 +253,7 @@ void CairoCanvas::HighlightDrawable(const SPDrawableNode &de)
         auto wxhdc = dc.GetHDC();
         if (wxhdc)
         {
-            Geom::PathVector pv;
-            de->BuildPath(pv);
-
-            Geom::OptRect boundRect = pv.boundsFast();
+            Geom::OptRect boundRect = de->GetBoundingBox();
             if (!boundRect.empty())
             {
                 int x = wxRound(boundRect.get().left()*GetMatScale());

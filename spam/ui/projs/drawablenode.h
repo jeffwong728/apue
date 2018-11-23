@@ -39,6 +39,8 @@ public:
     virtual SelectionData HitTest(const Geom::Point &pt) const = 0;
     virtual SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const;
     virtual bool IsIntersection(const Geom::Rect &box) const = 0;
+    virtual Geom::OptRect GetBoundingBox() const;
+    virtual Geom::OptRect GetBoundingBox(const Geom::PathVector &pv) const;
 
     void StartEdit(const int toolId);
     void Edit(const int toolId, const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt);

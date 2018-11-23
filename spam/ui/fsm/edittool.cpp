@@ -53,17 +53,13 @@ void EditToolImpl::ContinueEditing(const EvMouseMove &e)
         Geom::OptRect refreshRect;
         for (SPDrawableNode &selEnt : selEnts)
         {
-            Geom::PathVector pv;
-            selEnt->BuildPath(pv);
-            refreshRect.unionWith(pv.boundsFast());
+            refreshRect.unionWith(selEnt->GetBoundingBox());
             selEnt->Edit(toolId, anchor, freePt, last);
         }
 
         for (SPDrawableNode &selEnt : selEnts)
         {
-            Geom::PathVector pv;
-            selEnt->BuildPath(pv);
-            refreshRect.unionWith(pv.boundsFast());
+            refreshRect.unionWith(selEnt->GetBoundingBox());
         }
 
         cav->DrawPathVector(Geom::PathVector(), refreshRect);
@@ -94,11 +90,7 @@ void EditToolImpl::EndEditing(const EvLMouseUp &e)
         for (SPDrawableNode &selEnt : selEnts)
         {
             selEnt->SetSelectionData(selStates[s++]);
-
-            Geom::PathVector pv;
-            selEnt->BuildPath(pv);
-            refreshRect.unionWith(pv.boundsFast());
-
+            refreshRect.unionWith(selEnt->GetBoundingBox());
             selEnt->EndEdit(toolId);
         }
 
@@ -145,16 +137,10 @@ void EditToolImpl::ResetEditing(const EvReset &e)
         Geom::OptRect refreshRect;
         for (SPDrawableNode &selEnt : selEnts)
         {
-            Geom::PathVector cpv;
-            selEnt->BuildPath(cpv);
-            refreshRect.unionWith(cpv.boundsFast());
-
+            refreshRect.unionWith(selEnt->GetBoundingBox());
             selEnt->SetSelectionData(selStates[s++]);
             selEnt->ResetEdit(toolId);
-
-            Geom::PathVector opv;
-            selEnt->BuildPath(opv);
-            refreshRect.unionWith(opv.boundsFast());
+            refreshRect.unionWith(selEnt->GetBoundingBox());
         }
 
         selStates.clear();
@@ -187,14 +173,10 @@ EditIdleImpl::NextAction EditIdleImpl::GetNextAction(const EvLMouseDown &e)
             SPDrawableNodeVector oldEnts = selEnts;
             delayDelEnts.clear();
 
-            Geom::PathVector dpv;
-            drawable->BuildPath(dpv);
-            Geom::OptRect refreshRect = dpv.boundsFast();
+            Geom::OptRect refreshRect = drawable->GetBoundingBox();
             for (const SPDrawableNode &selEnt : selEnts)
             {
-                Geom::PathVector pv;
-                selEnt->BuildPath(pv);
-                refreshRect.unionWith(pv.boundsFast());
+                refreshRect.unionWith(selEnt->GetBoundingBox());
             }
 
             if (sd.hs == HitState::kHsFace)
