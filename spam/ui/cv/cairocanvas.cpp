@@ -440,6 +440,23 @@ void CairoCanvas::AddPolygon(const PolygonData &pd)
     }
 }
 
+void CairoCanvas::AddBeziergon(const BezierData &bd)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            wxString title = wxString::Format(wxT("beziergon%d"), cBeziergon_++);
+            auto cmd = std::make_shared<CreateBeziergonCmd>(model, station, title, bd);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            wxLogStatus(cmd->GetDescription());
+        }
+    }
+}
+
 void CairoCanvas::DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos)
 {
     auto model = Spam::GetModel();

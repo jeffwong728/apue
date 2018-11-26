@@ -67,6 +67,7 @@ public:
     void AddRect(const RectData &rd);
     void AddEllipse(const GenericEllipseArcData &ed);
     void AddPolygon(const PolygonData &pd);
+    void AddBeziergon(const BezierData &bd);
     void DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoNodeEdit(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
@@ -116,7 +117,8 @@ private:
     int anchorY_;
     int cRect_{ 0 };
     int cEllipse_{0};
-    int cPolygon_{0};
+    int cPolygon_{ 0 };
+    int cBeziergon_{0};
 };
 
 class DnDImageFile : public wxFileDropTarget

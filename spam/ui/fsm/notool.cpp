@@ -5,6 +5,7 @@
 #include "transformtool.h"
 #include "nodeedittool.h"
 #include "polygontool.h"
+#include "beziergontool.h"
 #include <wx/log.h>
 #include <ui/spam.h>
 #include <ui/cv/cairocanvas.h>
@@ -50,6 +51,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     if (kSpamID_TOOLBOX_GEOM_POLYGON == e.toolId)
     {
         return transit<PolygonTool>();
+    }
+    if (kSpamID_TOOLBOX_GEOM_BEZIERGON == e.toolId)
+    {
+        return transit<BeziergonTool>();
     }
     if (kSpamID_TOOLBOX_GEOM_TRANSFORM == e.toolId)
     {

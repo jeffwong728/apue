@@ -182,3 +182,39 @@ wxString CreateEllipseCmd::GetDescription() const
 {
     return wxString(wxT("Create ellipse ") + geom_->GetTitle());
 }
+
+CreateBeziergonCmd::CreateBeziergonCmd(ProjTreeModel *model, SPStationNode &station, const wxString &wouldTitle, const BezierData &data)
+    : GeomCmd(model, station)
+    , wouldTitle_(wouldTitle)
+    , data_(data)
+{
+}
+
+void CreateBeziergonCmd::Do()
+{
+    if (model_ && station_)
+    {
+        geom_ = model_->CreateToStation(station_, data_);
+    }
+}
+
+void CreateBeziergonCmd::Undo()
+{
+    if (model_ && geom_)
+    {
+        model_->Delete(wxDataViewItem(geom_.get()), true);
+    }
+}
+
+void CreateBeziergonCmd::Redo()
+{
+    if (model_ && station_ && geom_)
+    {
+        model_->AddToStation(station_, geom_, true);
+    }
+}
+
+wxString CreateBeziergonCmd::GetDescription() const
+{
+    return wxString(wxT("Create beziergon ") + geom_->GetTitle());
+}

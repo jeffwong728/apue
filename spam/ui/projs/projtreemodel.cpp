@@ -3,6 +3,7 @@
 #include "rectnode.h"
 #include "ellipsenode.h"
 #include "polygonnode.h"
+#include "beziergonnode.h"
 #include "nodefactory.h"
 #include <ui/cmndef.h>
 #include <ui/evts.h>
@@ -258,6 +259,26 @@ SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const PolygonD
     sig_GeomCreate(geoms);
 
     return newPg;
+}
+
+SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const BezierData &bd)
+{
+    SPBeziergonNode newGeom = std::make_shared<BeziergonNode>(station, GetUnusedName(station, wxT("beziergon")));
+    newGeom->SetData(bd);
+    newGeom->drawStyle_.strokeWidth_ = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
+    newGeom->drawStyle_.strokeColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
+    newGeom->drawStyle_.fillColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxYELLOW->GetRGBA()));
+    station->Append(newGeom);
+
+    wxDataViewItem child(newGeom.get());
+    wxDataViewItem parent(station.get());
+    ItemAdded(parent, child);
+    SetModified();
+
+    SPModelNodeVector geoms(1, newGeom);
+    sig_GeomCreate(geoms);
+
+    return newGeom;
 }
 
 void ProjTreeModel::Delete(const wxDataViewItem &item, bool fireEvent)

@@ -18,6 +18,7 @@ class DrawableNode;
 class RectNode;
 class GenericEllipseArcNode;
 class PolygonNode;
+class BeziergonNode;
 class GeomNode;
 class wxDataViewModel;
 class ProjTreeModel;
@@ -30,6 +31,7 @@ typedef std::shared_ptr<DrawableNode>          SPDrawableNode;
 typedef std::shared_ptr<RectNode>              SPRectNode;
 typedef std::shared_ptr<GenericEllipseArcNode> SPGenericEllipseArcNode;
 typedef std::shared_ptr<PolygonNode>           SPPolygonNode;
+typedef std::shared_ptr<BeziergonNode>         SPBeziergonNode;
 typedef std::shared_ptr<GeomNode>              SPGeomNode;
 typedef std::weak_ptr<ModelNode>               WPModelNode;
 typedef std::weak_ptr<ProjNode>                WPProjNode;
@@ -95,6 +97,13 @@ enum class GenericEllipseArcType {
     kAtArc
 };
 
+enum class BezierNodeType {
+    kBezierNoneCtrl,
+    kBezierPrevCtrl,
+    kBezierNextCtrl,
+    kBezierBothCtrl
+};
+
 struct RectData
 {
     std::array<std::array<double, 2>, 4> points;
@@ -118,8 +127,10 @@ struct GenericEllipseArcData
 
 struct BezierData
 {
-    std::vector<std::array<double, 7>> points;
+    std::vector<int> ntypes;
+    std::vector<std::array<double, 6>> points;
     std::array<double, 6> transform;
+    GenericEllipseArcType type;
 };
 
 struct HighlightData

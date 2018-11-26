@@ -4,6 +4,7 @@
 #include "rectnode.h"
 #include "ellipsenode.h"
 #include "polygonnode.h"
+#include "beziergonnode.h"
 
 NodeFactory::NodeFactory()
 {
@@ -12,6 +13,7 @@ NodeFactory::NodeFactory()
     nodeMakers_[RectNode::GetTypeName()] = RectNode::Create;
     nodeMakers_[GenericEllipseArcNode::GetTypeName()]    = GenericEllipseArcNode::Create;
     nodeMakers_[PolygonNode::GetTypeName()] = PolygonNode::Create;
+    nodeMakers_[BeziergonNode::GetTypeName()] = BeziergonNode::Create;
 }
 
 SPModelNode NodeFactory::Create(const std::string &typeName,

@@ -77,64 +77,6 @@ void H5DB::Save(const H5::Group &g, const std::string &n, const wxColour &c)
     }
 }
 
-void H5DB::Save(const H5::Group &g, const std::string &n, const std::vector<std::array<double, 2>> &points)
-{
-    if (g.nameExists(n))
-    {
-        H5Ldelete(g.getId(), n.data(), H5P_DEFAULT);
-    }
-
-    if (!g.nameExists(n))
-    {
-        hsize_t dimsm[1] = { 2 };
-        H5::ArrayType arrType(H5::PredType::NATIVE_DOUBLE, 1, dimsm);
-
-        int rank = 1;
-        const hsize_t dims[1] = { points.size() };
-        H5::DataSpace dataSpace(rank, dims);
-        H5::DataSet dataSet = g.createDataSet(n, arrType, dataSpace);
-
-        dataSet.write(&points.front()[0], arrType);
-    }
-}
-
-bool H5DB::Load(const H5::Group &g, const std::string &n, std::vector<std::array<double, 2>> &points)
-{
-    points.clear();
-    if (g.nameExists(n))
-    {
-        H5::DataSet dataset = g.openDataSet(n);
-        H5::DataType datatype = dataset.getDataType();
-
-        hsize_t dimsm[1] = { 2 };
-        H5::ArrayType arrType(H5::PredType::NATIVE_DOUBLE, 1, dimsm);
-        if (datatype.getClass() == arrType.getClass())
-        {
-            H5::DataSpace s = dataset.getSpace();
-            if (H5S_SIMPLE == s.getSimpleExtentType() &&
-                1 == s.getSimpleExtentNdims())
-            {
-                hsize_t dims[1] = { 0 };
-                s.getSimpleExtentDims(dims);
-                H5::ArrayType aType = dataset.getArrayType();
-                if (1 == aType.getArrayNDims() && dims[0]>0)
-                {
-                    dimsm[0] = 0;
-                    aType.getArrayDims(dimsm);
-                    if (2 == dimsm[0])
-                    {
-                        points.resize(dims[0]);
-                        dataset.read(points.data()->data(), aType);
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-
-    return false;
-}
-
 void H5DB::SetAttribute(const H5::H5Object &o, const std::string &n, const wxColour &c)
 {
     if (o.attrExists(n))

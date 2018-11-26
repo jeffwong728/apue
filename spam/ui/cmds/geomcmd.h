@@ -94,4 +94,22 @@ private:
     GenericEllipseArcData data_;
 };
 
+class CreateBeziergonCmd : public GeomCmd
+{
+public:
+    CreateBeziergonCmd(ProjTreeModel *model, SPStationNode &station, const wxString &wouldTitle, const BezierData &data);
+
+public:
+    void Do() wxOVERRIDE;
+    void Undo() wxOVERRIDE;
+    void Redo() wxOVERRIDE;
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+
+private:
+    wxString wouldTitle_;
+    BezierData data_;
+};
+
 #endif //SPAM_UI_CMDS_GEOM_CMD_H

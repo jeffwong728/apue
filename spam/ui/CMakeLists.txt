@@ -25,6 +25,7 @@ set(ui_core_SRCS
   projs/geomnode.cpp
   projs/drawablenode.cpp
   projs/polygonnode.cpp
+  projs/beziergonnode.cpp
   projs/stylecellrenderer.cpp
   toplevel/logpanel.cpp
   toplevel/mainstatus.cpp
@@ -46,6 +47,7 @@ set(ui_core_SRCS
   fsm/transformtool.cpp
   fsm/nodeedittool.cpp
   fsm/polygontool.cpp
+  fsm/beziergontool.cpp
 )
 
 set(ui_core_HEADERS 
@@ -76,6 +78,7 @@ set(ui_core_HEADERS
   projs/polygonnode.h
   projs/rectnode.h
   projs/ellipsenode.h
+  projs/beziergonnode.h
   projs/geomnode.h
   projs/stylecellrenderer.h
   toplevel/logpanel.h
@@ -97,6 +100,7 @@ set(ui_core_HEADERS
   fsm/spamer.h
   fsm/transformtool.h
   fsm/nodeedittool.h
+  fsm/beziergontool.h
   fsm/polygontool.h
   fsm/events.h
 )

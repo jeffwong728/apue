@@ -59,6 +59,7 @@ public:
     SPGeomNode CreateToStation(SPStationNode &station, const RectData &rd);
     SPGeomNode CreateToStation(SPStationNode &station, const GenericEllipseArcData &ed);
     SPGeomNode CreateToStation(SPStationNode &station, const PolygonData &pd);
+    SPGeomNode CreateToStation(SPStationNode &station, const BezierData &bd);
     void Delete(const wxDataViewItem &item, bool fireEvent);
     void Delete(const wxDataViewItemArray &items, bool fireEvent);
     void NewCurrentStation();
