@@ -98,10 +98,10 @@ enum class GenericEllipseArcType {
 };
 
 enum class BezierNodeType {
-    kBezierNoneCtrl,
-    kBezierPrevCtrl,
-    kBezierNextCtrl,
-    kBezierBothCtrl
+    kBezierNoneCtrl = 0b00,
+    kBezierPrevCtrl = 0b10,
+    kBezierNextCtrl = 0b01,
+    kBezierBothCtrl = 0b11
 };
 
 struct RectData

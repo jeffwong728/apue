@@ -74,6 +74,47 @@ void BeziergonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
     }
 }
 
+void BeziergonNode::BuildHandle(Geom::PathVector &hpv) const
+{
+    int numCurves = static_cast<int>(data_.points.size());
+    if (selData_.ss == SelectionState::kSelNodeEdit && numCurves>1 && data_.points.size() == data_.ntypes.size())
+    {
+        std::set<int> showCtrls;
+        showCtrls.insert((selData_.master - 1 + numCurves) % numCurves);
+        showCtrls.insert(selData_.master % numCurves);
+        showCtrls.insert((selData_.master + 1) % numCurves);
+
+        for (const int n : showCtrls)
+        {
+            Geom::Point selfPt{ data_.points[n][0], data_.points[n][1] };
+            Geom::Point prevPt{ data_.points[n][2], data_.points[n][3] };
+            Geom::Point nextPt{ data_.points[n][4], data_.points[n][5] };
+
+            Geom::Path pth;
+            switch (static_cast<BezierNodeType>(data_.ntypes[n]))
+            {
+            case BezierNodeType::kBezierPrevCtrl:
+                pth.append(Geom::LineSegment(selfPt, prevPt));
+                hpv.push_back(pth);
+                break;
+
+            case BezierNodeType::kBezierNextCtrl:
+                pth.append(Geom::LineSegment(selfPt, nextPt));
+                hpv.push_back(pth);
+                break;
+
+            case BezierNodeType::kBezierBothCtrl:
+                pth.append(Geom::LineSegment(prevPt, nextPt));
+                hpv.push_back(pth);
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+}
+
 SelectionData BeziergonNode::HitTest(const Geom::Point &pt) const
 {
     SelectionData sd{ selData_.ss, HitState::kHsNone, -1, -1};
@@ -147,6 +188,69 @@ void BeziergonNode::ResetTransform()
 
 void BeziergonNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt)
 {
+    Geom::Coord dx = freePt.x() - lastPt.x();
+    Geom::Coord dy = freePt.y() - lastPt.y();
+
+    if (HitState::kHsNode == selData_.hs)
+    {
+        if (selData_.id >= 0 && selData_.id < GetNumCorners())
+        {
+            int n = selData_.id;
+            if (1==selData_.subid)
+            {
+                data_.points[n][2] += dx;
+                data_.points[n][3] += dy;
+
+                Geom::Point selfPt{ data_.points[n][0], data_.points[n][1] };
+                Geom::Point prevPt{ data_.points[n][2], data_.points[n][3] };
+                Geom::Point nextPt{ data_.points[n][4], data_.points[n][5] };
+
+                double pdist = Geom::distance(selfPt, prevPt);
+                double ndist = Geom::distance(selfPt, nextPt);
+                if (pdist > Geom::EPSILON)
+                {
+                    nextPt = Geom::lerp(1 + ndist / pdist, prevPt, selfPt);
+
+                    data_.points[n][4] = nextPt.x();
+                    data_.points[n][5] = nextPt.y();
+                }
+            }
+            else if (2 == selData_.subid)
+            {
+                data_.points[n][4] += dx;
+                data_.points[n][5] += dy;
+
+                Geom::Point selfPt{ data_.points[n][0], data_.points[n][1] };
+                Geom::Point prevPt{ data_.points[n][2], data_.points[n][3] };
+                Geom::Point nextPt{ data_.points[n][4], data_.points[n][5] };
+
+                double pdist = Geom::distance(selfPt, prevPt);
+                double ndist = Geom::distance(selfPt, nextPt);
+                if (ndist > Geom::EPSILON)
+                {
+                    prevPt = Geom::lerp(1 + pdist / ndist, nextPt, selfPt);
+
+                    data_.points[n][2] = prevPt.x();
+                    data_.points[n][3] = prevPt.y();
+                }
+            }
+            else
+            {
+                data_.points[n][0] += dx;
+                data_.points[n][1] += dy;
+                data_.points[n][2] += dx;
+                data_.points[n][3] += dy;
+                data_.points[n][4] += dx;
+                data_.points[n][5] += dy;
+            }
+        }
+    }
+    else
+    {
+        Geom::Affine aff = Geom::Affine::identity();
+        aff *= Geom::Translate(dx, dy);
+        BeziergonNode::DoTransform(aff, dx, dy);
+    }
 }
 
 void BeziergonNode::ResetNodeEdit()
@@ -201,7 +305,45 @@ void BeziergonNode::InitData(BezierData &data)
     data.type = GenericEllipseArcType::kAtChord;
 }
 
-void BeziergonNode::BuildPreviewPath(Geom::PathVector &pv) const
+void BeziergonNode::BuildTracingPath(Geom::PathVector &pv) const
+{
+    BuildPathImpl(pv, false);
+    if (data_.points.size()>1 && data_.ntypes.size()>1)
+    {
+        auto i = data_.points.size() - 2;
+        Geom::Point selfPt{ data_.points[i][0], data_.points[i][1] };
+        Geom::Point prevPt{ data_.points[i][2], data_.points[i][3] };
+        Geom::Point nextPt{ data_.points[i][4], data_.points[i][5] };
+
+        Geom::Path pth;
+        switch (static_cast<BezierNodeType>(data_.ntypes[i]))
+        {
+        case BezierNodeType::kBezierPrevCtrl:
+            pth.append(Geom::LineSegment(selfPt, prevPt));
+            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3)));
+            pv.push_back(pth);
+            break;
+
+        case BezierNodeType::kBezierNextCtrl:
+            pth.append(Geom::LineSegment(selfPt, nextPt));
+            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3)));
+            pv.push_back(pth);
+            break;
+
+        case BezierNodeType::kBezierBothCtrl:
+            pth.append(Geom::LineSegment(prevPt, nextPt));
+            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3)));
+            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3)));
+            pv.push_back(pth);
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+void BeziergonNode::BuildDragingPath(Geom::PathVector &pv) const
 {
     BuildPathImpl(pv, false);
     if (!data_.points.empty() && !data_.ntypes.empty())
@@ -271,6 +413,58 @@ BezierNodeType BeziergonNode::GetCorner(int pos, Geom::Point &corner, Geom::Poin
     c1.y()     = data_.points[pos][5];
 
     return static_cast<BezierNodeType>(data_.ntypes[pos]);
+}
+
+void BeziergonNode::Collapse()
+{
+    std::vector<std::pair<int, int>> groups;
+    int numCorners = static_cast<int>(data_.points.size());
+
+    int n = 0;
+    while (n<numCorners)
+    {
+        std::pair<int, int> g{ n, n };
+        for (int m=g.first; m<numCorners-1; ++m)
+        {
+            Geom::Point mPt{ data_.points[m][0], data_.points[m][1] };
+            Geom::Point m1Pt{ data_.points[m+1][0], data_.points[m+1][1] };
+            if (Geom::distance(mPt, m1Pt)>Geom::EPSILON)
+            {
+                break;
+            }
+            else
+            {
+                g.second = m + 1;
+            }
+        }
+
+        groups.push_back(g);
+        n = g.second + 1;
+    }
+
+    if (groups.size()>1)
+    {
+        Geom::Point fPt{ data_.points[groups.front().first][0], data_.points[groups.front().first][1] };
+        Geom::Point lPt{ data_.points[groups.back().second][0], data_.points[groups.back().second][1] };
+        if (Geom::distance(fPt, lPt) < Geom::EPSILON)
+        {
+            groups.front().first = groups.back().first - numCorners;
+            groups.pop_back();
+        }
+    }
+
+    std::vector<int> ntypes;
+    std::vector<std::array<double, 6>> points;
+    for (const auto &g : groups)
+    {
+        int f = (g.first + numCorners) % numCorners;
+        int l = (g.second + numCorners) % numCorners;
+        ntypes.push_back((data_.ntypes[f] & 0b10) | (data_.ntypes[l] & 0b01));
+        points.push_back(data_.points[f]);
+    }
+
+    data_.ntypes.swap(ntypes);
+    data_.points.swap(points);
 }
 
 void BeziergonNode::Save(const H5::Group &g) const

@@ -17,10 +17,9 @@ struct BeziergonTool : boost::statechart::simple_state<BeziergonTool, Spamer, Be
     BeziergonTool();
     ~BeziergonTool();
 
-  void OnStartTracing(const EvLMouseDown &e);
   void OnTracing(const EvMouseMove &e);
   void OnReset(const EvReset &e);
-  void EndTracing(const wxMouseEvent &e);
+  void CompleteCreate(const wxMouseEvent &e);
   void OnCanvasEnter(const EvCanvasEnter &e);
   void OnCanvasLeave(const EvCanvasLeave &e);
 

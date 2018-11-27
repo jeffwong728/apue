@@ -59,7 +59,7 @@ GeomBox::~GeomBox()
 wxPanel *GeomBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 {
     constexpr int numTools = kSpamID_TOOLBOX_GEOM_GUARD - kSpamID_TOOLBOX_GEOM_TRANSFORM;
-    wxPanel *(GeomBox::*createOption[numTools])(wxWindow *parent) = { nullptr, nullptr, &GeomBox::CreateRectOption };
+    wxPanel *(GeomBox::*createOption[numTools])(wxWindow *parent) = { nullptr, &GeomBox::CreateNodeEditOption, &GeomBox::CreateRectOption };
 
     if (createOption[toolIndex])
     {
@@ -67,6 +67,41 @@ wxPanel *GeomBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
     }
 
     return nullptr;
+}
+
+wxPanel *GeomBox::CreateNodeEditOption(wxWindow *parent)
+{
+    auto panel = new wxScrolledWindow(parent, wxID_ANY);
+    wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+
+    auto nodeEditMethod = new wxToolBar(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_VERTICAL | wxTB_TEXT | wxTB_HORZ_TEXT | wxTB_NODIVIDER);
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_MOVE, wxT("Move nodes"), wxBitmap(wxT("res/node_move.png"), wxBITMAP_TYPE_PNG));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_ADD, wxT("Insert new nodes"), wxBitmap(wxT("res/node_add.png"), wxBITMAP_TYPE_PNG));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_DELETE, wxT("Delete nodes"), wxBitmap(wxT("res/node_delete.png"), wxBITMAP_TYPE_PNG));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_SMOOTH, wxT("Make nodes smooth"), wxBitmap(wxT("res/node_smooth.png"), wxBITMAP_TYPE_PNG));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_CUSP, wxT("Make nodes corner"), wxBitmap(wxT("res/node_cusp.png"), wxBITMAP_TYPE_PNG));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_SYMMETRIC, wxT("Make nodes symmetric"), wxBitmap(wxT("res/node_symmetric.png"), wxBITMAP_TYPE_PNG));
+    nodeEditMethod->Realize();
+
+    sizerRoot->Add(nodeEditMethod, wxSizerFlags(0).Expand().Border());
+
+    auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
+    helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &GeomBox::OnHelpCollapse, this, wxID_ANY);
+    sizerRoot->Add(helpPane, wxSizerFlags(1).Expand());
+
+    wxWindow *win = helpPane->GetPane();
+    auto helpSizer = new wxBoxSizer(wxVERTICAL);
+    auto html = new wxHtmlWindow(win, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_NEVER);
+    html->SetBorders(0);
+    html->LoadPage(wxT("res/help/rect.htm"));
+    html->SetInitialSize(wxSize(html->GetInternalRepresentation()->GetWidth(), html->GetInternalRepresentation()->GetHeight()));
+    helpSizer->Add(html, wxSizerFlags(1).Expand().DoubleBorder());
+    win->SetSizerAndFit(helpSizer);
+
+    panel->SetScrollRate(6, 6);
+    panel->SetVirtualSize(panel->GetBestSize());
+    panel->SetSizerAndFit(sizerRoot);
+    return panel;
 }
 
 wxPanel *GeomBox::CreateRectOption(wxWindow *parent)

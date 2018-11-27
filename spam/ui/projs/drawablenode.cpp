@@ -23,13 +23,6 @@ DrawableNode::~DrawableNode()
 {
 }
 
-void DrawableNode::BuildHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const
-{
-    BuildScaleHandle(corners, sx, sy, hpv);
-    BuildSkewHandle(corners, sx, sy, hpv);
-    BuildRotateHandle(corners, sx, sy, hpv);
-}
-
 void DrawableNode::BuildScaleHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const
 {
     if (selData_.ss == SelectionState::kSelScale)
@@ -434,6 +427,7 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
         Geom::PathVector skpv;
         Geom::PathVector rpv;
         Geom::PathVector npv;
+        Geom::PathVector hpv;
         NodeIdVector     nids;
 
         double sx = 1;
@@ -451,6 +445,9 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
         DrawHighlightScaleHandle(cr, spv, sx, hx);
         DrawHighlightSkewHandle(cr, skpv, sx, hx);
         DrawHighlightRotateHandle(cr, rpv, sx, hx);
+
+        BuildHandle(hpv);
+        DrawHighlightHandle(cr, hpv, HighlightState::kHlNone, sx, hx);
 
         BuildNode(npv, nids);
         DrawHighlightNode(cr, npv, nids, sx, hx);

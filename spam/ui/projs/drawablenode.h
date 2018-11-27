@@ -30,7 +30,7 @@ public:
     bool IsContainer() const override { return false; }
     virtual void BuildPath(Geom::PathVector &pv) const = 0;
     virtual void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const = 0;
-    virtual void BuildHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
+    virtual void BuildHandle(Geom::PathVector &hpv) const {};
     virtual void BuildScaleHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
     virtual void BuildSkewHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
     virtual void BuildRotateHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;

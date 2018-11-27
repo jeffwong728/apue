@@ -16,21 +16,6 @@ BeziergonTool::~BeziergonTool()
     wxLogMessage(wxT("BeziergonTool Quit."));
 }
 
-void BeziergonTool::OnStartTracing(const EvLMouseDown &e)
-{
-    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
-    if (cav)
-    {
-        if (!cav->HasCapture())
-        {
-            cav->CaptureMouse();
-        }
-
-        auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
-        Geom::Point freePt(imgPt.x, imgPt.y);
-    }
-}
-
 void BeziergonTool::OnTracing(const EvMouseMove &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
@@ -40,13 +25,13 @@ void BeziergonTool::OnTracing(const EvMouseMove &e)
         Geom::Point freePt(imgPt.x, imgPt.y);
 
         Geom::PathVector opv;
-        beziergon->BuildPreviewPath(opv);
+        beziergon->BuildTracingPath(opv);
 
         beziergon->PopCorner();
         beziergon->AddCorner(freePt, freePt, freePt, BezierNodeType::kBezierNoneCtrl);
 
         Geom::PathVector pv;
-        beziergon->BuildPreviewPath(pv);
+        beziergon->BuildTracingPath(pv);
 
         auto orect = opv.boundsFast();
         auto rect = pv.boundsFast();
@@ -55,7 +40,7 @@ void BeziergonTool::OnTracing(const EvMouseMove &e)
     }
 }
 
-void BeziergonTool::EndTracing(const wxMouseEvent &e)
+void BeziergonTool::CompleteCreate(const wxMouseEvent &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.GetEventObject());
     if (cav)
@@ -64,6 +49,28 @@ void BeziergonTool::EndTracing(const wxMouseEvent &e)
         {
             cav->ReleaseMouse();
         }
+
+        auto imgPt = cav->ScreenToImage(e.GetPosition());
+        Geom::Point freePt(imgPt.x, imgPt.y);
+
+        Geom::PathVector opv;
+        beziergon->BuildTracingPath(opv);
+
+        beziergon->PopCorner();
+        beziergon->AddCorner(freePt, freePt, freePt, BezierNodeType::kBezierNoneCtrl);
+        beziergon->Collapse();
+
+        Geom::PathVector pv;
+        if (beziergon->GetNumCorners()>2)
+        {
+            cav->AddBeziergon(beziergon->GetData());
+            beziergon->BuildPath(pv);
+        }
+
+        auto orect = opv.boundsFast();
+        auto rect = pv.boundsFast();
+        rect.unionWith(orect);
+        cav->DrawPathVector(pv, rect);
     }
 
     beziergon->Clear();
@@ -109,12 +116,12 @@ void BeziergonTool::OnStartDraging(const EvLMouseDown &e)
         c0 = Geom::lerp(2, freePt, corner);
 
         Geom::PathVector opv;
-        beziergon->BuildPreviewPath(opv);
+        beziergon->BuildTracingPath(opv);
 
-        beziergon->ReplaceBackCorner(corner, c0, freePt, BezierNodeType::kBezierBothCtrl);
+        beziergon->ReplaceBackCorner(corner, c0, freePt, BezierNodeType::kBezierNoneCtrl);
 
         Geom::PathVector pv;
-        beziergon->BuildPreviewPath(pv);
+        beziergon->BuildDragingPath(pv);
 
         auto orect = opv.boundsFast();
         auto rect = pv.boundsFast();
@@ -133,16 +140,16 @@ void BeziergonTool::OnDraging(const EvMouseMove &e)
         Geom::Point freePt(imgPt.x, imgPt.y);
 
         Geom::Point corner, c0, c1;
-        BezierNodeType t = beziergon->GetCorner(beziergon->GetNumCorners()-1, corner, c0, c1);
+        beziergon->GetCorner(beziergon->GetNumCorners()-1, corner, c0, c1);
         c0 = Geom::lerp(2, freePt, corner);
 
         Geom::PathVector opv;
-        beziergon->BuildPreviewPath(opv);
+        beziergon->BuildDragingPath(opv);
 
-        beziergon->ReplaceBackCorner(corner, c0, freePt, t);
+        beziergon->ReplaceBackCorner(corner, c0, freePt, BezierNodeType::kBezierBothCtrl);
 
         Geom::PathVector pv;
-        beziergon->BuildPreviewPath(pv);
+        beziergon->BuildDragingPath(pv);
 
         auto orect = opv.boundsFast();
         auto rect = pv.boundsFast();
@@ -164,23 +171,25 @@ void BeziergonTool::OnEndDraging(const EvLMouseUp &e)
         BezierNodeType t = beziergon->GetCorner(beziergon->GetNumCorners() - 1, corner, c0, c1);
         c0 = Geom::lerp(2, freePt, corner);
 
-        if (Geom::distanceSq(freePt, corner) > Geom::EPSILON)
+        if (Geom::distanceSq(freePt, corner) < Geom::EPSILON)
         {
-            Geom::PathVector opv;
-            beziergon->BuildPreviewPath(opv);
-
-            beziergon->ReplaceBackCorner(corner, c0, freePt, t);
-            beziergon->AddCorner(freePt, c1, freePt, BezierNodeType::kBezierNoneCtrl);
-
-            Geom::PathVector pv;
-            beziergon->BuildPreviewPath(pv);
-
-            auto orect = opv.boundsFast();
-            auto rect = pv.boundsFast();
-            rect.unionWith(orect);
-
-            cav->DrawPathVector(pv, rect);
+            t = BezierNodeType::kBezierNoneCtrl;
         }
+
+        Geom::PathVector opv;
+        beziergon->BuildDragingPath(opv);
+
+        beziergon->ReplaceBackCorner(corner, c0, freePt, t);
+        beziergon->AddCorner(freePt, c1, freePt, BezierNodeType::kBezierNoneCtrl);
+
+        Geom::PathVector pv;
+        beziergon->BuildTracingPath(pv);
+
+        auto orect = opv.boundsFast();
+        auto rect = pv.boundsFast();
+        rect.unionWith(orect);
+
+        cav->DrawPathVector(pv, rect);
     }
 }
 
@@ -196,12 +205,12 @@ void BeziergonTool::OnAddCorner(const EvLMouseDown &e)
 
 void BeziergonTool::OnMMouseDown(const EvMMouseDown &e)
 {
-    EndTracing(e.evData);
+    CompleteCreate(e.evData);
 }
 
 void BeziergonTool::OnLMouseDClick(const EvLMouseDClick &e)
 {
-    EndTracing(e.evData);
+    CompleteCreate(e.evData);
 }
 
 void BeziergonTool::OnReset(const EvReset &e)

@@ -23,6 +23,7 @@ protected:
     wxPanel * GetOptionPanel(const int toolIndex, wxWindow *parent);
 
 private:
+    wxPanel *CreateNodeEditOption(wxWindow *parent);
     wxPanel *CreateRectOption(wxWindow *parent);
 };
 #endif //SPAM_UI_TOOLBOX_GEOM_BOX_H

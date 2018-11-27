@@ -29,6 +29,7 @@ public:
     bool IsContainer() const override { return false; }
     void BuildPath(Geom::PathVector &pv) const override;
     void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const override;
+    void BuildHandle(Geom::PathVector &hpv) const override;
     SelectionData HitTest(const Geom::Point &pt) const override;
     SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const override;
     bool IsIntersection(const Geom::Rect &box) const override;
@@ -45,12 +46,14 @@ public:
     void SetData(const BezierData &data) { data_ = data; }
     const BezierData& GetData() const { return data_; }
     void Clear() { data_.points.clear(); data_.ntypes.clear(); }
-    void BuildPreviewPath(Geom::PathVector &pv) const;
+    void BuildTracingPath(Geom::PathVector &pv) const;
+    void BuildDragingPath(Geom::PathVector &pv) const;
     int GetNumCorners() const { return static_cast<int>(data_.points.size()); }
     void AddCorner(const Geom::Point &pt, const Geom::Point &c0, const Geom::Point &c1, const BezierNodeType t);
     void ReplaceBackCorner(const Geom::Point &pt, const Geom::Point &c0, const Geom::Point &c1, const BezierNodeType t);
     void PopCorner();
     BezierNodeType GetCorner(int pos, Geom::Point &corner, Geom::Point &c0, Geom::Point &c1) const;
+    void Collapse();
 
 public:
     void Save(const H5::Group &g) const override;
