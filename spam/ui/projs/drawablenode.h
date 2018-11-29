@@ -28,9 +28,12 @@ public:
 public:
     bool IsSelected() const { return SelectionState::kSelNone!=selData_.ss; }
     bool IsContainer() const override { return false; }
+    virtual bool IsTypeOf(const SpamEntityType t) const = 0;
+    virtual bool IsLegalHit(const SpamEntityOperation entityOp) const = 0;
     virtual void BuildPath(Geom::PathVector &pv) const = 0;
     virtual void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const = 0;
-    virtual void BuildHandle(Geom::PathVector &hpv) const {};
+    virtual void BuildEdge(Geom::Path &pth, NodeIdVector &ids) const {}
+    virtual void BuildHandle(Geom::PathVector &hpv) const {}
     virtual void BuildScaleHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
     virtual void BuildSkewHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
     virtual void BuildRotateHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const;
@@ -86,6 +89,7 @@ private:
     void DrawHighlightRotateHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &rpv, const double ux, const double ax) const;
     void DrawHighlightNode(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &npv, const NodeIdVector &ids, const double ux, const double ax) const;
     void DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &rpv, const HighlightState hs, const double ux, const double ax) const;
+    void DrawHighlightEdge(Cairo::RefPtr<Cairo::Context> &cr, const Geom::Path &pth, const double ux, const double ax) const;
     void BuildRotateMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
     void BuildScaleMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
     void BuildSkewMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);

@@ -1,4 +1,5 @@
 #include "toolbox.h"
+#include <ui/spam.h>
 #include <wx/artprov.h>
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
@@ -37,6 +38,8 @@ ToolBox::ToolBox(wxWindow* parent, const wxWindowID winid, const wxString &toolb
     SetSizer(sizerRoot);
 
     collOptPane_->Disable();
+
+    sig_ToolQuit.connect(std::bind(&ToolBox::OnToolQuit, this, std::placeholders::_1));
 }
 
 ToolBox::~ToolBox()
@@ -208,4 +211,10 @@ bool ToolBox::CreateOption(const int toolIndex)
     }
 
     return false;
+}
+
+void ToolBox::OnToolQuit(int toolId)
+{
+    Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_NONE);
+    Spam::GetSelectionFilter()->AddAllPassType();
 }

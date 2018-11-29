@@ -23,6 +23,66 @@ BeziergonNode::~BeziergonNode()
 {
 }
 
+bool BeziergonNode::IsTypeOf(const SpamEntityType t) const
+{
+    switch (t)
+    {
+    case SpamEntityType::kET_GEOM:
+    case SpamEntityType::kET_GEOM_BEZIERGON:
+        return true;
+
+    default: return false;
+    }
+}
+
+bool BeziergonNode::IsLegalHit(const SpamEntityOperation entityOp) const
+{
+    switch (entityOp)
+    {
+    case SpamEntityOperation::kEO_NONE:
+    case SpamEntityOperation::kEO_GEOM_CREATE:
+    case SpamEntityOperation::kEO_GEOM_TRANSFORM:
+    case SpamEntityOperation::kEO_VERTEX_MOVE:
+        return true;
+
+    case SpamEntityOperation::kEO_VERTEX_ADD:
+        if (hlData_.hls == HighlightState::kHlEdge)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    case SpamEntityOperation::kEO_VERTEX_DELETE:
+        if (hlData_.hls == HighlightState::kHlNode &&
+            hlData_.subid == 0 && GetNumCorners()>3)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    case SpamEntityOperation::kEO_VERTEX_SMOOTH:
+    case SpamEntityOperation::kEO_VERTEX_CUSP:
+    case SpamEntityOperation::kEO_VERTEX_SYMMETRIC:
+        if (hlData_.hls == HighlightState::kHlNode && hlData_.subid == 0)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    default:
+        return false;
+    }
+}
+
 void BeziergonNode::BuildPath(Geom::PathVector &pv) const
 {
     BuildPathImpl(pv, true);
@@ -70,6 +130,53 @@ void BeziergonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
             Geom::Point nPt{ pt[0], pt[1] };
             pv.push_back(Geom::Path(Geom::Rect(nPt + Geom::Point(-3, -3), nPt + Geom::Point(3, 3))));
             ids.push_back({ nNext++, 0 });
+        }
+    }
+}
+
+void BeziergonNode::BuildEdge(Geom::Path &pth, NodeIdVector &ids) const
+{
+    if (selData_.ss == SelectionState::kSelNodeEdit)
+    {
+        int numCurves = static_cast<int>(data_.points.size());
+        if (data_.points.size() == data_.ntypes.size() && numCurves>0)
+        {
+            int curveDegs[4][4] = { { 1, 2, 1, 2 },{ 1, 2, 1, 2 },{ 2, 3, 2, 3 },{ 2, 3, 2, 3 } };
+            for (int c = 0; c<numCurves; ++c)
+            {
+                int sIndex = c;
+                int eIndex = (c + 1) % numCurves;
+                Geom::Point sPt{ data_.points[sIndex][0], data_.points[sIndex][1] };
+                Geom::Point ePt{ data_.points[eIndex][0], data_.points[eIndex][1] };
+
+                int curveDeg = curveDegs[data_.ntypes[sIndex]][data_.ntypes[eIndex]];
+                if (1 == curveDeg)
+                {
+                    pth.append(Geom::LineSegment(sPt, ePt));
+                }
+                else if (2 == curveDeg)
+                {
+                    if (static_cast<int>(BezierNodeType::kBezierNoneCtrl) == data_.ntypes[sIndex] ||
+                        static_cast<int>(BezierNodeType::kBezierPrevCtrl) == data_.ntypes[sIndex])
+                    {
+                        Geom::Point cPt = Geom::Point(data_.points[eIndex][2], data_.points[eIndex][3]);
+                        pth.append(Geom::QuadraticBezier(sPt, cPt, ePt));
+                    }
+                    else
+                    {
+                        Geom::Point cPt = Geom::Point(data_.points[sIndex][4], data_.points[sIndex][5]);
+                        pth.append(Geom::QuadraticBezier(sPt, cPt, ePt));
+                    }
+                }
+                else
+                {
+                    Geom::Point c0{ data_.points[sIndex][4], data_.points[sIndex][5] };
+                    Geom::Point c1{ data_.points[eIndex][2], data_.points[eIndex][3] };
+                    pth.append(Geom::CubicBezier(sPt, c0, c1, ePt));
+                }
+
+                ids.push_back({ c, 0 });
+            }
         }
     }
 }
@@ -236,13 +343,18 @@ void BeziergonNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &fre
             }
             else
             {
-                data_.points[n][0] += dx;
-                data_.points[n][1] += dy;
-                data_.points[n][2] += dx;
-                data_.points[n][3] += dy;
-                data_.points[n][4] += dx;
-                data_.points[n][5] += dy;
+                TranslateVertex(n, dx, dy);
             }
+        }
+    }
+    else if (HitState::kHsEdge == selData_.hs)
+    {
+        int n = selData_.id;
+        int numCorners = GetNumCorners();
+        if (n>-1 && n<numCorners)
+        {
+            TranslateVertex(n, dx, dy);
+            TranslateVertex((n + 1) % numCorners, dx, dy);
         }
     }
     else
@@ -578,7 +690,6 @@ void BeziergonNode::BuildPathImpl(Geom::PathVector &pv, const bool closePath) co
     if (data_.points.size() == data_.ntypes.size() && numCurves>1)
     {
         int curveDegs[4][4] = { { 1, 2, 1, 2 },{ 1, 2, 1, 2 },{ 2, 3, 2, 3 },{ 2, 3, 2, 3 } };
-        int ctrlIndexs[4][4] = { { 0, 1, 0, 1 },{ 0, 1, 0, 1 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 } };
 
         Geom::PathBuilder pb(pv);
         pb.moveTo(Geom::Point(data_.points[0][0], data_.points[0][1]));
@@ -623,4 +734,14 @@ void BeziergonNode::BuildPathImpl(Geom::PathVector &pv, const bool closePath) co
             pb.flush();
         }
     }
+}
+
+void BeziergonNode::TranslateVertex(const int idx, const double dx, const double dy)
+{
+    data_.points[idx][0] += dx;
+    data_.points[idx][1] += dy;
+    data_.points[idx][2] += dx;
+    data_.points[idx][3] += dy;
+    data_.points[idx][4] += dx;
+    data_.points[idx][5] += dy;
 }

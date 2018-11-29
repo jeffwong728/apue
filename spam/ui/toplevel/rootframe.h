@@ -20,6 +20,8 @@ class ProjTreeModel;
 class DropImageEvent;
 class CVImagePanel;
 class CairoCanvas;
+class SelectionFilter;
+
 namespace cv
 {
     class Mat;
@@ -50,6 +52,7 @@ private:
     void CreateAuiPanes();
 
 public:
+    SelectionFilter *GetSelectionFilter() { return selFilter_.get(); }
     ProjPanel *GetProjPanel();
     wxAuiNotebook *GetStationNotebook() const;
     ProjTreeModel *GetProjTreeModel();
@@ -129,5 +132,6 @@ private:
     wxString initialPerspective_;
     const wxString toolBoxLabels[kSpam_TOOLBOX_GUARD];
     std::unique_ptr<Spamer> spamer_;
+    std::unique_ptr<SelectionFilter> selFilter_;
 };
 #endif //SPAM_UI_TOP_LEVEL_ROOT_FRAME_H

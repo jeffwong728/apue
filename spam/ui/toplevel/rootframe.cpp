@@ -61,6 +61,7 @@ RootFrame::RootFrame()
     , toolBoxLabels{wxT("toolBoxInfo"), wxT("toolBoxGeom"), wxT("toolBoxMatch"), wxT("toolBoxStyle") }
     , imageFileHistory_(9, spamID_BASE_IMAGE_FILE_HISTORY)
     , spamer_(std::make_unique<Spamer>())
+    , selFilter_(std::make_unique<SelectionFilter>())
 {
     //SetIcon(wxIcon(wxT("res\\target_128.png"), wxBITMAP_TYPE_PNG));
     CreateMenu();

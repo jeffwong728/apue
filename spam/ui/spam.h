@@ -1,5 +1,6 @@
 #ifndef SPAM_UI_SPAM_H
 #define SPAM_UI_SPAM_H
+#include "cmndef.h"
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
@@ -43,6 +44,29 @@ T SpamConfig::Get(const std::string &p, const T &v)
     return tree->get(p, v);
 }
 
+class SelectionFilter
+{
+public:
+    SelectionFilter() : entityOp_(SpamEntityOperation::kEO_NONE) { AddAllPassType(); }
+
+public:
+    bool IsPass(const SPDrawableNode &dn) const;
+
+public:
+    void AddPassType(const SpamEntityType et);
+    void AddPassType(const std::vector<SpamEntityType> &ets);
+    void ReplacePassType(const SpamEntityType et);
+    void ReplacePassType(const std::vector<SpamEntityType> &ets);
+    void Clear() { passTypes_.clear(); }
+    void AddAllPassType();
+    void SetEntityOperation(const SpamEntityOperation entityOp) { entityOp_ = entityOp; }
+    SpamEntityOperation GetEntityOperation() const { return entityOp_; }
+
+private:
+    SpamEntityOperation entityOp_;
+    std::vector<SpamEntityType> passTypes_;
+};
+
 class Spam : private boost::noncopyable
 {
 public:
@@ -50,6 +74,7 @@ public:
 
 public:
     static ProjTreeModel *GetModel(void);
+    static SelectionFilter *GetSelectionFilter(void);
     static void PopupPyError();
     static void ClearPyOutput();
     static void LogPyOutput();

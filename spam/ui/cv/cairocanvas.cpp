@@ -129,7 +129,7 @@ double CairoCanvas::GetMatScale() const
 { 
     if (srcMat_.empty() || disMat_.empty())
     {
-        return -1;
+        return 1;
     }
     else
     {

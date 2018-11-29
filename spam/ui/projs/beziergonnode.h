@@ -26,9 +26,12 @@ public:
     ~BeziergonNode();
 
 public:
+    bool IsTypeOf(const SpamEntityType t) const override;
+    bool IsLegalHit(const SpamEntityOperation entityOp) const override;
     bool IsContainer() const override { return false; }
     void BuildPath(Geom::PathVector &pv) const override;
     void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const override;
+    void BuildEdge(Geom::Path &pth, NodeIdVector &ids) const override;
     void BuildHandle(Geom::PathVector &hpv) const override;
     SelectionData HitTest(const Geom::Point &pt) const override;
     SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const override;
@@ -70,6 +73,7 @@ protected:
     std::string GetArcTypeName() const;
     GenericEllipseArcType GetArcTypeValue(const std::string &tName) const;
     void BuildPathImpl(Geom::PathVector &pv, const bool closePath) const;
+    void TranslateVertex(const int idx, const double dx, const double dy);
 
 private:
     BezierData data_;

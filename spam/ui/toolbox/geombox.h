@@ -19,11 +19,17 @@ public:
     GeomBox(wxWindow* parent);
     ~GeomBox();
 
+private:
+    void OnNodeEditMode(wxCommandEvent &cmd);
+    void OnToolEnter(int toolId);
+
 protected:
     wxPanel * GetOptionPanel(const int toolIndex, wxWindow *parent);
+    void UpdateSelectionFilter(void);
 
 private:
     wxPanel *CreateNodeEditOption(wxWindow *parent);
     wxPanel *CreateRectOption(wxWindow *parent);
+    int toolEditMode_{ kSpamID_TOOLBOX_NODE_MOVE };
 };
 #endif //SPAM_UI_TOOLBOX_GEOM_BOX_H

@@ -8,6 +8,7 @@
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
 #endif
+#include <ui/cmndef.h>
 #include <ui/cmds/cmdsfwd.h>
 #include "drawstyle.h"
 #include "modelfwd.h"

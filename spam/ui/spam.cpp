@@ -211,12 +211,77 @@ wxString SpamConfig::Get<wxString>(const std::string &p, const wxString &v)
     }
 }
 
+bool SelectionFilter::IsPass(const SPDrawableNode &dn) const
+{
+    for (const SpamEntityType t : passTypes_)
+    {
+        if (dn && dn->IsTypeOf(t))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SelectionFilter::AddPassType(const SpamEntityType et)
+{
+    auto itLower = std::lower_bound(passTypes_.begin(), passTypes_.end(), et);
+    if (itLower == passTypes_.end() || *itLower != et)
+    {
+        passTypes_.insert(itLower, et);
+    }
+}
+
+void SelectionFilter::AddPassType(const std::vector<SpamEntityType> &ets)
+{
+    for (const SpamEntityType et : ets)
+    {
+        AddPassType(et);
+    }
+}
+
+void SelectionFilter::ReplacePassType(const SpamEntityType et)
+{
+    passTypes_.clear();
+    passTypes_.push_back(et);
+}
+
+void SelectionFilter::ReplacePassType(const std::vector<SpamEntityType> &ets)
+{
+    passTypes_.swap(std::vector<SpamEntityType>(ets.cbegin(), ets.cend()));
+}
+
+void SelectionFilter::AddAllPassType()
+{
+    Clear();
+    SpamEntityType t = SpamEntityType::kET_IMAGE;
+    while ( t != SpamEntityType::kET_GUARD)
+    {
+        passTypes_.push_back(t);
+        t = static_cast<SpamEntityType>(static_cast<int>(t) + 1);
+    }
+}
+
 ProjTreeModel *Spam::GetModel(void)
 {
     auto frame = dynamic_cast<RootFrame *>(wxGetApp().GetTopWindow());
     if (frame)
     {
         return frame->GetProjTreeModel();
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
+SelectionFilter *Spam::GetSelectionFilter(void)
+{
+    auto frame = dynamic_cast<RootFrame *>(wxGetApp().GetTopWindow());
+    if (frame)
+    {
+        return frame->GetSelectionFilter();
     }
     else
     {

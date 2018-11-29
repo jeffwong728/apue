@@ -38,6 +38,7 @@ protected:
 
 private:
     bool CreateOption(const int toolIndex);
+    void OnToolQuit(int toolId);
 
 protected:
     const int startToolId_;

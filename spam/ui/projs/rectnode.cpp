@@ -20,6 +20,33 @@ RectNode::~RectNode()
 {
 }
 
+bool RectNode::IsTypeOf(const SpamEntityType t) const
+{
+    switch (t)
+    {
+    case SpamEntityType::kET_GEOM:
+    case SpamEntityType::kET_GEOM_RECT:
+        return true;
+
+    default: return false;
+    }
+}
+
+bool RectNode::IsLegalHit(const SpamEntityOperation entityOp) const
+{
+    switch (entityOp)
+    {
+    case SpamEntityOperation::kEO_NONE:
+    case SpamEntityOperation::kEO_GEOM_CREATE:
+    case SpamEntityOperation::kEO_GEOM_TRANSFORM:
+    case SpamEntityOperation::kEO_VERTEX_MOVE:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
 void RectNode::BuildPath(Geom::PathVector &pv) const
 {
     Geom::Point p0{ data_.points[0][0], data_.points[0][1] };

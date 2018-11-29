@@ -139,11 +139,36 @@ enum
     kSpamID_TOOLBOX_MATCH_GUARD
 };
 
-enum
+enum class SpamEntityType
 {
-    kSpamENTITY_TYPE_IMAGE,
+    kET_IMAGE,
+    kET_GEOM,
+    kET_GEOM_RECT,
+    kET_GEOM_ELLIPSE,
+    kET_GEOM_POLYGON,
+    kET_GEOM_BEZIERGON,
+    kET_GEOM_LINE,
+    kET_GEOM_ARC,
+    kET_GEOM_ZIGZAGLINE,
+    kET_GEOM_POLYLINE,
+    kET_GEOM_BEZIERLINE,
 
-    kSpamENTITY_TYPE_GUARD
+    kET_GUARD
+};
+
+enum class SpamEntityOperation
+{
+    kEO_NONE,
+    kEO_GEOM_CREATE,
+    kEO_GEOM_TRANSFORM,
+    kEO_VERTEX_MOVE,
+    kEO_VERTEX_ADD,
+    kEO_VERTEX_DELETE,
+    kEO_VERTEX_SMOOTH,
+    kEO_VERTEX_CUSP,
+    kEO_VERTEX_SYMMETRIC,
+
+    kEO_GUARD
 };
 
 enum

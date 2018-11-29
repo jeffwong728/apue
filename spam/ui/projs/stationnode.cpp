@@ -1,6 +1,7 @@
 #include "stationnode.h"
 #include "drawablenode.h"
 #include <ui/evts.h>
+#include <ui/spam.h>
 #include <helper/h5db.h>
 #include <helper/commondef.h>
 
@@ -71,13 +72,17 @@ int StationNode::GetNumDrawable() const
 
 SPDrawableNode StationNode::FindDrawable(const Geom::Point &pt)
 {
+    const SelectionFilter *sf = Spam::GetSelectionFilter();
     for (auto &c : GetChildren())
     {
         auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
-        auto hl = drawable->HitTest(pt);
-        if (hl.hs != HitState::kHsNone)
+        if (sf && sf->IsPass(drawable))
         {
-            return drawable;
+            auto hl = drawable->HitTest(pt);
+            if (hl.hs != HitState::kHsNone)
+            {
+                return drawable;
+            }
         }
     }
 
@@ -92,14 +97,18 @@ SPDrawableNode StationNode::FindDrawable(const Geom::Point &pt, const double sx,
     sd.subid = -1;
     sd.master = 0;
 
+    const SelectionFilter *sf = Spam::GetSelectionFilter();
     for (auto &c : GetChildren())
     {
         auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
-        auto ht = drawable->HitTest(pt, sx, sy);
-        if (ht.hs != HitState::kHsNone)
+        if (sf && sf->IsPass(drawable))
         {
-            sd = ht;
-            return drawable;
+            auto ht = drawable->HitTest(pt, sx, sy);
+            if (ht.hs != HitState::kHsNone)
+            {
+                sd = ht;
+                return drawable;
+            }
         }
     }
 
@@ -109,12 +118,16 @@ SPDrawableNode StationNode::FindDrawable(const Geom::Point &pt, const double sx,
 void StationNode::SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents)
 {
     ents.clear();
+    const SelectionFilter *sf = Spam::GetSelectionFilter();
     for (auto &c : GetChildren())
     {
         auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
-        if (drawable->IsIntersection(box))
+        if (sf && sf->IsPass(drawable))
         {
-            ents.push_back(drawable);
+            if (drawable->IsIntersection(box))
+            {
+                ents.push_back(drawable);
+            }
         }
     }
 }

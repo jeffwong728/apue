@@ -26,6 +26,8 @@ public:
     ~RectNode();
 
 public:
+    bool IsTypeOf(const SpamEntityType t) const override;
+    bool IsLegalHit(const SpamEntityOperation entityOp) const override;
     bool IsContainer() const override { return false; }
     void BuildPath(Geom::PathVector &pv) const override;
     void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const override;

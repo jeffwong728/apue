@@ -1,4 +1,5 @@
 #include "geombox.h"
+#include <ui/spam.h>
 #include <wx/artprov.h>
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
@@ -50,10 +51,43 @@ GeomBox::GeomBox(wxWindow* parent)
     };
 
     ToolBox::Init(toolIds, toolTips, toolIcons);
+    sig_ToolQuit.connect(std::bind(&GeomBox::OnToolEnter, this, std::placeholders::_1));
 }
 
 GeomBox::~GeomBox()
 {
+}
+
+void GeomBox::OnNodeEditMode(wxCommandEvent &cmd)
+{
+    toolEditMode_ = cmd.GetId();
+    UpdateSelectionFilter();
+}
+
+void GeomBox::OnToolEnter(int toolId)
+{
+    switch (toolId)
+    {
+    case kSpamID_TOOLBOX_GEOM_TRANSFORM:
+        Spam::GetSelectionFilter()->ReplacePassType(SpamEntityType::kET_GEOM);
+        Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GEOM_TRANSFORM);
+        break;
+
+    case kSpamID_TOOLBOX_GEOM_EDIT:
+        UpdateSelectionFilter();
+        break;
+
+    case kSpamID_TOOLBOX_GEOM_RECT:
+    case kSpamID_TOOLBOX_GEOM_ELLIPSE:
+    case kSpamID_TOOLBOX_GEOM_POLYGON:
+    case kSpamID_TOOLBOX_GEOM_BEZIERGON:
+        Spam::GetSelectionFilter()->Clear();
+        Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GEOM_CREATE);
+        break;
+
+    default:
+        break;
+    }
 }
 
 wxPanel *GeomBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
@@ -69,6 +103,50 @@ wxPanel *GeomBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
     return nullptr;
 }
 
+void GeomBox::UpdateSelectionFilter(void)
+{
+    switch (toolEditMode_)
+    {
+    case kSpamID_TOOLBOX_NODE_MOVE:
+        Spam::GetSelectionFilter()->AddAllPassType();
+        break;
+
+    case kSpamID_TOOLBOX_NODE_ADD:
+    case kSpamID_TOOLBOX_NODE_DELETE:
+        Spam::GetSelectionFilter()->Clear();
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_POLYGON);
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_BEZIERGON);
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_ZIGZAGLINE);
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_POLYLINE);
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_BEZIERLINE);
+        break;
+
+    case kSpamID_TOOLBOX_NODE_SMOOTH:
+    case kSpamID_TOOLBOX_NODE_CUSP:
+    case kSpamID_TOOLBOX_NODE_SYMMETRIC:
+        Spam::GetSelectionFilter()->Clear();
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_BEZIERGON);
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_BEZIERLINE);
+        break;
+
+    default:
+        break;
+    }
+
+    switch (toolEditMode_)
+    {
+    case kSpamID_TOOLBOX_NODE_MOVE:      Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_VERTEX_MOVE);      break;
+    case kSpamID_TOOLBOX_NODE_ADD:       Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_VERTEX_ADD);       break;
+    case kSpamID_TOOLBOX_NODE_DELETE:    Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_VERTEX_DELETE);    break;
+    case kSpamID_TOOLBOX_NODE_SMOOTH:    Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_VERTEX_SMOOTH);    break;
+    case kSpamID_TOOLBOX_NODE_CUSP:      Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_VERTEX_CUSP);      break;
+    case kSpamID_TOOLBOX_NODE_SYMMETRIC: Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_VERTEX_SYMMETRIC); break;
+
+    default:
+        break;
+    }
+}
+
 wxPanel *GeomBox::CreateNodeEditOption(wxWindow *parent)
 {
     auto panel = new wxScrolledWindow(parent, wxID_ANY);
@@ -81,6 +159,8 @@ wxPanel *GeomBox::CreateNodeEditOption(wxWindow *parent)
     nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_SMOOTH, wxT("Make nodes smooth"), wxBitmap(wxT("res/node_smooth.png"), wxBITMAP_TYPE_PNG));
     nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_CUSP, wxT("Make nodes corner"), wxBitmap(wxT("res/node_cusp.png"), wxBITMAP_TYPE_PNG));
     nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_SYMMETRIC, wxT("Make nodes symmetric"), wxBitmap(wxT("res/node_symmetric.png"), wxBITMAP_TYPE_PNG));
+    nodeEditMethod->ToggleTool(kSpamID_TOOLBOX_NODE_MOVE, true);
+    nodeEditMethod->Bind(wxEVT_TOOL, &GeomBox::OnNodeEditMode, this, kSpamID_TOOLBOX_NODE_MOVE, kSpamID_TOOLBOX_NODE_SYMMETRIC);
     nodeEditMethod->Realize();
 
     sizerRoot->Add(nodeEditMethod, wxSizerFlags(0).Expand().Border());

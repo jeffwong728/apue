@@ -25,6 +25,54 @@ PolygonNode::~PolygonNode()
 {
 }
 
+bool PolygonNode::IsTypeOf(const SpamEntityType t) const
+{
+    switch (t)
+    {
+    case SpamEntityType::kET_GEOM:
+    case SpamEntityType::kET_GEOM_POLYGON:
+        return true;
+
+    default: return false;
+    }
+}
+
+bool PolygonNode::IsLegalHit(const SpamEntityOperation entityOp) const
+{
+    switch (entityOp)
+    {
+    case SpamEntityOperation::kEO_NONE:
+    case SpamEntityOperation::kEO_GEOM_CREATE:
+    case SpamEntityOperation::kEO_GEOM_TRANSFORM:
+    case SpamEntityOperation::kEO_VERTEX_MOVE:
+        return true;
+
+    case SpamEntityOperation::kEO_VERTEX_ADD:
+        if (hlData_.hls == HighlightState::kHlEdge)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    case SpamEntityOperation::kEO_VERTEX_DELETE:
+        if (hlData_.hls == HighlightState::kHlNode &&
+            hlData_.subid == 0 && GetNumCorners()>3)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    default:
+        return false;
+    }
+}
+
 void PolygonNode::BuildPath(Geom::PathVector &pv) const
 {
     Geom::PathBuilder pb(pv);
@@ -58,6 +106,22 @@ void PolygonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
             Geom::Point b = pt + Geom::Point(3, 3);
             pv.push_back(Geom::Path(Geom::Rect(a, b)));
             ids.push_back({ c, 0 });
+        }
+    }
+}
+
+void PolygonNode::BuildEdge(Geom::Path &pth, NodeIdVector &ids) const
+{
+    if (selData_.ss == SelectionState::kSelNodeEdit)
+    {
+        int numEdges = GetNumCorners();
+        for (int e = 0; e<numEdges; ++e)
+        {
+            Geom::Point pts{ data_.points[e][0], data_.points[e][1] };
+            Geom::Point pte{ data_.points[(e+1) % numEdges][0], data_.points[(e + 1) % numEdges][1] };
+
+            pth.append(Geom::LineSegment(pts, pte));
+            ids.push_back({ e, 0 });
         }
     }
 }
@@ -132,6 +196,19 @@ void PolygonNode::NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freeP
         {
             data_.points[selData_.id][0] += dx;
             data_.points[selData_.id][1] += dy;
+        }
+    }
+    else if (HitState::kHsEdge == selData_.hs)
+    {
+        int numCorners = GetNumCorners();
+        if (selData_.id>-1 && selData_.id<numCorners)
+        {
+            data_.points[selData_.id][0] += dx;
+            data_.points[selData_.id][1] += dy;
+
+            int idx = (selData_.id + 1) % numCorners;
+            data_.points[idx][0] += dx;
+            data_.points[idx][1] += dy;
         }
     }
     else

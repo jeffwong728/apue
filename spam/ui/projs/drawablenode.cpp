@@ -1,6 +1,6 @@
 #include "drawablenode.h"
 #include <ui/evts.h>
-#include <ui/cmndef.h>
+#include <ui/spam.h>
 #include <helper/h5db.h>
 #include <helper/commondef.h>
 #pragma warning( push )
@@ -203,6 +203,26 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
                     sd.hs = HitState::kHsNode;
                     sd.id = nids[n].id;
                     sd.subid = nids[n].subid;
+                    sd.master = sd.id;
+
+                    return sd;
+                }
+            }
+
+            Geom::Path pth;
+            NodeIdVector eids;
+            BuildEdge(pth, eids);
+
+            for (int c = 0; c < static_cast<int>(pth.size()); ++c)
+            {
+                const Geom::Curve &curve = pth[c];
+                Geom::Coord t = curve.nearestTime(pt);
+                Geom::Coord dist = Geom::distanceSq(pt, curve.pointAt(t));
+                if (dist < 9)
+                {
+                    sd.hs = HitState::kHsEdge;
+                    sd.id = eids[c].id;
+                    sd.subid = eids[c].subid;
                     sd.master = sd.id;
 
                     return sd;
@@ -428,7 +448,9 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
         Geom::PathVector rpv;
         Geom::PathVector npv;
         Geom::PathVector hpv;
+        Geom::Path       epth;
         NodeIdVector     nids;
+        NodeIdVector     eids;
 
         double sx = 1;
         double sy = 1;
@@ -445,6 +467,9 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
         DrawHighlightScaleHandle(cr, spv, sx, hx);
         DrawHighlightSkewHandle(cr, skpv, sx, hx);
         DrawHighlightRotateHandle(cr, rpv, sx, hx);
+
+        BuildEdge(epth, eids);
+        DrawHighlightEdge(cr, epth, sx, hx);
 
         BuildHandle(hpv);
         DrawHighlightHandle(cr, hpv, HighlightState::kHlNone, sx, hx);
@@ -564,7 +589,13 @@ void DrawableNode::DrawHighlightFace(Cairo::RefPtr<Cairo::Context> &cr, const Ge
     Geom::CairoPathSink cairoPathSink(cr->cobj());
     if (HighlightState::kHlFace == hlData_.hls)
     {
-        const wxColour sc(0xF9, 0xA6, 0x02);
+        wxColour::ChannelType r = 0xF9, g = 0xA6, b = 0x02;
+        if (!IsLegalHit(Spam::GetSelectionFilter()->GetEntityOperation()))
+        {
+            r = 0xFF; g = 0; b = 0;
+        }
+
+        const wxColour sc(r, g, b);
         const wxColour &fc = sc;
 
         cairoPathSink.feed(fpv);
@@ -609,6 +640,12 @@ void DrawableNode::DrawHighlightRotateHandle(Cairo::RefPtr<Cairo::Context> &cr, 
 void DrawableNode::DrawHighlightNode(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &npv, const NodeIdVector &ids, const double ux, const double ax) const
 {
     Geom::CairoPathSink cairoPathSink(cr->cobj());
+    wxColour::ChannelType r = 0xF9, g = 0xA6, b = 0x02;
+    if (!IsLegalHit(Spam::GetSelectionFilter()->GetEntityOperation()))
+    {
+        r = 0xFF; g = 0; b = 0;
+    }
+
     for (int p = 0; p<static_cast<int>(npv.size()); ++p)
     {
         if (npv[p].empty())
@@ -620,7 +657,7 @@ void DrawableNode::DrawHighlightNode(Cairo::RefPtr<Cairo::Context> &cr, const Ge
             hlData_.id == ids[p].id &&
             hlData_.subid == ids[p].subid)
         {
-            const wxColour sc(0xF9, 0xA6, 0x02);
+            const wxColour sc(r, g, b);
             const wxColour &fc = sc;
 
             cairoPathSink.feed(npv[p]);
@@ -651,6 +688,12 @@ void DrawableNode::DrawHighlightNode(Cairo::RefPtr<Cairo::Context> &cr, const Ge
 void DrawableNode::DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const Geom::PathVector &pv, const HighlightState hs, const double ux, const double ax) const
 {
     Geom::CairoPathSink cairoPathSink(cr->cobj());
+    wxColour::ChannelType r = 0xF9, g = 0xA6, b = 0x02;
+    if (!IsLegalHit(Spam::GetSelectionFilter()->GetEntityOperation()))
+    {
+        r = 0xFF; g = 0; b = 0;
+    }
+
     for (int p = 0; p<static_cast<int>(pv.size()); ++p)
     {
         if (pv[p].empty())
@@ -660,7 +703,7 @@ void DrawableNode::DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const 
 
         if (hs == hlData_.hls && hlData_.id == p)
         {
-            const wxColour sc(0xF9, 0xA6, 0x02);
+            const wxColour sc(r, g, b);
             const wxColour &fc = sc;
 
             cairoPathSink.feed(pv[p]);
@@ -683,6 +726,31 @@ void DrawableNode::DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const 
             cr->fill_preserve();
             cr->set_line_width(ux);
             cr->set_source_rgba(1.0, 0.0, 0.0, sc.Alpha() / 255.0);
+            cr->stroke();
+        }
+    }
+}
+
+void DrawableNode::DrawHighlightEdge(Cairo::RefPtr<Cairo::Context> &cr, const Geom::Path &pth, const double ux, const double ax) const
+{
+    Geom::CairoPathSink cairoPathSink(cr->cobj());
+    wxColour::ChannelType r = 0xF9, g = 0xA6, b = 0x02;
+    if (!IsLegalHit(Spam::GetSelectionFilter()->GetEntityOperation()))
+    {
+        r = 0xFF; g = 0; b = 0;
+    }
+
+    for (int p = 0; p<static_cast<int>(pth.size()); ++p)
+    {
+        if (HighlightState::kHlEdge == hlData_.hls && hlData_.id == p)
+        {
+            const wxColour sc(r, g, b);
+            cairoPathSink.feed(pth[p]);
+            cr->set_line_width(ax);
+            cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0 / 4);
+            cr->stroke_preserve();
+            cr->set_line_width(ux);
+            cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0);
             cr->stroke();
         }
     }
