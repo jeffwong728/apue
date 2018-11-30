@@ -4,6 +4,10 @@
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
 #endif
+#include <boost/mpl/vector.hpp>
+#include <boost/variant.hpp>
+#include <string>
+#include <unordered_map>
 
 enum 
 {
@@ -177,11 +181,17 @@ enum
     kSpamTOOL_RECT_MODE_3POINTS
 };
 
+typedef boost::mpl::vector<int, long, double> OptTypes0;
+typedef boost::mpl::push_front<OptTypes0, std::string>::type OptTypes;
+using ToolOptions = std::unordered_map<std::string, boost::make_variant_over<OptTypes>::type>;
+
+extern const std::string cp_ToolId;
 extern const std::string cp_ToolRectMode;
 extern const std::string cp_ToolGeomFillPaint;
 extern const std::string cp_ToolGeomStrokePaint;
 extern const std::string cp_ToolGeomStrokeWidth;
 extern const std::string cp_ToolGeomStrokeJoin;
 extern const std::string cp_ToolGeomStrokeCap;
+extern const std::string cp_ToolGeomVertexEditMode;
 
 #endif //SPAM_UI_COMMON_DEFINE_H

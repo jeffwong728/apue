@@ -14,6 +14,7 @@ public:
     ~ProbeBox();
 
 protected:
-    wxPanel * GetOptionPanel(const int toolIndex, wxWindow *parent);
+    wxPanel * GetOptionPanel(const int toolIndex, wxWindow *parent) override;
+    ToolOptions GetToolOptions() const override;
 };
 #endif //SPAM_UI_TOOLBOX_PROBE_BOX_H

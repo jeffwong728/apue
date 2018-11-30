@@ -17,6 +17,12 @@ NodeEditTool::~NodeEditTool()
 {
 }
 
+void NodeEditTool::OnOptionChanged(const EvToolOption &e)
+{
+    const int toolId = boost::get<int>(e.toolOptions.at(cp_ToolId));
+    BoxToolImpl::QuitTool(EvToolQuit(toolId));
+}
+
 NodeEditIdle::NodeEditIdle()
     : EditIdleT(*this)
 {

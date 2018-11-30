@@ -2,6 +2,7 @@
 #define SPAM_UI_FSM_EVENTS_H
 #include <wx/event.h>
 #include <boost/statechart/event.hpp>
+#include <ui/cmndef.h>
 #include <ui/projs/modelfwd.h>
 
 struct EvLMouseDown : boost::statechart::event<EvLMouseDown>
@@ -57,13 +58,19 @@ struct EvAppQuit : boost::statechart::event<EvAppQuit> {};
 struct EvToolEnter : boost::statechart::event<EvToolEnter>
 {
     EvToolEnter(const int id) : toolId(id) {}
-    int toolId;
+    const int toolId;
 };
 
 struct EvToolQuit : boost::statechart::event<EvToolQuit>
 {
     EvToolQuit(const int id) : toolId(id) {}
-    int toolId;
+    const int toolId;
+};
+
+struct EvToolOption : boost::statechart::event<EvToolOption>
+{
+    EvToolOption(const ToolOptions &tos) : toolOptions(tos) {}
+    const ToolOptions toolOptions;
 };
 
 struct EvDrawableDelete : boost::statechart::event<EvDrawableDelete>

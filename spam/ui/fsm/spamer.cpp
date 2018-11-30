@@ -18,9 +18,11 @@ void Spamer::OnAppQuit()
     process_event(EvAppQuit());
 }
 
-void Spamer::OnToolEnter(int toolId)
+void Spamer::OnToolEnter(const ToolOptions &tos)
 {
+    const int toolId = boost::get<int>(tos.at(cp_ToolId));
     process_event(EvToolEnter(toolId));
+    process_event(EvToolOption(tos));
 }
 
 void Spamer::OnToolQuit(int toolId)

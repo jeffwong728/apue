@@ -26,6 +26,8 @@ struct NodeEditTool : sc::simple_state<NodeEditTool, Spamer, NodeEditIdle>, Node
     NodeEditTool();
     ~NodeEditTool();
 
+    void OnOptionChanged(const EvToolOption &e);
+
     typedef boost::mpl::list<
         sc::transition<EvReset, NodeEditTool>,
         sc::transition<EvToolQuit, NoTool>,
@@ -34,6 +36,8 @@ struct NodeEditTool : sc::simple_state<NodeEditTool, Spamer, NodeEditIdle>, Node
         sc::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
         sc::in_state_reaction<EvCanvasEnter, BoxToolT, &BoxToolT::EnterCanvas>,
         sc::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
+
+    ToolOptions toolOptions;
 };
 
 struct NodeEditIdle : sc::simple_state<NodeEditIdle, NodeEditTool>, NodeEditIdleImpl
@@ -44,6 +48,7 @@ struct NodeEditIdle : sc::simple_state<NodeEditIdle, NodeEditTool>, NodeEditIdle
     ~NodeEditIdle();
     typedef boost::mpl::list<
         sc::custom_reaction<EvLMouseDown>,
+        sc::in_state_reaction<EvToolOption, NodeEditTool, &NodeEditTool::OnOptionChanged>,
         sc::in_state_reaction<EvMouseMove, NodeEditTool::BoxToolT, &NodeEditTool::BoxToolT::Safari>> reactions;
 
     sc::result react(const EvLMouseDown &e);

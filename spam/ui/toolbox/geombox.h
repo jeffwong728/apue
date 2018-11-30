@@ -21,10 +21,11 @@ public:
 
 private:
     void OnNodeEditMode(wxCommandEvent &cmd);
-    void OnToolEnter(int toolId);
+    void OnToolEnter(const ToolOptions &toolOpts);
 
 protected:
-    wxPanel * GetOptionPanel(const int toolIndex, wxWindow *parent);
+    wxPanel * GetOptionPanel(const int toolIndex, wxWindow *parent) override;
+    ToolOptions GetToolOptions() const override;
     void UpdateSelectionFilter(void);
 
 private:

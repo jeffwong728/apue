@@ -51,7 +51,7 @@ GeomBox::GeomBox(wxWindow* parent)
     };
 
     ToolBox::Init(toolIds, toolTips, toolIcons);
-    sig_ToolQuit.connect(std::bind(&GeomBox::OnToolEnter, this, std::placeholders::_1));
+    sig_ToolEnter.connect(std::bind(&GeomBox::OnToolEnter, this, std::placeholders::_1));
 }
 
 GeomBox::~GeomBox()
@@ -64,8 +64,9 @@ void GeomBox::OnNodeEditMode(wxCommandEvent &cmd)
     UpdateSelectionFilter();
 }
 
-void GeomBox::OnToolEnter(int toolId)
+void GeomBox::OnToolEnter(const ToolOptions &toolOpts)
 {
+    const int toolId = boost::get<int>(toolOpts.at(cp_ToolId));
     switch (toolId)
     {
     case kSpamID_TOOLBOX_GEOM_TRANSFORM:
@@ -101,6 +102,13 @@ wxPanel *GeomBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
     }
 
     return nullptr;
+}
+
+ToolOptions GeomBox::GetToolOptions() const
+{
+    ToolOptions to;
+    to[cp_ToolGeomVertexEditMode] = toolEditMode_;
+    return to;
 }
 
 void GeomBox::UpdateSelectionFilter(void)

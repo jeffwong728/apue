@@ -33,3 +33,9 @@ wxPanel *MatchBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 {
     return nullptr;
 }
+
+ToolOptions MatchBox::GetToolOptions() const
+{
+    ToolOptions to;
+    return to;
+}

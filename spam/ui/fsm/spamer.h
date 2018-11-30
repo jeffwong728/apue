@@ -26,7 +26,7 @@ struct Spamer : boost::statechart::state_machine<Spamer, NoTool>
     ~Spamer();
 
     void OnAppQuit();
-    void OnToolEnter(int toolId);
+    void OnToolEnter(const ToolOptions &tos);
     void OnToolQuit(int toolId);
     void OnCanvasEnter(wxMouseEvent &e);
     void OnCanvasLeave(wxMouseEvent &e);

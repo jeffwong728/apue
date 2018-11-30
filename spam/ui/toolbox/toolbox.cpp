@@ -91,7 +91,10 @@ void ToolBox::OpenToolbox()
             {
                 GetSizer()->Layout();
             }
-            sig_ToolEnter(tBtn->GetId());
+
+            ToolOptions tos = GetToolOptions();
+            tos[cp_ToolId] = tBtn->GetId();
+            sig_ToolEnter(tos);
         }
 
         toolIndex += 1;
@@ -167,7 +170,9 @@ void ToolBox::OnTool(wxCommandEvent &e)
             wxToggleButton *tBtn = std::get<0>(tools_[tIndex]);
             if (tBtn)
             {
-                sig_ToolEnter(tBtn->GetId());
+                ToolOptions tos = GetToolOptions();
+                tos[cp_ToolId] = tBtn->GetId();
+                sig_ToolEnter(tos);
             }
         }
     }

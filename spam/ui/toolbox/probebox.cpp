@@ -33,3 +33,9 @@ wxPanel *ProbeBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 {
     return nullptr;
 }
+
+ToolOptions ProbeBox::GetToolOptions() const
+{
+    ToolOptions to;
+    return to;
+}

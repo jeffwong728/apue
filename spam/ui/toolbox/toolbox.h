@@ -22,13 +22,14 @@ public:
 protected:
     void Init(const wxWindowID toolIds[], const wxString toolTips[], const wxBitmap toolIcons[]);
     virtual wxPanel *GetOptionPanel(const int toolIndex, wxWindow *parent) = 0;
+    virtual ToolOptions GetToolOptions() const = 0;
 
 public:
     virtual void OpenToolbox();
     virtual void QuitToolbox();
 
 public:
-    bs2::signal_type<void(int), bs2::keywords::mutex_type<bs2::dummy_mutex>>::type sig_ToolEnter;
+    bs2::signal_type<void(const ToolOptions &), bs2::keywords::mutex_type<bs2::dummy_mutex>>::type sig_ToolEnter;
     bs2::signal_type<void(int), bs2::keywords::mutex_type<bs2::dummy_mutex>>::type sig_ToolQuit;
 
 protected:
