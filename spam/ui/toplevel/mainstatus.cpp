@@ -1,6 +1,8 @@
 #include "mainstatus.h"
 #include <pixmaps/green.xpm>
 #include <pixmaps/red.xpm>
+#include <wx/dcgraph.h>
+#include <wx/artprov.h>
 
 MainStatus::MainStatus(wxWindow *parent, long style)
     : wxStatusBar(parent, wxID_ANY, style, "MainStatus")
@@ -27,16 +29,17 @@ MainStatus::MainStatus(wxWindow *parent, long style)
     m_checkbox = new wxCheckBox(this, kSpamID_STATUS_CHECKBOX, wxT("&Toggle clock"));
     m_checkbox->SetValue(true);
 
-    m_statbmp = new wxStaticBitmap(this, wxID_ANY, wxIcon(green_xpm));
+    m_statbmp = new wxStaticBitmap(this, kSpamID_STATUS_CHECKBOX, wxBitmap());
 
     m_timer.Start(1000);
-    SetMinHeight(wxMax(m_statbmp->GetBestSize().GetHeight(), m_checkbox->GetBestSize().GetHeight()));
+    SetMinHeight(wxMax(wxArtProvider::GetBitmap(wxART_ERROR, wxART_TOOLBAR).GetHeight(), m_checkbox->GetBestSize().GetHeight()));
 
     UpdateClock();
 
     Bind(wxEVT_SIZE,  &MainStatus::OnSize,  this);
     Bind(wxEVT_TIMER, &MainStatus::OnTimer, this);
     Bind(wxEVT_IDLE,  &MainStatus::OnIdle,  this);
+    m_checkbox->Bind(wxEVT_CHECKBOX, &MainStatus::OnToggleClock, this);
 }
 
 MainStatus::~MainStatus()
@@ -47,26 +50,64 @@ MainStatus::~MainStatus()
     }
 }
 
-void MainStatus::OnSize(wxSizeEvent& event)
+void MainStatus::SetTextStatus(const wxString &text)
 {
-    if ( !m_checkbox )
-        return;
+    SetBitmapStatus(StatusIconType::kSIT_NONE, text);
+}
 
-    wxRect rect;
-    if (!GetFieldRect(Field_Checkbox, rect))
+void MainStatus::SetBitmapStatus(const StatusIconType iconType, const wxString &text)
+{
+    wxBitmap statusBitmap = m_statbmp->GetBitmap();
+    wxRect statusRect;
+    GetFieldRect(Field_Text, statusRect);
+    if (!statusBitmap.IsOk() || (statusRect.GetSize() != statusBitmap.GetSize()))
     {
-        event.Skip();
-        return;
+        statusBitmap.Create(statusRect.GetSize());
     }
 
-    wxRect rectCheck = rect;
-    rectCheck.Deflate(2);
-    m_checkbox->SetSize(rectCheck);
+    wxMemoryDC memDC(statusBitmap);
+    wxGCDC dc(memDC);
+    dc.SetBackground(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE));
+    dc.Clear();
 
-    GetFieldRect(Field_Bitmap, rect);
-    wxSize size = m_statbmp->GetSize();
+    wxBitmap iBitmap;
+    wxSize   iSize;
+    switch (iconType)
+    {
+    case StatusIconType::kSIT_ERROR:
+        iBitmap = wxArtProvider::GetBitmap(wxART_ERROR, wxART_MENU);
+        iSize   = iBitmap.GetSize();
+        dc.DrawBitmap(iBitmap, wxPoint(0, 0));
+        break;
 
-    m_statbmp->Move(rect.x + (rect.width - size.x) / 2, rect.y + (rect.height - size.y) / 2);
+    default:
+        break;
+    }
+
+    dc.DrawText(text, wxPoint(iSize.GetWidth()+3, 0));
+    memDC.SelectObject(wxNullBitmap);
+    m_statbmp->SetBitmap(statusBitmap);
+
+    m_iconType = iconType;
+    m_text = text;
+}
+
+void MainStatus::OnSize(wxSizeEvent& event)
+{
+    wxRect statusRect;
+    if (m_statbmp && GetFieldRect(Field_Text, statusRect))
+    {
+        m_statbmp->SetSize(statusRect);
+        SetBitmapStatus(m_iconType, m_text);
+    }
+
+    wxRect rectCheck;
+    if (m_checkbox && GetFieldRect(Field_Checkbox, rectCheck))
+    {
+        rectCheck.Deflate(2);
+        m_checkbox->SetSize(rectCheck);
+    }
+
     event.Skip();
 }
 
@@ -89,13 +130,11 @@ void MainStatus::DoToggle()
     if ( m_checkbox->GetValue() )
     {
         m_timer.Start(1000);
-        m_statbmp->SetIcon(wxIcon(green_xpm));
         UpdateClock();
     }
     else // don't show clock
     {
         m_timer.Stop();
-        m_statbmp->SetIcon(wxIcon(red_xpm));
         SetStatusText(wxEmptyString, Field_Clock);
     }
 }

@@ -40,5 +40,37 @@ wxString TransformCmd::GetDescription() const
 
 wxString NodeEditCmd::GetDescription() const
 {
-    return wxString(wxT("Edit Entity Node"));
+    return wxString(wxT("Move Entity Node"));
+}
+
+NodeModifyCmd::NodeModifyCmd(ProjTreeModel *model, SPStationNode &station, const SPDrawableNode &drawable, const boost::any &memento)
+    : SpamCmd()
+    , model_(model)
+    , station_(station)
+    , drawable_(drawable)
+    , memento_(memento)
+{
+}
+
+void NodeModifyCmd::Do()
+{
+}
+
+void NodeModifyCmd::Undo()
+{
+    SpamMany mementos;
+    mementos.push_back(drawable_->CreateMemento());
+
+    model_->RestoreTransform(SPDrawableNodeVector(1, drawable_), SpamMany(1, memento_), true);
+    memento_ = mementos.front();
+}
+
+void NodeModifyCmd::Redo()
+{
+    NodeModifyCmd::Undo();
+}
+
+wxString NodeModifyCmd::GetDescription() const
+{
+    return wxString(wxT("Modify Entity Node"));
 }

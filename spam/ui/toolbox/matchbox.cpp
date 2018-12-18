@@ -1,11 +1,12 @@
 #include "matchbox.h"
+#include <ui/spam.h>
 #include <wx/artprov.h>
 #include <wx/statline.h>
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
 
 MatchBox::MatchBox(wxWindow* parent)
-: ToolBox(parent, kSpamID_TOOLPAGE_MATCH, wxT("Template Matching"), kSpamID_TOOLBOX_MATCH_GUARD - kSpamID_TOOLBOX_MATCH_GRAY, kSpamID_TOOLBOX_MATCH_GRAY)
+: ToolBox(parent, kSpamID_TOOLPAGE_MATCH, wxT("Template Matching"), std::vector<wxString>(), kSpamID_TOOLBOX_MATCH_GUARD - kSpamID_TOOLBOX_MATCH_GRAY, kSpamID_TOOLBOX_MATCH_GRAY)
 {
     wxWindowID toolIds[] = {
         kSpamID_TOOLBOX_MATCH_GRAY,
@@ -17,12 +18,13 @@ MatchBox::MatchBox(wxWindow* parent)
         wxT("Create shape templates")
     };
 
+    const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
     wxBitmap toolIcons[] = {
-        { wxT("res/pointer.png"), wxBITMAP_TYPE_PNG },
-        { wxT("res/node_edit.png"), wxBITMAP_TYPE_PNG }
+        Spam::GetBitmap(ip, bm_Pointer),
+        Spam::GetBitmap(ip, bm_NodeEdit)
     };
 
-    ToolBox::Init(toolIds, toolTips, toolIcons);
+    ToolBox::Init(toolIds, toolTips, toolIcons, WXSIZEOF(toolTips), 0, 0);
 }
 
 MatchBox::~MatchBox()

@@ -23,6 +23,18 @@ DrawableNode::~DrawableNode()
 {
 }
 
+void DrawableNode::ChangeColorToSelected()
+{
+    baseStyle_ = drawStyle_;
+    drawStyle_.strokeColor_.Set(0xFF, 0, 0, 0xFF);
+    drawStyle_.fillColor_.Set(0xFF, 0, 0, 0x64);
+}
+
+void DrawableNode::RestoreColor()
+{
+    drawStyle_ = baseStyle_;
+}
+
 void DrawableNode::BuildScaleHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const
 {
     if (selData_.ss == SelectionState::kSelScale)

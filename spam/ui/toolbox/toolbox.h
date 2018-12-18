@@ -16,11 +16,11 @@ namespace bs2 = boost::signals2;
 class ToolBox : public wxPanel
 {
 public:
-    ToolBox(wxWindow* parent, const wxWindowID winid, const wxString &toolboxName, const int numTools, const int startToolId);
+    ToolBox(wxWindow* parent, const wxWindowID winid, const wxString &toolboxName, const std::vector<wxString> &toolGroupNames, const int numTools, const int startToolId);
     ~ToolBox();
 
 protected:
-    void Init(const wxWindowID toolIds[], const wxString toolTips[], const wxBitmap toolIcons[]);
+    void Init(const wxWindowID toolIds[], const wxString toolTips[], const wxBitmap toolIcons[], const int numTools, const int startIndex, const int toolGroup);
     virtual wxPanel *GetOptionPanel(const int toolIndex, wxWindow *parent) = 0;
     virtual ToolOptions GetToolOptions() const = 0;
 
@@ -31,6 +31,7 @@ public:
 public:
     bs2::signal_type<void(const ToolOptions &), bs2::keywords::mutex_type<bs2::dummy_mutex>>::type sig_ToolEnter;
     bs2::signal_type<void(int), bs2::keywords::mutex_type<bs2::dummy_mutex>>::type sig_ToolQuit;
+    bs2::signal_type<void(const ToolOptions &), bs2::keywords::mutex_type<bs2::dummy_mutex>>::type sig_OptionsChanged;
 
 protected:
     void OnToolCollapse(wxCollapsiblePaneEvent &e);
@@ -46,5 +47,6 @@ protected:
     wxGenericCollapsiblePane *collToolPane_;
     wxGenericCollapsiblePane *collOptPane_;
     std::vector<std::tuple<wxToggleButton*, wxPanel*, wxSizerItem*>> tools_;
+    std::vector<wxSizer *> toolGroupSizers_;
 };
 #endif //SPAM_UI_TOOLBOX_TOOL_BOX_H

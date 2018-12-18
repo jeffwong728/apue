@@ -6,6 +6,7 @@
 #include "nodeedittool.h"
 #include "polygontool.h"
 #include "beziergontool.h"
+#include "booltool.h"
 #include <wx/log.h>
 #include <ui/spam.h>
 #include <ui/cv/cairocanvas.h>
@@ -41,29 +42,37 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     {
         return transit<ProbeTool>();
     }
-    if (kSpamID_TOOLBOX_GEOM_RECT == toolId)
+    else if (kSpamID_TOOLBOX_GEOM_RECT == toolId)
     {
         return transit<RectTool>();
     }
-    if (kSpamID_TOOLBOX_GEOM_ELLIPSE == toolId)
+    else if (kSpamID_TOOLBOX_GEOM_ELLIPSE == toolId)
     {
         return transit<EllipseTool>();
     }
-    if (kSpamID_TOOLBOX_GEOM_POLYGON == toolId)
+    else if (kSpamID_TOOLBOX_GEOM_POLYGON == toolId)
     {
         return transit<PolygonTool>();
     }
-    if (kSpamID_TOOLBOX_GEOM_BEZIERGON == toolId)
+    else if (kSpamID_TOOLBOX_GEOM_BEZIERGON == toolId)
     {
         return transit<BeziergonTool>();
     }
-    if (kSpamID_TOOLBOX_GEOM_TRANSFORM == toolId)
+    else if (kSpamID_TOOLBOX_GEOM_TRANSFORM == toolId)
     {
         return transit<TransformTool>();
     }
-    if (kSpamID_TOOLBOX_GEOM_EDIT == toolId)
+    else if (kSpamID_TOOLBOX_GEOM_EDIT == toolId)
     {
         return transit<NodeEditTool>();
+    }
+    else if (kSpamID_TOOLBOX_GEOM_UNION == toolId)
+    {
+        return transit<UnionTool>();
+    }
+    else if (kSpamID_TOOLBOX_GEOM_DIFF == toolId)
+    {
+        return transit<DiffTool>();
     }
     else
     {

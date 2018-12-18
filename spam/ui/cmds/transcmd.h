@@ -40,4 +40,24 @@ public:
     wxString GetDescription() const wxOVERRIDE;
 };
 
+class NodeModifyCmd : public SpamCmd
+{
+public:
+    NodeModifyCmd(ProjTreeModel *model, SPStationNode &station, const SPDrawableNode &drawable, const boost::any &memento);
+
+public:
+    void Do() wxOVERRIDE;
+    void Undo() wxOVERRIDE;
+    void Redo() wxOVERRIDE;
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+
+private:
+    ProjTreeModel * model_;
+    SPStationNode station_;
+    SPDrawableNode drawable_;
+    boost::any memento_;
+};
+
 #endif //SPAM_UI_CMDS_TRANSFORM_CMD_H

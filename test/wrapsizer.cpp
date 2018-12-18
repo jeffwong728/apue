@@ -16,6 +16,7 @@
 #include <SkPath.h>
 #include <SkMaskFilter.h>
 #include <SkBlurMaskFilter.h>
+#include <wxSVG/SVGDocument.h>
 
 void raster(int width, int height, void(*draw)(SkCanvas*), const char* path) {
     sk_sp<SkSurface> rasterSurface = SkSurface::MakeRasterN32Premul(width, height);
@@ -72,12 +73,16 @@ enum
 {
     ID_Hello = 1
 };
+
 wxIMPLEMENT_APP(MyApp);
 bool MyApp::OnInit()
 {
     MyFrame *frame = new MyFrame();
-
-    raster(512, 512, example, "out_raster.png");
+    wxInitAllImageHandlers();
+    auto svgDoc = std::make_unique<wxSVGDocument>();
+    svgDoc->Load(wxT("D:\\Data\\inkscape\\share\\icons\\hicolor\\scalable\\actions\\node-add.svg"));
+    wxImage img = svgDoc->Render(128, 128, 0, true, true);
+    img.SaveFile(wxT("D:\\apue.png"), wxBITMAP_TYPE_PNG);
 
     frame->Show(true);
     return true;

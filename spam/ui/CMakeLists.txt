@@ -39,6 +39,7 @@ set(ui_core_SRCS
   toolbox/geombox.cpp
   fsm/boxtool.cpp
   fsm/edittool.cpp
+  fsm/booltool.cpp
   fsm/notool.cpp
   fsm/probetool.cpp
   fsm/recttool.cpp
@@ -93,6 +94,7 @@ set(ui_core_HEADERS
   toolbox/geombox.h
   fsm/boxtool.h
   fsm/edittool.h
+  fsm/booltool.h
   fsm/notool.h
   fsm/probetool.h
   fsm/recttool.h
@@ -130,6 +132,8 @@ assign_source_group(${ui_core_HEADERS})
 set(libs)
 list(APPEND libs CAIRO::cairo)
 list(APPEND libs CAIROMM::CAIROMM)
+list(APPEND libs SKIA::skia)
+list(APPEND libs SKIA::pathkit)
 list(APPEND libs TBB::tbb)
 list(APPEND libs hdf5::hdf5_cpp-static)
 list(APPEND libs hdf5::hdf5_hl_cpp-static)
@@ -153,8 +157,11 @@ list(APPEND libs LIBLZMA::LIBLZMA)
 list(APPEND libs Iconv::Iconv)
 list(APPEND libs Iconv::charset)
 list(APPEND libs "sigc-3.0")
+list(APPEND libs GLIB::glib)
+list(APPEND libs GLIB::gobject)
 list(APPEND libs GSL::gsl)
 list(APPEND libs GSL::gslcblas)
+list(APPEND libs WXSVG::WXSVG)
 
 target_link_libraries(ui_core PUBLIC ${libs})
 

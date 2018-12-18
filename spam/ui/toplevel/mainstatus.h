@@ -22,6 +22,10 @@ public:
     MainStatus(wxWindow *parent, long style = wxSTB_DEFAULT_STYLE);
     virtual ~MainStatus();
 
+public:
+    void SetTextStatus(const wxString &text);
+    void SetBitmapStatus(const StatusIconType iconType, const wxString &text);
+
 private:
     void UpdateClock();
     void OnTimer(wxTimerEvent& WXUNUSED(event)) { UpdateClock(); }
@@ -33,5 +37,7 @@ private:
     wxTimer m_timer;
     wxCheckBox *m_checkbox;
     wxStaticBitmap *m_statbmp;
+    StatusIconType m_iconType{ StatusIconType::kSIT_NONE};
+    wxString m_text;
 };
 #endif //SPAM_UI_TOP_LEVEL_MAIN_STATUS_H

@@ -29,6 +29,7 @@ struct BoxToolImpl
     void Safari(const EvMouseMove &e);
     void QuitApp(const EvAppQuit &e);
     void QuitTool(const EvToolQuit &e);
+    void ResetTool();
     void DeleteDrawable(const EvDrawableDelete &e);
     void SelectDrawable(const EvDrawableSelect &e);
     void ClearSelection(const std::string &uuid);
@@ -38,6 +39,7 @@ struct BoxToolImpl
     virtual void FireSelectEntity(const SPDrawableNodeVector &ents) const = 0;
     virtual void FireDimEntity(const SPDrawableNode &ent) const = 0;
     virtual void FireGlowEntity(const SPDrawableNode &ent) const = 0;
+    virtual Geom::OptRect FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const { return Geom::OptRect(); }
 
     Geom::Point    anchor;
     Geom::OptRect  rect;

@@ -129,6 +129,7 @@ struct BezierData
 {
     std::vector<int> ntypes;
     std::vector<std::array<double, 6>> points;
+    std::vector<int> cvertices;
     std::array<double, 6> transform;
     GenericEllipseArcType type;
 };

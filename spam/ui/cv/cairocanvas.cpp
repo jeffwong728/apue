@@ -391,7 +391,7 @@ void CairoCanvas::AddRect(const RectData &rd)
             auto cmd = std::make_shared<CreateRectCmd>(model, station, title, rd);
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
-            wxLogStatus(cmd->GetDescription());
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
         }
     }
 }
@@ -408,7 +408,7 @@ void CairoCanvas::AddEllipse(const GenericEllipseArcData &ed)
             auto cmd = std::make_shared<CreateEllipseCmd>(model, station, title, ed);
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
-            wxLogStatus(cmd->GetDescription());
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
         }
     }
 }
@@ -435,7 +435,7 @@ void CairoCanvas::AddPolygon(const PolygonData &pd)
             auto cmd = std::make_shared<CreatePolygonCmd>(model, station, title, pd);
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
-            wxLogStatus(cmd->GetDescription());
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
         }
     }
 }
@@ -452,7 +452,7 @@ void CairoCanvas::AddBeziergon(const BezierData &bd)
             auto cmd = std::make_shared<CreateBeziergonCmd>(model, station, title, bd);
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
-            wxLogStatus(cmd->GetDescription());
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
         }
     }
 }
@@ -468,7 +468,7 @@ void CairoCanvas::DoTransform(const SPDrawableNodeVector &selEnts, const SpamMan
             auto cmd = std::make_shared<TransformCmd>(model, station, selEnts, mementos);
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
-            wxLogStatus(cmd->GetDescription());
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
         }
     }
 }
@@ -484,7 +484,54 @@ void CairoCanvas::DoNodeEdit(const SPDrawableNodeVector &selEnts, const SpamMany
             auto cmd = std::make_shared<NodeEditCmd>(model, station, selEnts, mementos);
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
-            wxLogStatus(cmd->GetDescription());
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+        }
+    }
+}
+
+void CairoCanvas::DoUnion(const SPDrawableNodeVector &selEnts)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            wxString title = wxString::Format(wxT("beziergon%d"), cBeziergon_++);
+            SPGeomNodeVector geoms;
+            for (const auto &drawable : selEnts)
+            {
+                auto g = std::dynamic_pointer_cast<GeomNode>(drawable);
+                if (g)
+                {
+                    geoms.push_back(g);
+                }
+            }
+
+            auto cmd = std::make_shared<UnionGeomsCmd>(model, geoms, title);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+        }
+    }
+}
+
+void CairoCanvas::DoDifference(const SPDrawableNode &dn1, const SPDrawableNode &dn2)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            wxString title = wxString::Format(wxT("beziergon%d"), cBeziergon_++);
+            auto g1 = std::dynamic_pointer_cast<GeomNode>(dn1);
+            auto g2 = std::dynamic_pointer_cast<GeomNode>(dn2);
+
+            auto cmd = std::make_shared<DiffGeomsCmd>(model, g1, g2, title);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
         }
     }
 }
@@ -534,6 +581,35 @@ void CairoCanvas::SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &en
     if (sn)
     {
         return sn->SelectDrawable(box, ents);
+    }
+}
+
+void CairoCanvas::ModifyDrawable(const SPDrawableNode &ent, const Geom::Point &pt, const SelectionData &sd, const int editMode)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            if (ent)
+            {
+                boost::any memento = ent->CreateMemento();
+                SpamResult sr = ent->Modify(pt, editMode, sd);
+                if (SpamResult::kSR_SUCCESS == sr)
+                {
+                    auto cmd = std::make_shared<NodeModifyCmd>(model, station, ent, memento);
+                    cmd->Do();
+                    SpamUndoRedo::AddCommand(cmd);
+                    Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+                }
+
+                if (SpamResult::kSR_FAILURE == sr)
+                {
+                    Spam::SetStatus(StatusIconType::kSIT_ERROR, wxT("Modify geometry failed!"));
+                }
+            }
+        }
     }
 }
 
@@ -691,7 +767,7 @@ void CairoCanvas::OnDeleteEntities(wxCommandEvent &cmd)
                 auto cmd = std::make_shared<DeleteGeomsCmd>(Spam::GetModel(), delGeoms);
                 cmd->Do();
                 SpamUndoRedo::AddCommand(cmd);
-                wxLogStatus(cmd->GetDescription());
+                Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
             }
         }
     }

@@ -1,7 +1,18 @@
 #include "geomcmd.h"
+#include <ui/spam.h>
 #include <ui/projs/stationnode.h>
 #include <ui/projs/geomnode.h>
+#include <ui/projs/beziergonnode.h>
 #include <ui/projs/projtreemodel.h>
+#include <helper/splivarot.h>
+#include <2geom/svg-path-parser.h>
+#include <2geom/svg-path-writer.h>
+#ifdef realloc
+#undef realloc
+#endif
+#include <SkString.h>
+#include <SkParsePath.h>
+#include <SkPathOps.h>
 
 GeomCmd::GeomCmd(ProjTreeModel *model, SPStationNode &station)
     : SpamCmd()
@@ -217,4 +228,172 @@ void CreateBeziergonCmd::Redo()
 wxString CreateBeziergonCmd::GetDescription() const
 {
     return wxString(wxT("Create beziergon ") + geom_->GetTitle());
+}
+
+UnionGeomsCmd::UnionGeomsCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms, const wxString &wouldTitle)
+    : SpamCmd()
+    , wouldTitle_(wouldTitle)
+    , model_(model)
+    , geoms_(geoms)
+    , station_(std::dynamic_pointer_cast<StationNode>(geoms.front()->GetParent()))
+{
+}
+
+void UnionGeomsCmd::Do()
+{
+    if (model_ && !geoms_.empty())
+    {
+        Geom::PathVector upv;
+        wxDataViewItemArray geoms;
+        for (const auto &g : geoms_)
+        {
+            if (upv.empty())
+            {
+                g->BuildPath(upv);
+            }
+            else
+            {
+                Geom::PathVector pv;
+                g->BuildPath(pv);
+
+                std::string strpv = Geom::write_svg_path(pv);
+                std::string strupv = Geom::write_svg_path(upv);
+                SkPath skpv, skupv;
+                if (SkParsePath::FromSVGString(strpv.c_str(), &skpv) && SkParsePath::FromSVGString(strupv.c_str(), &skupv))
+                {
+                    SkPath skResPath;
+                    if (Op(skpv, skupv, kUnion_SkPathOp, &skResPath))
+                    {
+                        SkString skStr;
+                        SkParsePath::ToSVGString(skResPath, &skStr);
+                        upv = Geom::parse_svg_path(skStr.c_str());
+                    }
+                    else
+                    {
+                        upv = sp_pathvector_boolop(pv, upv, bool_op_union, fill_nonZero, fill_nonZero);
+                    }
+                }
+                else
+                {
+                    upv = sp_pathvector_boolop(pv, upv, bool_op_union, fill_nonZero, fill_nonZero);
+                }
+            }
+            
+            geoms.push_back(wxDataViewItem(g.get()));
+        }
+
+        uGeom_ = std::make_shared<BeziergonNode>(station_, wouldTitle_, upv);
+        uGeom_->drawStyle_.strokeWidth_ = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
+        uGeom_->drawStyle_.strokeColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
+        uGeom_->drawStyle_.fillColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxYELLOW->GetRGBA()));
+
+        if (!geoms.empty())
+        {
+            model_->Delete(geoms, true);
+        }
+
+        model_->AddToStation(station_, uGeom_, true);
+    }
+}
+
+void UnionGeomsCmd::Undo()
+{
+    if (model_)
+    {
+        model_->Delete(wxDataViewItem(uGeom_.get()), true);
+        model_->AddToStations(station_, geoms_, true);
+    }
+}
+
+void UnionGeomsCmd::Redo()
+{
+    if (model_ && !geoms_.empty())
+    {
+        wxDataViewItemArray geoms;
+        for (const auto &g : geoms_)
+        {
+            geoms.push_back(wxDataViewItem(g.get()));
+        }
+
+        if (!geoms.empty())
+        {
+            model_->Delete(geoms, true);
+        }
+
+        model_->AddToStation(station_, uGeom_, true);
+    }
+}
+
+wxString UnionGeomsCmd::GetDescription() const
+{
+    return wxString(wxT("Union geometries"));
+}
+
+DiffGeomsCmd::DiffGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const SPGeomNode &geom2, const wxString &wouldTitle)
+    : SpamCmd()
+    , wouldTitle_(wouldTitle)
+    , model_(model)
+    , geom1_(geom1)
+    , geom2_(geom2)
+    , station_(std::dynamic_pointer_cast<StationNode>(geom1->GetParent()))
+{
+}
+
+void DiffGeomsCmd::Do()
+{
+    if (model_ && geom1_ && geom2_)
+    {
+        Geom::PathVector pv1, pv2;
+        geom1_->BuildPath(pv1);
+        geom2_->BuildPath(pv2);
+        Geom::PathVector dpv = sp_pathvector_boolop(pv2, pv1, bool_op_diff, fill_nonZero, fill_nonZero);
+
+        wxDataViewItemArray geoms;
+        geoms.push_back(wxDataViewItem(geom1_.get()));
+        geoms.push_back(wxDataViewItem(geom2_.get()));
+
+        dGeom_ = std::make_shared<BeziergonNode>(station_, wouldTitle_, dpv);
+        dGeom_->drawStyle_.strokeWidth_ = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
+        dGeom_->drawStyle_.strokeColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
+        dGeom_->drawStyle_.fillColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxYELLOW->GetRGBA()));
+
+        if (!geoms.empty())
+        {
+            model_->Delete(geoms, true);
+        }
+
+        model_->AddToStation(station_, dGeom_, true);
+    }
+}
+
+void DiffGeomsCmd::Undo()
+{
+    if (model_)
+    {
+        model_->Delete(wxDataViewItem(dGeom_.get()), true);
+        SPGeomNodeVector geoms{ geom1_ , geom2_ };
+        model_->AddToStations(station_, geoms, true);
+    }
+}
+
+void DiffGeomsCmd::Redo()
+{
+    if (model_ && geom1_ && geom2_)
+    {
+        wxDataViewItemArray geoms;
+        geoms.push_back(wxDataViewItem(geom1_.get()));
+        geoms.push_back(wxDataViewItem(geom2_.get()));
+
+        if (!geoms.empty())
+        {
+            model_->Delete(geoms, true);
+        }
+
+        model_->AddToStation(station_, dGeom_, true);
+    }
+}
+
+wxString DiffGeomsCmd::GetDescription() const
+{
+    return wxString(wxT("Difference geometries"));
 }

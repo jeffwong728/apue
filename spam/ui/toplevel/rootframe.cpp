@@ -13,12 +13,14 @@
 #include <ui/cv/cairocanvas.h>
 #include <ui/projs/stationnode.h>
 #include <ui/projs/drawablenode.h>
+#include <ui/projs/beziergonnode.h>
 #include <ui/projs/projnode.h>
 #include <ui/projs/projtreemodel.h>
 #include <ui/toolbox/stylebox.h>
 #include <ui/toolbox/probebox.h>
 #include <ui/toolbox/matchbox.h>
 #include <ui/toolbox/geombox.h>
+#include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <wx/artprov.h>
 #include <wx/statline.h>
@@ -67,7 +69,7 @@ RootFrame::RootFrame()
     CreateMenu();
     //CreateStatusBar();
     SetStatusBar(new MainStatus(this));
-    SetStatusText("Welcome to wxWidgets!");
+    SetStatusText("Welcome to Spam!");
 
     Bind(wxEVT_SIZE, &RootFrame::OnSize, this, wxID_ANY);
     Bind(wxEVT_CLOSE_WINDOW, &RootFrame::OnClose, this, wxID_ANY);
@@ -100,10 +102,12 @@ RootFrame::RootFrame()
         p->sig_EntityGlow.connect(std::bind(&RootFrame::OnGlowGeom, this, std::placeholders::_1));
         p->sig_EntityDim.connect(std::bind(&RootFrame::OnDimGeom, this, std::placeholders::_1));
         p->sig_EntitySelect.connect(std::bind(&Spamer::OnDrawableSelect, spamer_.get(), std::placeholders::_1));
+        p->sig_EntitySelect.connect(std::bind(&RootFrame::OnSelectEntity, this, std::placeholders::_1));
 
         spamer_->sig_EntityDim.connect(std::bind(&ProjPanel::DimEntity, p, std::placeholders::_1));
         spamer_->sig_EntityGlow.connect(std::bind(&ProjPanel::GlowEntity, p, std::placeholders::_1));
         spamer_->sig_EntitySel.connect(std::bind(&ProjPanel::SelectEntity, p, std::placeholders::_1));
+        spamer_->sig_EntitySel.connect(std::bind(&RootFrame::OnSelectEntity, this, std::placeholders::_1));
         spamer_->sig_EntityDesel.connect(std::bind(&ProjPanel::DeselectEntity, p, std::placeholders::_1));
     }
 }
@@ -199,10 +203,13 @@ void RootFrame::CreateAuiPanes()
 
     infoBox->sig_ToolEnter.connect(std::bind(&Spamer::OnToolEnter, spamer_.get(), std::placeholders::_1));
     infoBox->sig_ToolQuit.connect(std::bind(&Spamer::OnToolQuit, spamer_.get(), std::placeholders::_1));
+    infoBox->sig_OptionsChanged.connect(std::bind(&Spamer::OnToolOptionsChanged, spamer_.get(), std::placeholders::_1));
     geomBox->sig_ToolEnter.connect(std::bind(&Spamer::OnToolEnter, spamer_.get(), std::placeholders::_1));
     geomBox->sig_ToolQuit.connect(std::bind(&Spamer::OnToolQuit, spamer_.get(), std::placeholders::_1));
+    geomBox->sig_OptionsChanged.connect(std::bind(&Spamer::OnToolOptionsChanged, spamer_.get(), std::placeholders::_1));
     matchBox->sig_ToolEnter.connect(std::bind(&Spamer::OnToolEnter, spamer_.get(), std::placeholders::_1));
     matchBox->sig_ToolQuit.connect(std::bind(&Spamer::OnToolQuit, spamer_.get(), std::placeholders::_1));
+    matchBox->sig_OptionsChanged.connect(std::bind(&Spamer::OnToolOptionsChanged, spamer_.get(), std::placeholders::_1));
 
     wxAuiMgr_.AddPane(infoBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_PROBE]).Right().Caption("Probe").Show(false));
     wxAuiMgr_.AddPane(geomBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_GEOM]).Right().Caption("Geometry Tool").Show(false));
@@ -291,6 +298,25 @@ void RootFrame::SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page)
     }
 }
 
+void RootFrame::SetStatusText(const wxString &text, int number)
+{
+    if (0 == number)
+    {
+        auto mainStatus = dynamic_cast<MainStatus *>(GetStatusBar());
+        mainStatus->SetTextStatus(text);
+    }
+    else
+    {
+        GetStatusBar()->SetStatusText(text, number);
+    }
+}
+
+void RootFrame::SetBitmapStatus(const StatusIconType iconType, const wxString &text)
+{
+    auto mainStatus = dynamic_cast<MainStatus *>(GetStatusBar());
+    mainStatus->SetBitmapStatus(iconType, text);
+}
+
 void RootFrame::OnExit(wxCommandEvent& e)
 {
     Close(false);
@@ -324,8 +350,32 @@ void RootFrame::OnClose(wxCloseEvent& e)
 
 void RootFrame::OnAbout(wxCommandEvent& event)
 {
-    wxMessageBox("This is a wxWidgets Hello World example",
-                 "About Hello World", wxOK | wxICON_INFORMATION);
+    cv::Mat src(480, 640, CV_8UC4);
+
+    Geom::PathVector pv1 = Geom::parse_svg_path("M 145.14285,117.83929 A 60.098213,34.773811 0 0 1 85.04464,152.6131 60.098213,34.773811 0 0 1 24.946426,117.83929 60.098213,34.773811 0 0 1 85.04464,83.065475 60.098213,34.773811 0 0 1 145.14285,117.83929 Z");
+    Geom::PathVector pv3 = Geom::parse_svg_path("M 60.47619,188.14285 C 68.791666,122.375 55.184523,1.422619 84.666666,50.559522 114.14881,99.696427 168.57738,179.07143 114.14881,183.60714 c -54.428572,4.53571 -53.67262,4.53571 -53.67262,4.53571 z");
+    auto pvr = sp_pathvector_boolop(pv3, pv1, bool_op_union, fill_nonZero, fill_nonZero);
+    auto pvr1 = sp_pathvector_boolop(pv3, pv1, bool_op_inters, fill_nonZero, fill_nonZero)*Geom::Translate(100, 100);
+    auto pvr2 = sp_pathvector_boolop(pv3, pv1, bool_op_symdiff, fill_nonZero, fill_nonZero)*Geom::Translate(200, 200);
+
+    auto d = "M 394.28516 353.94922 A 182.85715 192.85715 0 0 0 211.42773 546.80469 A 182.85715 192.85715 0 0 0 394.28516 739.66211 A 182.85715 192.85715 0 0 0 577.14258 546.80469 A 182.85715 192.85715 0 0 0 394.28516 353.94922 z M 370.01367 475.80859 C 402.86279 475.57396 463.57143 480.64424 480 519.66211 C 502.85715 573.9478 488.57171 579.6627 442.85742 625.37695 C 397.14313 671.09125 360 619.66238 320 582.51953 C 280 545.37668 314.28655 548.23326 348.57227 476.80469 C 348.57227 476.80469 357.15967 475.90041 370.01367 475.80859 z ";
+    Geom::PathVector hole = Geom::parse_svg_path(d)*Geom::Scale(0.5, 0.5);
+    BeziergonNode(SPModelNode(), wxT(""), hole);
+
+    auto imgSurf = cairo_image_surface_create_for_data(src.data, CAIRO_FORMAT_RGB24, src.cols, src.rows, src.step1());
+    auto cr = cairo_create(imgSurf);
+
+    Geom::CairoPathSink cairoPathSink(cr);
+    cairo_set_line_width(cr, 3);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 0.3);
+    cairoPathSink.feed(pvr);
+    cairoPathSink.feed(hole);
+    cairo_stroke_preserve(cr);
+    cairo_set_source_rgba(cr, 0.0, 0.8, 0.8, 0.2);
+    cairo_fill(cr);
+    cairo_destroy(cr);
+    cairo_surface_destroy(imgSurf);
+    cv::imwrite(cv::String("C:\\Users\\wwang\\Desktop\\dest.png"), src);
 }
 
 void RootFrame::OnHello(wxCommandEvent& event)
@@ -1009,6 +1059,18 @@ void RootFrame::OnToolboxStyle(wxCommandEvent& e)
     ClickToolbox(e, kSpam_TOOLBOX_STYLE);
 }
 
+void RootFrame::OnSelectEntity(const SPDrawableNodeVector &des)
+{
+    if (1==des.size())
+    {
+        SetBitmapStatus(StatusIconType::kSIT_NONE, wxString(wxT("Selected: ") + des.front()->GetTitle()));
+    }
+    else
+    {
+        SetBitmapStatus(StatusIconType::kSIT_NONE, wxString::Format(wxT("Selected: %d entities"), static_cast<int>(des.size())));
+    }
+}
+
 wxAuiNotebook *RootFrame::CreateStationNotebook()
 {
     long style = wxAUI_NB_BOTTOM | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_WINDOWLIST_BUTTON | wxNO_BORDER;
@@ -1053,6 +1115,7 @@ std::vector<std::string> RootFrame::GetAllTabPaneNames(const std::string &perspe
 wxToolBar *RootFrame::MakeStationToolBar(wxWindow *parent)
 {
     constexpr int sz = 16;
+    const SpamIconPurpose ip = kICON_PURPOSE_TOOLBAR;
     wxToolBar *tb = new wxToolBar(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_NODIVIDER | wxTB_FLAT);
     tb->SetMargins(wxSize(0, 0));
     tb->SetToolBitmapSize(wxSize(sz, sz));
@@ -1080,14 +1143,14 @@ wxToolBar *RootFrame::MakeStationToolBar(wxWindow *parent)
 
     tb->AddControl(choice, wxT("Scale Factor"));
     tb->AddSeparator();
-    tb->AddTool(kSpamID_ZOOM_OUT, wxT("Zoom Out"), wxBitmap(wxT("res/zoom_out_16.png"), wxBITMAP_TYPE_PNG), wxNullBitmap, wxITEM_DROPDOWN);
+    tb->AddTool(kSpamID_ZOOM_OUT, wxT("Zoom Out"), Spam::GetBitmap(ip, bm_ZoomOut), wxNullBitmap, wxITEM_DROPDOWN);
 
     wxMenu* menu = new wxMenu;
-    wxBitmap zoomInBM(wxT("res/zoom_in_16.png"), wxBITMAP_TYPE_PNG);
-    wxBitmap zoomExBM(wxT("res/zoom_extent_16.png"), wxBITMAP_TYPE_PNG);
-    wxBitmap zoom11BM(wxT("res/zoom_original_16.png"), wxBITMAP_TYPE_PNG);
-    wxBitmap zoom12BM(wxT("res/zoom_half_16.png"), wxBITMAP_TYPE_PNG);
-    wxBitmap zoom21BM(wxT("res/zoom_double_16.png"), wxBITMAP_TYPE_PNG);
+    wxBitmap zoomInBM = Spam::GetBitmap(ip, bm_ZoomIn);
+    wxBitmap zoomExBM = Spam::GetBitmap(ip, bm_ZoomExtent);
+    wxBitmap zoom11BM = Spam::GetBitmap(ip, bm_ZoomOriginal);
+    wxBitmap zoom12BM = Spam::GetBitmap(ip, bm_ZoomHalf);
+    wxBitmap zoom21BM = Spam::GetBitmap(ip, bm_ZoomDouble);
     menu->AppendCheckItem(kSpamID_ZOOM_IN, wxT("Zoom In"))->SetBitmaps(zoomInBM, zoomInBM);
     menu->AppendCheckItem(kSpamID_ZOOM_EXTENT, wxT("Zoom Extent"))->SetBitmaps(zoomExBM, zoomExBM);
     menu->AppendSeparator();

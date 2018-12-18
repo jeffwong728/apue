@@ -19,7 +19,7 @@ find_package_handle_standard_args(SKIA FOUND_VAR SKIA_FOUND REQUIRED_VARS SKIA_s
 
 include(SpamCommon)
 if(SKIA_FOUND)
-  set(SKIA_INCLUDE_DIRS "${SKIA_INCLUDE_DIR}/core" "${SKIA_INCLUDE_DIR}/config" "${SKIA_INCLUDE_DIR}/gpu" "${SKIA_INCLUDE_DIR}/effects" "${SKIA_INCLUDE_DIR}/utils" "${SKIA_INCLUDE_DIR}/private")
+  set(SKIA_INCLUDE_DIRS "${SKIA_INCLUDE_DIR}/core" "${SKIA_INCLUDE_DIR}/config" "${SKIA_INCLUDE_DIR}/gpu" "${SKIA_INCLUDE_DIR}/effects" "${SKIA_INCLUDE_DIR}/utils" "${SKIA_INCLUDE_DIR}/private" "${SKIA_INCLUDE_DIR}/pathops")
   set(SKIA_LIBRARIES "${SKIA_skia_LIBRARY}" "${SKIA_pathkit_LIBRARY}")
   spam_export_pack_component(SKIA skia)
   spam_export_pack_component(SKIA pathkit)

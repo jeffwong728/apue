@@ -1,11 +1,12 @@
 #include "probebox.h"
+#include <ui/spam.h>
 #include <wx/artprov.h>
 #include <wx/statline.h>
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
 
 ProbeBox::ProbeBox(wxWindow* parent)
-: ToolBox(parent, kSpamID_TOOLPAGE_PROBE, wxT("Infomation"), kSpamID_TOOLBOX_PROBE_GUARD - kSpamID_TOOLBOX_PROBE_SELECT, kSpamID_TOOLBOX_PROBE_SELECT)
+: ToolBox(parent, kSpamID_TOOLPAGE_PROBE, wxT("Infomation"), std::vector<wxString>(), kSpamID_TOOLBOX_PROBE_GUARD - kSpamID_TOOLBOX_PROBE_SELECT, kSpamID_TOOLBOX_PROBE_SELECT)
 {
     wxWindowID toolIds[] = {
         kSpamID_TOOLBOX_PROBE_SELECT,
@@ -17,12 +18,13 @@ ProbeBox::ProbeBox(wxWindow* parent)
         wxT("Select entities to show histogram")
     };
 
+    const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
     wxBitmap toolIcons[] = {
-        { wxT("res/pointer.png"), wxBITMAP_TYPE_PNG },
-        { wxT("res/node_edit.png"), wxBITMAP_TYPE_PNG }
+        Spam::GetBitmap(ip, bm_Pointer),
+        Spam::GetBitmap(ip, bm_NodeEdit)
     };
 
-    ToolBox::Init(toolIds, toolTips, toolIcons);
+    ToolBox::Init(toolIds, toolTips, toolIcons, WXSIZEOF(toolTips), 0, 0);
 }
 
 ProbeBox::~ProbeBox()

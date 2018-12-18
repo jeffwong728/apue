@@ -74,6 +74,7 @@ enum
     kSpamID_LOG_CLEAR,
     kSpamID_LOG_SAVE,
     
+    kSpamID_STATUS_STATUS,
     kSpamID_STATUS_CHECKBOX,
     
     kSpamID_ADD_STATION,
@@ -113,15 +114,11 @@ enum
     kSpamID_TOOLBOX_GEOM_ZIGZAGLINE,
     kSpamID_TOOLBOX_GEOM_POLYLINE,
     kSpamID_TOOLBOX_GEOM_BEZIERLINE,
+    kSpamID_TOOLBOX_GEOM_UNION,
+    kSpamID_TOOLBOX_GEOM_INTERS,
+    kSpamID_TOOLBOX_GEOM_DIFF,
+    kSpamID_TOOLBOX_GEOM_SYMDIFF,
     kSpamID_TOOLBOX_GEOM_GUARD,
-
-    kSpamID_TOOLBOX_BOOL_UNION,
-    kSpamID_TOOLBOX_BOOL_INTERS,
-    kSpamID_TOOLBOX_BOOL_DIFF,
-    kSpamID_TOOLBOX_BOOL_SYMDIFF,
-    kSpamID_TOOLBOX_BOOL_CUT,
-    kSpamID_TOOLBOX_BOOL_SLICE,
-    kSpamID_TOOLBOX_BOOL_GUARD,
 
     kSpamID_TOOLBOX_NODE_MOVE,
     kSpamID_TOOLBOX_NODE_ADD,
@@ -143,6 +140,15 @@ enum
     kSpamID_TOOLBOX_MATCH_GUARD
 };
 
+enum SpamIconPurpose
+{
+    kICON_PURPOSE_TOOLBOX,
+    kICON_PURPOSE_TOOLBAR,
+    kICON_PURPOSE_CURSOR,
+
+    kICON_PURPOSE_GUARD
+};
+
 enum class SpamEntityType
 {
     kET_IMAGE,
@@ -160,6 +166,15 @@ enum class SpamEntityType
     kET_GUARD
 };
 
+enum class SpamEntitySelectionMode
+{
+    kESM_NONE,
+    kESM_MULTIPLE,
+    kESM_SINGLE,
+
+    kESM_GUARD
+};
+
 enum class SpamEntityOperation
 {
     kEO_NONE,
@@ -175,10 +190,26 @@ enum class SpamEntityOperation
     kEO_GUARD
 };
 
-enum
+enum class SpamRectToolMode
 {
-    kSpamTOOL_RECT_MODE_2POINTS,
-    kSpamTOOL_RECT_MODE_3POINTS
+    kRTM_2POINTS,
+    kRTM_3POINTS
+};
+
+enum class StatusIconType
+{
+    kSIT_NONE,
+    kSIT_OK,
+    kSIT_ERROR,
+    kSIT_WARNING,
+    kSIT_INFO
+};
+
+enum class SpamResult
+{
+    kSR_SUCCESS,
+    kSR_SUCCESS_NOOP,
+    kSR_FAILURE
 };
 
 typedef boost::mpl::vector<int, long, double> OptTypes0;
@@ -193,5 +224,38 @@ extern const std::string cp_ToolGeomStrokeWidth;
 extern const std::string cp_ToolGeomStrokeJoin;
 extern const std::string cp_ToolGeomStrokeCap;
 extern const std::string cp_ToolGeomVertexEditMode;
+
+extern const std::string bm_Pointer;
+extern const std::string bm_PointerEdit;
+extern const std::string bm_NodeEdit;
+extern const std::string bm_Box;
+extern const std::string bm_Ellipse;
+extern const std::string bm_Polygon;
+extern const std::string bm_Beziergon;
+extern const std::string bm_Line;
+extern const std::string bm_Arc;
+extern const std::string bm_Zigzagline;
+extern const std::string bm_Polyline;
+extern const std::string bm_Bezierline;
+extern const std::string bm_NodeMove;
+extern const std::string bm_NodeAdd;
+extern const std::string bm_NodeDelete;
+extern const std::string bm_NodeSmooth;
+extern const std::string bm_NodeCusp;
+extern const std::string bm_NodeSymmetric;
+extern const std::string bm_ZoomIn;
+extern const std::string bm_ZoomOut;
+extern const std::string bm_ZoomExtent;
+extern const std::string bm_ZoomOriginal;
+extern const std::string bm_ZoomHalf;
+extern const std::string bm_ZoomDouble;
+extern const std::string bm_PathUnion;
+extern const std::string bm_PathDiff;
+extern const std::string bm_PathInter;
+extern const std::string bm_PathXOR;
+extern const std::string bm_PathCut;
+extern const std::string bm_PathSlice;
+extern const std::string bm_ImageImport;
+extern const std::string bm_ImageExport;
 
 #endif //SPAM_UI_COMMON_DEFINE_H

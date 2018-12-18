@@ -71,11 +71,14 @@ public:
     void DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoNodeEdit(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
+    void DoUnion(const SPDrawableNodeVector &selEnts);
+    void DoDifference(const SPDrawableNode &dn1, const SPDrawableNode &dn2);
     SPStationNode GetStation();
     SPDrawableNode FindDrawable(const Geom::Point &pt);
     SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
     std::string GetUUID() const { return stationUUID_.ToStdString(); }
+    void ModifyDrawable(const SPDrawableNode &ent, const Geom::Point &pt, const SelectionData &sd, const int editMode);
 
 private:
     void OnSize(wxSizeEvent& event);

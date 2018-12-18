@@ -58,6 +58,8 @@ public:
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
     void SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page);
+    void SetStatusText(const wxString &text, int number = 0) wxOVERRIDE;
+    void SetBitmapStatus(const StatusIconType iconType, const wxString &text);
 
 private:
     void OnHello(wxCommandEvent& e);
@@ -102,6 +104,7 @@ private:
     void OnToolboxGeom(wxCommandEvent& e);
     void OnToolboxMatch(wxCommandEvent& e);
     void OnToolboxStyle(wxCommandEvent& e);
+    void OnSelectEntity(const SPDrawableNodeVector &des);
 
 private:
     wxAuiNotebook *CreateStationNotebook();

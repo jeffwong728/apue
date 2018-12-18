@@ -21,6 +21,7 @@
 #pragma warning( pop )
 #include <boost/algorithm/string.hpp>
 #include <ui/projs/drawablenode.h>
+#include <wxSVG/SVGDocument.h>
 
 struct GUILogerTempSwitcher
 {
@@ -73,6 +74,7 @@ public:
     void Redo(void);
     bool IsUndoable(void) const { return !undoStack_.empty(); }
     bool IsRedoable(void) const { return !redoStack_.empty(); }
+    wxBitmap GetBitmap(const SpamIconPurpose ip, const std::string &bmName) const;
 
 private:
     void SaveConfig();
@@ -83,6 +85,7 @@ private:
     std::stack<std::shared_ptr<SpamCmd>> undoStack_;
     std::stack<std::shared_ptr<SpamCmd>> redoStack_;
     std::unique_ptr<wxSingleInstanceChecker> uniqueApp_;
+    mutable std::unordered_map<std::string, wxBitmap> bitmaps_[kICON_PURPOSE_GUARD];
 };
 
 wxIMPLEMENT_APP(SpamApp);
@@ -120,6 +123,23 @@ bool SpamApp::OnInit()
         boost::property_tree::read_xml(ifs, *configTree_, boost::property_tree::xml_parser::trim_whitespace);
     }
     wxInitAllImageHandlers();
+
+    const wxBitmapType    bmt    = wxBITMAP_TYPE_PNG;
+    const SpamIconPurpose ipTBox = kICON_PURPOSE_TOOLBOX;
+    bitmaps_[ipTBox][bm_Box]            = wxBitmap(wxT("res/box.png"),              bmt);
+    bitmaps_[ipTBox][bm_Ellipse]        = wxBitmap(wxT("res/ellipse.png"),          bmt);
+    bitmaps_[ipTBox][bm_Polygon]        = wxBitmap(wxT("res/polygon.png"),          bmt);
+    bitmaps_[ipTBox][bm_Beziergon]      = wxBitmap(wxT("res/beziergon.png"),        bmt);
+    bitmaps_[ipTBox][bm_Line]           = wxBitmap(wxT("res/line.png"),             bmt);
+    bitmaps_[ipTBox][bm_Arc]            = wxBitmap(wxT("res/arc.png"),              bmt);
+    bitmaps_[ipTBox][bm_Zigzagline]     = wxBitmap(wxT("res/zigzagline.png"),       bmt);
+    bitmaps_[ipTBox][bm_Polyline]       = wxBitmap(wxT("res/polyline.png"),         bmt);
+    bitmaps_[ipTBox][bm_Bezierline]     = wxBitmap(wxT("res/bezierline.png"),       bmt);
+
+    const SpamIconPurpose ipTBar = kICON_PURPOSE_TOOLBAR;
+    bitmaps_[ipTBar][bm_ImageImport]    = wxBitmap(wxT("res/import_layer_16.png"),  bmt);
+    bitmaps_[ipTBar][bm_ImageExport]    = wxBitmap(wxT("res/export_layer_16.png"),  bmt);
+
     RootFrame *frame = new RootFrame();
     SetTopWindow(frame);
     frame->Show(true);
@@ -178,6 +198,45 @@ void SpamApp::Redo(void)
         cmd->Redo();
         undoStack_.push(cmd);
     }
+}
+
+wxBitmap SpamApp::GetBitmap(const SpamIconPurpose ip, const std::string &bmName) const
+{
+    if (ip<kICON_PURPOSE_GUARD && ip>= kICON_PURPOSE_TOOLBOX)
+    {
+        auto &bms = bitmaps_[ip];
+        const auto fIt = bms.find(bmName);
+        if (fIt != bms.cend())
+        {
+            return fIt->second;
+        }
+        else
+        {
+            boost::system::error_code ec;
+            boost::filesystem::path p = boost::dll::program_location(ec);
+            p = p.parent_path();
+            p.append(wxT("res")).append(wxT("svg")).append(bmName);
+            p += wxT(".svg");
+
+            if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
+            {
+                auto svgDoc = std::make_unique<wxSVGDocument>();
+                svgDoc->Load(wxString(p.native()).ToUTF8());
+
+                const int iconSizes[kICON_PURPOSE_GUARD] = {22, 16, 24};
+                wxImage img = svgDoc->Render(iconSizes[ip], iconSizes[ip], 0, true, true);
+                if (img.IsOk())
+                {
+                    wxBitmap bmp = wxBitmap(img);
+                    bms[bmName] = bmp;
+
+                    return bmp;
+                }
+            }
+        }
+    }
+
+    return wxBitmap();
 }
 
 void SpamConfig::Save()
@@ -385,6 +444,20 @@ SPDrawableNodeVector Spam::Intersection(const SPDrawableNodeVector& lseq, const 
     }
 
     return result;
+}
+
+wxBitmap Spam::GetBitmap(const SpamIconPurpose ip, const std::string &bmName)
+{
+    return wxGetApp().GetBitmap(ip, bmName);
+}
+
+void Spam::SetStatus(const StatusIconType iconType, const wxString &text)
+{
+    auto frame = dynamic_cast<RootFrame *>(wxGetApp().GetTopWindow());
+    if (frame)
+    {
+        frame->SetBitmapStatus(iconType, text);
+    }
 }
 
 void SpamUndoRedo::AddCommand(const std::shared_ptr<SpamCmd> &cmd)

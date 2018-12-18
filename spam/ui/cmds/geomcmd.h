@@ -112,4 +112,47 @@ private:
     BezierData data_;
 };
 
+class UnionGeomsCmd : public SpamCmd
+{
+public:
+    UnionGeomsCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms, const wxString &wouldTitle);
+
+public:
+    void Do() wxOVERRIDE;
+    void Undo() wxOVERRIDE;
+    void Redo() wxOVERRIDE;
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+
+private:
+    wxString         wouldTitle_;
+    ProjTreeModel   *model_;
+    SPStationNode    station_;
+    SPGeomNode       uGeom_;
+    SPGeomNodeVector geoms_;
+};
+
+class DiffGeomsCmd : public SpamCmd
+{
+public:
+    DiffGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const SPGeomNode &geom2, const wxString &wouldTitle);
+
+public:
+    void Do() wxOVERRIDE;
+    void Undo() wxOVERRIDE;
+    void Redo() wxOVERRIDE;
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+
+private:
+    wxString         wouldTitle_;
+    ProjTreeModel   *model_;
+    SPStationNode    station_;
+    SPGeomNode       dGeom_;
+    SPGeomNode       geom1_;
+    SPGeomNode       geom2_;
+};
+
 #endif //SPAM_UI_CMDS_GEOM_CMD_H

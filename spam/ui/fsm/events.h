@@ -85,4 +85,39 @@ struct EvDrawableSelect : boost::statechart::event<EvDrawableSelect>
     SPDrawableNodeVector drawables;
 };
 
+// MSM events
+struct evt_reset {};
+struct evt_go_back {};
+struct evt_go_forward {};
+
+struct evt_apply 
+{
+    evt_apply(const std::string &u) : uuid(u) {}
+    const std::string uuid;
+};
+
+struct evt_go_to
+{
+    evt_go_to(const int s) : stage(s) {}
+    const int stage;
+};
+
+struct evt_entity_selected
+{
+    evt_entity_selected(const SPDrawableNode &e) : ent(e) {}
+    const SPDrawableNode ent;
+};
+
+struct evt_entities_selected
+{
+    evt_entities_selected(const SPDrawableNodeVector &e) : ents(e) {}
+    const SPDrawableNodeVector ents;
+};
+
+struct evt_entities_deleted
+{
+    evt_entities_deleted(const SPDrawableNodeVector &e) : ents(e) {}
+    const SPDrawableNodeVector ents;
+};
+
 #endif //SPAM_UI_FSM_EVENTS_H

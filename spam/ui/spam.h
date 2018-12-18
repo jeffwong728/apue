@@ -61,8 +61,11 @@ public:
     void AddAllPassType();
     void SetEntityOperation(const SpamEntityOperation entityOp) { entityOp_ = entityOp; }
     SpamEntityOperation GetEntityOperation() const { return entityOp_; }
+    void SetEntitySelectionMode(const SpamEntitySelectionMode selMode) { entitySelMode_ = selMode; }
+    SpamEntitySelectionMode GetEntitySelectionMode() const { return entitySelMode_; }
 
 private:
+    SpamEntitySelectionMode entitySelMode_;
     SpamEntityOperation entityOp_;
     std::vector<SpamEntityType> passTypes_;
 };
@@ -80,6 +83,8 @@ public:
     static void LogPyOutput();
     static SPDrawableNodeVector Difference(const SPDrawableNodeVector& lseq, const SPDrawableNodeVector& rseq);
     static SPDrawableNodeVector Intersection(const SPDrawableNodeVector& lseq, const SPDrawableNodeVector& rseq);
+    static wxBitmap GetBitmap(const SpamIconPurpose ip, const std::string &bmName);
+    static void SetStatus(const StatusIconType iconType, const wxString &text);
 };
 
 class SpamUndoRedo : private boost::noncopyable

@@ -53,6 +53,7 @@ list(APPEND libs Boost::chrono)
 list(APPEND libs OpenCL::OpenCL)
 list(APPEND libs opencv_core)
 list(APPEND libs opencv_imgcodecs)
+list(APPEND libs WXSVG::WXSVG)
 
 target_link_libraries(test PRIVATE ${libs})
 target_link_libraries(SampleFilterFuzz PRIVATE ${libs})

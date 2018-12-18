@@ -120,7 +120,7 @@ void ProjPanel::CreateStation()
         auto cmd = std::make_shared<CreateStationCmd>(projModel, title);
         cmd->Do();
         SpamUndoRedo::AddCommand(cmd);
-        wxLogStatus(cmd->GetDescription());
+        Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
     }
 }
 
@@ -339,7 +339,7 @@ void ProjPanel::OnDeleteEntities(wxCommandEvent &cmd)
             auto cmd = std::make_shared<MacroCmd>(cmds);
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
-            wxLogStatus(cmd->GetDescription());
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
         }
     }
 }

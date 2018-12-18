@@ -38,7 +38,10 @@ void BoxToolImpl::ContinueBoxing(const EvMouseMove &e)
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
         Geom::Rect  newRect{ anchor , freePt };
-        cav->DrawBox(rect, newRect);
+        if (SpamEntitySelectionMode::kESM_MULTIPLE == Spam::GetSelectionFilter()->GetEntitySelectionMode())
+        {
+            cav->DrawBox(rect, newRect);
+        }
         rect.emplace(newRect);
     }
 }
@@ -63,18 +66,41 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
         }
 
         SPDrawableNodeVector newSelEnts;
-        if (!rect.empty())
+
+        if (SpamEntitySelectionMode::kESM_MULTIPLE == Spam::GetSelectionFilter()->GetEntitySelectionMode())
         {
-            cav->SelectDrawable(*rect, newSelEnts);
+            if (!rect.empty())
+            {
+                cav->SelectDrawable(*rect, newSelEnts);
+            }
+            else
+            {
+                auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
+                Geom::Point freePt(imgPt.x, imgPt.y);
+                auto s = 1 / cav->GetMatScale();
+                SelectionData sd{ SelectionState::kSelNone, HitState::kHsNone, -1, -1, 0 };
+                SPDrawableNode fEnt = cav->FindDrawable(freePt, s, s, sd);
+                if (fEnt)
+                {
+                    newSelEnts.push_back(fEnt);
+                }
+            }
         }
         else
         {
-            auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
-            Geom::Point freePt(imgPt.x, imgPt.y);
-            auto fEnt = cav->FindDrawable(freePt);
-            if (fEnt)
+            if (rect.empty())
             {
-                newSelEnts.push_back(fEnt);
+                auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
+                Geom::Point freePt(imgPt.x, imgPt.y);
+                auto s = 1 / cav->GetMatScale();
+                SelectionData sd{ SelectionState::kSelNone, HitState::kHsNone, -1, -1, 0 };
+                SPDrawableNode fEnt = cav->FindDrawable(freePt, s, s, sd);
+                if (fEnt)
+                {
+                    newSelEnts.push_back(fEnt);
+                    Geom::OptRect invalRect = FireClickEntity(fEnt, e.evData, freePt, sd);
+                    oldRect.unionWith(invalRect);
+                }
             }
         }
 
@@ -83,7 +109,8 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
             oldRect.unionWith(selEnt->GetBoundingBox());
         }
 
-        if (e.evData.ControlDown())
+        if (e.evData.ControlDown() &&
+            SpamEntitySelectionMode::kESM_MULTIPLE == Spam::GetSelectionFilter()->GetEntitySelectionMode())
         {
             SPDrawableNodeVector deselEnts = Spam::Intersection(selEnts, newSelEnts);
             SPDrawableNodeVector newselEnts = Spam::Difference(newSelEnts, deselEnts);
@@ -99,8 +126,8 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
                 mewselEnt->Select(toolId);
             }
 
-            FireDeselectEntity(deselEnts);
-            FireSelectEntity(newselEnts);
+            if (!deselEnts.empty()) FireDeselectEntity(deselEnts);
+            if (!newselEnts.empty()) FireSelectEntity(newselEnts);
 
             newselEnts.insert(newselEnts.end(), residulselEnts.cbegin(), residulselEnts.cend());
             selEnts.swap(newselEnts);
@@ -120,8 +147,8 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
                 mewselEnt->Select(toolId);
             }
 
-            FireDeselectEntity(deselEnts);
-            FireSelectEntity(newselEnts);
+            if (!deselEnts.empty()) FireDeselectEntity(deselEnts);
+            if (!newselEnts.empty()) FireSelectEntity(newselEnts);
 
             selEnts.swap(newSelEnts);
         }
@@ -171,10 +198,15 @@ void BoxToolImpl::EnterCanvas(const EvCanvasEnter &e)
 void BoxToolImpl::LeaveCanvas(const EvCanvasLeave &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
-    if (cav && highlight)
+    if (cav)
     {
-        highlight->ClearHighlight();
-        cav->DimDrawable(highlight);
+        if (highlight)
+        {
+            highlight->ClearHighlight();
+            cav->DimDrawable(highlight);
+        }
+
+        cav->SetCursor(wxCURSOR_ARROW);
     }
 
     FireDimEntity(highlight);
@@ -232,6 +264,11 @@ void BoxToolImpl::QuitApp(const EvAppQuit &e)
 
 void BoxToolImpl::QuitTool(const EvToolQuit &e)
 {
+    ResetTool();
+}
+
+void BoxToolImpl::ResetTool()
+{
     auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
     if (frame)
     {
@@ -253,6 +290,11 @@ void BoxToolImpl::QuitTool(const EvToolQuit &e)
             }
         }
     }
+
+    rect = Geom::OptRect();
+    highlight.reset();
+    ClearHighlightData();
+    selData.clear();
 }
 
 void BoxToolImpl::DeleteDrawable(const EvDrawableDelete &e)

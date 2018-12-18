@@ -62,13 +62,14 @@ wxToolBar *MainToolPane::MakeImageToolBar(wxFileHistory &fh)
     wxToolBar *tb = new wxToolBar(this, kSpamGlobalImageToolBar, wxDefaultPosition, wxDefaultSize, wxTB_FLAT | wxTB_NODIVIDER);
     tb->SetToolBitmapSize(toolImageSize_);
 
-    wxBitmap zoomInBM(wxT("res/zoom_in_16.png"),       wxBITMAP_TYPE_PNG);
-    wxBitmap zoomExBM(wxT("res/zoom_extent_16.png"),   wxBITMAP_TYPE_PNG);
-    wxBitmap zoom11BM(wxT("res/zoom_original_16.png"), wxBITMAP_TYPE_PNG);
-    wxBitmap zoom12BM(wxT("res/zoom_half_16.png"),     wxBITMAP_TYPE_PNG);
-    wxBitmap zoom21BM(wxT("res/zoom_double_16.png"),   wxBITMAP_TYPE_PNG);
-    wxBitmap importBM(wxT("res/import_layer_16.png"),  wxBITMAP_TYPE_PNG);
-    wxBitmap exportBM(wxT("res/export_layer_16.png"),  wxBITMAP_TYPE_PNG);
+    const SpamIconPurpose ip = kICON_PURPOSE_TOOLBAR;
+    wxBitmap zoomInBM = Spam::GetBitmap(ip, bm_ZoomIn);
+    wxBitmap zoomExBM = Spam::GetBitmap(ip, bm_ZoomExtent);
+    wxBitmap zoom11BM = Spam::GetBitmap(ip, bm_ZoomOriginal);
+    wxBitmap zoom12BM = Spam::GetBitmap(ip, bm_ZoomHalf);
+    wxBitmap zoom21BM = Spam::GetBitmap(ip, bm_ZoomDouble);
+    wxBitmap importBM = Spam::GetBitmap(ip, bm_ImageImport);
+    wxBitmap exportBM = Spam::GetBitmap(ip, bm_ImageExport);
 
     wxMenu* fhMenu = new wxMenu;
     fh.UseMenu(fhMenu);
@@ -100,7 +101,7 @@ wxToolBar *MainToolPane::MakeImageToolBar(wxFileHistory &fh)
 
     tb->AddControl(choice, wxT("Scale Factor"));
     tb->AddSeparator();
-    tb->AddTool(kSpamID_MAIN_ZOOM_OUT, wxT("Zoom Out"), wxBitmap(wxT("res/zoom_out_16.png"), wxBITMAP_TYPE_PNG), wxNullBitmap, wxITEM_DROPDOWN);
+    tb->AddTool(kSpamID_MAIN_ZOOM_OUT, wxT("Zoom Out"), Spam::GetBitmap(ip, bm_ZoomOut), wxNullBitmap, wxITEM_DROPDOWN);
 
     wxMenu* zoomMenu = new wxMenu;
     zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_IN, wxT("Zoom In"))->SetBitmaps(zoomInBM, zoomInBM);

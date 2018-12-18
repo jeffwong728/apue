@@ -30,6 +30,11 @@ void Spamer::OnToolQuit(int toolId)
     process_event(EvToolQuit(toolId));
 }
 
+void Spamer::OnToolOptionsChanged(const ToolOptions &tos)
+{
+    process_event(EvToolOption(tos));
+}
+
 void Spamer::OnCanvasEnter(wxMouseEvent &e)
 {
     process_event(EvCanvasEnter(e));

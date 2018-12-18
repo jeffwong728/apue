@@ -6,9 +6,10 @@
 #include <wx/wxhtml.h>
 
 GeomBox::GeomBox(wxWindow* parent)
-: ToolBox(parent, kSpamID_TOOLPAGE_GEOM, wxT("Geometries"), kSpamID_TOOLBOX_GEOM_GUARD- kSpamID_TOOLBOX_GEOM_TRANSFORM, kSpamID_TOOLBOX_GEOM_TRANSFORM)
+    : ToolBox(parent, kSpamID_TOOLPAGE_GEOM, wxT("Geometries:"), {wxString(wxT("Create Tools:")), wxString(wxT("Boolean Tools:"))},
+        kSpamID_TOOLBOX_GEOM_GUARD - kSpamID_TOOLBOX_GEOM_TRANSFORM, kSpamID_TOOLBOX_GEOM_TRANSFORM)
 {
-    wxWindowID toolIds[] = {   
+    wxWindowID cToolIds[] = {   
         kSpamID_TOOLBOX_GEOM_TRANSFORM,
         kSpamID_TOOLBOX_GEOM_EDIT,
         kSpamID_TOOLBOX_GEOM_RECT,
@@ -22,7 +23,7 @@ GeomBox::GeomBox(wxWindow* parent)
         kSpamID_TOOLBOX_GEOM_BEZIERLINE
     };
 
-    wxString   toolTips[] = { 
+    wxString   cToolTips[] = { 
         wxT("Select and transform entities"),
         wxT("Edit paths by nodes"),
         wxT("Create rectangles and squares"),
@@ -36,21 +37,44 @@ GeomBox::GeomBox(wxWindow* parent)
         wxT("Create bezier curves")
     };
 
-    wxBitmap toolIcons[] = {
-        {wxT("res/pointer.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/node_edit.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/box.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/ellipse.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/polygon.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/beziergon.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/line.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/arc.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/zigzagline.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/polyline.png"), wxBITMAP_TYPE_PNG},
-        {wxT("res/bezierline.png"), wxBITMAP_TYPE_PNG}
+    const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
+    wxBitmap cToolIcons[] = {
+        Spam::GetBitmap(ip, bm_Pointer),
+        Spam::GetBitmap(ip, bm_NodeEdit),
+        Spam::GetBitmap(ip, bm_Box),
+        Spam::GetBitmap(ip, bm_Ellipse),
+        Spam::GetBitmap(ip, bm_Polygon),
+        Spam::GetBitmap(ip, bm_Beziergon),
+        Spam::GetBitmap(ip, bm_Line),
+        Spam::GetBitmap(ip, bm_Arc),
+        Spam::GetBitmap(ip, bm_Zigzagline),
+        Spam::GetBitmap(ip, bm_Polyline),
+        Spam::GetBitmap(ip, bm_Bezierline)
     };
 
-    ToolBox::Init(toolIds, toolTips, toolIcons);
+    wxWindowID bToolIds[] = {
+        kSpamID_TOOLBOX_GEOM_UNION,
+        kSpamID_TOOLBOX_GEOM_INTERS,
+        kSpamID_TOOLBOX_GEOM_DIFF,
+        kSpamID_TOOLBOX_GEOM_SYMDIFF
+    };
+
+    wxString   bToolTips[] = {
+        wxT("Create union of selected regions"),
+        wxT("Create intersection of selected regions"),
+        wxT("Create difference of selected regions"),
+        wxT("Create exclusive OR of selected regions")
+    };
+
+    wxBitmap bToolIcons[] = {
+        Spam::GetBitmap(ip, bm_PathUnion),
+        Spam::GetBitmap(ip, bm_PathInter),
+        Spam::GetBitmap(ip, bm_PathDiff),
+        Spam::GetBitmap(ip, bm_PathXOR)
+    };
+
+    ToolBox::Init(cToolIds, cToolTips, cToolIcons, WXSIZEOF(cToolIds), 0, 0);
+    ToolBox::Init(bToolIds, bToolTips, bToolIcons, WXSIZEOF(bToolIds), WXSIZEOF(cToolIds), 1);
     sig_ToolEnter.connect(std::bind(&GeomBox::OnToolEnter, this, std::placeholders::_1));
 }
 
@@ -62,6 +86,10 @@ void GeomBox::OnNodeEditMode(wxCommandEvent &cmd)
 {
     toolEditMode_ = cmd.GetId();
     UpdateSelectionFilter();
+
+    ToolOptions tos = GeomBox::GetToolOptions();
+    tos[cp_ToolId] = kSpamID_TOOLBOX_GEOM_EDIT;
+    sig_OptionsChanged(tos);
 }
 
 void GeomBox::OnToolEnter(const ToolOptions &toolOpts)
@@ -71,6 +99,7 @@ void GeomBox::OnToolEnter(const ToolOptions &toolOpts)
     {
     case kSpamID_TOOLBOX_GEOM_TRANSFORM:
         Spam::GetSelectionFilter()->ReplacePassType(SpamEntityType::kET_GEOM);
+        Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_MULTIPLE);
         Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GEOM_TRANSFORM);
         break;
 
@@ -83,7 +112,17 @@ void GeomBox::OnToolEnter(const ToolOptions &toolOpts)
     case kSpamID_TOOLBOX_GEOM_POLYGON:
     case kSpamID_TOOLBOX_GEOM_BEZIERGON:
         Spam::GetSelectionFilter()->Clear();
+        Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_NONE);
         Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GEOM_CREATE);
+        break;
+
+    case kSpamID_TOOLBOX_GEOM_DIFF:
+        Spam::GetSelectionFilter()->Clear();
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_RECT);
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_ELLIPSE);
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_POLYGON);
+        Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_BEZIERGON);
+        Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_SINGLE);
         break;
 
     default:
@@ -106,9 +145,9 @@ wxPanel *GeomBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 
 ToolOptions GeomBox::GetToolOptions() const
 {
-    ToolOptions to;
-    to[cp_ToolGeomVertexEditMode] = toolEditMode_;
-    return to;
+    ToolOptions tos;
+    tos[cp_ToolGeomVertexEditMode] = toolEditMode_;
+    return tos;
 }
 
 void GeomBox::UpdateSelectionFilter(void)
@@ -153,6 +192,15 @@ void GeomBox::UpdateSelectionFilter(void)
     default:
         break;
     }
+
+    if (kSpamID_TOOLBOX_NODE_MOVE == toolEditMode_)
+    {
+        Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_MULTIPLE);
+    }
+    else
+    {
+        Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_SINGLE);
+    }
 }
 
 wxPanel *GeomBox::CreateNodeEditOption(wxWindow *parent)
@@ -160,13 +208,14 @@ wxPanel *GeomBox::CreateNodeEditOption(wxWindow *parent)
     auto panel = new wxScrolledWindow(parent, wxID_ANY);
     wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
 
+    const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
     auto nodeEditMethod = new wxToolBar(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_VERTICAL | wxTB_TEXT | wxTB_HORZ_TEXT | wxTB_NODIVIDER);
-    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_MOVE, wxT("Move nodes"), wxBitmap(wxT("res/node_move.png"), wxBITMAP_TYPE_PNG));
-    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_ADD, wxT("Insert new nodes"), wxBitmap(wxT("res/node_add.png"), wxBITMAP_TYPE_PNG));
-    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_DELETE, wxT("Delete nodes"), wxBitmap(wxT("res/node_delete.png"), wxBITMAP_TYPE_PNG));
-    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_SMOOTH, wxT("Make nodes smooth"), wxBitmap(wxT("res/node_smooth.png"), wxBITMAP_TYPE_PNG));
-    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_CUSP, wxT("Make nodes corner"), wxBitmap(wxT("res/node_cusp.png"), wxBITMAP_TYPE_PNG));
-    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_SYMMETRIC, wxT("Make nodes symmetric"), wxBitmap(wxT("res/node_symmetric.png"), wxBITMAP_TYPE_PNG));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_MOVE, wxT("Move nodes"),                Spam::GetBitmap(ip, bm_NodeMove));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_ADD, wxT("Insert new nodes"),           Spam::GetBitmap(ip, bm_NodeAdd));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_DELETE, wxT("Delete nodes"),            Spam::GetBitmap(ip, bm_NodeDelete));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_SMOOTH, wxT("Make nodes smooth"),       Spam::GetBitmap(ip, bm_NodeSmooth));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_CUSP, wxT("Make nodes corner"),         Spam::GetBitmap(ip, bm_NodeCusp));
+    nodeEditMethod->AddRadioTool(kSpamID_TOOLBOX_NODE_SYMMETRIC, wxT("Make nodes symmetric"), Spam::GetBitmap(ip, bm_NodeSymmetric));
     nodeEditMethod->ToggleTool(kSpamID_TOOLBOX_NODE_MOVE, true);
     nodeEditMethod->Bind(wxEVT_TOOL, &GeomBox::OnNodeEditMode, this, kSpamID_TOOLBOX_NODE_MOVE, kSpamID_TOOLBOX_NODE_SYMMETRIC);
     nodeEditMethod->Realize();

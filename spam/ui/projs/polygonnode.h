@@ -36,6 +36,7 @@ public:
     void ResetTransform() override;
     void NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt) override;
     void ResetNodeEdit() override;
+    SpamResult Modify(const Geom::Point &pt, const int editMode, const SelectionData &sd) override;
     boost::any CreateMemento() const override;
     bool RestoreFromMemento(const boost::any &memento) override;
     int GetNumCorners() const { return static_cast<int>(data_.points.size()); }

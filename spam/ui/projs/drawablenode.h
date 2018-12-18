@@ -26,6 +26,8 @@ public:
     ~DrawableNode();
 
 public:
+    void ChangeColorToSelected();
+    void RestoreColor();
     bool IsSelected() const { return SelectionState::kSelNone!=selData_.ss; }
     bool IsContainer() const override { return false; }
     virtual bool IsTypeOf(const SpamEntityType t) const = 0;
@@ -61,6 +63,9 @@ public:
     virtual void NodeEdit(const Geom::Point &anchorPt, const Geom::Point &freePt, const Geom::Point &lastPt);
     virtual void EndNodeEdit();
     virtual void ResetNodeEdit() = 0;
+
+    // Modify geometry
+    virtual SpamResult Modify(const Geom::Point &pt, const int editMode, const SelectionData &sd) { return SpamResult::kSR_SUCCESS_NOOP; }
 
     virtual boost::any CreateMemento() const = 0;
     virtual bool RestoreFromMemento(const boost::any &memento) = 0;
@@ -100,6 +105,7 @@ protected:
     SelectionData selData_;
     HighlightData hlData_;
     Geom::Rect  baseRect_;
+    DrawStyle   baseStyle_;
 };
 
 #endif //SPAM_UI_PROJS_DRAWABLE_NODE_H

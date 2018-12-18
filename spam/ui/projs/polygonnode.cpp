@@ -223,6 +223,47 @@ void PolygonNode::ResetNodeEdit()
 {
 }
 
+SpamResult PolygonNode::Modify(const Geom::Point &pt, const int editMode, const SelectionData &sd)
+{
+    if (SelectionState::kSelNone == selData_.ss)
+    {
+        return SpamResult::kSR_SUCCESS_NOOP;
+    }
+
+    if (kSpamID_TOOLBOX_NODE_ADD == editMode && HitState::kHsEdge==sd.hs)
+    {
+        int numEdges = GetNumCorners();
+        if (sd.id<numEdges && sd.id>=0)
+        {
+            Geom::Point pts{ data_.points[sd.id][0], data_.points[sd.id][1] };
+            Geom::Point pte{ data_.points[(sd.id + 1) % numEdges][0], data_.points[(sd.id + 1) % numEdges][1] };
+
+            Geom::LineSegment edge(pts, pte);
+            Geom::Coord t = edge.nearestTime(pt);
+            Geom::Point nPt = edge.pointAt(t);
+            std::array<double, 2> pt{ nPt.x(), nPt.y()};
+            data_.points.insert(data_.points.begin()+sd.id+1, pt);
+
+            return SpamResult::kSR_SUCCESS;
+        }
+    }
+    else if (kSpamID_TOOLBOX_NODE_DELETE == editMode && HitState::kHsNode == sd.hs)
+    {
+        int numEdges = GetNumCorners();
+        if (sd.id < numEdges && sd.id >= 0 && numEdges>3)
+        {
+            data_.points.erase(data_.points.begin() + sd.id);
+            return SpamResult::kSR_SUCCESS;
+        }
+    }
+    else
+    {
+        return SpamResult::kSR_FAILURE;
+    }
+
+    return SpamResult::kSR_FAILURE;
+}
+
 boost::any PolygonNode::CreateMemento() const
 {
     auto mem = std::make_shared<Memento>();

@@ -5,7 +5,7 @@
 #include <wx/tglbtn.h>
 #include <wx/wxhtml.h>
 
-ToolBox::ToolBox(wxWindow* parent, const wxWindowID winid, const wxString &toolboxName, const int numTools, const int startToolId)
+ToolBox::ToolBox(wxWindow* parent, const wxWindowID winid, const wxString &toolboxName, const std::vector<wxString> &toolGroupNames, const int numTools, const int startToolId)
 : wxPanel(parent, winid)
 , startToolId_(startToolId)
 , collOptPane_(nullptr)
@@ -25,7 +25,23 @@ ToolBox::ToolBox(wxWindow* parent, const wxWindowID winid, const wxString &toolb
     sizerRoot->Add(collToolPane_, wxSizerFlags(0).Expand());
 
     wxWindow *winTool = collToolPane_->GetPane();
-    auto paneSizer = new wxGridSizer(6, 2, 2);
+    wxSizer *paneSizer = nullptr;
+    if (toolGroupNames.empty())
+    {
+        paneSizer = new wxGridSizer(6, 2, 2);
+        toolGroupSizers_.push_back(paneSizer);
+    }
+    else
+    {
+        paneSizer = new wxBoxSizer(wxVERTICAL);
+        for (const wxString &groupName : toolGroupNames)
+        {
+            paneSizer->Add(new wxStaticText(winTool, wxID_ANY, groupName));
+            auto toolGroupSizer = new wxGridSizer(6, 2, 2);
+            toolGroupSizers_.push_back(toolGroupSizer);
+            paneSizer->Add(toolGroupSizer, wxSizerFlags(0).Expand());
+        }
+    }
 
     collOptPane_ = new wxCollapsiblePane(this, wxID_ANY, wxT("Options"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
     collOptPane_->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ToolBox::OnToolCollapse, this, wxID_ANY);
@@ -46,21 +62,19 @@ ToolBox::~ToolBox()
 {
 }
 
-void ToolBox::Init(const wxWindowID toolIds[], const wxString toolTips[], const wxBitmap toolIcons[])
+void ToolBox::Init(const wxWindowID toolIds[], const wxString toolTips[], const wxBitmap toolIcons[], const int numTools, const int startIndex, const int toolGroup)
 {
     wxSizer * const sizerRoot = GetSizer();
     wxWindow *winTool = collToolPane_->GetPane();
-    wxSizer * const paneSizer = winTool->GetSizer();
-    wxWindow *winOpt = collOptPane_->GetPane();
-    wxSizer * const sizerOpt = winOpt->GetSizer();
+    wxSizer * const paneSizer = toolGroupSizers_[toolGroup];
 
-    for (int t = 0; t<static_cast<int>(tools_.size()); ++t)
+    for (int t = 0; t<numTools; ++t)
     {
         auto tBtn = new wxBitmapToggleButton(winTool, toolIds[t], toolIcons[t], wxDefaultPosition, wxSize(32, 32), wxBU_LEFT | wxBU_EXACTFIT);
         tBtn->SetToolTip(toolTips[t]);
         tBtn->Bind(wxEVT_TOGGLEBUTTON, &ToolBox::OnTool, this, toolIds[t]);
         paneSizer->Add(tBtn, wxSizerFlags(1).Expand());
-        std::get<0>(tools_[t]) = tBtn;
+        std::get<0>(tools_[t + startIndex]) = tBtn;
     }
 
     sizerRoot->SetMinSize(GetBestSize());
@@ -220,6 +234,7 @@ bool ToolBox::CreateOption(const int toolIndex)
 
 void ToolBox::OnToolQuit(int toolId)
 {
+    Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_MULTIPLE);
     Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_NONE);
     Spam::GetSelectionFilter()->AddAllPassType();
 }
