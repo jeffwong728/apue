@@ -61,18 +61,18 @@ struct DiffOperatorDef : public boost::msm::front::state_machine_def<DiffOperato
 {
     struct Wait1stOperand : public boost::msm::front::state<> 
     {
-        template <class Event> void on_exit(Event const&, DiffOperatorDef& fsm) { fsm.rect = Geom::OptRect(); }
+        template <class Event> void on_exit(Event const&, DiffOperatorDef& fsm) {}
     };
 
     struct Wait2ndOperand : public boost::msm::front::state<>
     {
-        template <class Event> void on_exit(Event const&, DiffOperatorDef& fsm) { operand1st->RestoreColor(); fsm.rect = Geom::OptRect(); }
+        template <class Event> void on_exit(Event const&, DiffOperatorDef& fsm) { operand1st->RestoreColor(); }
         SPDrawableNode operand1st;
     };
 
     struct ReadyGo : public boost::msm::front::state<>
     {
-        template <class Event> void on_exit(Event const&, DiffOperatorDef& fsm) { operand1st->RestoreColor(); operand2nd->RestoreColor(); fsm.rect = Geom::OptRect(); }
+        template <class Event> void on_exit(Event const&, DiffOperatorDef& fsm) { operand1st->RestoreColor(); operand2nd->RestoreColor(); }
         SPDrawableNode operand1st;
         SPDrawableNode operand2nd;
     };
@@ -97,17 +97,15 @@ struct DiffOperatorDef : public boost::msm::front::state_machine_def<DiffOperato
         }
     };
 
+    struct invalidate_operands
+    {
+        void operator()(evt_quit_tool const& e, DiffOperatorDef&, Wait2ndOperand &s, Wait2ndOperand& t);
+        void operator()(evt_quit_tool const& e, DiffOperatorDef&, ReadyGo &s, ReadyGo& t);
+    };
+
     struct wrap_operand
     {
-        void operator()(evt_entity_selected const& e, DiffOperatorDef &dop, ReadyGo &s, ReadyGo& t)
-        {
-            dop.rect = s.operand1st->GetBoundingBox();
-            s.operand1st->RestoreColor();
-            t.operand1st = s.operand2nd;
-            t.operand2nd = e.ent;
-            t.operand1st->ChangeColorToSelected();
-            t.operand2nd->ChangeColorToSelected();
-        }
+        void operator()(evt_entity_selected const& e, DiffOperatorDef &dop, ReadyGo &s, ReadyGo& t);
     };
 
     struct do_diff
@@ -123,17 +121,15 @@ struct DiffOperatorDef : public boost::msm::front::state_machine_def<DiffOperato
     };
 
     struct transition_table : boost::mpl::vector<
-        //    Start     Event         Next      Action                     Guard
-        //  +---------+-------------+---------+---------------------------+----------------------+
         boost::msm::front::Row<Wait1stOperand, evt_entity_selected, Wait2ndOperand, save_1st_operand, valid_operand>,
-        boost::msm::front::Row<Wait1stOperand, evt_apply, Wait1stOperand, boost::msm::front::none, boost::msm::front::none>,
         boost::msm::front::Row<Wait2ndOperand, evt_entity_selected, ReadyGo, save_2nd_operand, valid_operand>,
-        boost::msm::front::Row<Wait2ndOperand, evt_apply, Wait2ndOperand, boost::msm::front::none, boost::msm::front::none>,
+        boost::msm::front::Row<Wait2ndOperand, evt_quit_tool, Wait2ndOperand, invalidate_operands, boost::msm::front::none>,
         boost::msm::front::Row<ReadyGo, evt_entity_selected, ReadyGo, wrap_operand, valid_operand>,
-        boost::msm::front::Row<ReadyGo, evt_apply, Wait1stOperand, do_diff, boost::msm::front::none>> {};
+        boost::msm::front::Row<ReadyGo, evt_apply, Wait1stOperand, do_diff, boost::msm::front::none>,
+        boost::msm::front::Row<ReadyGo, evt_quit_tool, ReadyGo, invalidate_operands, boost::msm::front::none>> {};
 
+    template <class FSM, class Event> void no_transition(Event const& e, FSM&, int state){}
     typedef Wait1stOperand initial_state;
-    Geom::OptRect rect;
 };
 
 typedef boost::msm::back::state_machine<DiffOperatorDef> DiffOperator;
@@ -150,7 +146,7 @@ struct DiffTool : boost::statechart::simple_state<DiffTool, Spamer, DiffToolIdle
     ~DiffTool();
 
     void OnMMouseDown(const EvMMouseDown &e);
-    Geom::OptRect FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override;
+    void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override;
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, DiffTool>,

@@ -98,8 +98,7 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
                 if (fEnt)
                 {
                     newSelEnts.push_back(fEnt);
-                    Geom::OptRect invalRect = FireClickEntity(fEnt, e.evData, freePt, sd);
-                    oldRect.unionWith(invalRect);
+                    FireClickEntity(fEnt, e.evData, freePt, sd);
                 }
             }
         }
@@ -154,9 +153,10 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
         }
 
         rect.unionWith(oldRect);
-        cav->DrawBox(rect, Geom::OptRect());
+        Spam::InvalidateCanvasRect(cav->GetUUID(), rect);
     }
 
+    Spam::RequestRefreshAllCanvases();
     rect = Geom::OptRect();
 }
 
@@ -286,9 +286,11 @@ void BoxToolImpl::ResetTool()
                 }
 
                 FireDeselectEntity(selEnts.second.ents);
-                cav->DrawPathVector(Geom::PathVector(), refreshRect);
+                Spam::InvalidateCanvasRect(uuid, refreshRect);
             }
         }
+
+        Spam::RequestRefreshAllCanvases();
     }
 
     rect = Geom::OptRect();

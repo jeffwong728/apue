@@ -39,7 +39,7 @@ struct BoxToolImpl
     virtual void FireSelectEntity(const SPDrawableNodeVector &ents) const = 0;
     virtual void FireDimEntity(const SPDrawableNode &ent) const = 0;
     virtual void FireGlowEntity(const SPDrawableNode &ent) const = 0;
-    virtual Geom::OptRect FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const { return Geom::OptRect(); }
+    virtual void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const {}
 
     Geom::Point    anchor;
     Geom::OptRect  rect;

@@ -73,7 +73,7 @@ void NodeEditTool::OnEnterCanvas(const EvCanvasEnter &e)
     BoxToolT::EnterCanvas(e);
 }
 
-Geom::OptRect NodeEditTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
+void NodeEditTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
 {
     const int editMode = boost::get<int>(toolOptions.at(cp_ToolGeomVertexEditMode));
     if (kSpamID_TOOLBOX_NODE_MOVE != editMode)
@@ -84,8 +84,6 @@ Geom::OptRect NodeEditTool::FireClickEntity(const SPDrawableNode &ent, const wxM
             cav->ModifyDrawable(ent, pt, sd, editMode);
         }
     }
-
-    return Geom::OptRect();
 }
 
 NodeEditIdle::NodeEditIdle()

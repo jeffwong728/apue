@@ -96,6 +96,12 @@ struct evt_apply
     const std::string uuid;
 };
 
+struct evt_quit_tool
+{
+    evt_quit_tool(const std::string &u) : uuid(u) {}
+    const std::string uuid;
+};
+
 struct evt_go_to
 {
     evt_go_to(const int s) : stage(s) {}
@@ -104,7 +110,8 @@ struct evt_go_to
 
 struct evt_entity_selected
 {
-    evt_entity_selected(const SPDrawableNode &e) : ent(e) {}
+    evt_entity_selected(const std::string &u, const SPDrawableNode &e) : uuid(u), ent(e) {}
+    const std::string uuid;
     const SPDrawableNode ent;
 };
 

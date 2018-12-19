@@ -32,7 +32,7 @@ public:
     bool IsContainer() const override { return false; }
     void BuildPath(Geom::PathVector &pv) const override;
     void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const override;
-    void BuildEdge(Geom::Path &pth, NodeIdVector &ids) const override;
+    void BuildEdge(CurveVector &pth, NodeIdVector &ids) const override;
     void BuildHandle(Geom::PathVector &hpv) const override;
     SelectionData HitTest(const Geom::Point &pt) const override;
     SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const override;

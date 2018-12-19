@@ -18,6 +18,28 @@ void UnionTool::OnMMouseDown(const EvMMouseDown &e)
     }
 }
 
+
+void DiffOperatorDef::invalidate_operands::operator()(evt_quit_tool const& e, DiffOperatorDef&, Wait2ndOperand &s, Wait2ndOperand& t)
+{
+    Spam::InvalidateCanvasRect(e.uuid, s.operand1st->GetBoundingBox());
+}
+
+void DiffOperatorDef::invalidate_operands::operator()(evt_quit_tool const& e, DiffOperatorDef&, ReadyGo &s, ReadyGo& t)
+{
+    Spam::InvalidateCanvasRect(e.uuid, s.operand1st->GetBoundingBox());
+    Spam::InvalidateCanvasRect(e.uuid, s.operand2nd->GetBoundingBox());
+}
+
+void DiffOperatorDef::wrap_operand::operator()(evt_entity_selected const& e, DiffOperatorDef &dop, ReadyGo &s, ReadyGo& t)
+{
+    Spam::InvalidateCanvasRect(e.uuid, s.operand1st->GetBoundingBox());
+    s.operand1st->RestoreColor();
+    t.operand1st = s.operand2nd;
+    t.operand2nd = e.ent;
+    t.operand1st->ChangeColorToSelected();
+    t.operand2nd->ChangeColorToSelected();
+}
+
 void DiffOperatorDef::do_diff::operator()(const evt_apply & e, DiffOperatorDef&, DiffOperatorDef::ReadyGo& s, DiffOperatorDef::Wait1stOperand& t)
 {
     auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
@@ -54,6 +76,7 @@ DiffTool::~DiffTool()
 {
     for (auto &d : differs)
     {
+        d.second.process_event(evt_quit_tool(d.first));
         d.second.stop();
     }
 }
@@ -77,7 +100,7 @@ void DiffTool::OnMMouseDown(const EvMMouseDown &e)
     }
 }
 
-Geom::OptRect DiffTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
+void DiffTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.GetEventObject());
     if (cav)
@@ -85,17 +108,13 @@ Geom::OptRect DiffTool::FireClickEntity(const SPDrawableNode &ent, const wxMouse
         auto fIt = differs.find(cav->GetUUID());
         if (fIt != differs.cend())
         {
-            fIt->second.process_event(evt_entity_selected(ent));
-            return fIt->second.rect;
+            fIt->second.process_event(evt_entity_selected(cav->GetUUID(), ent));
         }
         else
         {
             auto &differ = differs[cav->GetUUID()];
             differ.start();
-            differ.process_event(evt_entity_selected(ent));
-            return differ.rect;
+            differ.process_event(evt_entity_selected(cav->GetUUID(), ent));
         }
     }
-
-    return Geom::OptRect();
 }

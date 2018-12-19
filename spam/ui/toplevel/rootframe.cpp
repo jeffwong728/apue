@@ -64,6 +64,7 @@ RootFrame::RootFrame()
     , imageFileHistory_(9, spamID_BASE_IMAGE_FILE_HISTORY)
     , spamer_(std::make_unique<Spamer>())
     , selFilter_(std::make_unique<SelectionFilter>())
+    , cavDirtRects_(std::make_unique<std::map<std::string, Geom::OptRect>>())
 {
     //SetIcon(wxIcon(wxT("res\\target_128.png"), wxBITMAP_TYPE_PNG));
     CreateMenu();
@@ -114,6 +115,7 @@ RootFrame::RootFrame()
 
 RootFrame::~RootFrame()
 {
+    cavDirtRects_.reset();
     wxAuiMgr_.UnInit();
 }
 
@@ -284,6 +286,28 @@ CairoCanvas *RootFrame::FindCanvasByUUID(const std::string &uuidTag) const
     }
 
     return nullptr;
+}
+
+void RootFrame::AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect)
+{
+    (*cavDirtRects_)[uuidTag].unionWith(dirtRect);
+}
+
+void RootFrame::RequestRefreshCanvas()
+{
+    if (cavDirtRects_)
+    {
+        for (const auto &dirtCanv : *cavDirtRects_)
+        {
+            CairoCanvas *canv = FindCanvasByUUID(dirtCanv.first);
+            if (canv)
+            {
+                canv->DrawPathVector(Geom::PathVector(), dirtCanv.second);
+            }
+        }
+
+        cavDirtRects_->clear();
+    }
 }
 
 void RootFrame::SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page)

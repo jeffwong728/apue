@@ -460,6 +460,24 @@ void Spam::SetStatus(const StatusIconType iconType, const wxString &text)
     }
 }
 
+void Spam::InvalidateCanvasRect(const std::string &uuidCanv, const Geom::OptRect &dirtRect)
+{
+    auto frame = dynamic_cast<RootFrame *>(wxGetApp().GetTopWindow());
+    if (frame)
+    {
+        frame->AddDirtRect(uuidCanv, dirtRect);
+    }
+}
+
+void Spam::RequestRefreshAllCanvases()
+{
+    auto frame = dynamic_cast<RootFrame *>(wxGetApp().GetTopWindow());
+    if (frame)
+    {
+        frame->RequestRefreshCanvas();
+    }
+}
+
 void SpamUndoRedo::AddCommand(const std::shared_ptr<SpamCmd> &cmd)
 {
     wxGetApp().AddCommand(cmd);

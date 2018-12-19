@@ -96,6 +96,8 @@ private:
     void OnEraseBackground(wxEraseEvent &e);
     void OnContextMenu(wxContextMenuEvent& e);
     void OnDeleteEntities(wxCommandEvent &cmd);
+    void OnPushToBack(wxCommandEvent &cmd);
+    void OnBringToFront(wxCommandEvent &cmd);
     void Draw(wxDC &dc, const Geom::OptRect &rect);
     void Draw(wxDC &dc, const Geom::Path &pth);
     void DrawBox(wxDC &dc, const Geom::Path &pth);

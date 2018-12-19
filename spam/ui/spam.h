@@ -85,6 +85,8 @@ public:
     static SPDrawableNodeVector Intersection(const SPDrawableNodeVector& lseq, const SPDrawableNodeVector& rseq);
     static wxBitmap GetBitmap(const SpamIconPurpose ip, const std::string &bmName);
     static void SetStatus(const StatusIconType iconType, const wxString &text);
+    static void InvalidateCanvasRect(const std::string &uuidCanv, const Geom::OptRect &dirtRect);
+    static void RequestRefreshAllCanvases();
 };
 
 class SpamUndoRedo : private boost::noncopyable

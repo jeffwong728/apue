@@ -110,7 +110,7 @@ void PolygonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
     }
 }
 
-void PolygonNode::BuildEdge(Geom::Path &pth, NodeIdVector &ids) const
+void PolygonNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
 {
     if (selData_.ss == SelectionState::kSelNodeEdit)
     {
@@ -120,7 +120,7 @@ void PolygonNode::BuildEdge(Geom::Path &pth, NodeIdVector &ids) const
             Geom::Point pts{ data_.points[e][0], data_.points[e][1] };
             Geom::Point pte{ data_.points[(e+1) % numEdges][0], data_.points[(e + 1) % numEdges][1] };
 
-            pth.append(Geom::LineSegment(pts, pte));
+            pth.push_back(std::make_unique<Geom::LineSegment>(pts, pte));
             ids.push_back({ e, 0 });
         }
     }

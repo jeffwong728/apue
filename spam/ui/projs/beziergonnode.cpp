@@ -241,7 +241,7 @@ void BeziergonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
     }
 }
 
-void BeziergonNode::BuildEdge(Geom::Path &pth, NodeIdVector &ids) const
+void BeziergonNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
 {
     if (selData_.ss == SelectionState::kSelNodeEdit)
     {
@@ -258,7 +258,7 @@ void BeziergonNode::BuildEdge(Geom::Path &pth, NodeIdVector &ids) const
                     {
                         const int sIndex = c + subPathInterv.first;
                         const int eIndex = (c+1) % numSubPathCurves + subPathInterv.first;
-                        pth.append(*BuildEdgeCurve(sIndex, eIndex));
+                        pth.push_back(BuildEdgeCurve(sIndex, eIndex));
                         ids.push_back({ sIndex, 0 });
                     }
                 }

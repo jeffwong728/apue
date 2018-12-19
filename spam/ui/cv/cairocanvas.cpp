@@ -36,6 +36,8 @@ CairoCanvas::CairoCanvas(wxWindow* parent, const std::string &cvWinName, const w
     Bind(wxEVT_ERASE_BACKGROUND, &CairoCanvas::OnEraseBackground, this, wxID_ANY);
     Bind(wxEVT_CONTEXT_MENU,     &CairoCanvas::OnContextMenu,     this, wxID_ANY);
     Bind(wxEVT_MENU,             &CairoCanvas::OnDeleteEntities,  this, kSpamID_DELETE_ENTITIES);
+    Bind(wxEVT_MENU,             &CairoCanvas::OnPushToBack,      this, kSpamID_PUSH_TO_BACK);
+    Bind(wxEVT_MENU,             &CairoCanvas::OnBringToFront,    this, kSpamID_BRING_TO_FRONT);
 
     SetDropTarget(new DnDImageFile(parent));
 }
@@ -737,6 +739,9 @@ void CairoCanvas::OnContextMenu(wxContextMenuEvent& e)
             menu.Append(kSpamID_SHOW_REVERSE_ENTITIES, wxT("Show Reverse"))->Enable(numDra);
             menu.Append(kSpamID_SHOW_ALL_ENTITIES, wxT("Show All"))->Enable(numDra);
             menu.Append(kSpamID_HIDE_ALL_ENTITIES, wxT("Hide All"))->Enable(numDra);
+            menu.AppendSeparator();
+            menu.Append(kSpamID_PUSH_TO_BACK, wxT("Push to Back"))->Enable(numDra);
+            menu.Append(kSpamID_BRING_TO_FRONT, wxT("Bring to Front"))->Enable(numDra);
 
             PopupMenu(&menu);
         }
@@ -769,6 +774,58 @@ void CairoCanvas::OnDeleteEntities(wxCommandEvent &cmd)
                 SpamUndoRedo::AddCommand(cmd);
                 Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
             }
+        }
+    }
+}
+
+void CairoCanvas::OnPushToBack(wxCommandEvent &cmd)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            SPDrawableNodeVector drawables = station->GeSelected();
+            SPGeomNodeVector delGeoms;
+
+            Geom::OptRect refreshRect;
+            for (const auto &drawable : drawables)
+            {
+                station->RemoveChild(drawable.get());
+                refreshRect.unionWith(drawable->GetBoundingBox());
+            }
+
+            for (const auto &drawable : drawables)
+            {
+                station->Append(drawable);
+            }
+
+            DrawPathVector(Geom::PathVector(), refreshRect);
+        }
+    }
+}
+
+void CairoCanvas::OnBringToFront(wxCommandEvent &cmd)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            SPDrawableNodeVector drawables = station->GeSelected();
+            SPGeomNodeVector delGeoms;
+
+            Geom::OptRect refreshRect;
+            for (const auto &drawable : drawables)
+            {
+                station->RemoveChild(drawable.get());
+                refreshRect.unionWith(drawable->GetBoundingBox());
+            }
+
+            station->GetChildren().insert(station->GetChildren().begin(), drawables.cbegin(), drawables.cend());
+            DrawPathVector(Geom::PathVector(), refreshRect);
         }
     }
 }

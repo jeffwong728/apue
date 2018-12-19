@@ -57,6 +57,8 @@ public:
     wxAuiNotebook *GetStationNotebook() const;
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
+    void AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect);
+    void RequestRefreshCanvas();
     void SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page);
     void SetStatusText(const wxString &text, int number = 0) wxOVERRIDE;
     void SetBitmapStatus(const StatusIconType iconType, const wxString &text);
@@ -136,5 +138,6 @@ private:
     const wxString toolBoxLabels[kSpam_TOOLBOX_GUARD];
     std::unique_ptr<Spamer> spamer_;
     std::unique_ptr<SelectionFilter> selFilter_;
+    std::unique_ptr<std::map<std::string, Geom::OptRect>> cavDirtRects_;
 };
 #endif //SPAM_UI_TOP_LEVEL_ROOT_FRAME_H

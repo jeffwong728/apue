@@ -221,13 +221,13 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
                 }
             }
 
-            Geom::Path pth;
+            CurveVector pth;
             NodeIdVector eids;
             BuildEdge(pth, eids);
 
             for (int c = 0; c < static_cast<int>(pth.size()); ++c)
             {
-                const Geom::Curve &curve = pth[c];
+                const Geom::Curve &curve = *pth[c];
                 Geom::Coord t = curve.nearestTime(pt);
                 Geom::Coord dist = Geom::distanceSq(pt, curve.pointAt(t));
                 if (dist < 9)
@@ -460,7 +460,7 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
         Geom::PathVector rpv;
         Geom::PathVector npv;
         Geom::PathVector hpv;
-        Geom::Path       epth;
+        CurveVector      epth;
         NodeIdVector     nids;
         NodeIdVector     eids;
 
@@ -743,7 +743,7 @@ void DrawableNode::DrawHighlightHandle(Cairo::RefPtr<Cairo::Context> &cr, const 
     }
 }
 
-void DrawableNode::DrawHighlightEdge(Cairo::RefPtr<Cairo::Context> &cr, const Geom::Path &pth, const double ux, const double ax) const
+void DrawableNode::DrawHighlightEdge(Cairo::RefPtr<Cairo::Context> &cr, const CurveVector &pth, const double ux, const double ax) const
 {
     Geom::CairoPathSink cairoPathSink(cr->cobj());
     wxColour::ChannelType r = 0xF9, g = 0xA6, b = 0x02;
@@ -757,7 +757,7 @@ void DrawableNode::DrawHighlightEdge(Cairo::RefPtr<Cairo::Context> &cr, const Ge
         if (HighlightState::kHlEdge == hlData_.hls && hlData_.id == p)
         {
             const wxColour sc(r, g, b);
-            cairoPathSink.feed(pth[p]);
+            cairoPathSink.feed(*pth[p]);
             cr->set_line_width(ax);
             cr->set_source_rgba(sc.Red() / 255.0, sc.Green() / 255.0, sc.Blue() / 255.0, sc.Alpha() / 255.0 / 4);
             cr->stroke_preserve();

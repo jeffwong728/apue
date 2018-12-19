@@ -9,6 +9,12 @@
 #include <array>
 #include <vector>
 #include <boost/any.hpp>
+namespace Geom {
+    class PathVector;
+    class Rect;
+    class Curve;
+    class OptRect;
+}
 
 class NodeFactory;
 class ModelNode;
@@ -157,5 +163,6 @@ struct NodeId
 };
 
 using NodeIdVector = std::vector<NodeId>;
+using CurveVector = std::vector<std::unique_ptr<Geom::Curve>>;
 
 #endif //SPAM_UI_PROJS_MODEL_FWD_H
