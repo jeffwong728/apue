@@ -70,9 +70,17 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     {
         return transit<UnionTool>();
     }
+    else if (kSpamID_TOOLBOX_GEOM_INTERS == toolId)
+    {
+        return transit<IntersectionTool>();
+    }
     else if (kSpamID_TOOLBOX_GEOM_DIFF == toolId)
     {
         return transit<DiffTool>();
+    }
+    else if (kSpamID_TOOLBOX_GEOM_SYMDIFF == toolId)
+    {
+        return transit<XORTool>();
     }
     else
     {

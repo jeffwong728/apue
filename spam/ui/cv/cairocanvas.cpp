@@ -518,6 +518,53 @@ void CairoCanvas::DoUnion(const SPDrawableNodeVector &selEnts)
     }
 }
 
+void CairoCanvas::DoIntersection(const SPDrawableNodeVector &selEnts)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            wxString title = wxString::Format(wxT("beziergon%d"), cBeziergon_++);
+            SPGeomNodeVector geoms;
+            for (const auto &drawable : selEnts)
+            {
+                auto g = std::dynamic_pointer_cast<GeomNode>(drawable);
+                if (g)
+                {
+                    geoms.push_back(g);
+                }
+            }
+
+            auto cmd = std::make_shared<IntersectionGeomsCmd>(model, geoms, title);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+        }
+    }
+}
+
+void CairoCanvas::DoXOR(const SPDrawableNode &dn1, const SPDrawableNode &dn2)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            wxString title = wxString::Format(wxT("beziergon%d"), cBeziergon_++);
+            auto g1 = std::dynamic_pointer_cast<GeomNode>(dn1);
+            auto g2 = std::dynamic_pointer_cast<GeomNode>(dn2);
+
+            auto cmd = std::make_shared<XORGeomsCmd>(model, g1, g2, title);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+        }
+    }
+}
+
 void CairoCanvas::DoDifference(const SPDrawableNode &dn1, const SPDrawableNode &dn2)
 {
     auto model = Spam::GetModel();

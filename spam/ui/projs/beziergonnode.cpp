@@ -321,7 +321,16 @@ SelectionData BeziergonNode::HitTest(const Geom::Point &pt) const
 
     if (!pv.empty())
     {
-        if (Geom::contains(pv.front(), pt))
+        int numWinding = 0;
+        for (const Geom::Path &pth : pv)
+        {
+            if (Geom::contains(pth, pt))
+            {
+                numWinding += 1;
+            }
+        }
+
+        if (numWinding & 1)
         {
             sd.hs = HitState::kHsFace;
             sd.id = 0;

@@ -230,7 +230,7 @@ wxString CreateBeziergonCmd::GetDescription() const
     return wxString(wxT("Create beziergon ") + geom_->GetTitle());
 }
 
-UnionGeomsCmd::UnionGeomsCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms, const wxString &wouldTitle)
+BoolCmd::BoolCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms, const wxString &wouldTitle)
     : SpamCmd()
     , wouldTitle_(wouldTitle)
     , model_(model)
@@ -239,7 +239,35 @@ UnionGeomsCmd::UnionGeomsCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms
 {
 }
 
-void UnionGeomsCmd::Do()
+void BoolCmd::Undo()
+{
+    if (model_)
+    {
+        model_->Delete(wxDataViewItem(uGeom_.get()), true);
+        model_->AddToStations(station_, geoms_, true);
+    }
+}
+
+void BoolCmd::Redo()
+{
+    if (model_ && !geoms_.empty())
+    {
+        wxDataViewItemArray geoms;
+        for (const auto &g : geoms_)
+        {
+            geoms.push_back(wxDataViewItem(g.get()));
+        }
+
+        if (!geoms.empty())
+        {
+            model_->Delete(geoms, true);
+        }
+
+        model_->AddToStation(station_, uGeom_, true);
+    }
+}
+
+void BoolCmd::BoolOp(const int op)
 {
     if (model_ && !geoms_.empty())
     {
@@ -262,7 +290,7 @@ void UnionGeomsCmd::Do()
                 if (SkParsePath::FromSVGString(strpv.c_str(), &skpv) && SkParsePath::FromSVGString(strupv.c_str(), &skupv))
                 {
                     SkPath skResPath;
-                    if (Op(skpv, skupv, kUnion_SkPathOp, &skResPath))
+                    if (Op(skpv, skupv, (op == UnionOp) ? kUnion_SkPathOp : kIntersect_SkPathOp, &skResPath))
                     {
                         SkString skStr;
                         SkParsePath::ToSVGString(skResPath, &skStr);
@@ -270,15 +298,15 @@ void UnionGeomsCmd::Do()
                     }
                     else
                     {
-                        upv = sp_pathvector_boolop(pv, upv, bool_op_union, fill_nonZero, fill_nonZero);
+                        upv = sp_pathvector_boolop(pv, upv, (op == UnionOp) ? bool_op_union : bool_op_inters, fill_nonZero, fill_nonZero);
                     }
                 }
                 else
                 {
-                    upv = sp_pathvector_boolop(pv, upv, bool_op_union, fill_nonZero, fill_nonZero);
+                    upv = sp_pathvector_boolop(pv, upv, (op == UnionOp) ? bool_op_union : bool_op_inters, fill_nonZero, fill_nonZero);
                 }
             }
-            
+
             geoms.push_back(wxDataViewItem(g.get()));
         }
 
@@ -296,40 +324,17 @@ void UnionGeomsCmd::Do()
     }
 }
 
-void UnionGeomsCmd::Undo()
-{
-    if (model_)
-    {
-        model_->Delete(wxDataViewItem(uGeom_.get()), true);
-        model_->AddToStations(station_, geoms_, true);
-    }
-}
-
-void UnionGeomsCmd::Redo()
-{
-    if (model_ && !geoms_.empty())
-    {
-        wxDataViewItemArray geoms;
-        for (const auto &g : geoms_)
-        {
-            geoms.push_back(wxDataViewItem(g.get()));
-        }
-
-        if (!geoms.empty())
-        {
-            model_->Delete(geoms, true);
-        }
-
-        model_->AddToStation(station_, uGeom_, true);
-    }
-}
-
 wxString UnionGeomsCmd::GetDescription() const
 {
     return wxString(wxT("Union geometries"));
 }
 
-DiffGeomsCmd::DiffGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const SPGeomNode &geom2, const wxString &wouldTitle)
+wxString IntersectionGeomsCmd::GetDescription() const
+{
+    return wxString(wxT("Intersection geometries"));
+}
+
+BinaryBoolGeomsCmd::BinaryBoolGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const SPGeomNode &geom2, const wxString &wouldTitle)
     : SpamCmd()
     , wouldTitle_(wouldTitle)
     , model_(model)
@@ -339,14 +344,41 @@ DiffGeomsCmd::DiffGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const 
 {
 }
 
-void DiffGeomsCmd::Do()
+void BinaryBoolGeomsCmd::Undo()
+{
+    if (model_)
+    {
+        model_->Delete(wxDataViewItem(dGeom_.get()), true);
+        SPGeomNodeVector geoms{ geom1_ , geom2_ };
+        model_->AddToStations(station_, geoms, true);
+    }
+}
+
+void BinaryBoolGeomsCmd::Redo()
+{
+    if (model_ && geom1_ && geom2_)
+    {
+        wxDataViewItemArray geoms;
+        geoms.push_back(wxDataViewItem(geom1_.get()));
+        geoms.push_back(wxDataViewItem(geom2_.get()));
+
+        if (!geoms.empty())
+        {
+            model_->Delete(geoms, true);
+        }
+
+        model_->AddToStation(station_, dGeom_, true);
+    }
+}
+
+void BinaryBoolGeomsCmd::BoolOp(const int op)
 {
     if (model_ && geom1_ && geom2_)
     {
         Geom::PathVector pv1, pv2;
         geom1_->BuildPath(pv1);
         geom2_->BuildPath(pv2);
-        Geom::PathVector dpv = sp_pathvector_boolop(pv2, pv1, bool_op_diff, fill_nonZero, fill_nonZero);
+        Geom::PathVector dpv = sp_pathvector_boolop(pv2, pv1, (op == DiffOp) ? bool_op_diff : bool_op_symdiff, fill_nonZero, fill_nonZero);
 
         wxDataViewItemArray geoms;
         geoms.push_back(wxDataViewItem(geom1_.get()));
@@ -366,34 +398,12 @@ void DiffGeomsCmd::Do()
     }
 }
 
-void DiffGeomsCmd::Undo()
-{
-    if (model_)
-    {
-        model_->Delete(wxDataViewItem(dGeom_.get()), true);
-        SPGeomNodeVector geoms{ geom1_ , geom2_ };
-        model_->AddToStations(station_, geoms, true);
-    }
-}
-
-void DiffGeomsCmd::Redo()
-{
-    if (model_ && geom1_ && geom2_)
-    {
-        wxDataViewItemArray geoms;
-        geoms.push_back(wxDataViewItem(geom1_.get()));
-        geoms.push_back(wxDataViewItem(geom2_.get()));
-
-        if (!geoms.empty())
-        {
-            model_->Delete(geoms, true);
-        }
-
-        model_->AddToStation(station_, dGeom_, true);
-    }
-}
-
 wxString DiffGeomsCmd::GetDescription() const
 {
     return wxString(wxT("Difference geometries"));
+}
+
+wxString XORGeomsCmd::GetDescription() const
+{
+    return wxString(wxT("Exclusive OR geometries"));
 }

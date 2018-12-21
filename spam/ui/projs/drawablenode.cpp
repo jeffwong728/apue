@@ -242,7 +242,16 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
             }
         }
 
-        if (Geom::contains(pv.front(), pt, false))
+        int numWinding = 0;
+        for (const Geom::Path &pth : pv)
+        {
+            if (Geom::contains(pth, pt, false))
+            {
+                numWinding += 1;
+            }
+        }
+
+        if (numWinding & 1)
         {
             sd.hs = HitState::kHsFace;
             sd.id = 0;

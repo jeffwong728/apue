@@ -72,6 +72,8 @@ public:
     void DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoNodeEdit(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoUnion(const SPDrawableNodeVector &selEnts);
+    void DoIntersection(const SPDrawableNodeVector &selEnts);
+    void DoXOR(const SPDrawableNode &dn1, const SPDrawableNode &dn2);
     void DoDifference(const SPDrawableNode &dn1, const SPDrawableNode &dn2);
     SPStationNode GetStation();
     SPDrawableNode FindDrawable(const Geom::Point &pt);

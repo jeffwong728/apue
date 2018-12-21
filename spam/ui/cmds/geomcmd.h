@@ -112,18 +112,19 @@ private:
     BezierData data_;
 };
 
-class UnionGeomsCmd : public SpamCmd
+class BoolCmd : public SpamCmd
 {
+protected:
+    enum {UnionOp, IntersectionOp};
 public:
-    UnionGeomsCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms, const wxString &wouldTitle);
+    BoolCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms, const wxString &wouldTitle);
 
 public:
-    void Do() wxOVERRIDE;
     void Undo() wxOVERRIDE;
     void Redo() wxOVERRIDE;
 
-public:
-    wxString GetDescription() const wxOVERRIDE;
+protected:
+    void BoolOp(const int op);
 
 private:
     wxString         wouldTitle_;
@@ -133,18 +134,44 @@ private:
     SPGeomNodeVector geoms_;
 };
 
-class DiffGeomsCmd : public SpamCmd
+class UnionGeomsCmd : public BoolCmd
 {
 public:
-    DiffGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const SPGeomNode &geom2, const wxString &wouldTitle);
+    UnionGeomsCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms, const wxString &wouldTitle) : BoolCmd(model, geoms, wouldTitle) {}
 
 public:
-    void Do() wxOVERRIDE;
-    void Undo() wxOVERRIDE;
-    void Redo() wxOVERRIDE;
+    void Do() wxOVERRIDE { BoolOp(BoolCmd::UnionOp); }
 
 public:
     wxString GetDescription() const wxOVERRIDE;
+};
+
+class IntersectionGeomsCmd : public BoolCmd
+{
+public:
+    IntersectionGeomsCmd(ProjTreeModel *model, const SPGeomNodeVector &geoms, const wxString &wouldTitle) : BoolCmd(model, geoms, wouldTitle) {}
+
+public:
+    void Do() wxOVERRIDE { BoolOp(BoolCmd::IntersectionOp); }
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+};
+
+class BinaryBoolGeomsCmd : public SpamCmd
+{
+protected:
+    enum { DiffOp, XOROp };
+
+public:
+    BinaryBoolGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const SPGeomNode &geom2, const wxString &wouldTitle);
+
+public:
+    void Undo() wxOVERRIDE;
+    void Redo() wxOVERRIDE;
+
+protected:
+    void BoolOp(const int op);
 
 private:
     wxString         wouldTitle_;
@@ -153,6 +180,30 @@ private:
     SPGeomNode       dGeom_;
     SPGeomNode       geom1_;
     SPGeomNode       geom2_;
+};
+
+class DiffGeomsCmd : public BinaryBoolGeomsCmd
+{
+public:
+    DiffGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const SPGeomNode &geom2, const wxString &wouldTitle) : BinaryBoolGeomsCmd(model, geom1, geom2, wouldTitle) {}
+
+public:
+    void Do() wxOVERRIDE { BoolOp(BinaryBoolGeomsCmd::DiffOp); }
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+};
+
+class XORGeomsCmd : public BinaryBoolGeomsCmd
+{
+public:
+    XORGeomsCmd(ProjTreeModel *model, const SPGeomNode &geom1, const SPGeomNode &geom2, const wxString &wouldTitle) : BinaryBoolGeomsCmd(model, geom1, geom2, wouldTitle) {}
+
+public:
+    void Do() wxOVERRIDE { BoolOp(BinaryBoolGeomsCmd::XOROp); }
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
 };
 
 #endif //SPAM_UI_CMDS_GEOM_CMD_H

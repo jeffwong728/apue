@@ -117,6 +117,7 @@ void GeomBox::OnToolEnter(const ToolOptions &toolOpts)
         break;
 
     case kSpamID_TOOLBOX_GEOM_DIFF:
+    case kSpamID_TOOLBOX_GEOM_SYMDIFF:
         Spam::GetSelectionFilter()->Clear();
         Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_RECT);
         Spam::GetSelectionFilter()->AddPassType(SpamEntityType::kET_GEOM_ELLIPSE);
