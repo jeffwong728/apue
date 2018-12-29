@@ -235,6 +235,6 @@ bool ToolBox::CreateOption(const int toolIndex)
 void ToolBox::OnToolQuit(int toolId)
 {
     Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_MULTIPLE);
-    Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_NONE);
+    Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GENERAL);
     Spam::GetSelectionFilter()->AddAllPassType();
 }

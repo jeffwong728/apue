@@ -90,6 +90,7 @@ enum
 
     kSpamID_TOOLPAGE_PROBE,
     kSpamID_TOOLPAGE_GEOM,
+    kSpamID_TOOLPAGE_PROC,
     kSpamID_TOOLPAGE_MATCH,
     kSpamID_TOOLPAGE_MEASURE,
     kSpamID_TOOLPAGE_STYLE,
@@ -122,12 +123,23 @@ enum
     kSpamID_TOOLBOX_GEOM_SYMDIFF,
     kSpamID_TOOLBOX_GEOM_GUARD,
 
+    kSpamID_TOOLBOX_PROC_ENHANCEMENT,
+    kSpamID_TOOLBOX_PROC_THRESHOLD,
+    kSpamID_TOOLBOX_PROC_FILTER,
+    kSpamID_TOOLBOX_PROC_EDGE,
+    kSpamID_TOOLBOX_PROC_PYRAMID,
+    kSpamID_TOOLBOX_PROC_GUARD,
+
     kSpamID_TOOLBOX_NODE_MOVE,
     kSpamID_TOOLBOX_NODE_ADD,
     kSpamID_TOOLBOX_NODE_DELETE,
     kSpamID_TOOLBOX_NODE_SMOOTH,
     kSpamID_TOOLBOX_NODE_CUSP,
     kSpamID_TOOLBOX_NODE_SYMMETRIC,
+
+    kSpamID_TOOLBOX_PROBE_PIXEL,
+    kSpamID_TOOLBOX_PROBE_ENTITY,
+    kSpamID_TOOLBOX_PROBE_IMAGE,
 
     kSpamID_TOOLBOX_GEOM_FILL_COLOR,
     kSpamID_TOOLBOX_GEOM_FILL_ALPHA,
@@ -173,13 +185,14 @@ enum class SpamEntitySelectionMode
     kESM_NONE,
     kESM_MULTIPLE,
     kESM_SINGLE,
+    kESM_BOX_SINGLE,
 
     kESM_GUARD
 };
 
 enum class SpamEntityOperation
 {
-    kEO_NONE,
+    kEO_GENERAL,
     kEO_GEOM_CREATE,
     kEO_GEOM_TRANSFORM,
     kEO_VERTEX_MOVE,
@@ -226,6 +239,7 @@ extern const std::string cp_ToolGeomStrokeWidth;
 extern const std::string cp_ToolGeomStrokeJoin;
 extern const std::string cp_ToolGeomStrokeCap;
 extern const std::string cp_ToolGeomVertexEditMode;
+extern const std::string cp_ToolProbeMode;
 
 extern const std::string bm_Pointer;
 extern const std::string bm_PointerEdit;

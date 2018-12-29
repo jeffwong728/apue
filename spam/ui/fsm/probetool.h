@@ -19,14 +19,18 @@ struct ProbeTool : boost::statechart::simple_state<ProbeTool, Spamer, ProbeIdle>
     ProbeTool() : ProbeBoxTool(*this) {}
     ~ProbeTool() {}
 
-    void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override;
+    void OnOptionChanged(const EvToolOption &e);
+    void OnImageClicked(const EvImageClicked &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, ProbeTool>,
         boost::statechart::transition<EvToolQuit, NoTool>,
-        boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
-        boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
-        boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>> reactions;
+        boost::statechart::in_state_reaction<EvAppQuit,        BoxToolT,  &BoxToolT::QuitApp>,
+        boost::statechart::in_state_reaction<EvImageClicked,   ProbeTool, &ProbeTool::OnImageClicked>,
+        boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT,  &BoxToolT::DeleteDrawable>,
+        boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT,  &BoxToolT::SelectDrawable>> reactions;
+
+    ToolOptions toolOptions;
 };
 
 struct ProbeIdle : boost::statechart::simple_state<ProbeIdle, ProbeTool>
@@ -40,6 +44,7 @@ struct ProbeIdle : boost::statechart::simple_state<ProbeIdle, ProbeTool>
     typedef boost::mpl::list<
         boost::statechart::transition<EvLMouseDown, ProbeDraging, ProbeTool::BoxToolT, &ProbeTool::BoxToolT::StartBoxing>,
         boost::statechart::in_state_reaction<EvMouseMove, ProbeIdle, &ProbeIdle::OnSafari>,
+        boost::statechart::in_state_reaction<EvToolOption, ProbeTool, &ProbeTool::OnOptionChanged>,
         boost::statechart::in_state_reaction<EvCanvasLeave, ProbeIdle, &ProbeIdle::OnLeaveCanvas>> reactions;
 };
 

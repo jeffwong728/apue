@@ -41,7 +41,7 @@ bool PolygonNode::IsLegalHit(const SpamEntityOperation entityOp) const
 {
     switch (entityOp)
     {
-    case SpamEntityOperation::kEO_NONE:
+    case SpamEntityOperation::kEO_GENERAL:
     case SpamEntityOperation::kEO_GEOM_CREATE:
     case SpamEntityOperation::kEO_GEOM_TRANSFORM:
     case SpamEntityOperation::kEO_VERTEX_MOVE:

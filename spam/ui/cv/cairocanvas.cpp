@@ -780,6 +780,29 @@ void CairoCanvas::ShowPixelValue(const wxPoint &pos)
     }
 }
 
+void CairoCanvas::PopupImageInfomation(const wxPoint &pos)
+{
+    if (!srcImg_.empty())
+    {
+        int dph = srcImg_.depth();
+        int cnl = srcImg_.channels();
+        wxString::const_pointer dphStr[CV_16F + 1] = { wxT("8U"), wxT("8S"), wxT("16U"), wxT("16S"), wxT("32S"), wxT("32F"), wxT("64F"), wxT("16F") };
+
+        std::vector<wxString> messages;
+        messages.push_back(wxString::Format(wxT("<b>Channels:</b> %d"),  cnl));
+        messages.push_back(wxString::Format(wxT("<b>Depth:</b> %s"),  dphStr[dph]));
+        messages.push_back(wxString::Format(wxT("<b>Width:</b> %d"),  srcImg_.cols));
+        messages.push_back(wxString::Format(wxT("<b>Height:</b> %d"),  srcImg_.rows));
+        messages.push_back(wxString::Format(wxT("<b>Pixel Size:</b> %zd"), srcImg_.elemSize()));
+        messages.push_back(wxString::Format(wxT("<b>Pixel Size1:</b> %zd"), srcImg_.elemSize1()));
+        messages.push_back(wxString::Format(wxT("<b>Stride:</b> %zd"), srcImg_.step1()));
+
+        InformationTip *info = new InformationTip(this, messages, wxBitmap());
+        info->Position(ClientToScreen(pos), wxSize(0, 5));
+        info->Popup(this);
+    }
+}
+
 void CairoCanvas::OnSize(wxSizeEvent& e)
 {
     if (!disMat_.empty())

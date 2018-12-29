@@ -47,7 +47,7 @@ T SpamConfig::Get(const std::string &p, const T &v)
 class SelectionFilter
 {
 public:
-    SelectionFilter() : entityOp_(SpamEntityOperation::kEO_NONE) { AddAllPassType(); }
+    SelectionFilter() : entityOp_(SpamEntityOperation::kEO_GENERAL) { AddAllPassType(); }
 
 public:
     bool IsPass(const SPDrawableNode &dn) const;

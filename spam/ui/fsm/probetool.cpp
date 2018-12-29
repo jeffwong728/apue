@@ -2,8 +2,29 @@
 #include <wx/log.h>
 #include <ui/cv/cairocanvas.h>
 
-void ProbeTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
+void ProbeTool::OnOptionChanged(const EvToolOption &e)
 {
+    const int toolId = boost::get<int>(e.toolOptions.at(cp_ToolId));
+    if (kSpamID_TOOLBOX_PROBE_SELECT == toolId)
+    {
+        toolOptions = e.toolOptions;
+        BoxToolImpl::ResetTool();
+    }
+}
+
+void ProbeTool::OnImageClicked(const EvImageClicked &e)
+{
+    const int probeMode = boost::get<int>(toolOptions.at(cp_ToolProbeMode));
+    {
+        if (kSpamID_TOOLBOX_PROBE_IMAGE == probeMode)
+        {
+            CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
+            if (cav)
+            {
+                cav->PopupImageInfomation(e.evData.GetPosition());
+            }
+        }
+    }
 }
 
 void ProbeIdle::OnSafari(const EvMouseMove &e)
@@ -12,14 +33,18 @@ void ProbeIdle::OnSafari(const EvMouseMove &e)
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
     {
-        if (cav->IsInImageRect(e.evData.GetPosition()))
+        const int probeMode = boost::get<int>(context<ProbeTool>().toolOptions.at(cp_ToolProbeMode));
+        if (kSpamID_TOOLBOX_PROBE_PIXEL == probeMode)
         {
-            cav->DismissInstructionTip();
-            cav->ShowPixelValue(e.evData.GetPosition());
-        }
-        else
-        {
-            cav->StopInstructionTip();
+            if (cav->IsInImageRect(e.evData.GetPosition()))
+            {
+                cav->DismissInstructionTip();
+                cav->ShowPixelValue(e.evData.GetPosition());
+            }
+            else
+            {
+                cav->StopInstructionTip();
+            }
         }
     }
 }

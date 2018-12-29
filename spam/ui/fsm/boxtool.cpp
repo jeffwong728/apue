@@ -38,7 +38,8 @@ void BoxToolImpl::ContinueBoxing(const EvMouseMove &e)
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
         Geom::Rect  newRect{ anchor , freePt };
-        if (SpamEntitySelectionMode::kESM_MULTIPLE == Spam::GetSelectionFilter()->GetEntitySelectionMode())
+        SpamEntitySelectionMode selMode = Spam::GetSelectionFilter()->GetEntitySelectionMode();
+        if (SpamEntitySelectionMode::kESM_MULTIPLE == selMode || SpamEntitySelectionMode::kESM_BOX_SINGLE == selMode)
         {
             cav->DrawBox(rect, newRect);
         }
@@ -100,6 +101,14 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
                     newSelEnts.push_back(fEnt);
                     FireClickEntity(fEnt, e.evData, freePt, sd);
                 }
+                else
+                {
+                    FireClickImage(e.evData);
+                }
+            }
+            else
+            {
+                FireEndBoxing(rect, e.evData);
             }
         }
 

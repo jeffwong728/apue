@@ -4,6 +4,10 @@
 #include <boost/statechart/event.hpp>
 #include <ui/cmndef.h>
 #include <ui/projs/modelfwd.h>
+#pragma warning( push )
+#pragma warning( disable : 4819 4003 )
+#include <2geom/2geom.h>
+#pragma warning( pop )
 
 struct EvLMouseDown : boost::statechart::event<EvLMouseDown>
 {
@@ -83,6 +87,19 @@ struct EvDrawableSelect : boost::statechart::event<EvDrawableSelect>
 {
     EvDrawableSelect(const SPDrawableNodeVector &dras) : drawables(dras) {}
     SPDrawableNodeVector drawables;
+};
+
+struct EvImageClicked : boost::statechart::event<EvImageClicked>
+{
+    EvImageClicked(const wxMouseEvent &e) : evData(e) {}
+    wxMouseEvent evData;
+};
+
+struct EvBoxingEnded : boost::statechart::event<EvBoxingEnded>
+{
+    EvBoxingEnded(const Geom::OptRect &b, const wxMouseEvent &e) : boxRect(b), mData(e) {}
+    Geom::OptRect boxRect;
+    wxMouseEvent  mData;
 };
 
 // MSM events

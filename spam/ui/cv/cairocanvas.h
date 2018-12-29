@@ -88,6 +88,7 @@ public:
     void SetInstructionTip(const wxString &message, const std::string &icon, const wxPoint &pos);
     void StopInstructionTip();
     void ShowPixelValue(const wxPoint &pos);
+    void PopupImageInfomation(const wxPoint &pos);
 
 private:
     void OnSize(wxSizeEvent& event);

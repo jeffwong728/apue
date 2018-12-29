@@ -38,6 +38,7 @@ set(ui_core_SRCS
   toolbox/probebox.cpp
   toolbox/matchbox.cpp
   toolbox/geombox.cpp
+  toolbox/procbox.cpp
   fsm/boxtool.cpp
   fsm/edittool.cpp
   fsm/booltool.cpp
@@ -95,6 +96,7 @@ set(ui_core_HEADERS
   toolbox/probebox.h
   toolbox/matchbox.h
   toolbox/geombox.h
+  toolbox/procbox.h
   fsm/boxtool.h
   fsm/edittool.h
   fsm/booltool.h

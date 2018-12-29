@@ -64,24 +64,14 @@ double CVImagePanel::SetImage(const cv::Mat &img)
             wxT("CV_64F")
         };
 
-        wxLogMessage(wxT("channels : %d"), cnl);
         if (CV_8U == dph)
         {
-            wxLogMessage(wxT("depth : %s"), dphStr[dph]);
-
             wxSizerItem* sizerItem = GetSizer()->GetItemById(kSpamImageCanvas);
             if (sizerItem)
             {
                 auto cvWidget = dynamic_cast<CairoCanvas *>(sizerItem->GetWindow());
                 if (cvWidget)
                 {
-                    wxSize cvImgSize{ img_.cols, img_.rows };
-                    wxLogMessage(wxT("width : %d"), cvImgSize.GetX());
-                    wxLogMessage(wxT("height : %d"), cvImgSize.GetY());
-                    wxLogMessage(wxT("elemSize : %zd"), img_.elemSize());
-                    wxLogMessage(wxT("elemSize1 : %zd"), img_.elemSize1());
-                    wxLogMessage(wxT("step1 : %zd"), img_.step1());
-
                     cvWidget->ShowImage(img_);
                     double newScale = cvWidget->GetMatScale();
                     if (newScale > 0)
