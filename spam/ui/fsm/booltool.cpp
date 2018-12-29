@@ -1,8 +1,40 @@
 #include "booltool.h"
 #include <wx/log.h>
+#include <wx/dcgraph.h>
 #include <ui/spam.h>
 #include <ui/cv/cairocanvas.h>
 #include <ui/toplevel/rootframe.h>
+
+void CanvasCursorManipulator::EnterCanvas(const EvCanvasEnter &e, const std::string &bmName)
+{
+    const SpamIconPurpose ip = kICON_PURPOSE_CURSOR;
+    wxBitmap curIcon = Spam::GetBitmap(ip, bmName);
+
+    if (curIcon.IsOk())
+    {
+        wxBitmap cursorImg;
+        cursorImg.Create(32, 32);
+        cursorImg.UseAlpha();
+        wxMemoryDC memDC(cursorImg);
+        wxGCDC dc(memDC);
+        dc.SetBackground(*wxTRANSPARENT_BRUSH);
+
+        dc.SetPen(*wxLIGHT_GREY_PEN);
+        dc.SetBrush(*wxBLACK_BRUSH);
+        const wxPoint points[] = { { 0, 0 },{ 4, 8 },{ 5, 5 },{ 8, 4 } };
+        dc.DrawPolygon(4, points);
+        dc.DrawBitmap(curIcon, wxPoint(8, 8));
+
+        memDC.SelectObject(wxNullBitmap);
+
+        auto img = cursorImg.ConvertToImage();
+        img.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_X, 0);
+        img.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_Y, 0);
+
+        CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
+        cav->SetCursor(wxCursor(img));
+    }
+}
 
 void UnionTool::OnMMouseDown(const EvMMouseDown &e)
 {
@@ -18,6 +50,12 @@ void UnionTool::OnMMouseDown(const EvMMouseDown &e)
     }
 }
 
+void UnionTool::OnEnterCanvas(const EvCanvasEnter &e)
+{
+    CanvasCursorManipulator::EnterCanvas(e, bm_PathUnion);
+    BoxToolT::EnterCanvas(e);
+}
+
 void IntersectionTool::OnMMouseDown(const EvMMouseDown &e)
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
@@ -30,6 +68,12 @@ void IntersectionTool::OnMMouseDown(const EvMMouseDown &e)
             cav->DoIntersection(selEnts);
         }
     }
+}
+
+void IntersectionTool::OnEnterCanvas(const EvCanvasEnter &e)
+{
+    CanvasCursorManipulator::EnterCanvas(e, bm_PathInter);
+    BoxToolT::EnterCanvas(e);
 }
 
 void BinaryBoolOperatorDef::invalidate_operands::operator()(evt_quit_tool const& e, BinaryBoolOperatorDef&, Wait2ndOperand &s, Wait2ndOperand& t)
@@ -125,6 +169,12 @@ void DiffTool::OnMMouseDown(const EvMMouseDown &e)
     }
 }
 
+void DiffTool::OnEnterCanvas(const EvCanvasEnter &e)
+{
+    CanvasCursorManipulator::EnterCanvas(e, bm_PathDiff);
+    BoxToolT::EnterCanvas(e);
+}
+
 void DiffTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
 {
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.GetEventObject());
@@ -175,6 +225,12 @@ void XORTool::OnMMouseDown(const EvMMouseDown &e)
             XORer.process_event(evt_apply(cav->GetUUID()));
         }
     }
+}
+
+void XORTool::OnEnterCanvas(const EvCanvasEnter &e)
+{
+    CanvasCursorManipulator::EnterCanvas(e, bm_PathXOR);
+    BoxToolT::EnterCanvas(e);
 }
 
 void XORTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const

@@ -3,7 +3,9 @@
 #include "modelfwd.h"
 #include "modelnode.h"
 #include "drawablenode.h"
+#include <ui/proc/rgn.h>
 namespace Geom {
+    class Point;
     class PathVector;
 }
 
@@ -17,11 +19,15 @@ public:
 
 public:
     bool IsContainer() const wxOVERRIDE { return false; }
+    std::shared_ptr<SpamRgn> ToRegion() const;
 
 public:
     EntitySigType GetCreateSigType() const wxOVERRIDE;
     EntitySigType GetAddSigType() const wxOVERRIDE;
     EntitySigType GetDeleteSigType() const wxOVERRIDE;
+
+private:
+    static bool IsPointInside(Geom::PathVector &pv, const Geom::Point &pt);
 };
 
 #endif //SPAM_UI_PROJS_GEOM_NODE_H

@@ -20,6 +20,8 @@
 #include <ui/toolbox/probebox.h>
 #include <ui/toolbox/matchbox.h>
 #include <ui/toolbox/geombox.h>
+#include <ui/misc/percentvalidator.h>
+#include <ui/proc/rgn.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <wx/artprov.h>
@@ -51,7 +53,6 @@
 #endif
 #include <boost/python.hpp>
 #pragma warning( pop )
-#include <ui/misc/percentvalidator.h>
 
 RootFrame::RootFrame()
     : wxFrame(NULL, wxID_ANY, wxT("Spam"))
@@ -374,32 +375,37 @@ void RootFrame::OnClose(wxCloseEvent& e)
 
 void RootFrame::OnAbout(wxCommandEvent& event)
 {
-    cv::Mat src(480, 640, CV_8UC4);
+    wxAuiNotebook *stationNB = GetStationNotebook();
+    wxWindow *page = stationNB->GetCurrentPage();
+    CairoCanvas *canv = FindCanvasByUUID(page->GetName());
+    ProjTreeModel *model = Spam::GetModel();
+    SPStationNode station = model->FindStationByUUID(page->GetName());
 
-    Geom::PathVector pv1 = Geom::parse_svg_path("M 145.14285,117.83929 A 60.098213,34.773811 0 0 1 85.04464,152.6131 60.098213,34.773811 0 0 1 24.946426,117.83929 60.098213,34.773811 0 0 1 85.04464,83.065475 60.098213,34.773811 0 0 1 145.14285,117.83929 Z");
-    Geom::PathVector pv3 = Geom::parse_svg_path("M 60.47619,188.14285 C 68.791666,122.375 55.184523,1.422619 84.666666,50.559522 114.14881,99.696427 168.57738,179.07143 114.14881,183.60714 c -54.428572,4.53571 -53.67262,4.53571 -53.67262,4.53571 z");
-    auto pvr = sp_pathvector_boolop(pv3, pv1, bool_op_union, fill_nonZero, fill_nonZero);
-    auto pvr1 = sp_pathvector_boolop(pv3, pv1, bool_op_inters, fill_nonZero, fill_nonZero)*Geom::Translate(100, 100);
-    auto pvr2 = sp_pathvector_boolop(pv3, pv1, bool_op_symdiff, fill_nonZero, fill_nonZero)*Geom::Translate(200, 200);
+    cv::Mat srcMat, dstMat;
+    cv::Mat img = station->GetImage();
 
-    auto d = "M 394.28516 353.94922 A 182.85715 192.85715 0 0 0 211.42773 546.80469 A 182.85715 192.85715 0 0 0 394.28516 739.66211 A 182.85715 192.85715 0 0 0 577.14258 546.80469 A 182.85715 192.85715 0 0 0 394.28516 353.94922 z M 370.01367 475.80859 C 402.86279 475.57396 463.57143 480.64424 480 519.66211 C 502.85715 573.9478 488.57171 579.6627 442.85742 625.37695 C 397.14313 671.09125 360 619.66238 320 582.51953 C 280 545.37668 314.28655 548.23326 348.57227 476.80469 C 348.57227 476.80469 357.15967 475.90041 370.01367 475.80859 z ";
-    Geom::PathVector hole = Geom::parse_svg_path(d)*Geom::Scale(0.5, 0.5);
-    BeziergonNode(SPModelNode(), wxT(""), hole);
+    int dph = img.depth();
+    int cnl = img.channels();
 
-    auto imgSurf = cairo_image_surface_create_for_data(src.data, CAIRO_FORMAT_RGB24, src.cols, src.rows, src.step1());
-    auto cr = cairo_create(imgSurf);
+    if (CV_8U == dph && (1 == cnl || 3 == cnl || 4 == cnl))
+    {
+        if (1 == cnl)
+        {
+            srcMat = img;
+            
+        }
+        else if (3 == cnl)
+        {
+            cv::cvtColor(img, srcMat, cv::COLOR_BGR2GRAY);
+        }
+        else
+        {
+            cv::cvtColor(img, srcMat, cv::COLOR_BGRA2GRAY);
+        }
+    }
 
-    Geom::CairoPathSink cairoPathSink(cr);
-    cairo_set_line_width(cr, 3);
-    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 0.3);
-    cairoPathSink.feed(pvr);
-    cairoPathSink.feed(hole);
-    cairo_stroke_preserve(cr);
-    cairo_set_source_rgba(cr, 0.0, 0.8, 0.8, 0.2);
-    cairo_fill(cr);
-    cairo_destroy(cr);
-    cairo_surface_destroy(imgSurf);
-    cv::imwrite(cv::String("C:\\Users\\wwang\\Desktop\\dest.png"), src);
+    SpamRgn rgn;
+    rgn.AddRun(srcMat);
 }
 
 void RootFrame::OnHello(wxCommandEvent& event)
@@ -465,55 +471,6 @@ void RootFrame::OnLoadImage(wxCommandEvent& event)
                 }
             }
         }
-#if 0
-        auto src = cv::imread(cv::String(fullPath.c_str()), cv::IMREAD_COLOR);
-
-        cv::Mat disSrc;
-        cv::cvtColor(src, disSrc, cv::COLOR_BGR2BGRA);
-
-        const auto tilePanel = dynamic_cast<const CVImagePanel *>(wxAuiMgr_.GetPane(wxT("cv1")).window);
-        tilePanel->AdjustImgWndSize(nCVWndId % 2, wxSize(disSrc.cols, disSrc.rows));
-
-        const auto &curImgWnd = cvWndNames[nCVWndId % 2];
-        const cv::Rect imgWndSize = cv::getWindowImageRect(curImgWnd);
-
-        Geom::PathVector pv = Geom::parse_svg_path("m 28.969534,110.28325 c -1.796599,4.42678 -3.748208,10.61397 -6.128371,19.63472 -8.420958,31.9152 -6.755309,21.93975 -8.597107,54.44133 h 16.705972 c -0.963418,-7.97698 -1.687496,-16.75675 -1.044576,-26.77407 2.11937,-33.0219 2.119647,-12.49504 22.606885,-40.16203 2.097235,-2.83221 3.939323,-5.18938 5.599081,-7.13995 z m 56.585786,0 c 4.527431,2.5729 10.232013,5.43577 17.82154,8.03252 33.90992,11.60229 14.12926,16.95702 45.91981,54.44133 4.25123,5.01264 7.36171,8.75065 9.61416,11.6022 h 17.35164 c -4.15814,-9.44396 -9.55048,-21.56978 -12.83674,-37.48431 -4.59873,-22.27048 -12.31725,-30.62014 -22.92706,-36.59174 z");
-        Geom::Affine a1 = Geom::Scale(0.99, 0.99);
-        Geom::Affine a2 = Geom::Translate(disSrc.cols / 2, disSrc.rows / 2);
-        pv = pv*(a1*a2);
-
-        Geom::PathVector pv1 = Geom::parse_svg_path("M 145.14285,117.83929 A 60.098213,34.773811 0 0 1 85.04464,152.6131 60.098213,34.773811 0 0 1 24.946426,117.83929 60.098213,34.773811 0 0 1 85.04464,83.065475 60.098213,34.773811 0 0 1 145.14285,117.83929 Z");
-        Geom::PathVector pv3 = Geom::parse_svg_path("M 60.47619,188.14285 C 68.791666,122.375 55.184523,1.422619 84.666666,50.559522 114.14881,99.696427 168.57738,179.07143 114.14881,183.60714 c -54.428572,4.53571 -53.67262,4.53571 -53.67262,4.53571 z");
-        auto pvr = sp_pathvector_boolop(pv3, pv1, bool_op_union, fill_nonZero, fill_nonZero)*Geom::Scale(2, 2);
-
-        auto imgSurf = cairo_image_surface_create_for_data(disSrc.data, CAIRO_FORMAT_RGB24, disSrc.cols, disSrc.rows, disSrc.step1());
-        auto cr = cairo_create(imgSurf);
-
-        Geom::Point ctrlPts[4] = { Geom::Point(200, 200), Geom::Point(100, 200), Geom::Point(100, 300), Geom::Point(100, 400) };
-        Geom::CubicBezier cb(ctrlPts[0], ctrlPts[1], ctrlPts[2], ctrlPts[3]);
-        Geom::Path pv2;
-        pv2.append(cb);
-        pv2.close();
-
-        Geom::CairoPathSink cairoPathSink(cr);
-        cairo_set_line_width(cr, 3);
-        cairo_set_source_rgba(cr, 0.0, 0.8, 0.8, 0.2);
-        cairoPathSink.feed(pv);
-        cairoPathSink.feed(pvr);
-        //cairo_stroke(cr);
-        cairo_fill(cr);
-        cairo_destroy(cr);
-        cairo_surface_destroy(imgSurf);
-        //cv::imwrite(cv::String("C:\\Users\\wwang\\Desktop\\dest.png"), disSrc);
-
-        //cv::drawMarker(disSrc, cv::Point(200, 200), cv::Scalar(0, 0, 255), cv::MARKER_DIAMOND, 10, 3);
-        //cv::drawMarker(disSrc, cv::Point(100, 200), cv::Scalar(0, 0, 255), cv::MARKER_DIAMOND, 10, 3);
-        //cv::drawMarker(disSrc, cv::Point(100, 300), cv::Scalar(0, 0, 255), cv::MARKER_DIAMOND, 10, 3);
-        //cv::drawMarker(disSrc, cv::Point(100, 400), cv::Scalar(0, 0, 255), cv::MARKER_DIAMOND, 10, 3);
-
-        cv::imshow(curImgWnd, disSrc);
-        nCVWndId += 1;
-#endif
     }
 }
 

@@ -32,12 +32,18 @@ using DiffBoxTool         = BoxTool<DiffTool,         kSpamID_TOOLBOX_GEOM_DIFF>
 using XORBoxTool          = BoxTool<XORTool,          kSpamID_TOOLBOX_GEOM_SYMDIFF>;
 using IntersectionBoxTool = BoxTool<IntersectionTool, kSpamID_TOOLBOX_GEOM_INTERS>;
 
+struct CanvasCursorManipulator
+{
+    static void EnterCanvas(const EvCanvasEnter &e, const std::string &bmName);
+};
+
 struct UnionTool : boost::statechart::simple_state<UnionTool, Spamer, UnionToolIdle>, UnionBoxTool
 {
     using BoxToolT = BoxToolImpl;
     UnionTool() : UnionBoxTool(*this) {}
     ~UnionTool() {}
     void OnMMouseDown(const EvMMouseDown &e);
+    void OnEnterCanvas(const EvCanvasEnter &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, UnionTool>,
@@ -45,6 +51,7 @@ struct UnionTool : boost::statechart::simple_state<UnionTool, Spamer, UnionToolI
         boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
+        boost::statechart::in_state_reaction<EvCanvasEnter, UnionTool, &UnionTool::OnEnterCanvas>,
         boost::statechart::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
 };
 
@@ -76,6 +83,7 @@ struct IntersectionTool : boost::statechart::simple_state<IntersectionTool, Spam
     IntersectionTool() : IntersectionBoxTool(*this) {}
     ~IntersectionTool() {}
     void OnMMouseDown(const EvMMouseDown &e);
+    void OnEnterCanvas(const EvCanvasEnter &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, IntersectionTool>,
@@ -83,6 +91,7 @@ struct IntersectionTool : boost::statechart::simple_state<IntersectionTool, Spam
         boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
+        boost::statechart::in_state_reaction<EvCanvasEnter, IntersectionTool, &IntersectionTool::OnEnterCanvas>,
         boost::statechart::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
 };
 
@@ -199,6 +208,7 @@ struct DiffTool : boost::statechart::simple_state<DiffTool, Spamer, DiffToolIdle
     ~DiffTool();
 
     void OnMMouseDown(const EvMMouseDown &e);
+    void OnEnterCanvas(const EvCanvasEnter &e);
     void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override;
 
     typedef boost::mpl::list<
@@ -207,6 +217,7 @@ struct DiffTool : boost::statechart::simple_state<DiffTool, Spamer, DiffToolIdle
         boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
+        boost::statechart::in_state_reaction<EvCanvasEnter, DiffTool, &DiffTool::OnEnterCanvas>,
         boost::statechart::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
 
     mutable std::map<std::string, BinaryBoolOperator> differs;
@@ -241,6 +252,7 @@ struct XORTool : boost::statechart::simple_state<XORTool, Spamer, XORToolIdle>, 
     ~XORTool();
 
     void OnMMouseDown(const EvMMouseDown &e);
+    void OnEnterCanvas(const EvCanvasEnter &e);
     void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override;
 
     typedef boost::mpl::list<
@@ -249,6 +261,7 @@ struct XORTool : boost::statechart::simple_state<XORTool, Spamer, XORToolIdle>, 
         boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
+        boost::statechart::in_state_reaction<EvCanvasEnter, XORTool, &XORTool::OnEnterCanvas>,
         boost::statechart::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
 
     mutable std::map<std::string, BinaryBoolOperator> XORers;

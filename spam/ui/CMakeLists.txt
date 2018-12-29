@@ -14,6 +14,7 @@ set(ui_core_SRCS
   dlg/openprojdlg.cpp
   misc/percentvalidator.cpp
   misc/scopedtimer.cpp
+  misc/instructiontip.cpp
   projs/drawstyle.cpp
   projs/modelnode.cpp
   projs/nodefactory.cpp
@@ -49,6 +50,7 @@ set(ui_core_SRCS
   fsm/nodeedittool.cpp
   fsm/polygontool.cpp
   fsm/beziergontool.cpp
+  proc/rgn.cpp
 )
 
 set(ui_core_HEADERS 
@@ -68,6 +70,7 @@ set(ui_core_HEADERS
   dlg/openprojdlg.h
   misc/percentvalidator.h
   misc/scopedtimer.h
+  misc/instructiontip.h
   projs/drawstyle.h
   projs/modelfwd.h
   projs/modelnode.h
@@ -105,6 +108,7 @@ set(ui_core_HEADERS
   fsm/beziergontool.h
   fsm/polygontool.h
   fsm/events.h
+  proc/rgn.h
 )
 
 if(MSVC)
@@ -134,7 +138,7 @@ list(APPEND libs CAIRO::cairo)
 list(APPEND libs CAIROMM::CAIROMM)
 list(APPEND libs SKIA::skia)
 list(APPEND libs SKIA::pathkit)
-list(APPEND libs TBB::tbb)
+list(APPEND libs TBB::tbb TBB::tbbmalloc)
 list(APPEND libs hdf5::hdf5_cpp-static)
 list(APPEND libs hdf5::hdf5_hl_cpp-static)
 list(APPEND libs opencv_core)

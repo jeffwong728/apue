@@ -7,6 +7,7 @@
     #include <wx/wx.h>
 #endif
 #include <ui/projs/modelfwd.h>
+#include <ui/misc/instructiontip.h>
 #include <string>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
@@ -55,8 +56,9 @@ public:
     void ScaleDown(double val);
     double GetMatScale() const;
     bool HasImage() const { return !srcMat_.empty() && !disMat_.empty(); }
+    bool IsInImageRect(const wxPoint &pt) const;
     wxRealPoint ScreenToDispImage(const wxPoint &pt);
-    wxRealPoint ScreenToImage(const wxPoint &pt);
+    wxRealPoint ScreenToImage(const wxPoint &pt) const;
     void DrawDrawables(const SPDrawableNodeVector &des);
     void EraseDrawables(const SPDrawableNodeVector &des);
     void HighlightDrawable(const SPDrawableNode &de);
@@ -81,6 +83,11 @@ public:
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
     std::string GetUUID() const { return stationUUID_.ToStdString(); }
     void ModifyDrawable(const SPDrawableNode &ent, const Geom::Point &pt, const SelectionData &sd, const int editMode);
+    void DismissInstructionTip();
+    void SetInstructionTip(std::vector<wxString> &&messages, const wxPoint &pos);
+    void SetInstructionTip(const wxString &message, const std::string &icon, const wxPoint &pos);
+    void StopInstructionTip();
+    void ShowPixelValue(const wxPoint &pos);
 
 private:
     void OnSize(wxSizeEvent& event);
@@ -100,6 +107,7 @@ private:
     void OnDeleteEntities(wxCommandEvent &cmd);
     void OnPushToBack(wxCommandEvent &cmd);
     void OnBringToFront(wxCommandEvent &cmd);
+    void OnTipTimer(wxTimerEvent &e);
     void Draw(wxDC &dc, const Geom::OptRect &rect);
     void Draw(wxDC &dc, const Geom::Path &pth);
     void DrawBox(wxDC &dc, const Geom::Path &pth);
@@ -117,6 +125,7 @@ private:
 private:
     cv::String cvWndName_;
     wxString stationUUID_;
+    cv::Mat srcImg_;
     cv::Mat srcMat_;
     cv::Mat disMat_;
     cv::Mat scrMat_;
@@ -126,6 +135,11 @@ private:
     int cEllipse_{0};
     int cPolygon_{ 0 };
     int cBeziergon_{0};
+    std::unique_ptr<wxTimer> tipTimer_;
+    std::unique_ptr<InstructionTip> tip_;
+    std::vector<wxString> tipMessages_;
+    std::string tipIcon_;
+    wxPoint     tipPos_;
 };
 
 class DnDImageFile : public wxFileDropTarget

@@ -8,6 +8,8 @@
 #include <ui/cmds/geomcmd.h>
 #include <ui/cmds/transcmd.h>
 #include <wx/graphics.h>
+#include <wx/popupwin.h>
+#include <wx/artprov.h>
 #include <algorithm>
 #include <cairomm/win32_surface.h>
 //#include <tbb/tbb.h>
@@ -38,6 +40,7 @@ CairoCanvas::CairoCanvas(wxWindow* parent, const std::string &cvWinName, const w
     Bind(wxEVT_MENU,             &CairoCanvas::OnDeleteEntities,  this, kSpamID_DELETE_ENTITIES);
     Bind(wxEVT_MENU,             &CairoCanvas::OnPushToBack,      this, kSpamID_PUSH_TO_BACK);
     Bind(wxEVT_MENU,             &CairoCanvas::OnBringToFront,    this, kSpamID_BRING_TO_FRONT);
+    Bind(wxEVT_TIMER,            &CairoCanvas::OnTipTimer,        this, wxID_ANY);
 
     SetDropTarget(new DnDImageFile(parent));
 }
@@ -50,6 +53,7 @@ void CairoCanvas::ShowImage(const cv::Mat &img)
 {
     int dph = img.depth();
     int cnl = img.channels();
+    srcImg_ = img;
 
     if (CV_8U == dph && (1==cnl || 3==cnl || 4==cnl))
     {
@@ -139,6 +143,24 @@ double CairoCanvas::GetMatScale() const
     } 
 }
 
+bool CairoCanvas::IsInImageRect(const wxPoint &pt) const
+{
+    if (!srcImg_.empty())
+    {
+        int dph = srcImg_.depth();
+        int cnl = srcImg_.channels();
+
+        wxPoint imgPt = wxPoint(ScreenToImage(pt));
+        wxRect imgRect(wxPoint(0, 0), wxPoint(srcImg_.cols - 1, srcImg_.rows - 1));
+        if (CV_8U == dph && (1 == cnl || 3 == cnl || 4 == cnl) && imgRect.Contains(imgPt))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 wxRealPoint CairoCanvas::ScreenToDispImage(const wxPoint &pt)
 {
     auto uspt = CalcUnscrolledPosition(pt) - wxSize(anchorX_, anchorY_);
@@ -153,7 +175,7 @@ wxRealPoint CairoCanvas::ScreenToDispImage(const wxPoint &pt)
     }
 }
 
-wxRealPoint CairoCanvas::ScreenToImage(const wxPoint &pt)
+wxRealPoint CairoCanvas::ScreenToImage(const wxPoint &pt) const
 {
     auto uspt = CalcUnscrolledPosition(pt) - wxSize(anchorX_, anchorY_);
 
@@ -662,6 +684,102 @@ void CairoCanvas::ModifyDrawable(const SPDrawableNode &ent, const Geom::Point &p
     }
 }
 
+void CairoCanvas::DismissInstructionTip()
+{
+    if (tip_)
+    {
+        tip_->Show(false);
+        tip_.reset();
+    }
+
+    if (tipTimer_)
+    {
+        tipTimer_->Stop();
+        tipTimer_->StartOnce(500);
+    }
+    else
+    {
+        tipTimer_ = std::make_unique<wxTimer>(this, wxID_ANY);
+        tipTimer_->StartOnce(500);
+    }
+}
+
+void CairoCanvas::SetInstructionTip(std::vector<wxString> &&messages, const wxPoint &pos)
+{
+    tipPos_ = pos;
+
+    if (!std::equal(tipMessages_.cbegin(), tipMessages_.cend(), messages.cbegin(), messages.cend()))
+    {
+        tipMessages_ = messages;
+    }
+}
+
+void CairoCanvas::SetInstructionTip(const wxString &message, const std::string &icon, const wxPoint &pos)
+{
+    if (icon != tipIcon_) tipIcon_ = icon;
+    tipPos_ = pos;
+
+    if (1 == tipMessages_.size() && tipMessages_.front() == message)
+    {
+        return;
+    }
+
+    tipMessages_.clear();
+    tipMessages_.push_back(message);
+}
+
+void CairoCanvas::StopInstructionTip()
+{
+    if (tip_)
+    {
+        tip_.reset();
+    }
+
+    if (tipTimer_)
+    {
+        tipTimer_.reset();
+    }
+}
+
+void CairoCanvas::ShowPixelValue(const wxPoint &pos)
+{
+    if (!srcImg_.empty())
+    {
+        int dph = srcImg_.depth();
+        int cnl = srcImg_.channels();
+
+        wxPoint imgPt = wxPoint(ScreenToImage(pos));
+        wxRect imgRect(wxPoint(0, 0), wxPoint(srcImg_.cols-1, srcImg_.rows-1));
+        if (CV_8U == dph && (1 == cnl || 3 == cnl || 4 == cnl) && imgRect.Contains(imgPt))
+        {
+            std::vector<wxString> messages;
+            if (1 == cnl)
+            {
+                auto pPixel = srcImg_.data + imgPt.y * srcImg_.step1() + imgPt.x;
+                auto pixelVal = pPixel[0];
+                messages.push_back(wxString::Format(wxT("Grayscale: %u"), pPixel[0]));
+            }
+            else if (3 == cnl)
+            {
+                auto pPixel = srcImg_.data + imgPt.y * srcImg_.step1() + imgPt.x * 3;
+                messages.push_back(wxString::Format(wxT("<span foreground='red'>R: %u</span>"), pPixel[2]));
+                messages.push_back(wxString::Format(wxT("<span foreground='green'>G: %u</span>"), pPixel[1]));
+                messages.push_back(wxString::Format(wxT("<span foreground='blue'>B: %u</span>"), pPixel[0]));
+            }
+            else
+            {
+                auto pPixel = srcImg_.data + imgPt.y * srcImg_.step1() + imgPt.x * 4;
+                messages.push_back(wxString::Format(wxT("<span foreground='red'>R: %u</span>"), pPixel[2]));
+                messages.push_back(wxString::Format(wxT("<span foreground='green'>G: %u</span>"), pPixel[1]));
+                messages.push_back(wxString::Format(wxT("<span foreground='blue'>B: %u</span>"), pPixel[0]));
+                messages.push_back(wxString::Format(wxT("<span foreground='black'>Alpha: %u</span>"), pPixel[3]));
+            }
+
+            SetInstructionTip(std::move(messages), pos);
+        }
+    }
+}
+
 void CairoCanvas::OnSize(wxSizeEvent& e)
 {
     if (!disMat_.empty())
@@ -873,6 +991,33 @@ void CairoCanvas::OnBringToFront(wxCommandEvent &cmd)
 
             station->GetChildren().insert(station->GetChildren().begin(), drawables.cbegin(), drawables.cend());
             DrawPathVector(Geom::PathVector(), refreshRect);
+        }
+    }
+}
+
+void CairoCanvas::OnTipTimer(wxTimerEvent &e)
+{
+    if (tipTimer_ && tipTimer_->GetId() == e.GetTimer().GetId())
+    {
+        if (!tip_ && !tipMessages_.empty() && !tipMessages_.front().empty())
+        {
+            wxBitmap iBitmap = Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, tipIcon_);
+            if (!iBitmap.IsOk() && !tipIcon_.empty())
+            {
+                iBitmap = wxArtProvider::GetBitmap(wxART_ERROR, wxART_OTHER);
+            }
+            if (1== tipMessages_.size())
+            {
+                tip_ = std::make_unique<InstructionTip>(this, tipMessages_.front(), iBitmap);
+            }
+            else
+            {
+                tip_ = std::make_unique<InstructionTip>(this, tipMessages_, iBitmap);
+            }
+
+            wxPoint pos = ClientToScreen(tipPos_);
+            tip_->Position(pos+wxPoint(32, 0), wxSize());
+            tip_->Show();
         }
     }
 }

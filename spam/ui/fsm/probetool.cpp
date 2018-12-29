@@ -2,92 +2,34 @@
 #include <wx/log.h>
 #include <ui/cv/cairocanvas.h>
 
-ProbeTool::ProbeTool()
+void ProbeTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
 {
-    wxLogMessage(wxT("ProbeTool Enter."));
 }
 
-ProbeTool::~ProbeTool()
+void ProbeIdle::OnSafari(const EvMouseMove &e)
 {
-    wxLogMessage(wxT("ProbeTool Quit."));
-}
-
-void ProbeTool::OnStartDraging(const EvLMouseDown &e)
-{
+    context<ProbeTool>().Safari(e);
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
     {
-        if (!cav->HasCapture())
+        if (cav->IsInImageRect(e.evData.GetPosition()))
         {
-            cav->CaptureMouse();
+            cav->DismissInstructionTip();
+            cav->ShowPixelValue(e.evData.GetPosition());
         }
-        
-        auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
-        anchor = Geom::Point(imgPt.x, imgPt.y);
-    }
-}
-
-void ProbeTool::OnDraging(const EvMouseMove &e)
-{
-    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
-    if (cav)
-    {
-        auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
-        Geom::Point freePt(imgPt.x, imgPt.y);
-        Geom::Rect rect{ anchor , freePt };
-        cav->DrawBox(Geom::Path(rect));
-    }
-}
-
-void ProbeTool::OnEndDraging(const EvLMouseUp &e)
-{
-    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
-    if (cav)
-    {
-        if (cav->HasCapture())
+        else
         {
-            cav->ReleaseMouse();
+            cav->StopInstructionTip();
         }
-
-        cav->DrawBox(Geom::Path());
     }
 }
 
-void ProbeTool::OnReset(const EvReset &e)
+void ProbeIdle::OnLeaveCanvas(const EvCanvasLeave &e)
 {
+    context<ProbeTool>().LeaveCanvas(e);
     CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
     if (cav)
     {
-        if (cav->HasCapture())
-        {
-            cav->ReleaseMouse();
-        }
-
-        cav->DrawBox(Geom::Path());
+        cav->StopInstructionTip();
     }
-}
-
-ProbeIdle::ProbeIdle()
-{
-    wxLogMessage(wxT("ProbeIdle Enter."));
-}
-
-ProbeIdle::~ProbeIdle()
-{
-    wxLogMessage(wxT("ProbeIdle Quit."));
-}
-
-sc::result ProbeIdle::react(const EvToolQuit &e)
-{
-    return transit<NoTool>();
-}
-
-ProbeDraging::ProbeDraging()
-{
-    wxLogMessage(wxT("ProbeDraging Enter."));
-}
-
-ProbeDraging::~ProbeDraging()
-{
-    wxLogMessage(wxT("ProbeDraging Quit."));
 }
