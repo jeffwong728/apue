@@ -43,6 +43,7 @@ public:
     virtual void BuildCorners(const Geom::PathVector &pv, Geom::Point(&corners)[4]) const;
     virtual SelectionData HitTest(const Geom::Point &pt) const = 0;
     virtual SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const;
+    virtual bool IsHitFace(const Geom::Point &pt, const Geom::PathVector &pv) const;
     virtual bool IsIntersection(const Geom::Rect &box) const = 0;
     virtual Geom::OptRect GetBoundingBox() const;
     virtual Geom::OptRect GetBoundingBox(const Geom::PathVector &pv) const;

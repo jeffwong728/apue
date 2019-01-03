@@ -98,6 +98,7 @@ enum
 
     kSpamID_TOOLBOX_PROBE,
     kSpamID_TOOLBOX_GEOM,
+    kSpamID_TOOLBOX_PROC,
     kSpamID_TOOLBOX_MATCH,
     kSpamID_TOOLBOX_MEASURE,
     kSpamID_TOOLBOX_STYLE,
@@ -167,6 +168,7 @@ enum class SpamEntityType
 {
     kET_IMAGE,
     kET_GEOM,
+    kET_GEOM_REGION,
     kET_GEOM_RECT,
     kET_GEOM_ELLIPSE,
     kET_GEOM_POLYGON,

@@ -2,18 +2,20 @@
 #include "projnode.h"
 #include "stationnode.h"
 #include "rectnode.h"
+#include "linenode.h"
 #include "ellipsenode.h"
 #include "polygonnode.h"
 #include "beziergonnode.h"
 
 NodeFactory::NodeFactory()
 {
-    nodeMakers_[ProjNode::GetTypeName()]    = ProjNode::Create;
-    nodeMakers_[StationNode::GetTypeName()] = StationNode::Create;
-    nodeMakers_[RectNode::GetTypeName()] = RectNode::Create;
-    nodeMakers_[GenericEllipseArcNode::GetTypeName()]    = GenericEllipseArcNode::Create;
-    nodeMakers_[PolygonNode::GetTypeName()] = PolygonNode::Create;
-    nodeMakers_[BeziergonNode::GetTypeName()] = BeziergonNode::Create;
+    nodeMakers_[ProjNode::GetTypeName()]              = ProjNode::Create;
+    nodeMakers_[StationNode::GetTypeName()]           = StationNode::Create;
+    nodeMakers_[RectNode::GetTypeName()]              = RectNode::Create;
+    nodeMakers_[LineNode::GetTypeName()]              = LineNode::Create;
+    nodeMakers_[GenericEllipseArcNode::GetTypeName()] = GenericEllipseArcNode::Create;
+    nodeMakers_[PolygonNode::GetTypeName()]           = PolygonNode::Create;
+    nodeMakers_[BeziergonNode::GetTypeName()]         = BeziergonNode::Create;
 }
 
 SPModelNode NodeFactory::Create(const std::string &typeName,

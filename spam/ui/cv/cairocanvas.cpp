@@ -420,6 +420,23 @@ void CairoCanvas::AddRect(const RectData &rd)
     }
 }
 
+void CairoCanvas::AddLine(const LineData &ld)
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            wxString title = wxString::Format(wxT("line%d"), cLine_++);
+            auto cmd = std::make_shared<CreateLineCmd>(model, station, title, ld);
+            cmd->Do();
+            SpamUndoRedo::AddCommand(cmd);
+            Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+        }
+    }
+}
+
 void CairoCanvas::AddEllipse(const GenericEllipseArcData &ed)
 {
     auto model = Spam::GetModel();

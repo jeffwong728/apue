@@ -122,6 +122,42 @@ wxString CreateRectCmd::GetDescription() const
     return wxString(wxT("Create rectangle ") + geom_->GetTitle());
 }
 
+CreateLineCmd::CreateLineCmd(ProjTreeModel *model, SPStationNode &station, const wxString &wouldTitle, const LineData &data)
+    : GeomCmd(model, station)
+    , wouldTitle_(wouldTitle)
+    , data_(data)
+{
+}
+
+void CreateLineCmd::Do()
+{
+    if (model_ && station_)
+    {
+        geom_ = model_->CreateToStation(station_, data_);
+    }
+}
+
+void CreateLineCmd::Undo()
+{
+    if (model_ && geom_)
+    {
+        model_->Delete(wxDataViewItem(geom_.get()), true);
+    }
+}
+
+void CreateLineCmd::Redo()
+{
+    if (model_ && station_ && geom_)
+    {
+        model_->AddToStation(station_, geom_, true);
+    }
+}
+
+wxString CreateLineCmd::GetDescription() const
+{
+    return wxString(wxT("Create rectangle ") + geom_->GetTitle());
+}
+
 CreatePolygonCmd::CreatePolygonCmd(ProjTreeModel *model, SPStationNode &station, const wxString &wouldTitle, const PolygonData &data)
     : GeomCmd(model, station)
     , wouldTitle_(wouldTitle)

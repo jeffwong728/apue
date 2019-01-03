@@ -28,7 +28,10 @@ ProcBox::ProcBox(wxWindow* parent)
     const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
     wxBitmap toolIcons[] = {
         Spam::GetBitmap(ip, bm_Pointer),
-        Spam::GetBitmap(ip, bm_NodeEdit)
+        Spam::GetBitmap(ip, bm_Pointer),
+        Spam::GetBitmap(ip, bm_Pointer),
+        Spam::GetBitmap(ip, bm_Pointer),
+        Spam::GetBitmap(ip, bm_Pointer)
     };
 
     ToolBox::Init(toolIds, toolTips, toolIcons, WXSIZEOF(toolTips), 0, 0);
@@ -68,6 +71,7 @@ void ProcBox::OnToolEnter(const ToolOptions &toolOpts)
 
 wxPanel *ProcBox::CreateThresholdOption(wxWindow *parent)
 {
+    return nullptr;
 }
 
 void ProcBox::UpdateSelectionFilter(void)

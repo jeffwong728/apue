@@ -23,6 +23,7 @@ private:
 
 private:
     wxPanel *CreateSelectOption(wxWindow *parent);
+    wxPanel *CreateHistOption(wxWindow *parent);
     void UpdateSelectionFilter(void);
 
 private:

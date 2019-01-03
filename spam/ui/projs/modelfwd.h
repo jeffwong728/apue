@@ -22,6 +22,7 @@ class ProjNode;
 class StationNode;
 class DrawableNode;
 class RectNode;
+class LineNode;
 class GenericEllipseArcNode;
 class PolygonNode;
 class BeziergonNode;
@@ -35,6 +36,7 @@ typedef std::shared_ptr<ProjNode>              SPProjNode;
 typedef std::shared_ptr<StationNode>           SPStationNode;
 typedef std::shared_ptr<DrawableNode>          SPDrawableNode;
 typedef std::shared_ptr<RectNode>              SPRectNode;
+typedef std::shared_ptr<LineNode>              SPLineNode;
 typedef std::shared_ptr<GenericEllipseArcNode> SPGenericEllipseArcNode;
 typedef std::shared_ptr<PolygonNode>           SPPolygonNode;
 typedef std::shared_ptr<BeziergonNode>         SPBeziergonNode;
@@ -114,6 +116,12 @@ struct RectData
 {
     std::array<std::array<double, 2>, 4> points;
     std::array<std::array<double, 2>, 4> radii;
+    std::array<double, 6> transform;
+};
+
+struct LineData
+{
+    std::array<std::array<double, 2>, 2> points;
     std::array<double, 6> transform;
 };
 

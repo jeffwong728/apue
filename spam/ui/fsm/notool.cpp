@@ -1,6 +1,7 @@
 #include "notool.h"
 #include "probetool.h"
 #include "recttool.h"
+#include "linetool.h"
 #include "ellipsetool.h"
 #include "transformtool.h"
 #include "nodeedittool.h"
@@ -57,6 +58,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     else if (kSpamID_TOOLBOX_GEOM_BEZIERGON == toolId)
     {
         return transit<BeziergonTool>();
+    }
+    else if (kSpamID_TOOLBOX_GEOM_LINE == toolId)
+    {
+        return transit<LineTool>();
     }
     else if (kSpamID_TOOLBOX_GEOM_TRANSFORM == toolId)
     {

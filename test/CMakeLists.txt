@@ -1,9 +1,9 @@
 add_compile_options("/utf-8")
-add_executable(test WIN32 wrapsizer.cpp ustring.cpp)
+#add_executable(test WIN32 wrapsizer.cpp ustring.cpp)
 add_executable(SampleFilterFuzz main.cpp)
+add_executable(test WIN32 thumbnail/thumbnaildlg.h thumbnail/thumbnailctrl.h thumbnail/thumbnaildlg.cpp thumbnail/sample.cpp thumbnail/thumbnailctrl.cpp)
 
-file(GLOB cameraSrc Camera/*.cpp Camera/*.hpp)
-add_executable(Camera ${cameraSrc})
+#add_executable(Camera examples/SimpleWithFunctors.cpp)
 add_library(hellopy SHARED hellopy.cpp)
 
 set(libs)
@@ -58,7 +58,7 @@ list(APPEND libs WXSVG::WXSVG)
 target_link_libraries(test PRIVATE ${libs})
 target_link_libraries(SampleFilterFuzz PRIVATE ${libs})
 target_link_libraries(hellopy PRIVATE Python2::Python Boost::python27 Boost::chrono OpenCL::OpenCL)
-target_include_directories(Camera PRIVATE ${Boost_INCLUDE_DIRS})
+#target_include_directories(Camera PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_include_directories(test PRIVATE ${wxWidgets_INCLUDE_DIRS})
 target_compile_definitions(test PRIVATE ${wxWidgets_DEFINITIONS})

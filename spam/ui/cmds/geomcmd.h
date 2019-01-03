@@ -58,6 +58,24 @@ private:
     RectData data_;
 };
 
+class CreateLineCmd : public GeomCmd
+{
+public:
+    CreateLineCmd(ProjTreeModel *model, SPStationNode &station, const wxString &wouldTitle, const LineData &data);
+
+public:
+    void Do() wxOVERRIDE;
+    void Undo() wxOVERRIDE;
+    void Redo() wxOVERRIDE;
+
+public:
+    wxString GetDescription() const wxOVERRIDE;
+
+private:
+    wxString wouldTitle_;
+    LineData data_;
+};
+
 class CreatePolygonCmd : public GeomCmd
 {
 public:

@@ -15,6 +15,7 @@ set(ui_core_SRCS
   misc/percentvalidator.cpp
   misc/scopedtimer.cpp
   misc/instructiontip.cpp
+  misc/histwidget.cpp
   projs/drawstyle.cpp
   projs/modelnode.cpp
   projs/nodefactory.cpp
@@ -23,6 +24,7 @@ set(ui_core_SRCS
   projs/stationnode.cpp
   projs/ellipsenode.cpp
   projs/rectnode.cpp
+  projs/linenode.cpp
   projs/geomnode.cpp
   projs/drawablenode.cpp
   projs/polygonnode.cpp
@@ -45,6 +47,7 @@ set(ui_core_SRCS
   fsm/notool.cpp
   fsm/probetool.cpp
   fsm/recttool.cpp
+  fsm/linetool.cpp
   fsm/ellipsetool.cpp
   fsm/spamer.cpp
   fsm/transformtool.cpp
@@ -72,6 +75,7 @@ set(ui_core_HEADERS
   misc/percentvalidator.h
   misc/scopedtimer.h
   misc/instructiontip.h
+  misc/histwidget.h
   projs/drawstyle.h
   projs/modelfwd.h
   projs/modelnode.h
@@ -82,6 +86,7 @@ set(ui_core_HEADERS
   projs/drawablenode.h
   projs/polygonnode.h
   projs/rectnode.h
+  projs/linenode.h
   projs/ellipsenode.h
   projs/beziergonnode.h
   projs/geomnode.h
@@ -103,6 +108,7 @@ set(ui_core_HEADERS
   fsm/notool.h
   fsm/probetool.h
   fsm/recttool.h
+  fsm/linetool.h
   fsm/ellipsetool.h
   fsm/spamer.h
   fsm/transformtool.h

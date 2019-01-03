@@ -1,6 +1,7 @@
 ﻿#include "projtreemodel.h"
 #include "projnode.h"
 #include "rectnode.h"
+#include "linenode.h"
 #include "ellipsenode.h"
 #include "polygonnode.h"
 #include "beziergonnode.h"
@@ -219,6 +220,26 @@ SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const RectData
     sig_GeomCreate(geoms);
 
     return newRect;
+}
+
+SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const LineData &ld)
+{
+    SPLineNode newLine = std::make_shared<LineNode>(station, GetUnusedName(station, wxT("line")));
+    newLine->SetData(ld);
+    newLine->drawStyle_.strokeWidth_ = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
+    newLine->drawStyle_.strokeColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
+    newLine->drawStyle_.fillColor_.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxYELLOW->GetRGBA()));
+    station->Append(newLine);
+
+    wxDataViewItem child(newLine.get());
+    wxDataViewItem parent(station.get());
+    ItemAdded(parent, child);
+    SetModified();
+
+    SPModelNodeVector geoms(1, newLine);
+    sig_GeomCreate(geoms);
+
+    return newLine;
 }
 
 SPGeomNode ProjTreeModel::CreateToStation(SPStationNode &station, const GenericEllipseArcData &ed)

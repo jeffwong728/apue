@@ -18,6 +18,7 @@
 #include <ui/projs/projtreemodel.h>
 #include <ui/toolbox/stylebox.h>
 #include <ui/toolbox/probebox.h>
+#include <ui/toolbox/procbox.h>
 #include <ui/toolbox/matchbox.h>
 #include <ui/toolbox/geombox.h>
 #include <ui/misc/percentvalidator.h>
@@ -61,7 +62,7 @@ RootFrame::RootFrame()
     , projPanelName_(wxT("proj"))
     , logPanelName_(wxT("log"))
     , toolBoxBarName_(wxT("toolBoxBar"))
-    , toolBoxLabels{wxT("toolBoxInfo"), wxT("toolBoxGeom"), wxT("toolBoxMatch"), wxT("toolBoxStyle") }
+    , toolBoxLabels{wxT("toolBoxInfo"), wxT("toolBoxGeom"), wxT("toolBoxProc"), wxT("toolBoxMatch"), wxT("toolBoxStyle") }
     , imageFileHistory_(9, spamID_BASE_IMAGE_FILE_HISTORY)
     , spamer_(std::make_unique<Spamer>())
     , selFilter_(std::make_unique<SelectionFilter>())
@@ -174,13 +175,15 @@ void RootFrame::CreateAuiPanes()
     tbBar->SetToolBitmapSize(wxSize(24, 24));
     tbBar->AddTool(kSpamID_TOOLBOX_PROBE, toolBoxLabels[kSpam_TOOLBOX_PROBE], wxArtProvider::GetBitmap(wxART_NEW), wxT("Image Infomation"), wxITEM_CHECK);
     tbBar->AddTool(kSpamID_TOOLBOX_GEOM, toolBoxLabels[kSpam_TOOLBOX_GEOM], wxArtProvider::GetBitmap(wxART_NEW), wxT("Geometry Tool"), wxITEM_CHECK);
+    tbBar->AddTool(kSpamID_TOOLBOX_PROC, toolBoxLabels[kSpam_TOOLBOX_PROC], wxArtProvider::GetBitmap(wxART_NEW), wxT("Image Processing"), wxITEM_CHECK);
     tbBar->AddTool(kSpamID_TOOLBOX_MATCH, toolBoxLabels[kSpam_TOOLBOX_MATCH], wxArtProvider::GetBitmap(wxART_NEW), wxT("Pattern Match"), wxITEM_CHECK);
     tbBar->AddSeparator();
     tbBar->AddTool(kSpamID_TOOLBOX_STYLE, toolBoxLabels[kSpam_TOOLBOX_STYLE], wxArtProvider::GetBitmap(wxART_NEW), wxT("Geometry Style"), wxITEM_CHECK);
     tbBar->Realize();
 
-    tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxInfo, this, kSpamID_TOOLBOX_PROBE);
-    tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxGeom, this, kSpamID_TOOLBOX_GEOM);
+    tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxInfo,  this, kSpamID_TOOLBOX_PROBE);
+    tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxGeom,  this, kSpamID_TOOLBOX_GEOM);
+    tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxProc,  this, kSpamID_TOOLBOX_PROC);
     tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxMatch, this, kSpamID_TOOLBOX_MATCH);
     tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxStyle, this, kSpamID_TOOLBOX_STYLE);
 
@@ -199,8 +202,9 @@ void RootFrame::CreateAuiPanes()
     wxAuiMgr_.AddPane(new ProjPanel(this), wxAuiPaneInfo().Name(projPanelName_).Left().Caption(wxT("Project Explorer")));
     wxAuiMgr_.AddPane(new LogPanel(this), wxAuiPaneInfo().Name(logPanelName_).Left().Bottom().Caption("Log"));
 
-    auto infoBox = new ProbeBox(this);
-    auto geomBox = new GeomBox(this);
+    auto infoBox  = new ProbeBox(this);
+    auto geomBox  = new GeomBox(this);
+    auto procBox  = new ProcBox(this);
     auto matchBox = new MatchBox(this);
     auto styleBox = new StyleBox(this);
 
@@ -210,12 +214,16 @@ void RootFrame::CreateAuiPanes()
     geomBox->sig_ToolEnter.connect(std::bind(&Spamer::OnToolEnter, spamer_.get(), std::placeholders::_1));
     geomBox->sig_ToolQuit.connect(std::bind(&Spamer::OnToolQuit, spamer_.get(), std::placeholders::_1));
     geomBox->sig_OptionsChanged.connect(std::bind(&Spamer::OnToolOptionsChanged, spamer_.get(), std::placeholders::_1));
+    procBox->sig_ToolEnter.connect(std::bind(&Spamer::OnToolEnter, spamer_.get(), std::placeholders::_1));
+    procBox->sig_ToolQuit.connect(std::bind(&Spamer::OnToolQuit, spamer_.get(), std::placeholders::_1));
+    procBox->sig_OptionsChanged.connect(std::bind(&Spamer::OnToolOptionsChanged, spamer_.get(), std::placeholders::_1));
     matchBox->sig_ToolEnter.connect(std::bind(&Spamer::OnToolEnter, spamer_.get(), std::placeholders::_1));
     matchBox->sig_ToolQuit.connect(std::bind(&Spamer::OnToolQuit, spamer_.get(), std::placeholders::_1));
     matchBox->sig_OptionsChanged.connect(std::bind(&Spamer::OnToolOptionsChanged, spamer_.get(), std::placeholders::_1));
 
     wxAuiMgr_.AddPane(infoBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_PROBE]).Right().Caption("Probe").Show(false));
     wxAuiMgr_.AddPane(geomBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_GEOM]).Right().Caption("Geometry Tool").Show(false));
+    wxAuiMgr_.AddPane(procBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_PROC]).Right().Caption("Image Processing").Show(false));
     wxAuiMgr_.AddPane(matchBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_MATCH]).Right().Caption("Template Matching").Show(false));
     wxAuiMgr_.AddPane(styleBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_STYLE]).Right().Caption("Style").Show(false));
 
@@ -236,6 +244,7 @@ void RootFrame::CreateAuiPanes()
 
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]).MinSize(infoBox->GetSizer()->GetMinSize());
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_GEOM]).MinSize(geomBox->GetSizer()->GetMinSize());
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROC]).MinSize(procBox->GetSizer()->GetMinSize());
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_MATCH]).MinSize(matchBox->GetSizer()->GetMinSize());
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_STYLE]).MinSize(styleBox->GetSizer()->GetMinSize());
 
@@ -472,10 +481,6 @@ void RootFrame::OnLoadImage(wxCommandEvent& event)
             }
         }
     }
-}
-
-void RootFrame::OnSize(wxSizeEvent& event)
-{
 }
 
 void RootFrame::OnAddStations(const SPModelNodeVector &stations)
@@ -1028,6 +1033,11 @@ void RootFrame::OnToolboxInfo(wxCommandEvent& e)
 void RootFrame::OnToolboxGeom(wxCommandEvent& e)
 {
     ClickToolbox(e, kSpam_TOOLBOX_GEOM);
+}
+
+void RootFrame::OnToolboxProc(wxCommandEvent& e)
+{
+    ClickToolbox(e, kSpam_TOOLBOX_PROC);
 }
 
 void RootFrame::OnToolboxMatch(wxCommandEvent& e)

@@ -37,6 +37,7 @@ class RootFrame : public wxFrame
     enum {
         kSpam_TOOLBOX_PROBE,
         kSpam_TOOLBOX_GEOM,
+        kSpam_TOOLBOX_PROC,
         kSpam_TOOLBOX_MATCH,
         kSpam_TOOLBOX_STYLE,
 
@@ -69,7 +70,6 @@ private:
     void OnClose(wxCloseEvent& e);
     void OnLoadImage(wxCommandEvent& e);
     void OnAbout(wxCommandEvent& e);
-    void OnSize(wxSizeEvent& e);
     void OnAddStations(const SPModelNodeVector &stations);
     void OnDeleteStations(const SPModelNodeVector &stations);
     void OnAddGeoms(const SPModelNodeVector &geoms);
@@ -104,6 +104,7 @@ private:
     void OnSelectScale(wxCommandEvent &e);
     void OnToolboxInfo(wxCommandEvent& e);
     void OnToolboxGeom(wxCommandEvent& e);
+    void OnToolboxProc(wxCommandEvent& e);
     void OnToolboxMatch(wxCommandEvent& e);
     void OnToolboxStyle(wxCommandEvent& e);
     void OnSelectEntity(const SPDrawableNodeVector &des);

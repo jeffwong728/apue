@@ -57,6 +57,7 @@ public:
     void AddToStation(SPStationNode &station, SPGeomNode &geom, bool fireEvent);
     void AddToStations(SPStationNode &station, SPGeomNodeVector &geoms, bool fireEvent);
     SPGeomNode CreateToStation(SPStationNode &station, const RectData &rd);
+    SPGeomNode CreateToStation(SPStationNode &station, const LineData &ld);
     SPGeomNode CreateToStation(SPStationNode &station, const GenericEllipseArcData &ed);
     SPGeomNode CreateToStation(SPStationNode &station, const PolygonData &pd);
     SPGeomNode CreateToStation(SPStationNode &station, const BezierData &bd);

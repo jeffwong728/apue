@@ -1,4 +1,5 @@
 /site_scons/__pycache__
+/test/thumbnail
 3rdparty
 build
 msvs

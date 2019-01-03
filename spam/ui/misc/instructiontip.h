@@ -1,3 +1,5 @@
+#ifndef SPAM_UI_MISC_INSTRUCTION_TIP_H
+#define SPAM_UI_MISC_INSTRUCTION_TIP_H
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
 #endif
@@ -27,3 +29,4 @@ protected:
 
     wxDECLARE_NO_COPY_CLASS(InformationTip);
 };
+#endif //SPAM_UI_MISC_INSTRUCTION_TIP_H

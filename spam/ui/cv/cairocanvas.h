@@ -67,6 +67,7 @@ public:
     void DrawBox(const Geom::Path &pth);
     void DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
     void AddRect(const RectData &rd);
+    void AddLine(const LineData &ld);
     void AddEllipse(const GenericEllipseArcData &ed);
     void AddPolygon(const PolygonData &pd);
     void AddBeziergon(const BezierData &bd);
@@ -133,6 +134,7 @@ private:
     int anchorX_;
     int anchorY_;
     int cRect_{ 0 };
+    int cLine_{ 0 };
     int cEllipse_{0};
     int cPolygon_{ 0 };
     int cBeziergon_{0};

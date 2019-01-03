@@ -1,5 +1,6 @@
 #include "probebox.h"
 #include <ui/spam.h>
+#include <ui/misc/histwidget.h>
 #include <wx/artprov.h>
 #include <wx/statline.h>
 #include <wx/collpane.h>
@@ -36,7 +37,7 @@ ProbeBox::~ProbeBox()
 wxPanel *ProbeBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 {
     constexpr int numTools = kSpamID_TOOLBOX_PROBE_GUARD - kSpamID_TOOLBOX_PROBE_SELECT;
-    wxPanel *(ProbeBox::*createOption[numTools])(wxWindow *parent) = { &ProbeBox::CreateSelectOption };
+    wxPanel *(ProbeBox::*createOption[numTools])(wxWindow *parent) = { &ProbeBox::CreateSelectOption, &ProbeBox::CreateHistOption };
 
     if (createOption[toolIndex])
     {
@@ -98,6 +99,33 @@ wxPanel *ProbeBox::CreateSelectOption(wxWindow *parent)
     probeMode->Realize();
 
     sizerRoot->Add(probeMode, wxSizerFlags(0).Expand().Border());
+
+    auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
+    helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProbeBox::OnHelpCollapse, this, wxID_ANY);
+    sizerRoot->Add(helpPane, wxSizerFlags(1).Expand());
+
+    wxWindow *win = helpPane->GetPane();
+    auto helpSizer = new wxBoxSizer(wxVERTICAL);
+    auto html = new wxHtmlWindow(win, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_NEVER);
+    html->SetBorders(0);
+    html->LoadPage(wxT("res/help/rect.htm"));
+    html->SetInitialSize(wxSize(html->GetInternalRepresentation()->GetWidth(), html->GetInternalRepresentation()->GetHeight()));
+    helpSizer->Add(html, wxSizerFlags(1).Expand().DoubleBorder());
+    win->SetSizerAndFit(helpSizer);
+
+    panel->SetScrollRate(6, 6);
+    panel->SetVirtualSize(panel->GetBestSize());
+    panel->SetSizerAndFit(sizerRoot);
+    return panel;
+}
+
+wxPanel *ProbeBox::CreateHistOption(wxWindow *parent)
+{
+    auto panel = new wxScrolledWindow(parent, wxID_ANY);
+    wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+
+    auto histWnd = new HistogramWidget(panel);
+    sizerRoot->Add(histWnd, wxSizerFlags(0).Expand().Border());
 
     auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
     helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProbeBox::OnHelpCollapse, this, wxID_ANY);
