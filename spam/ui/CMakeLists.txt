@@ -16,6 +16,7 @@ set(ui_core_SRCS
   misc/scopedtimer.cpp
   misc/instructiontip.cpp
   misc/histwidget.cpp
+  misc/spamutility.cpp
   projs/drawstyle.cpp
   projs/modelnode.cpp
   projs/nodefactory.cpp
@@ -76,6 +77,7 @@ set(ui_core_HEADERS
   misc/scopedtimer.h
   misc/instructiontip.h
   misc/histwidget.h
+  misc/spamutility.h
   projs/drawstyle.h
   projs/modelfwd.h
   projs/modelnode.h

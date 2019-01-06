@@ -1,6 +1,6 @@
 #include "probebox.h"
 #include <ui/spam.h>
-#include <ui/misc/histwidget.h>
+#include <ui/misc/spamutility.h>
 #include <wx/artprov.h>
 #include <wx/statline.h>
 #include <wx/collpane.h>
@@ -32,6 +32,47 @@ ProbeBox::ProbeBox(wxWindow* parent)
 
 ProbeBox::~ProbeBox()
 {
+}
+
+void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
+{
+    const Geom::OptRect *rect = boost::any_cast<Geom::OptRect>(&roi);
+    cv::Mat mask;
+    if (rect)
+    {
+        if (!rect->empty())
+        {
+            Geom::PathVector pv{ Geom::Path(**rect) };
+            mask = SpamUtility::GetMaskFromPath(pv, cv::Size(srcImg.cols, srcImg.rows));
+        }
+    }
+    else
+    {
+        const Geom::PathVector *pv = boost::any_cast<Geom::PathVector>(&roi);
+        if (pv)
+        {
+            mask = SpamUtility::GetMaskFromPath(*pv, cv::Size(srcImg.cols, srcImg.rows));
+        }
+    }
+
+    std::vector<cv::Mat> imags;
+    cv::split(srcImg, imags);
+    hist_->ClearProfiles();
+    for (const cv::Mat &imag : imags)
+    {
+        const int channels[] = {0};
+        const int histSize[] = { 256 };
+        const float range[] = {0, 256};
+        const float *ranges[] = { range };
+        cv::Mat hist;
+        cv::calcHist(&imag, 1, channels, mask, hist, 1, histSize, ranges, true, false);
+
+        HistogramWidget::Profile profile{wxT(""), *wxRED};
+        profile.seq.resize(256);
+        std::copy(hist.data, hist.data+256, profile.seq.begin());
+        hist_->AddProfile(std::move(profile));
+    }
+    hist_->Refresh(true);
 }
 
 wxPanel *ProbeBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
@@ -124,8 +165,8 @@ wxPanel *ProbeBox::CreateHistOption(wxWindow *parent)
     auto panel = new wxScrolledWindow(parent, wxID_ANY);
     wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
 
-    auto histWnd = new HistogramWidget(panel);
-    sizerRoot->Add(histWnd, wxSizerFlags(0).Expand().Border());
+    hist_ = new HistogramWidget(panel);
+    sizerRoot->Add(hist_, wxSizerFlags(0).Expand().Border());
 
     auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
     helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProbeBox::OnHelpCollapse, this, wxID_ANY);

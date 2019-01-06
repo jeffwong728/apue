@@ -73,15 +73,15 @@ void NodeEditTool::OnEnterCanvas(const EvCanvasEnter &e)
     BoxToolT::EnterCanvas(e);
 }
 
-void NodeEditTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
+void NodeEditTool::OnEntityClicked(const EvEntityClicked &e)
 {
     const int editMode = boost::get<int>(toolOptions.at(cp_ToolGeomVertexEditMode));
     if (kSpamID_TOOLBOX_NODE_MOVE != editMode)
     {
-        CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.GetEventObject());
+        CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.e.GetEventObject());
         if (cav)
         {
-            cav->ModifyDrawable(ent, pt, sd, editMode);
+            cav->ModifyDrawable(e.ent, e.pt, e.sd, editMode);
         }
     }
 }

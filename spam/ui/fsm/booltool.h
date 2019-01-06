@@ -209,11 +209,12 @@ struct DiffTool : boost::statechart::simple_state<DiffTool, Spamer, DiffToolIdle
 
     void OnMMouseDown(const EvMMouseDown &e);
     void OnEnterCanvas(const EvCanvasEnter &e);
-    void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override;
+    void OnEntityClicked(const EvEntityClicked &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, DiffTool>,
         boost::statechart::transition<EvToolQuit, NoTool>,
+        boost::statechart::in_state_reaction<EvEntityClicked, DiffTool, &DiffTool::OnEntityClicked>,
         boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
@@ -253,11 +254,12 @@ struct XORTool : boost::statechart::simple_state<XORTool, Spamer, XORToolIdle>, 
 
     void OnMMouseDown(const EvMMouseDown &e);
     void OnEnterCanvas(const EvCanvasEnter &e);
-    void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override;
+    void OnEntityClicked(const EvEntityClicked &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, XORTool>,
         boost::statechart::transition<EvToolQuit, NoTool>,
+        boost::statechart::in_state_reaction<EvEntityClicked, XORTool, &XORTool::OnEntityClicked>,
         boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,

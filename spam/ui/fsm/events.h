@@ -89,6 +89,16 @@ struct EvDrawableSelect : boost::statechart::event<EvDrawableSelect>
     SPDrawableNodeVector drawables;
 };
 
+struct EvEntityClicked : boost::statechart::event<EvEntityClicked>
+{
+    EvEntityClicked(const SPDrawableNode &entity, const wxMouseEvent &me, const Geom::Point &point, const SelectionData &seld) 
+    : ent(entity), e(me), pt(point), sd(seld) {}
+    const SPDrawableNode ent;
+    const wxMouseEvent e;
+    const Geom::Point pt;
+    const SelectionData sd;
+};
+
 struct EvImageClicked : boost::statechart::event<EvImageClicked>
 {
     EvImageClicked(const wxMouseEvent &e) : evData(e) {}

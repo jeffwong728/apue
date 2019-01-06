@@ -9,9 +9,13 @@
 #pragma warning( pop )
 
 struct ProbeTool;
+struct HistogramTool;
 struct ProbeIdle;
+struct HistogramIdle;
 struct ProbeDraging;
+struct HistogramDraging;
 using  ProbeBoxTool = BoxTool<ProbeTool, kSpamID_TOOLBOX_PROBE_SELECT>;
+using  HistogramBoxTool = BoxTool<HistogramTool, kSpamID_TOOLBOX_PROBE_HISTOGRAM>;
 
 struct ProbeTool : boost::statechart::simple_state<ProbeTool, Spamer, ProbeIdle>, ProbeBoxTool
 {
@@ -57,6 +61,53 @@ struct ProbeDraging : boost::statechart::simple_state<ProbeDraging, ProbeTool>
         boost::statechart::transition<EvLMouseUp, ProbeIdle, ProbeTool::BoxToolT, &ProbeTool::BoxToolT::EndBoxing>,
         boost::statechart::transition<EvReset, ProbeIdle, ProbeTool::BoxToolT, &ProbeTool::BoxToolT::ResetBoxing>,
         boost::statechart::in_state_reaction<EvMouseMove, ProbeTool::BoxToolT, &ProbeTool::BoxToolT::ContinueBoxing>> reactions;
+};
+
+struct HistogramTool : boost::statechart::simple_state<HistogramTool, Spamer, HistogramIdle>, HistogramBoxTool
+{
+    using BoxToolT = BoxToolImpl;
+    HistogramTool() : HistogramBoxTool(*this) {}
+    ~HistogramTool() {}
+
+    void OnOptionChanged(const EvToolOption &e);
+    void OnBoxingEnded(const EvBoxingEnded &e);
+    void OnImageClicked(const EvImageClicked &e);
+    void OnEntityClicked(const EvEntityClicked &e);
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvReset, HistogramTool>,
+        boost::statechart::transition<EvToolQuit, NoTool>,
+        boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
+        boost::statechart::in_state_reaction<EvBoxingEnded, HistogramTool, &HistogramTool::OnBoxingEnded>,
+        boost::statechart::in_state_reaction<EvImageClicked, HistogramTool, &HistogramTool::OnImageClicked>,
+        boost::statechart::in_state_reaction<EvEntityClicked, HistogramTool, &HistogramTool::OnEntityClicked>,
+        boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
+        boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>> reactions;
+
+    ToolOptions toolOptions;
+};
+
+struct HistogramIdle : boost::statechart::simple_state<HistogramIdle, HistogramTool>
+{
+    HistogramIdle() {}
+    ~HistogramIdle() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseDown, HistogramDraging, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::StartBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvToolOption, HistogramTool, &HistogramTool::OnOptionChanged>,
+        boost::statechart::in_state_reaction<EvCanvasLeave, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::LeaveCanvas>> reactions;
+};
+
+struct HistogramDraging : boost::statechart::simple_state<HistogramDraging, HistogramTool>
+{
+    HistogramDraging() {}
+    ~HistogramDraging() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseUp, HistogramIdle, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::EndBoxing>,
+        boost::statechart::transition<EvReset, HistogramIdle, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::ResetBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::ContinueBoxing>> reactions;
 };
 
 #endif //SPAM_UI_FSM_PROBE_TOOL_H

@@ -49,6 +49,7 @@ public:
     bs2::signal_type<void(wxKeyEvent &),   bs2_dummy_mutex>::type sig_Char;
 
 public:
+    cv::Mat GetOriginalImage() const { return srcImg_; }
     void ShowImage(const cv::Mat &img);
     void ExtentImage();
     void ScaleImage(double scaleVal);

@@ -175,21 +175,21 @@ void DiffTool::OnEnterCanvas(const EvCanvasEnter &e)
     BoxToolT::EnterCanvas(e);
 }
 
-void DiffTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
+void DiffTool::OnEntityClicked(const EvEntityClicked &e)
 {
-    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.GetEventObject());
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.e.GetEventObject());
     if (cav)
     {
         auto fIt = differs.find(cav->GetUUID());
         if (fIt != differs.cend())
         {
-            fIt->second.process_event(evt_entity_selected(cav->GetUUID(), ent));
+            fIt->second.process_event(evt_entity_selected(cav->GetUUID(), e.ent));
         }
         else
         {
             auto &differ = differs[cav->GetUUID()];
             differ.start(BinaryBoolOperatorDef::BinaryBooleanType::DiffOp);
-            differ.process_event(evt_entity_selected(cav->GetUUID(), ent));
+            differ.process_event(evt_entity_selected(cav->GetUUID(), e.ent));
         }
     }
 }
@@ -233,21 +233,21 @@ void XORTool::OnEnterCanvas(const EvCanvasEnter &e)
     BoxToolT::EnterCanvas(e);
 }
 
-void XORTool::FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const
+void XORTool::OnEntityClicked(const EvEntityClicked &e)
 {
-    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.GetEventObject());
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.e.GetEventObject());
     if (cav)
     {
         auto fIt = XORers.find(cav->GetUUID());
         if (fIt != XORers.cend())
         {
-            fIt->second.process_event(evt_entity_selected(cav->GetUUID(), ent));
+            fIt->second.process_event(evt_entity_selected(cav->GetUUID(), e.ent));
         }
         else
         {
             auto &XORer = XORers[cav->GetUUID()];
             XORer.start(BinaryBoolOperatorDef::BinaryBooleanType::XOROp);
-            XORer.process_event(evt_entity_selected(cav->GetUUID(), ent));
+            XORer.process_event(evt_entity_selected(cav->GetUUID(), e.ent));
         }
     }
 }

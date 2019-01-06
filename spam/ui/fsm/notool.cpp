@@ -43,6 +43,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     {
         return transit<ProbeTool>();
     }
+    else if (kSpamID_TOOLBOX_PROBE_HISTOGRAM == toolId)
+    {
+        return transit<HistogramTool>();
+    }
     else if (kSpamID_TOOLBOX_GEOM_RECT == toolId)
     {
         return transit<RectTool>();

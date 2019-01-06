@@ -30,6 +30,7 @@ namespace cv
 namespace Geom 
 {
     class OptRect;
+    class Path;
 }
 
 class RootFrame : public wxFrame
@@ -58,6 +59,7 @@ public:
     wxAuiNotebook *GetStationNotebook() const;
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
+    void RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi);
     void AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect);
     void RequestRefreshCanvas();
     void SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page);

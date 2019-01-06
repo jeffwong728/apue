@@ -298,6 +298,17 @@ CairoCanvas *RootFrame::FindCanvasByUUID(const std::string &uuidTag) const
     return nullptr;
 }
 
+void RootFrame::RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi)
+{
+    CairoCanvas *canv = FindCanvasByUUID(uuidTag);
+    auto &tbPanelInfo = wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]);
+    ProbeBox *probeBox = dynamic_cast<ProbeBox *>(tbPanelInfo.window);
+    if (probeBox && canv)
+    {
+        probeBox->UpdateHistogram(canv->GetOriginalImage(), roi);
+    }
+}
+
 void RootFrame::AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect)
 {
     (*cavDirtRects_)[uuidTag].unionWith(dirtRect);

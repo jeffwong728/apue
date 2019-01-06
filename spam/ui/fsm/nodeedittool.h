@@ -28,11 +28,12 @@ struct NodeEditTool : sc::simple_state<NodeEditTool, Spamer, NodeEditIdle>, Node
 
     void OnOptionChanged(const EvToolOption &e);
     void OnEnterCanvas(const EvCanvasEnter &e);
-    void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override;
+    void OnEntityClicked(const EvEntityClicked &e);
 
     typedef boost::mpl::list<
         sc::transition<EvReset, NodeEditTool>,
         sc::transition<EvToolQuit, NoTool>,
+        sc::in_state_reaction<EvEntityClicked, NodeEditTool, &NodeEditTool::OnEntityClicked>,
         sc::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
         sc::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         sc::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,

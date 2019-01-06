@@ -1,5 +1,7 @@
 #include "probetool.h"
 #include <wx/log.h>
+#include <ui/spam.h>
+#include <ui/toplevel/rootframe.h>
 #include <ui/cv/cairocanvas.h>
 
 void ProbeTool::OnOptionChanged(const EvToolOption &e)
@@ -57,4 +59,34 @@ void ProbeIdle::OnLeaveCanvas(const EvCanvasLeave &e)
     {
         cav->StopInstructionTip();
     }
+}
+
+void HistogramTool::OnOptionChanged(const EvToolOption &e)
+{
+    const int toolId = boost::get<int>(e.toolOptions.at(cp_ToolId));
+    if (kSpamID_TOOLBOX_PROBE_HISTOGRAM == toolId)
+    {
+        toolOptions = e.toolOptions;
+        BoxToolImpl::ResetTool();
+    }
+}
+
+void HistogramTool::OnBoxingEnded(const EvBoxingEnded &e)
+{
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.mData.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        frame->RequestUpdateHistogram(cav->GetUUID(), e.boxRect);
+    }
+}
+
+void HistogramTool::OnImageClicked(const EvImageClicked &e)
+{
+
+}
+
+void HistogramTool::OnEntityClicked(const EvEntityClicked &e)
+{
+
 }

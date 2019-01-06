@@ -1077,6 +1077,11 @@ void CairoCanvas::Draw(wxDC &dc, const Geom::OptRect &rect)
             ConpensateHandle(invalidRect);
             invalidRect.Intersect(wxRect(0, 0, scrMat_.cols, scrMat_.rows));
 
+            if (invalidRect.IsEmpty())
+            {
+                return;
+            }
+
             auto dstPtr = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
             auto srcPtr = disMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
             for (int r = invalidRect.GetTop(); r <= invalidRect.GetBottom(); ++r)
