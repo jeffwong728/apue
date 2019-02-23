@@ -60,6 +60,7 @@ public:
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
     void RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi);
+    void RequestUpdateThreshold(const std::string &uuidTag, const boost::any &roi);
     void AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect);
     void RequestRefreshCanvas();
     void SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page);
@@ -85,6 +86,7 @@ private:
     void OnViewImage(wxCommandEvent& e);
     void OnViewProject(wxCommandEvent& e);
     void OnViewLog(wxCommandEvent& e);
+    void OnViewImagesZone(wxCommandEvent& e);
     void OnViewToolboxBar(wxCommandEvent& e);
     void OnViewDefaultLayout(wxCommandEvent& e);
     void OnUpdateUI(wxUpdateUIEvent& e);
@@ -110,6 +112,8 @@ private:
     void OnToolboxMatch(wxCommandEvent& e);
     void OnToolboxStyle(wxCommandEvent& e);
     void OnSelectEntity(const SPDrawableNodeVector &des);
+    void OnImageBufferItemAdd(const ImageBufferItem &ibi);
+    void OnImageBufferItemUpdate(const ImageBufferItem &ibi);
 
 private:
     wxAuiNotebook *CreateStationNotebook();
@@ -133,6 +137,7 @@ private:
     const wxString stationNotebookName_;
     const wxString projPanelName_;
     const wxString logPanelName_;
+    const wxString imagesZonePanelName_;
     const wxString toolBoxBarName_;
     wxFileHistory  imageFileHistory_;
     int cCVStation_{ 0 };

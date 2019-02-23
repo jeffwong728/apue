@@ -1,5 +1,6 @@
 #include "notool.h"
 #include "probetool.h"
+#include "proctool.h"
 #include "recttool.h"
 #include "linetool.h"
 #include "ellipsetool.h"
@@ -46,6 +47,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     else if (kSpamID_TOOLBOX_PROBE_HISTOGRAM == toolId)
     {
         return transit<HistogramTool>();
+    }
+    else if (kSpamID_TOOLBOX_PROC_THRESHOLD == toolId)
+    {
+        return transit<ThresholdTool>();
     }
     else if (kSpamID_TOOLBOX_GEOM_RECT == toolId)
     {

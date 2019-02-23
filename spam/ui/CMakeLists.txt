@@ -16,6 +16,7 @@ set(ui_core_SRCS
   misc/scopedtimer.cpp
   misc/instructiontip.cpp
   misc/histwidget.cpp
+  misc/thumbnailctrl.cpp
   misc/spamutility.cpp
   projs/drawstyle.cpp
   projs/modelnode.cpp
@@ -32,6 +33,7 @@ set(ui_core_SRCS
   projs/beziergonnode.cpp
   projs/stylecellrenderer.cpp
   toplevel/logpanel.cpp
+  toplevel/thumbnailpanel.cpp
   toplevel/mainstatus.cpp
   toplevel/maintoolpane.cpp
   toplevel/projpanel.cpp
@@ -47,6 +49,7 @@ set(ui_core_SRCS
   fsm/booltool.cpp
   fsm/notool.cpp
   fsm/probetool.cpp
+  fsm/proctool.cpp
   fsm/recttool.cpp
   fsm/linetool.cpp
   fsm/ellipsetool.cpp
@@ -56,6 +59,7 @@ set(ui_core_SRCS
   fsm/polygontool.cpp
   fsm/beziergontool.cpp
   proc/rgn.cpp
+  proc/basic.cpp
 )
 
 set(ui_core_HEADERS 
@@ -77,6 +81,7 @@ set(ui_core_HEADERS
   misc/scopedtimer.h
   misc/instructiontip.h
   misc/histwidget.h
+  misc/thumbnailctrl.h
   misc/spamutility.h
   projs/drawstyle.h
   projs/modelfwd.h
@@ -94,6 +99,7 @@ set(ui_core_HEADERS
   projs/geomnode.h
   projs/stylecellrenderer.h
   toplevel/logpanel.h
+  toplevel/thumbnailpanel.h
   toplevel/mainstatus.h
   toplevel/maintoolpane.h
   toplevel/projpanel.h
@@ -109,6 +115,7 @@ set(ui_core_HEADERS
   fsm/booltool.h
   fsm/notool.h
   fsm/probetool.h
+  fsm/proctool.h
   fsm/recttool.h
   fsm/linetool.h
   fsm/ellipsetool.h
@@ -119,6 +126,7 @@ set(ui_core_HEADERS
   fsm/polygontool.h
   fsm/events.h
   proc/rgn.h
+  proc/basic.h
 )
 
 if(MSVC)
@@ -180,7 +188,7 @@ list(APPEND libs WXSVG::WXSVG)
 target_link_libraries(ui_core PUBLIC ${libs})
 
 if(MSVC)
-  target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC)
+  target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX)
   target_compile_definitions(ui_core PRIVATE BOOST_PYTHON_NO_LIB BOOST_PYTHON_STATIC_LIB BOOST_PYTHON_STATIC_MODULE PY_MAJOR_VERSION=2 PY_MINOR_VERSION=7)
   target_compile_options(ui_core PRIVATE "/MP")
 endif()

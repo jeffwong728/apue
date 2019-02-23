@@ -4,6 +4,7 @@
 #include "maintoolpane.h"
 #include "projpanel.h"
 #include "logpanel.h"
+#include "thumbnailpanel.h"
 #include "mainstatus.h"
 #include <ui/spam.h>
 #include <ui/evts.h>
@@ -22,6 +23,7 @@
 #include <ui/toolbox/matchbox.h>
 #include <ui/toolbox/geombox.h>
 #include <ui/misc/percentvalidator.h>
+#include <ui/misc/thumbnailctrl.h>
 #include <ui/proc/rgn.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -61,6 +63,7 @@ RootFrame::RootFrame()
     , stationNotebookName_(wxT("station"))
     , projPanelName_(wxT("proj"))
     , logPanelName_(wxT("log"))
+    , imagesZonePanelName_(wxT("imagesZone"))
     , toolBoxBarName_(wxT("toolBoxBar"))
     , toolBoxLabels{wxT("toolBoxInfo"), wxT("toolBoxGeom"), wxT("toolBoxProc"), wxT("toolBoxMatch"), wxT("toolBoxStyle") }
     , imageFileHistory_(9, spamID_BASE_IMAGE_FILE_HISTORY)
@@ -134,6 +137,7 @@ void RootFrame::CreateMenu()
     menuView->Append(spamID_VIEW_IMAGE, wxT("Image Panel"), wxT("Show image panel"), wxITEM_CHECK);
     menuView->Append(spamID_VIEW_PROJECT, wxT("Project Panel"), wxT("Show project panel"), wxITEM_CHECK);
     menuView->Append(spamID_VIEW_LOG, wxT("Log Panel"), wxT("Show log panel"), wxITEM_CHECK);
+    menuView->Append(spamID_VIEW_IMAGES_ZONE, wxT("Images Zone Panel"), wxT("Show images zone panel"), wxITEM_CHECK);
     menuView->Append(spamID_VIEW_TOOLBOX_BAR, wxT("Toolbox Bar"), wxT("Show toolbox bar"), wxITEM_CHECK);
     menuView->AppendSeparator();
     menuView->Append(spamID_VIEW_DEFAULT_LAYOUT, wxT("Default Layout"), wxT("Show default layout"), wxITEM_NORMAL);
@@ -159,6 +163,7 @@ void RootFrame::CreateMenu()
     Bind(wxEVT_MENU, &RootFrame::OnViewImage, this, spamID_VIEW_IMAGE);
     Bind(wxEVT_MENU, &RootFrame::OnViewProject, this, spamID_VIEW_PROJECT);
     Bind(wxEVT_MENU, &RootFrame::OnViewLog, this, spamID_VIEW_LOG);
+    Bind(wxEVT_MENU, &RootFrame::OnViewImagesZone, this, spamID_VIEW_IMAGES_ZONE);
     Bind(wxEVT_MENU, &RootFrame::OnViewToolboxBar, this, spamID_VIEW_TOOLBOX_BAR);
     Bind(wxEVT_MENU, &RootFrame::OnViewDefaultLayout, this, spamID_VIEW_DEFAULT_LAYOUT);
     Bind(wxEVT_MENU, &RootFrame::OnSetTileLayout, this, spamID_VIEW_SET_TILE_LAYOUT);
@@ -201,6 +206,7 @@ void RootFrame::CreateAuiPanes()
     wxAuiMgr_.AddPane(CreateStationNotebook(), wxAuiPaneInfo().Name(stationNotebookName_).Center().PaneBorder(false).CloseButton(false).CaptionVisible(false));
     wxAuiMgr_.AddPane(new ProjPanel(this), wxAuiPaneInfo().Name(projPanelName_).Left().Caption(wxT("Project Explorer")));
     wxAuiMgr_.AddPane(new LogPanel(this), wxAuiPaneInfo().Name(logPanelName_).Left().Bottom().Caption("Log"));
+    wxAuiMgr_.AddPane(new ThumbnailPanel(this), wxAuiPaneInfo().Name(imagesZonePanelName_).Bottom().Bottom().Caption("Images Zone"));
 
     auto infoBox  = new ProbeBox(this);
     auto geomBox  = new GeomBox(this);
@@ -306,6 +312,17 @@ void RootFrame::RequestUpdateHistogram(const std::string &uuidTag, const boost::
     if (probeBox && canv)
     {
         probeBox->UpdateHistogram(canv->GetOriginalImage(), roi);
+    }
+}
+
+void RootFrame::RequestUpdateThreshold(const std::string &uuidTag, const boost::any &roi)
+{
+    CairoCanvas *canv = FindCanvasByUUID(uuidTag);
+    auto &tbPanelInfo = wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROC]);
+    ProcBox *procBox = dynamic_cast<ProcBox *>(tbPanelInfo.window);
+    if (procBox && canv)
+    {
+        procBox->UpdateHistogram(uuidTag, canv->GetOriginalImage(), roi);
     }
 }
 
@@ -507,15 +524,15 @@ void RootFrame::OnAddStations(const SPModelNodeVector &stations)
             {
                 wxString uuidName = station->GetUUIDTag();
                 wxSize size = wxDefaultSize;
-                auto initImg = station->GetImage();
-                if (!initImg.empty())
-                {
-                    size = wxSize(initImg.cols, initImg.rows);
-                }
                 auto imgPanel = new CVImagePanel(stationNB, GetNextCVStationWinName(), uuidName, wxDefaultSize);
+                auto initImg = station->GetImage();
                 imgPanel->SetImage(initImg);
                 ConnectCanvas(imgPanel);
                 stationNB->AddPage(imgPanel, station->GetTitle(), true);
+                if (!initImg.empty())
+                {
+                    imgPanel->BufferImage(station->GetTitle().ToStdString());
+                }
             }
         }
         stationNB->Thaw();
@@ -664,6 +681,10 @@ void RootFrame::OnLoadProject(ModelEvent& e)
                     ConnectCanvas(imgPanel);
                     imgPanel->SetImage(initImg);
                     stationNB->AddPage(imgPanel, station->GetTitle(), true);
+                    if (!initImg.empty())
+                    {
+                        imgPanel->BufferImage(station->GetTitle().ToStdString());
+                    }
                 }
             }
             stationNB->Thaw();
@@ -704,6 +725,14 @@ void RootFrame::OnViewLog(wxCommandEvent& e)
     wxAuiMgr_.Update();
 }
 
+void RootFrame::OnViewImagesZone(wxCommandEvent& e)
+{
+    auto &pane = wxAuiMgr_.GetPane(imagesZonePanelName_);
+    bool v = pane.IsShown();
+    pane.Show(!v);
+    wxAuiMgr_.Update();
+}
+
 void RootFrame::OnViewToolboxBar(wxCommandEvent& e)
 {
     auto &pane = wxAuiMgr_.GetPane(toolBoxBarName_);
@@ -726,6 +755,7 @@ void RootFrame::OnUpdateUI(wxUpdateUIEvent& e)
     case spamID_VIEW_IMAGE:       e.Check(wxAuiMgr_.GetPane(stationNotebookName_).IsShown()); break;
     case spamID_VIEW_PROJECT:     e.Check(wxAuiMgr_.GetPane(projPanelName_).IsShown());       break;
     case spamID_VIEW_LOG:         e.Check(wxAuiMgr_.GetPane(logPanelName_).IsShown());        break;
+    case spamID_VIEW_IMAGES_ZONE: e.Check(wxAuiMgr_.GetPane(imagesZonePanelName_).IsShown()); break;
     case spamID_VIEW_TOOLBOX_BAR: e.Check(wxAuiMgr_.GetPane(toolBoxBarName_).IsShown());      break;
     case wxID_UNDO:               e.Enable(SpamUndoRedo::IsUndoable());                       break;
     case wxID_REDO:               e.Enable(SpamUndoRedo::IsRedoable());                       break;
@@ -770,6 +800,11 @@ void RootFrame::OnStationActivated(wxDataViewEvent &e)
             ConnectCanvas(imgPanel);
             stationNB->AddPage(imgPanel, sNode->GetTitle(), true);
             stationNB->Thaw();
+
+            if (!initImg.empty())
+            {
+                imgPanel->BufferImage(sNode->GetTitle().ToStdString());
+            }
         }
     }
 }
@@ -913,16 +948,47 @@ void RootFrame::OnPageSelect(wxAuiNotebookEvent& e)
         {
             auto page = nb->GetPage(sel);
             auto extCtrl = nb->FindExtensionCtrlByPage(page);
+
+            auto tmPanel = dynamic_cast<ThumbnailPanel *>(wxAuiMgr_.GetPane(imagesZonePanelName_).window);
+            wxThumbnailCtrl *tmCtrl = nullptr;
+            if (tmPanel)
+            {
+                tmCtrl = tmPanel->GetThumbnailCtrl();
+            }
+
+            if (tmCtrl)
+            {
+                tmCtrl->Freeze();
+                tmCtrl->Clear();
+            }
+
             CVImagePanel *imgPage = dynamic_cast<CVImagePanel *>(page);
             if (imgPage && imgPage->HasImage())
             {
                 scale_ = imgPage->GetScale();
                 EnablePageImageTool(extCtrl, true);
                 SyncScale(extCtrl);
+
+                CairoCanvas *cav = imgPage->GetCanvas();
+                if (cav)
+                {
+                    for (const auto &bufItem : cav->GetImageBufferZone())
+                    {
+                        if (tmCtrl)
+                        {
+                            tmCtrl->Append(new wxPreloadImageThumbnailItem(bufItem.second.iThumbnail, bufItem.second.iStationUUID, bufItem.second.iName));
+                        }
+                    }
+                }
             }
             else
             {
                 EnablePageImageTool(extCtrl, false);
+            }
+
+            if (tmCtrl)
+            {
+                tmCtrl->Thaw();
             }
         }
     }
@@ -1070,6 +1136,44 @@ void RootFrame::OnSelectEntity(const SPDrawableNodeVector &des)
     else
     {
         SetBitmapStatus(StatusIconType::kSIT_NONE, wxString::Format(wxT("Selected: %d entities"), static_cast<int>(des.size())));
+    }
+}
+
+void RootFrame::OnImageBufferItemAdd(const ImageBufferItem &ibi)
+{
+    auto tmPanel = dynamic_cast<ThumbnailPanel *>(wxAuiMgr_.GetPane(imagesZonePanelName_).window);
+    if (tmPanel)
+    {
+        wxThumbnailCtrl *tmCtrl = tmPanel->GetThumbnailCtrl();
+        if (tmCtrl)
+        {
+            tmCtrl->Append(new wxPreloadImageThumbnailItem(ibi.iThumbnail, ibi.iStationUUID, ibi.iName));
+        }
+    }
+}
+
+void RootFrame::OnImageBufferItemUpdate(const ImageBufferItem &ibi)
+{
+    auto tmPanel = dynamic_cast<ThumbnailPanel *>(wxAuiMgr_.GetPane(imagesZonePanelName_).window);
+    if (tmPanel)
+    {
+        wxThumbnailCtrl *tmCtrl = tmPanel->GetThumbnailCtrl();
+        if (tmCtrl)
+        {
+            int iPos = tmCtrl->FindItemForFilename(ibi.iName);
+            if (iPos>=0)
+            {
+                wxThumbnailItem *tItem = tmCtrl->GetItem(iPos);
+                if (tItem)
+                {
+                    wxPreloadImageThumbnailItem *tPreloadItem = dynamic_cast<wxPreloadImageThumbnailItem *>(tItem);
+                    tPreloadItem->SetThumbnailBitmap(ibi.iThumbnail);
+                    wxRect rect;
+                    tmCtrl->GetItemRect(iPos, rect);
+                    tmCtrl->RefreshRect(rect);
+                }
+            }
+        }
     }
 }
 
@@ -1360,6 +1464,8 @@ void RootFrame::ConnectCanvas(CVImagePanel *imgPanel)
             canv->sig_MiddleDown.connect(std::bind(&Spamer::OnCanvasMiddleDown, spamer_.get(), std::placeholders::_1));
             canv->sig_EnterWindow.connect(std::bind(&Spamer::OnCanvasEnter, spamer_.get(), std::placeholders::_1));
             canv->sig_LeaveWindow.connect(std::bind(&Spamer::OnCanvasLeave, spamer_.get(), std::placeholders::_1));
+            canv->sig_ImageBufferItemAdd.connect(std::bind(&RootFrame::OnImageBufferItemAdd, this, std::placeholders::_1));
+            canv->sig_ImageBufferItemUpdate.connect(std::bind(&RootFrame::OnImageBufferItemUpdate, this, std::placeholders::_1));
         }
     }
 }

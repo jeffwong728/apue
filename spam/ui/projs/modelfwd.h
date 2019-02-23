@@ -8,6 +8,8 @@
 #endif
 #include <array>
 #include <vector>
+#include <opencv2/core/cvstd.hpp>
+#include <opencv2/imgproc.hpp>
 #include <boost/any.hpp>
 namespace Geom {
     class PathVector;
@@ -170,7 +172,16 @@ struct NodeId
     int subid;
 };
 
-using NodeIdVector = std::vector<NodeId>;
-using CurveVector = std::vector<std::unique_ptr<Geom::Curve>>;
+struct ImageBufferItem
+{
+    wxString iName;
+    wxString iStationUUID;
+    cv::Mat  iSrcImage;
+    wxBitmap iThumbnail;
+};
+
+using NodeIdVector    = std::vector<NodeId>;
+using CurveVector     = std::vector<std::unique_ptr<Geom::Curve>>;
+using ImageBufferZone = std::unordered_map<std::string, ImageBufferItem>;
 
 #endif //SPAM_UI_PROJS_MODEL_FWD_H

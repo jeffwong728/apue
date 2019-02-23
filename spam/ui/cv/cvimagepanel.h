@@ -21,6 +21,7 @@ public:
 public:
     double LoadImageFromFile(const wxString &filePath);
     double SetImage(const cv::Mat &img);
+    void BufferImage(const std::string &name);
     void AdjustImgWndSize(const int id, const wxSize &imgSize) const;
     double GetScale() const { return scale_; }
     void SetScale(const double scale, bool getFocus);
@@ -31,8 +32,8 @@ public:
     double ZoomHalf(bool getFocus);
     double ZoomDouble(bool getFocus);
     bool HasImage() const;
-    const cv::Mat &GetImage() const { return img_; }
-    cv::Mat &GetImage() { return img_; }
+    const cv::Mat GetImage() const;
+    cv::Mat GetImage();
     CairoCanvas *GetCanvas() const { return canv_; }
 
 private:
@@ -42,8 +43,6 @@ private:
     void OnUpdateUI(wxUpdateUIEvent& e);
 
 private:
-    cv::Mat img_;
-    wxImage surface_;
     double scale_{100.0};
     CairoCanvas *canv_;
 };

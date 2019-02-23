@@ -3,6 +3,7 @@
 #include <ui/spam.h>
 #include <ui/toplevel/rootframe.h>
 #include <ui/cv/cairocanvas.h>
+#include <ui/projs/drawablenode.h>
 
 void ProbeTool::OnOptionChanged(const EvToolOption &e)
 {
@@ -83,10 +84,22 @@ void HistogramTool::OnBoxingEnded(const EvBoxingEnded &e)
 
 void HistogramTool::OnImageClicked(const EvImageClicked &e)
 {
-
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        frame->RequestUpdateHistogram(cav->GetUUID(), Geom::OptRect());
+    }
 }
 
 void HistogramTool::OnEntityClicked(const EvEntityClicked &e)
 {
-
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.e.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        Geom::PathVector pv;
+        e.ent->BuildPath(pv);
+        frame->RequestUpdateHistogram(cav->GetUUID(), pv);
+    }
 }

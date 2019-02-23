@@ -40,6 +40,7 @@ double CVImagePanel::LoadImageFromFile(const wxString &filePath)
     else
     {
         scale_ = SetImage(img);
+        BufferImage(filePath.ToStdString());
     }
 
     return scale_;
@@ -47,22 +48,10 @@ double CVImagePanel::LoadImageFromFile(const wxString &filePath)
 
 double CVImagePanel::SetImage(const cv::Mat &img)
 {
-    img_ = img;
-    if (!img_.empty())
+    if (!img.empty())
     {
-        int dph = img_.depth();
-        int cnl = img_.channels();
-
-        wxString::const_pointer dphStr[CV_64F + 1] =
-        {
-            wxT("CV_8U"),
-            wxT("CV_8S"),
-            wxT("CV_16U"),
-            wxT("CV_16S"),
-            wxT("CV_32S"),
-            wxT("CV_32F"),
-            wxT("CV_64F")
-        };
+        int dph = img.depth();
+        int cnl = img.channels();
 
         if (CV_8U == dph)
         {
@@ -72,7 +61,7 @@ double CVImagePanel::SetImage(const cv::Mat &img)
                 auto cvWidget = dynamic_cast<CairoCanvas *>(sizerItem->GetWindow());
                 if (cvWidget)
                 {
-                    cvWidget->ShowImage(img_);
+                    cvWidget->ShowImage(img);
                     double newScale = cvWidget->GetMatScale();
                     if (newScale > 0)
                     {
@@ -83,11 +72,34 @@ double CVImagePanel::SetImage(const cv::Mat &img)
         }
         else
         {
+            wxString::const_pointer dphStr[CV_64F + 1] =
+            {
+                wxT("CV_8U"),
+                wxT("CV_8S"),
+                wxT("CV_16U"),
+                wxT("CV_16S"),
+                wxT("CV_32S"),
+                wxT("CV_32F"),
+                wxT("CV_64F")
+            };
             wxLogMessage(wxT("Not supported depth : %s"), dphStr[dph]);
         }
     }
 
     return scale_;
+}
+
+void CVImagePanel::BufferImage(const std::string &name)
+{
+    wxSizerItem* sizerItem = GetSizer()->GetItemById(kSpamImageCanvas);
+    if (sizerItem)
+    {
+        auto cvWidget = dynamic_cast<CairoCanvas *>(sizerItem->GetWindow());
+        if (cvWidget)
+        {
+            cvWidget->PushImageIntoBufferZone(name);
+        }
+    }
 }
 
 void CVImagePanel::AdjustImgWndSize(const int id, const wxSize &imgSize) const
@@ -255,6 +267,16 @@ double CVImagePanel::ZoomDouble(bool getFocus)
     return scale_;
 }
 
+const cv::Mat CVImagePanel::GetImage() const
+{ 
+    return canv_->GetOriginalImage(); 
+}
+
+cv::Mat CVImagePanel::GetImage() 
+{ 
+    return canv_->GetOriginalImage(); 
+}
+
 bool CVImagePanel::HasImage() const
 {
     wxSizerItem* sizerItem = GetSizer()->GetItemById(kSpamImageCanvas);
@@ -317,6 +339,6 @@ void CVImagePanel::OnUpdateUI(wxUpdateUIEvent& e)
 {
     if (e.GetId() <= kSpamID_ZOOM_DOUBLE && e.GetId() >= kSpamID_SCALE_CHOICE)
     {
-        e.Enable(!img_.empty());
+        e.Enable(!GetImage().empty());
     }
 }

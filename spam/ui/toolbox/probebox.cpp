@@ -58,6 +58,13 @@ void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
     std::vector<cv::Mat> imags;
     cv::split(srcImg, imags);
     hist_->ClearProfiles();
+    wxColor  colors[4] = { *wxBLUE, *wxGREEN, *wxRED, *wxBLACK };
+    if (imags.size() < 2)
+    {
+        colors[0] = *wxBLACK;
+    }
+
+    int c = 0;
     for (const cv::Mat &imag : imags)
     {
         const int channels[] = {0};
@@ -67,9 +74,9 @@ void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
         cv::Mat hist;
         cv::calcHist(&imag, 1, channels, mask, hist, 1, histSize, ranges, true, false);
 
-        HistogramWidget::Profile profile{wxT(""), *wxRED};
+        HistogramWidget::Profile profile{wxT(""), colors[c++]};
         profile.seq.resize(256);
-        std::copy(hist.data, hist.data+256, profile.seq.begin());
+        std::copy(hist.ptr<float>(0, 0), hist.ptr<float>(0, 0)+256, profile.seq.begin());
         hist_->AddProfile(std::move(profile));
     }
     hist_->Refresh(true);

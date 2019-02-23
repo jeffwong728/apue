@@ -1,6 +1,7 @@
 ﻿#include "logpanel.h"
 #include <wx/artprov.h>
 #include <wx/wrapsizer.h>
+#include <boost/container/flat_map.hpp>
 
 LogPanel::LogPanel(wxWindow* parent)
 : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
@@ -50,4 +51,5 @@ void LogPanel::OnClear(wxCommandEvent &cmd)
 
 void LogPanel::OnSave(wxCommandEvent &cmd)
 {
+    boost::container::flat_map<int, int> fm;
 }

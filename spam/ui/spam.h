@@ -13,6 +13,7 @@
 #include <memory>
 #include <ui/cmds/spamcmd.h>
 #include <ui/projs/modelfwd.h>
+class CairoCanvas;
 
 class SpamConfig : private boost::noncopyable
 {
@@ -87,6 +88,7 @@ public:
     static void SetStatus(const StatusIconType iconType, const wxString &text);
     static void InvalidateCanvasRect(const std::string &uuidCanv, const Geom::OptRect &dirtRect);
     static void RequestRefreshAllCanvases();
+    static CairoCanvas *FindCanvas(const std::string &uuidTag);
 };
 
 class SpamUndoRedo : private boost::noncopyable

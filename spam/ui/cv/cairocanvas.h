@@ -8,6 +8,7 @@
 #endif
 #include <ui/projs/modelfwd.h>
 #include <ui/misc/instructiontip.h>
+#include <ui/proc/rgn.h>
 #include <string>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
@@ -16,7 +17,6 @@
 #include <2geom/2geom.h>
 #pragma warning( pop )
 #include <boost/signals2.hpp>
-namespace bs2 = boost::signals2;
 
 #ifdef IN
 #undef IN
@@ -29,6 +29,9 @@ namespace bs2 = boost::signals2;
 #endif
 #include <cairomm/cairomm.h>
 
+
+namespace bs2 = boost::signals2;
+
 class CairoCanvas : public wxScrolledCanvas
 {
 public:
@@ -37,20 +40,24 @@ public:
 
 public:
     typedef bs2::keywords::mutex_type<bs2::dummy_mutex> bs2_dummy_mutex;
-    bs2::signal_type<void(wxMouseEvent &), bs2_dummy_mutex>::type sig_EnterWindow;
-    bs2::signal_type<void(wxMouseEvent &), bs2_dummy_mutex>::type sig_LeaveWindow;
-    bs2::signal_type<void(wxMouseEvent &), bs2_dummy_mutex>::type sig_LeftMouseDown;
-    bs2::signal_type<void(wxMouseEvent &), bs2_dummy_mutex>::type sig_LeftMouseUp;
-    bs2::signal_type<void(wxMouseEvent &), bs2_dummy_mutex>::type sig_MouseMotion;
-    bs2::signal_type<void(wxMouseEvent &), bs2_dummy_mutex>::type sig_LeftDClick;
-    bs2::signal_type<void(wxMouseEvent &), bs2_dummy_mutex>::type sig_MiddleDown;
-    bs2::signal_type<void(wxKeyEvent &),   bs2_dummy_mutex>::type sig_KeyDown;
-    bs2::signal_type<void(wxKeyEvent &),   bs2_dummy_mutex>::type sig_KeyUp;
-    bs2::signal_type<void(wxKeyEvent &),   bs2_dummy_mutex>::type sig_Char;
+    bs2::signal_type<void(wxMouseEvent &),          bs2_dummy_mutex>::type sig_EnterWindow;
+    bs2::signal_type<void(wxMouseEvent &),          bs2_dummy_mutex>::type sig_LeaveWindow;
+    bs2::signal_type<void(wxMouseEvent &),          bs2_dummy_mutex>::type sig_LeftMouseDown;
+    bs2::signal_type<void(wxMouseEvent &),          bs2_dummy_mutex>::type sig_LeftMouseUp;
+    bs2::signal_type<void(wxMouseEvent &),          bs2_dummy_mutex>::type sig_MouseMotion;
+    bs2::signal_type<void(wxMouseEvent &),          bs2_dummy_mutex>::type sig_LeftDClick;
+    bs2::signal_type<void(wxMouseEvent &),          bs2_dummy_mutex>::type sig_MiddleDown;
+    bs2::signal_type<void(wxKeyEvent &),            bs2_dummy_mutex>::type sig_KeyDown;
+    bs2::signal_type<void(wxKeyEvent &),            bs2_dummy_mutex>::type sig_KeyUp;
+    bs2::signal_type<void(wxKeyEvent &),            bs2_dummy_mutex>::type sig_Char;
+    bs2::signal_type<void(const ImageBufferItem &), bs2_dummy_mutex>::type sig_ImageBufferItemAdd;
+    bs2::signal_type<void(const ImageBufferItem &), bs2_dummy_mutex>::type sig_ImageBufferItemUpdate;
 
 public:
     cv::Mat GetOriginalImage() const { return srcImg_; }
+    const ImageBufferZone &GetImageBufferZone() const { return imgBufferZone_; }
     void ShowImage(const cv::Mat &img);
+    void SwitchImage(const std::string &iName);
     void ExtentImage();
     void ScaleImage(double scaleVal);
     void ScaleUp(double val);
@@ -91,6 +98,8 @@ public:
     void StopInstructionTip();
     void ShowPixelValue(const wxPoint &pos);
     void PopupImageInfomation(const wxPoint &pos);
+    void PushImageIntoBufferZone(const std::string &name);
+    void PushRegionsIntoBufferZone(const std::string &name, const SPSpamRgnVector &rgns);
 
 private:
     void OnSize(wxSizeEvent& event);
@@ -144,6 +153,8 @@ private:
     std::vector<wxString> tipMessages_;
     std::string tipIcon_;
     wxPoint     tipPos_;
+    ImageBufferZone imgBufferZone_;
+    RgnBufferZone   rgnBufferZone_;
 };
 
 class DnDImageFile : public wxFileDropTarget

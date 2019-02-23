@@ -31,6 +31,9 @@ enum
     
     kSpamLogToolBar,
     kSpamLogTextCtrl,
+
+    kStationThumbnailToolBar,
+    kStationThumbnailCtrl,
     
     kSpamProjToolBar,
     kSpamProjTree,
@@ -46,6 +49,7 @@ enum
     spamID_VIEW_IMAGE,
     spamID_VIEW_PROJECT,
     spamID_VIEW_LOG,
+    spamID_VIEW_IMAGES_ZONE,
     spamID_VIEW_TOOLBOX_BAR,
     spamID_VIEW_DEFAULT_LAYOUT,
     spamID_VIEW_SET_TILE_LAYOUT,
@@ -152,7 +156,10 @@ enum
 
     kSpamID_TOOLBOX_MATCH_GRAY,
     kSpamID_TOOLBOX_MATCH_SHAPE,
-    kSpamID_TOOLBOX_MATCH_GUARD
+    kSpamID_TOOLBOX_MATCH_GUARD,
+
+    kSpamID_STATION_THUMBNAIL_DELETE,
+    kSpamID_STATION_THUMBNAIL_SAVE
 };
 
 enum SpamIconPurpose

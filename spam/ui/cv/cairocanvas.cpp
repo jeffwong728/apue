@@ -11,6 +11,8 @@
 #include <wx/popupwin.h>
 #include <wx/artprov.h>
 #include <algorithm>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <cairomm/win32_surface.h>
 //#include <tbb/tbb.h>
 #include <ui/misc/scopedtimer.h>
@@ -75,6 +77,18 @@ void CairoCanvas::ShowImage(const cv::Mat &img)
         SetVirtualSize(sToSize);
         MoveAnchor(sViewPort, sToSize);
         ScaleShowImage(sToSize);
+    }
+}
+
+void CairoCanvas::SwitchImage(const std::string &iName)
+{
+    auto itF = imgBufferZone_.find(iName);
+    if (itF != imgBufferZone_.end())
+    {
+        if (itF->second.iSrcImage.ptr() != srcImg_.ptr())
+        {
+            ShowImage(itF->second.iSrcImage);
+        }
     }
 }
 
@@ -817,6 +831,114 @@ void CairoCanvas::PopupImageInfomation(const wxPoint &pos)
         InformationTip *info = new InformationTip(this, messages, wxBitmap());
         info->Position(ClientToScreen(pos), wxSize(0, 5));
         info->Popup(this);
+    }
+}
+
+void CairoCanvas::PushImageIntoBufferZone(const std::string &name)
+{
+    wxSize thumbnailSize(80, 80);
+    double scaleX = (thumbnailSize.x + 0.0) / srcMat_.cols;
+    double scaleY = (thumbnailSize.y + 0.0) / srcMat_.rows;
+
+    cv::Mat thumbMat;
+    if (scaleX < 1.0 || scaleY < 1.0)
+    {
+        cv::Size newSize{ thumbnailSize.x, thumbnailSize.y };
+        if (scaleX < scaleY)
+        {
+            newSize.height = static_cast<int>(scaleX * srcMat_.rows);
+        }
+        else
+        {
+            newSize.width = static_cast<int>(scaleY * srcMat_.cols);
+        }
+
+        cv::resize(srcMat_, thumbMat, newSize, 0.0, 0.0, cv::INTER_AREA);
+    }
+    else
+    {
+        thumbMat = srcMat_;
+    }
+
+    wxImage thumbImg;
+    thumbImg.Create(thumbMat.cols, thumbMat.rows, false);
+    for (int r = 0; r<thumbMat.rows; ++r)
+    {
+        for (int c = 0; c<thumbMat.cols; ++c)
+        {
+            auto pPixel = thumbMat.data + r * thumbMat.step1() + c * 4;
+            thumbImg.SetRGB(c, r, pPixel[2], pPixel[1], pPixel[0]);
+        }
+    }
+
+    ImageBufferItem bufItem{ name, stationUUID_, srcImg_, wxBitmap(thumbImg) };
+    auto insResult = imgBufferZone_.insert(std::make_pair(name, bufItem));
+    if (!insResult.second)
+    {
+        insResult.first->second.iName = bufItem.iName;
+        insResult.first->second.iStationUUID = bufItem.iStationUUID;
+        insResult.first->second.iSrcImage = bufItem.iSrcImage;
+        insResult.first->second.iThumbnail = bufItem.iThumbnail;
+        sig_ImageBufferItemUpdate(bufItem);
+    }
+    else
+    {
+        sig_ImageBufferItemAdd(bufItem);
+    }
+}
+
+void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const SPSpamRgnVector &rgns)
+{
+    wxSize thumbnailSize(80, 80);
+    double scaleX = (thumbnailSize.x + 0.0) / srcMat_.cols;
+    double scaleY = (thumbnailSize.y + 0.0) / srcMat_.rows;
+
+    cv::Mat thumbMat;
+    if (scaleX < 1.0 || scaleY < 1.0)
+    {
+        cv::Size newSize{ thumbnailSize.x, thumbnailSize.y };
+        if (scaleX < scaleY)
+        {
+            newSize.height = static_cast<int>(scaleX * srcMat_.rows);
+        }
+        else
+        {
+            newSize.width = static_cast<int>(scaleY * srcMat_.cols);
+        }
+
+        thumbMat.create(newSize, CV_8UC4);
+    }
+    else
+    {
+        thumbMat.create(srcMat_.rows, srcMat_.cols, CV_8UC4);
+    }
+
+    for (const SpamRgn &rgn : *rgns)
+    {
+        rgn.Draw(thumbMat, (thumbMat.cols + 0.0) / srcMat_.cols, (thumbMat.rows + 0.0) / srcMat_.rows);
+    }
+
+    wxImage thumbImg;
+    thumbImg.Create(thumbMat.cols, thumbMat.rows, false);
+    for (int r = 0; r<thumbMat.rows; ++r)
+    {
+        for (int c = 0; c<thumbMat.cols; ++c)
+        {
+            auto pPixel = thumbMat.data + r * thumbMat.step1() + c * 4;
+            thumbImg.SetRGB(c, r, pPixel[2], pPixel[1], pPixel[0]);
+        }
+    }
+
+    ImageBufferItem bufItem{ name, stationUUID_, srcImg_, wxBitmap(thumbImg) };
+    auto insResult = rgnBufferZone_.insert(std::make_pair(name, rgns));
+    if (!insResult.second)
+    {
+        insResult.first->second = rgns;
+        sig_ImageBufferItemUpdate(bufItem);
+    }
+    else
+    {
+        sig_ImageBufferItemAdd(bufItem);
     }
 }
 

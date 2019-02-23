@@ -478,6 +478,17 @@ void Spam::RequestRefreshAllCanvases()
     }
 }
 
+CairoCanvas *Spam::FindCanvas(const std::string &uuidTag)
+{
+    auto frame = dynamic_cast<RootFrame *>(wxGetApp().GetTopWindow());
+    if (frame)
+    {
+        return frame->FindCanvasByUUID(uuidTag);
+    }
+
+    return nullptr;
+}
+
 void SpamUndoRedo::AddCommand(const std::shared_ptr<SpamCmd> &cmd)
 {
     wxGetApp().AddCommand(cmd);

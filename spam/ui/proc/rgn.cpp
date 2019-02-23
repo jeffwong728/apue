@@ -1,4 +1,5 @@
 #include "rgn.h"
+#include <limits>
 #ifdef free
 #undef free
 #endif
@@ -118,6 +119,59 @@ void SpamRgn::AddRunParallel(const cv::Mat &binaryImage)
     }
 }
 
+void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) const
+{
+    int dph = dstImage.depth();
+    int cnl = dstImage.channels();
+    if (CV_8U == dph && 4 == cnl)
+    {
+        cv::Rect bbox = BoundingBox();
+        double minx = sx * bbox.x;
+        double miny = sy * bbox.y;
+        double maxx = sx * (bbox.x + bbox.width + 1);
+        double maxy = sy * (bbox.y + bbox.height + 1);
+        for (double y = miny; y < maxy; ++y)
+        {
+            int or = cv::saturate_cast<int>(y / sy - 0.5);
+            auto lb = std::lower_bound(data_.cbegin(), data_.cend(), or, [](const SpamRun &run, const int val) { return  run.l < val; });
+            if (lb != data_.cend() && or == lb->l)
+            {
+                int r = cv::saturate_cast<int>(y);
+                if (r >= 0 && r<dstImage.rows)
+                {
+                    auto pRow = dstImage.data + r * dstImage.step1();
+                    for (double x = minx; x<maxx; ++x)
+                    {
+                        int oc = cv::saturate_cast<int>(x / sx - 0.5);
+                        auto itRun = lb;
+                        bool cInside = false;
+                        while (itRun != data_.cend() && or == itRun->l)
+                        {
+                            if (oc < itRun->ce && oc >= itRun->cb)
+                            {
+                                cInside = true;
+                                break;
+                            }
+
+                            itRun += 1;
+                        }
+
+                        if (cInside)
+                        {
+                            int c = cv::saturate_cast<int>(x);
+                            if (c >= 0 && c<dstImage.cols)
+                            {
+                                auto pPixel = reinterpret_cast<uint32_t *>(pRow + c * 4);
+                                *pPixel = 0xFFFF0000;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 double SpamRgn::Area() const
 {
     double a = 0;
@@ -132,4 +186,58 @@ double SpamRgn::Area() const
 void SpamRgn::Connect() const
 {
 
+}
+
+cv::Rect SpamRgn::BoundingBox() const
+{
+    cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+    cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
+
+    for (const SpamRun &r : data_)
+    {
+        if (r.l < minPoint.y)
+        {
+            minPoint.y = r.l;
+        }
+
+        if (r.l > maxPoint.y)
+        {
+            maxPoint.y = r.l;
+        }
+
+        if (r.cb < minPoint.x)
+        {
+            minPoint.x = r.cb;
+        }
+
+        if (r.ce > maxPoint.x)
+        {
+            maxPoint.x = r.ce;
+        }
+    }
+
+    if (data_.empty())
+    {
+        return cv::Rect();
+    }
+    else
+    {
+        return cv::Rect(minPoint, maxPoint);
+    }
+}
+
+bool SpamRgn::Contain(const int r, const int c) const
+{
+    auto lb = std::lower_bound(data_.cbegin(), data_.cend(), r, [](const SpamRun &run, const int val) { return val < run.l; });
+    while (lb != data_.cend() && r == lb->l)
+    {
+        if (c<lb->ce && c>=lb->cb)
+        {
+            return true;
+        }
+
+        lb += 1;
+    }
+
+    return false;
 }
