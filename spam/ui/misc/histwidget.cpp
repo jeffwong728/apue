@@ -35,6 +35,16 @@ HistogramWidget::HistogramWidget(wxWindow* parent)
     }
 }
 
+void HistogramWidget::ClearProfiles()
+{ 
+    profiles_.clear();
+}
+
+void HistogramWidget::SetRangeX(const std::pair<int, int> &r) 
+{ 
+    rangeX_ = r;
+}
+
 void HistogramWidget::OnEnterWindow(wxMouseEvent &e)
 {
     cursorVisible_ = true;
@@ -188,6 +198,13 @@ void HistogramWidget::DrawHistogram(wxGCDC &dc, const wxPoint *point) const
     dc.SetPen(*wxBLACK_PEN);
     dc.DrawRectangle(wxRect(gapX_-1, gapY_, width+2, height));
 
+    bool noProfile = profiles_.empty();
+    if (profiles_.empty())
+    {
+        Profile prof{ wxT(""), *wxBLACK, std::vector<double>(std::max(0, rangeX_.second - rangeX_.first + 1), 0.0) };
+        profiles_.push_back(prof);
+    }
+
     std::vector<CursorData> curDatas;
     wxPoint mPos = point ? *point + wxPoint(-gapX_, 0) : wxPoint();
     for (int p=0; p<static_cast<int>(profiles_.size()); ++p)
@@ -202,13 +219,12 @@ void HistogramWidget::DrawHistogram(wxGCDC &dc, const wxPoint *point) const
 
             CursorData curd = { 0, 0, wxPoint(),  profile.color };
             curd.pos.x = point ? point->x : 0;
-            curd.pos.x = point ? point->x : 0;
             double minDist = std::numeric_limits<double>::max();
 
             std::vector<wxPoint> points;
             if (yInter>0.1)
             {
-                int px = 0;
+                int px = -1;
                 double py = 0;
                 for (int n = 0; n<profile.seq.size(); ++n)
                 {
@@ -252,8 +268,12 @@ void HistogramWidget::DrawHistogram(wxGCDC &dc, const wxPoint *point) const
             }
             else
             {
-                int px = 0;
-                int py = wxRound(height / 2.0);
+                int px = -1;
+                int py = height;
+                if (0==wxRound(minVal) && 0==wxRound(maxVal))
+                {
+                    py = 0;
+                }
                 for (int n = 0; n<profile.seq.size(); ++n)
                 {
                     int x = wxRound(n / (profile.seq.size() - 1.0) * width);
@@ -301,6 +321,11 @@ void HistogramWidget::DrawHistogram(wxGCDC &dc, const wxPoint *point) const
     if (dragingThumb_<0 && highlightThumb_<0)
     {
         DrawCursors(dc, curDatas);
+    }
+
+    if (noProfile)
+    {
+        profiles_.clear();
     }
 }
 

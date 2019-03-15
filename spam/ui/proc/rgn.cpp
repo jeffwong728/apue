@@ -1,10 +1,20 @@
 #include "rgn.h"
 #include <limits>
+#include <boost/graph/graph_traits.hpp>
+#include <boost/graph/adjacency_list.hpp>
 #ifdef free
 #undef free
 #endif
 #include <tbb/tbb.h>
 #include <tbb/scalable_allocator.h>
+#include <stack>
+
+namespace
+{
+    constexpr int g_numRgnColors = 12;
+    static const uint32_t g_rgnColors[g_numRgnColors] = { 0xFFFF0000, 0xFF00FF00, 0xFF0000FF,
+        0xFF800000, 0xFFFFFF00, 0xFF808000, 0xFF008000, 0xFF00FFFF, 0xFF008080, 0xFF000080, 0xFFFF00FF, 0xFF800080 };
+};
 
 class RunLengthEncoder
 {
@@ -162,7 +172,7 @@ void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) co
                             if (c >= 0 && c<dstImage.cols)
                             {
                                 auto pPixel = reinterpret_cast<uint32_t *>(pRow + c * 4);
-                                *pPixel = 0xFFFF0000;
+                                *pPixel = color_;
                             }
                         }
                     }
@@ -183,9 +193,56 @@ double SpamRgn::Area() const
     return a;
 }
 
-void SpamRgn::Connect() const
+SPSpamRgnVector SpamRgn::Connect() const
 {
+    AdjacencyList al = GetAdjacencyList();
+    std::vector<uint8_t> met(al.size());
 
+    std::vector<std::vector<int>> rgnIdxs;
+    const int numRuns = static_cast<int>(al.size());
+    for (int n=0; n<numRuns; ++n)
+    {
+        if (!met[n])
+        {
+            rgnIdxs.emplace_back();
+            std::vector<int> runStack(1, n);
+            while (!runStack.empty())
+            {
+                const int seedRun = runStack.back();
+                runStack.pop_back();
+                if (!met[seedRun])
+                {
+                    met[seedRun] = 1;
+                    rgnIdxs.back().push_back(seedRun);
+                    for (const int a : al[seedRun])
+                    {
+                        runStack.push_back(a);
+                    }
+                }
+            }
+
+            std::sort(rgnIdxs.back().begin(), rgnIdxs.back().end());
+        }
+    }
+
+    SPSpamRgnVector rgs = std::make_shared<SpamRgnVector>();
+    rgs->resize(rgnIdxs.size());
+    const int numRgns = static_cast<int>(rgnIdxs.size());
+    for (int r = 0; r < numRgns; ++r)
+    {
+        SpamRgn &rgn = (*rgs)[r];
+        const std::vector<int> &rgnIdx = rgnIdxs[r];
+        const int numRgnRuns = static_cast<int>(rgnIdx.size());
+        rgn.data_.resize(numRgnRuns);
+        for (int rr = 0; rr < numRgnRuns; ++rr)
+        {
+            rgn.data_[rr] = data_[rgnIdx[rr]];
+        }
+
+        rgn.color_ = g_rgnColors[r%g_numRgnColors];
+    }
+
+    return rgs;
 }
 
 cv::Rect SpamRgn::BoundingBox() const
@@ -240,4 +297,83 @@ bool SpamRgn::Contain(const int r, const int c) const
     }
 
     return false;
+}
+
+AdjacencyList SpamRgn::GetAdjacencyList() const
+{
+    AdjacencyList al(data_.size());
+    if (!data_.empty() && data_.back().l > 0)
+    {
+        const int numRuns = static_cast<int>(data_.size());
+        std::vector<std::pair<int, int>> rowIndexRanges(data_.back().l+1);
+
+        int prevRun = 0;
+        rowIndexRanges[data_.front().l].first = 0;
+        for (int run = 0; run<numRuns; ++run)
+        {
+            if (data_[run].l != data_[prevRun].l)
+            {
+                rowIndexRanges[data_[prevRun].l].second = run;
+                rowIndexRanges[data_[run].l].first = run;
+            }
+
+            prevRun = run;
+        }
+        rowIndexRanges[data_[prevRun].l].second = numRuns;
+
+        const int row0StartIndex    = rowIndexRanges[0].first;
+        const int row0EndIndex      = rowIndexRanges[0].second;
+        const int rowMidStartIndex  = rowIndexRanges[0].second;
+        const int rowMidEndIndex    = rowIndexRanges[data_.back().l].first;
+        const int rowLastStartIndex = rowIndexRanges[data_.back().l].first;
+        const int rowLastEndIndex   = rowIndexRanges[data_.back().l].second;
+
+        for (int i=row0StartIndex; i<row0EndIndex; ++i)
+        {
+            const int nextRow = data_[i].l + 1;
+            for (int j = rowIndexRanges[nextRow].first; j < rowIndexRanges[nextRow].second; ++j)
+            {
+                if (IsRunColumnIntersection(data_[i], data_[j]))
+                {
+                    al[i].push_back(j);
+                }
+            }
+        }
+
+        for (int i = rowMidStartIndex; i<rowMidEndIndex; ++i)
+        {
+            const int prevRow = data_[i].l - 1;
+            const int nextRow = data_[i].l + 1;
+
+            for (int j = rowIndexRanges[prevRow].first; j < rowIndexRanges[prevRow].second; ++j)
+            {
+                if (IsRunColumnIntersection(data_[i], data_[j]))
+                {
+                    al[i].push_back(j);
+                }
+            }
+            
+            for (int j = rowIndexRanges[nextRow].first; j < rowIndexRanges[nextRow].second; ++j)
+            {
+                if (IsRunColumnIntersection(data_[i], data_[j]))
+                {
+                    al[i].push_back(j);
+                }
+            }
+        }
+
+        for (int i = rowLastStartIndex; i<rowLastEndIndex; ++i)
+        {
+            const int prevRow = data_[i].l - 1;
+            for (int j = rowIndexRanges[prevRow].first; j < rowIndexRanges[prevRow].second; ++j)
+            {
+                if (IsRunColumnIntersection(data_[i], data_[j]))
+                {
+                    al[i].push_back(j);
+                }
+            }
+        }
+    }
+
+    return al;
 }

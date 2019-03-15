@@ -100,6 +100,8 @@ public:
     void PopupImageInfomation(const wxPoint &pos);
     void PushImageIntoBufferZone(const std::string &name);
     void PushRegionsIntoBufferZone(const std::string &name, const SPSpamRgnVector &rgns);
+    void ClearVisiableRegions() { rgnsVisiable_.clear(); }
+    void SetVisiableRegion(const std::string &rgnName) { rgnsVisiable_.push_back(rgnName); }
 
 private:
     void OnSize(wxSizeEvent& event);
@@ -125,6 +127,7 @@ private:
     void DrawBox(wxDC &dc, const Geom::Path &pth);
     void DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
     void DrawEntities(Cairo::RefPtr<Cairo::Context> &cr);
+    void DrawRegions();
     void DrawEntities(Cairo::RefPtr<Cairo::Context> &cr, const SPDrawableNode &highlight);
     void ConpensateHandle(wxRect &invalidRect) const;
 
@@ -155,6 +158,7 @@ private:
     wxPoint     tipPos_;
     ImageBufferZone imgBufferZone_;
     RgnBufferZone   rgnBufferZone_;
+    std::vector<std::string> rgnsVisiable_;
 };
 
 class DnDImageFile : public wxFileDropTarget

@@ -5,3 +5,4 @@ build
 msvs
 install
 config
+/test/examples

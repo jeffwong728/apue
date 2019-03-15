@@ -11,6 +11,7 @@
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
 #include <boost/any.hpp>
+#include <ui/cmndef.h>
 namespace Geom {
     class PathVector;
     class Rect;
@@ -174,6 +175,7 @@ struct NodeId
 
 struct ImageBufferItem
 {
+    SpamEntityType iType;
     wxString iName;
     wxString iStationUUID;
     cv::Mat  iSrcImage;

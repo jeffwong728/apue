@@ -85,9 +85,33 @@ void CairoCanvas::SwitchImage(const std::string &iName)
     auto itF = imgBufferZone_.find(iName);
     if (itF != imgBufferZone_.end())
     {
-        if (itF->second.iSrcImage.ptr() != srcImg_.ptr())
+        if (SpamEntityType::kET_IMAGE == itF->second.iType)
         {
-            ShowImage(itF->second.iSrcImage);
+            bool haveVisibleRgn = !rgnsVisiable_.empty();
+            ClearVisiableRegions();
+            if (itF->second.iSrcImage.ptr() != srcImg_.ptr())
+            {
+                ShowImage(itF->second.iSrcImage);
+            }
+            else
+            {
+                if (haveVisibleRgn)
+                {
+                    Refresh(false);
+                }
+            }
+        }
+        else
+        {
+            if (SpamEntityType::kET_GEOM_REGION == itF->second.iType)
+            {
+                if (1!=rgnsVisiable_.size() || rgnsVisiable_[0]!=itF->second.iName.ToStdString())
+                {
+                    ClearVisiableRegions();
+                    SetVisiableRegion(itF->second.iName.ToStdString());
+                    Refresh(false);
+                }
+            }
         }
     }
 }
@@ -871,7 +895,7 @@ void CairoCanvas::PushImageIntoBufferZone(const std::string &name)
         }
     }
 
-    ImageBufferItem bufItem{ name, stationUUID_, srcImg_, wxBitmap(thumbImg) };
+    ImageBufferItem bufItem{ SpamEntityType::kET_IMAGE, name, stationUUID_, srcImg_, wxBitmap(thumbImg) };
     auto insResult = imgBufferZone_.insert(std::make_pair(name, bufItem));
     if (!insResult.second)
     {
@@ -906,11 +930,11 @@ void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const SPSpa
             newSize.width = static_cast<int>(scaleY * srcMat_.cols);
         }
 
-        thumbMat.create(newSize, CV_8UC4);
+        thumbMat = cv::Mat::zeros(newSize, CV_8UC4);
     }
     else
     {
-        thumbMat.create(srcMat_.rows, srcMat_.cols, CV_8UC4);
+        thumbMat = cv::Mat::zeros(srcMat_.rows, srcMat_.cols, CV_8UC4);
     }
 
     for (const SpamRgn &rgn : *rgns)
@@ -929,11 +953,20 @@ void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const SPSpa
         }
     }
 
-    ImageBufferItem bufItem{ name, stationUUID_, srcImg_, wxBitmap(thumbImg) };
+    ImageBufferItem bufItem{ SpamEntityType::kET_GEOM_REGION, name, stationUUID_, srcImg_, wxBitmap(thumbImg) };
     auto insResult = rgnBufferZone_.insert(std::make_pair(name, rgns));
     if (!insResult.second)
     {
         insResult.first->second = rgns;
+    }
+
+    auto insImgResult = imgBufferZone_.insert(std::make_pair(name, bufItem));
+    if (!insImgResult.second)
+    {
+        insImgResult.first->second.iName = bufItem.iName;
+        insImgResult.first->second.iStationUUID = bufItem.iStationUUID;
+        insImgResult.first->second.iSrcImage = bufItem.iSrcImage;
+        insImgResult.first->second.iThumbnail = bufItem.iThumbnail;
         sig_ImageBufferItemUpdate(bufItem);
     }
     else
@@ -1366,8 +1399,24 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::Op
     crScr->paint();
 }
 
+void CairoCanvas::DrawRegions()
+{
+    for (const std::string &rgnName : rgnsVisiable_)
+    {
+        auto itf = rgnBufferZone_.find(rgnName);
+        if (itf != rgnBufferZone_.end())
+        {
+            for (const SpamRgn &rgn : *itf->second)
+            {
+                rgn.Draw(scrMat_, GetMatScale(), GetMatScale());
+            }
+        }
+    }
+}
+
 void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr)
 {
+    DrawRegions();
     auto station = GetStation();
     if (station)
     {
@@ -1384,6 +1433,7 @@ void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr)
 
 void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr, const SPDrawableNode &highlight)
 {
+    DrawRegions();
     auto station = GetStation();
     if (station)
     {

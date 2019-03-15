@@ -33,10 +33,10 @@ public:
 
 public:
     void ClearThumbs() { thumbs_.clear(); }
-    void ClearProfiles() { profiles_.clear(); }
+    void ClearProfiles();
     void AddThumb(const int t) { thumbs_.push_back(t); }
     void AddProfile(Profile &&profile) { profiles_.push_back(profile); }
-    void SetRangeX(const std::pair<int, int> &r) { rangeX_ = r; }
+    void SetRangeX(const std::pair<int, int> &r);
     int  GetPlane() const { return plane_; }
     void SetPlane(const int plane) { if (plane>=0 && plane<static_cast<int>(profiles_.size())) plane_ = plane; }
     const std::vector<int> &GetThumbs() const { return thumbs_; }
@@ -68,7 +68,7 @@ private:
     int gapY_{5};
     int plane_{0};
     std::pair<int, int> rangeX_;
-    std::vector<Profile> profiles_;
+    mutable std::vector<Profile> profiles_;
     std::vector<int> thumbs_;
 
     wxDECLARE_NO_COPY_CLASS(HistogramWidget);

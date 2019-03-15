@@ -232,16 +232,21 @@ void ProcBox::RePopulateHistogramProfiles(const std::vector<cv::Mat> &imags, con
 void ProcBox::ReThreshold()
 {
     int selChannel = channelChoice_->GetSelection();
-    int minGray = hist_->GetThumbs()[0];
-    int maxGray = hist_->GetThumbs()[1];
-    cv::Mat grayImg = imgs_[selChannel];
-    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, minGray, maxGray);
-
-    CairoCanvas *cav = Spam::FindCanvas(uuidStation_);
-    if (cav && nameText_)
+    if (selChannel>=0 && selChannel<static_cast<int>(imgs_.size()))
     {
-        SPSpamRgnVector rgns = std::make_shared<SpamRgnVector>(1);
-        rgns->back().swap(*rgn);
-        cav->PushRegionsIntoBufferZone(nameText_->GetValue().ToStdString(), rgns);
+        int minGray = hist_->GetThumbs()[0];
+        int maxGray = hist_->GetThumbs()[1];
+        cv::Mat grayImg = imgs_[selChannel];
+        SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, minGray, maxGray);
+
+        CairoCanvas *cav = Spam::FindCanvas(uuidStation_);
+        if (cav && nameText_)
+        {
+            SPSpamRgnVector rgns = rgn->Connect();
+            cav->PushRegionsIntoBufferZone(nameText_->GetValue().ToStdString(), rgns);
+            cav->ClearVisiableRegions();
+            cav->SetVisiableRegion(nameText_->GetValue().ToStdString());
+            cav->Refresh(false);
+        }
     }
 }

@@ -418,31 +418,11 @@ void RootFrame::OnAbout(wxCommandEvent& event)
     ProjTreeModel *model = Spam::GetModel();
     SPStationNode station = model->FindStationByUUID(page->GetName());
 
-    cv::Mat srcMat, dstMat;
-    cv::Mat img = station->GetImage();
-
-    int dph = img.depth();
-    int cnl = img.channels();
-
-    if (CV_8U == dph && (1 == cnl || 3 == cnl || 4 == cnl))
-    {
-        if (1 == cnl)
-        {
-            srcMat = img;
-            
-        }
-        else if (3 == cnl)
-        {
-            cv::cvtColor(img, srcMat, cv::COLOR_BGR2GRAY);
-        }
-        else
-        {
-            cv::cvtColor(img, srcMat, cv::COLOR_BGRA2GRAY);
-        }
-    }
-
     SpamRgn rgn;
-    rgn.AddRun(srcMat);
+    rgn.AddRun(0, 5, 8);
+    rgn.AddRun(1, 5, 8);
+    rgn.AddRun(1, 50, 81);
+    rgn.Connect();
 }
 
 void RootFrame::OnHello(wxCommandEvent& event)
