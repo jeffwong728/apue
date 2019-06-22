@@ -377,3 +377,121 @@ AdjacencyList SpamRgn::GetAdjacencyList() const
 
     return al;
 }
+
+RD_LIST RunTypeDirectionEncoder::encode()
+{
+    std::vector<int> P_BUFFER;
+    std::vector<int> C_BUFFER;
+    constexpr int Infinity = std::numeric_limits<int>::max();
+    P_BUFFER.push_back(Infinity);
+
+    RD_LIST rd_list;
+    rd_list.reserve((rgn_.GetRunData().size()+1)*2);
+
+    int l = rgn_.GetRunData()[0].l;
+    for (const SpamRun &r : rgn_.GetRunData())
+    {
+        if (r.l == l)
+        {
+            C_BUFFER.push_back(r.cb);
+            C_BUFFER.push_back(r.ce);
+        }
+        else
+        {
+            C_BUFFER.push_back(Infinity);
+
+            int P1 = 0;
+            int P2 = 0;
+            int State = 0;
+            int X1 = P_BUFFER[P1];
+            int X2 = C_BUFFER[P2];
+            int X  = X2;
+
+            bool stay = true;
+            while (stay)
+            {
+                int RD_CODE = 0;
+                switch (State)
+                {
+                case 0:
+                    if (X1>X2) {
+                        State = 2; X = X2; P2 += 1; X2 = C_BUFFER[P2];
+                    } else if (X1<X2) {
+                        State = 1; P1 += 1; X1 = P_BUFFER[P1];
+                    } else if (X1 < Infinity) {
+                        State = 3; RD_CODE = 2; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                    } else {
+                        stay = false;
+                    }
+                    break;
+
+                case 1:
+                    if (X1 > X2) {
+                        State = 3; X = X2; RD_CODE = 4; P2 += 1; X2 = C_BUFFER[P2];
+                    } else if (X1 < X2) {
+                        State = 0; X = X1; RD_CODE = 5; P1 += 1; X1 = P_BUFFER[P1];
+                    } else {
+                        State = 4; X = X1; RD_CODE = 4; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                    }
+                    break;
+
+                case 2:
+                    if (X1 > X2) {
+                        State = 0; RD_CODE = 1; P2 += 1; X2 = C_BUFFER[P2];
+                    } else if (X1 < X2) {
+                        State = 3; RD_CODE = 3; P1 += 1; X1 = P_BUFFER[P1];
+                    } else {
+                        State = 5; RD_CODE = 3; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                    }
+                    break;
+
+                case 3:
+                    if (X1 > X2) {
+                        State = 5; P2 += 1; X2 = C_BUFFER[P2];
+                    } else if (X1 < X2) {
+                        State = 4; X = X1; P1 += 1; X1 = P_BUFFER[P1];
+                    } else {
+                        State = 0; RD_CODE = 6; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                    }
+                    break;
+
+                case 4:
+                    if (X1 > X2) {
+                        State = 0; RD_CODE = 8; P2 += 1; X2 = C_BUFFER[P2];
+                    } else if (X1 < X2) {
+                        State = 3; RD_CODE = 10; P1 += 1; X1 = P_BUFFER[P1];
+                    } else {
+                        State = 5; RD_CODE = 10; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                    }
+                    break;
+
+                case 5:
+                    if (X1 > X2) {
+                        State = 3; X = X2; RD_CODE = 9; P2 += 1; X2 = C_BUFFER[P2];
+                    } else if (X1 < X2) {
+                        State = 0; X = X1; RD_CODE = 7; P1 += 1; X1 = P_BUFFER[P1];
+                    } else {
+                        State = 4; X = X1; RD_CODE = 9; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                    }
+                    break;
+
+                default:
+                    break;
+                }
+
+                if (RD_CODE)
+                {
+                    rd_list.emplace_back(X, l, RD_CODE, 0, 0);
+                }
+            }
+
+            P_BUFFER.swap(C_BUFFER);
+            C_BUFFER.resize(0);
+            C_BUFFER.push_back(r.cb);
+            C_BUFFER.push_back(r.ce);
+            l = r.l;
+        }
+    }
+
+    return rd_list;
+}

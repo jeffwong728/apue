@@ -12,6 +12,16 @@ struct SpamRun
     int ce; // column index of ending(exclude) of run
 };
 
+struct RD_LIST_ENTRY
+{
+    RD_LIST_ENTRY(const int x, const int y, const int code, const int link, const int w_link) : X(x), Y(y), CODE(code), LINK(link), W_LINK(w_link) {}
+    int X;
+    int Y;
+    int CODE;
+    int LINK;
+    int W_LINK;
+};
+
 class SpamRgn;
 using VertexList = boost::container::small_vector<int, 5>;
 using AdjacencyList = std::vector<VertexList>;
@@ -19,6 +29,7 @@ using SpamRgnVector = std::vector<SpamRgn>;
 using SPSpamRgn = std::shared_ptr<SpamRgn>;
 using SPSpamRgnVector = std::shared_ptr<SpamRgnVector>;
 using RgnBufferZone = std::unordered_map<std::string, SPSpamRgnVector>;
+using RD_LIST = std::vector<RD_LIST_ENTRY>;
 
 class SpamRgn
 {
@@ -43,10 +54,23 @@ public:
     cv::Rect BoundingBox() const;
     bool Contain(const int r, const int c) const;
     AdjacencyList GetAdjacencyList() const;
+    const std::vector<SpamRun> &GetRunData() const { return data_; }
 
 private:
     std::vector<SpamRun> data_;
     uint32_t             color_;
+};
+
+class RunTypeDirectionEncoder
+{
+public:
+    RunTypeDirectionEncoder(const SpamRgn &rgn) : rgn_(rgn) {}
+
+public:
+    RD_LIST encode();
+
+private:
+    const SpamRgn &rgn_;
 };
 
 inline bool IsRunColumnIntersection(const SpamRun &r1, const SpamRun &r2)
