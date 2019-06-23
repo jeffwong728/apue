@@ -378,18 +378,50 @@ AdjacencyList SpamRgn::GetAdjacencyList() const
     return al;
 }
 
-RD_LIST RunTypeDirectionEncoder::encode()
+RD_LIST RunTypeDirectionEncoder::encode() const
 {
+    RD_LIST rd_list;
+    rd_list.reserve(rgn_.data_.size() * 2 + 1);
+    rd_list.emplace_back(0, 0, 0, 0, 0, 0);
+
+    if (rgn_.data_.empty())
+    {
+        return rd_list;
+    }
+
     std::vector<int> P_BUFFER;
     std::vector<int> C_BUFFER;
     constexpr int Infinity = std::numeric_limits<int>::max();
     P_BUFFER.push_back(Infinity);
 
-    RD_LIST rd_list;
-    rd_list.reserve((rgn_.GetRunData().size()+1)*2);
+    bool extended = false;
+    std::vector<SpamRun> runData;
+    const std::vector<SpamRun> *pRunData = nullptr;
+    if (rgn_.data_.capacity() >= rgn_.data_.size()+2)
+    {
+        extended = true;
+        const int lastRun = rgn_.data_.back().l;
+        rgn_.data_.emplace_back(lastRun + 1, Infinity, Infinity);
+        rgn_.data_.emplace_back(lastRun + 2, Infinity, Infinity);
+        pRunData = &rgn_.data_;
+    }
+    else
+    {
+        runData.resize(rgn_.data_.size() + 2);
+        ::memcpy(&runData[0], &rgn_.data_[0], sizeof(runData[0])*rgn_.data_.size());
 
-    int l = rgn_.GetRunData()[0].l;
-    for (const SpamRun &r : rgn_.GetRunData())
+        const int lastRun = rgn_.data_.back().l;
+        runData[rgn_.data_.size()]   = SpamRun(lastRun + 1, Infinity, Infinity);
+        runData[rgn_.data_.size()+1] = SpamRun(lastRun+2, Infinity, Infinity);
+        pRunData = &runData;
+    }
+
+    int P3 = 0;
+    int P4 = 1;
+    int P5 = 0;
+
+    int l = (*pRunData)[0].l;
+    for (const SpamRun &r : *pRunData)
     {
         if (r.l == l)
         {
@@ -481,7 +513,60 @@ RD_LIST RunTypeDirectionEncoder::encode()
 
                 if (RD_CODE)
                 {
-                    rd_list.emplace_back(X, l, RD_CODE, 0, 0);
+                    P3 += 1;
+                    const int QI = qis_[RD_CODE];
+                    rd_list.emplace_back(X, l, RD_CODE, 0, 0, QI);
+
+                    if (QI)
+                    {
+                        rd_list[P5].W_LINK = P3;
+                        P5 = P3;
+                    }
+
+                    if (5 == RD_CODE)
+                    {
+                        if (downLink_[RD_CODE][rd_list[P4].CODE])
+                        {
+                            rd_list[P4].LINK = P3;
+                            rd_list[P4].QI -= 1;
+                            if (1 > rd_list[P4].QI)
+                            {
+                                P4 = rd_list[P4].W_LINK;
+                            }
+                        }
+
+                        if (upLink_[RD_CODE][rd_list[P4].CODE])
+                        {
+                            rd_list[P3].LINK = P4;
+                            rd_list[P4].QI -= 1;
+                            if (1 > rd_list[P4].QI)
+                            {
+                                P4 = rd_list[P4].W_LINK;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (upLink_[RD_CODE][rd_list[P4].CODE])
+                        {
+                            rd_list[P3].LINK = P4;
+                            rd_list[P4].QI -= 1;
+                            if (1 > rd_list[P4].QI)
+                            {
+                                P4 = rd_list[P4].W_LINK;
+                            }
+                        }
+
+                        if (downLink_[RD_CODE][rd_list[P4].CODE])
+                        {
+                            rd_list[P4].LINK = P3;
+                            rd_list[P4].QI -= 1;
+                            if (1 > rd_list[P4].QI)
+                            {
+                                P4 = rd_list[P4].W_LINK;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -491,6 +576,12 @@ RD_LIST RunTypeDirectionEncoder::encode()
             C_BUFFER.push_back(r.ce);
             l = r.l;
         }
+    }
+
+    if (extended)
+    {
+        rgn_.data_.pop_back();
+        rgn_.data_.pop_back();
     }
 
     return rd_list;

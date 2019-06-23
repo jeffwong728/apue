@@ -7,6 +7,8 @@
 
 struct SpamRun
 {
+    SpamRun() : l(0), cb(0), ce(0) {}
+    SpamRun(const int ll, const int bb, const int ee) : l(ll), cb(bb), ce(ee) {}
     int l;  // line number (row) of run
     int cb; // column index of beginning(include) of run
     int ce; // column index of ending(exclude) of run
@@ -14,12 +16,13 @@ struct SpamRun
 
 struct RD_LIST_ENTRY
 {
-    RD_LIST_ENTRY(const int x, const int y, const int code, const int link, const int w_link) : X(x), Y(y), CODE(code), LINK(link), W_LINK(w_link) {}
+    RD_LIST_ENTRY(const int x, const int y, const int code, const int link, const int w_link, const int qi) : X(x), Y(y), CODE(code), LINK(link), W_LINK(w_link), QI(qi) {}
     int X;
     int Y;
     int CODE;
     int LINK;
     int W_LINK;
+    int QI;
 };
 
 class SpamRgn;
@@ -33,7 +36,7 @@ using RD_LIST = std::vector<RD_LIST_ENTRY>;
 
 class SpamRgn
 {
-
+    friend class RunTypeDirectionEncoder;
 public:
     SpamRgn() : color_(0xFFFF0000) {}
     ~SpamRgn() {}
@@ -47,6 +50,7 @@ public:
     void AddRun(const cv::Mat &binaryImage);
     void AddRunParallel(const cv::Mat &binaryImage);
     void Draw(const cv::Mat &dstImage, const double sx, const double sy) const;
+    int GetNumRuns() const { return static_cast<int>(data_.size()); }
 
 public:
     double Area() const;
@@ -54,7 +58,6 @@ public:
     cv::Rect BoundingBox() const;
     bool Contain(const int r, const int c) const;
     AdjacencyList GetAdjacencyList() const;
-    const std::vector<SpamRun> &GetRunData() const { return data_; }
 
 private:
     std::vector<SpamRun> data_;
@@ -64,13 +67,16 @@ private:
 class RunTypeDirectionEncoder
 {
 public:
-    RunTypeDirectionEncoder(const SpamRgn &rgn) : rgn_(rgn) {}
+    RunTypeDirectionEncoder(SpamRgn &rgn) : rgn_(rgn) {}
 
 public:
-    RD_LIST encode();
+    RD_LIST encode() const;
 
 private:
-    const SpamRgn &rgn_;
+    SpamRgn &rgn_;
+    const int qis_[11]{0, 2, 1, 1, 1, 0, 1, 1, 1, 2, 0};
+    const int downLink_[11][11]{ {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0}, {0}, {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1} };
+    const int upLink_[11][11]{ {0}, {0}, {0}, {0}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1} };
 };
 
 inline bool IsRunColumnIntersection(const SpamRun &r1, const SpamRun &r2)
