@@ -418,3 +418,144 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_7)
     BOOST_CHECK_EQUAL(re_list[15].CODE, 7);
     BOOST_CHECK_EQUAL(re_list[16].CODE, 5);
 }
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_0)
+{
+    SpamRgn rgn;
+    rgn.AddRun(0, 1, 2);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR outer = encoder.track(holes);
+
+    BOOST_CHECK_EQUAL(outer.size(), 4);
+    BOOST_CHECK_EQUAL(holes.size(), 0);
+    BOOST_CHECK_EQUAL(outer[0].x, 1);
+    BOOST_CHECK_EQUAL(outer[0].y, 0);
+    BOOST_CHECK_EQUAL(outer[1].x, 1);
+    BOOST_CHECK_EQUAL(outer[1].y, 1);
+    BOOST_CHECK_EQUAL(outer[2].x, 2);
+    BOOST_CHECK_EQUAL(outer[2].y, 1);
+    BOOST_CHECK_EQUAL(outer[3].x, 2);
+    BOOST_CHECK_EQUAL(outer[3].y, 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_1)
+{
+    SpamRgn rgn;
+    rgn.AddRun(1, 1, 5);
+    rgn.AddRun(2, 1, 5);
+    rgn.AddRun(3, 1, 5);
+    rgn.AddRun(4, 1, 5);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR outer = encoder.track(holes);
+
+    BOOST_CHECK_EQUAL(outer.size(), 4);
+    BOOST_CHECK_EQUAL(holes.size(), 0);
+    BOOST_CHECK_EQUAL(outer[0].x, 1);
+    BOOST_CHECK_EQUAL(outer[0].y, 1);
+    BOOST_CHECK_EQUAL(outer[1].x, 1);
+    BOOST_CHECK_EQUAL(outer[1].y, 5);
+    BOOST_CHECK_EQUAL(outer[2].x, 5);
+    BOOST_CHECK_EQUAL(outer[2].y, 5);
+    BOOST_CHECK_EQUAL(outer[3].x, 5);
+    BOOST_CHECK_EQUAL(outer[3].y, 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_2)
+{
+    SpamRgn rgn;
+    rgn.AddRun(1, 2, 3);
+    rgn.AddRun(1, 5, 6);
+    rgn.AddRun(2, 1, 7);
+    rgn.AddRun(3, 1, 3);
+    rgn.AddRun(3, 5, 7);
+    rgn.AddRun(4, 2, 3);
+    rgn.AddRun(4, 5, 6);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR outer = encoder.track(holes);
+
+    BOOST_CHECK_EQUAL(rgn.GetNumRuns(), 7);
+    BOOST_CHECK_EQUAL(outer.size(), 20);
+    BOOST_CHECK_EQUAL(holes.size(), 0);
+    BOOST_CHECK_EQUAL(outer[0].x, 2);
+    BOOST_CHECK_EQUAL(outer[0].y, 1);
+    BOOST_CHECK_EQUAL(outer[1].x, 2);
+    BOOST_CHECK_EQUAL(outer[1].y, 2);
+    BOOST_CHECK_EQUAL(outer[2].x, 1);
+    BOOST_CHECK_EQUAL(outer[2].y, 2);
+    BOOST_CHECK_EQUAL(outer[3].x, 1);
+    BOOST_CHECK_EQUAL(outer[3].y, 4);
+    BOOST_CHECK_EQUAL(outer[4].x, 2);
+    BOOST_CHECK_EQUAL(outer[4].y, 4);
+    BOOST_CHECK_EQUAL(outer[5].x, 2);
+    BOOST_CHECK_EQUAL(outer[5].y, 5);
+    BOOST_CHECK_EQUAL(outer[6].x, 3);
+    BOOST_CHECK_EQUAL(outer[6].y, 5);
+    BOOST_CHECK_EQUAL(outer[7].x, 3);
+    BOOST_CHECK_EQUAL(outer[7].y, 3);
+    BOOST_CHECK_EQUAL(outer[8].x, 5);
+    BOOST_CHECK_EQUAL(outer[8].y, 3);
+    BOOST_CHECK_EQUAL(outer[9].x, 5);
+    BOOST_CHECK_EQUAL(outer[9].y, 5);
+    BOOST_CHECK_EQUAL(outer[10].x, 6);
+    BOOST_CHECK_EQUAL(outer[10].y, 5);
+    BOOST_CHECK_EQUAL(outer[11].x, 6);
+    BOOST_CHECK_EQUAL(outer[11].y, 4);
+    BOOST_CHECK_EQUAL(outer[12].x, 7);
+    BOOST_CHECK_EQUAL(outer[12].y, 4);
+    BOOST_CHECK_EQUAL(outer[13].x, 7);
+    BOOST_CHECK_EQUAL(outer[13].y, 2);
+    BOOST_CHECK_EQUAL(outer[14].x, 6);
+    BOOST_CHECK_EQUAL(outer[14].y, 2);
+    BOOST_CHECK_EQUAL(outer[15].x, 6);
+    BOOST_CHECK_EQUAL(outer[15].y, 1);
+    BOOST_CHECK_EQUAL(outer[16].x, 5);
+    BOOST_CHECK_EQUAL(outer[16].y, 1);
+    BOOST_CHECK_EQUAL(outer[17].x, 5);
+    BOOST_CHECK_EQUAL(outer[17].y, 2);
+    BOOST_CHECK_EQUAL(outer[18].x, 3);
+    BOOST_CHECK_EQUAL(outer[18].y, 2);
+    BOOST_CHECK_EQUAL(outer[19].x, 3);
+    BOOST_CHECK_EQUAL(outer[19].y, 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_3)
+{
+    SpamRgn rgn;
+    rgn.AddRun(1, 1, 6);
+    rgn.AddRun(2, 1, 2);
+    rgn.AddRun(2, 5, 6);
+    rgn.AddRun(3, 1, 2);
+    rgn.AddRun(3, 5, 6);
+    rgn.AddRun(4, 1, 6);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR outer = encoder.track(holes);
+
+    BOOST_CHECK_EQUAL(rgn.GetNumRuns(), 6);
+    BOOST_CHECK_EQUAL(outer.size(), 4);
+    BOOST_CHECK_EQUAL(holes.size(), 1);
+    BOOST_CHECK_EQUAL(holes[0].size(), 4);
+    BOOST_CHECK_EQUAL(outer[0].x, 1);
+    BOOST_CHECK_EQUAL(outer[0].y, 1);
+    BOOST_CHECK_EQUAL(outer[1].x, 1);
+    BOOST_CHECK_EQUAL(outer[1].y, 5);
+    BOOST_CHECK_EQUAL(outer[2].x, 6);
+    BOOST_CHECK_EQUAL(outer[2].y, 5);
+    BOOST_CHECK_EQUAL(outer[3].x, 6);
+    BOOST_CHECK_EQUAL(outer[3].y, 1);
+    BOOST_CHECK_EQUAL(holes[0][0].x, 5);
+    BOOST_CHECK_EQUAL(holes[0][0].y, 2);
+    BOOST_CHECK_EQUAL(holes[0][1].x, 5);
+    BOOST_CHECK_EQUAL(holes[0][1].y, 4);
+    BOOST_CHECK_EQUAL(holes[0][2].x, 2);
+    BOOST_CHECK_EQUAL(holes[0][2].y, 4);
+    BOOST_CHECK_EQUAL(holes[0][3].x, 2);
+    BOOST_CHECK_EQUAL(holes[0][3].y, 2);
+}

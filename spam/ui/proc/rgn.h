@@ -1,5 +1,6 @@
 #ifndef SPAM_UI_PROC_REGION_H
 #define SPAM_UI_PROC_REGION_H
+#include <array>
 #include <vector>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
@@ -16,13 +17,14 @@ struct SpamRun
 
 struct RD_LIST_ENTRY
 {
-    RD_LIST_ENTRY(const int x, const int y, const int code, const int link, const int w_link, const int qi) : X(x), Y(y), CODE(code), LINK(link), W_LINK(w_link), QI(qi) {}
+    RD_LIST_ENTRY(const int x, const int y, const int code, const int qi) : X(x), Y(y), CODE(code), LINK(0), W_LINK(0), QI(qi), FLAG(0) {}
     int X;
     int Y;
     int CODE;
     int LINK;
     int W_LINK;
     int QI;
+    int FLAG;
 };
 
 class SpamRgn;
@@ -33,6 +35,7 @@ using SPSpamRgn = std::shared_ptr<SpamRgn>;
 using SPSpamRgnVector = std::shared_ptr<SpamRgnVector>;
 using RgnBufferZone = std::unordered_map<std::string, SPSpamRgnVector>;
 using RD_LIST = std::vector<RD_LIST_ENTRY>;
+using RD_CONTOUR = std::vector<cv::Point>;
 
 class SpamRgn
 {
@@ -71,10 +74,12 @@ public:
 
 public:
     RD_LIST encode() const;
+    RD_CONTOUR track(std::vector<RD_CONTOUR> &holes) const;
 
 private:
     SpamRgn &rgn_;
-    const int qis_[11]{0, 2, 1, 1, 1, 0, 1, 1, 1, 2, 0};
+    const int qis_[11]{ 0, 2, 1, 1, 1, 0, 1, 1, 1, 2, 0 };
+    const int count_[11]{1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1};
     const int downLink_[11][11]{ {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0}, {0}, {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1} };
     const int upLink_[11][11]{ {0}, {0}, {0}, {0}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1} };
 };

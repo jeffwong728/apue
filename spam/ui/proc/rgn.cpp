@@ -382,7 +382,8 @@ RD_LIST RunTypeDirectionEncoder::encode() const
 {
     RD_LIST rd_list;
     rd_list.reserve(rgn_.data_.size() * 2 + 1);
-    rd_list.emplace_back(0, 0, 0, 0, 0, 0);
+    rd_list.emplace_back(0, 0, 0, 0);
+    rd_list.front().FLAG = 1;
 
     if (rgn_.data_.empty())
     {
@@ -515,7 +516,7 @@ RD_LIST RunTypeDirectionEncoder::encode() const
                 {
                     P3 += 1;
                     const int QI = qis_[RD_CODE];
-                    rd_list.emplace_back(X, l, RD_CODE, 0, 0, QI);
+                    rd_list.emplace_back(X, l, RD_CODE, QI);
 
                     if (QI)
                     {
@@ -585,4 +586,68 @@ RD_LIST RunTypeDirectionEncoder::encode() const
     }
 
     return rd_list;
+}
+
+RD_CONTOUR RunTypeDirectionEncoder::track(std::vector<RD_CONTOUR> &holes) const
+{
+    RD_CONTOUR outerContour;
+    RD_LIST rd_list = encode();
+    for (RD_LIST_ENTRY &e : rd_list)
+    {
+        if (!e.FLAG)
+        {
+            e.FLAG = 1;
+            if (1==e.CODE)
+            {
+                if (count_[e.CODE]) outerContour.emplace_back(e.X, e.Y);
+                int nextLink = e.LINK;
+                while (!rd_list[nextLink].FLAG)
+                {
+                    rd_list[nextLink].FLAG = 1;
+                    if (count_[rd_list[nextLink].CODE])
+                    {
+                        outerContour.emplace_back(outerContour.back().x, rd_list[nextLink].Y);
+                        outerContour.emplace_back(rd_list[nextLink].X, rd_list[nextLink].Y);
+                    }
+                    nextLink = rd_list[nextLink].LINK;
+                }
+            }
+            else
+            {
+                RD_CONTOUR hole;
+                if (count_[e.CODE]) hole.emplace_back(e.X, e.Y);
+                int nextLink = e.LINK;
+                while (!rd_list[nextLink].FLAG)
+                {
+                    rd_list[nextLink].FLAG = 1;
+                    if (count_[rd_list[nextLink].CODE])
+                    {
+                        hole.emplace_back(hole.back().x, rd_list[nextLink].Y);
+                        hole.emplace_back(rd_list[nextLink].X, rd_list[nextLink].Y);
+                    }
+                    nextLink = rd_list[nextLink].LINK;
+                }
+
+                if (!hole.empty())
+                {
+                    holes.push_back(std::move(hole));
+                }
+            }
+        }
+    }
+
+    if (!outerContour.empty())
+    {
+        outerContour.emplace_back(outerContour.back().x, outerContour.front().y);
+    }
+
+    for (auto &hole : holes)
+    {
+        if (!hole.empty())
+        {
+            hole.emplace_back(hole.back().x, hole.front().y);
+        }
+    }
+
+    return outerContour;
 }
