@@ -4,7 +4,13 @@
 #include <vector>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
+#include <boost/optional.hpp>
 #include <boost/container/small_vector.hpp>
+#pragma warning( push )
+#pragma warning( disable : 4819 4003 4267 4244)
+#include <2geom/path.h>
+#include <2geom/pathvector.h>
+#pragma warning( pop )
 
 struct SpamRun
 {
@@ -45,11 +51,11 @@ public:
     ~SpamRgn() {}
 
 public:
-    void swap(SpamRgn &o) { data_.swap(o.data_); }
-    void clear() { data_.clear(); }
+    void swap(SpamRgn &o) { data_.swap(o.data_); ClearCacheData(); }
+    void clear() { data_.clear(); ClearCacheData(); }
 
 public:
-    void AddRun(const int l, const int cb, const int ce) { data_.push_back({ l, cb, ce }); }
+    void AddRun(const int l, const int cb, const int ce) { data_.push_back({ l, cb, ce }); ClearCacheData(); }
     void AddRun(const cv::Mat &binaryImage);
     void AddRunParallel(const cv::Mat &binaryImage);
     void Draw(const cv::Mat &dstImage, const double sx, const double sy) const;
@@ -61,10 +67,17 @@ public:
     cv::Rect BoundingBox() const;
     bool Contain(const int r, const int c) const;
     AdjacencyList GetAdjacencyList() const;
+    const Geom::PathVector &GetPath() const;
+
+private:
+    void ClearCacheData();
 
 private:
     std::vector<SpamRun> data_;
     uint32_t             color_;
+    mutable boost::optional<double>           area_;
+    mutable boost::optional<cv::Rect>         bbox_;
+    mutable boost::optional<Geom::PathVector> path_;
 };
 
 class RunTypeDirectionEncoder
@@ -74,7 +87,8 @@ public:
 
 public:
     RD_LIST encode() const;
-    RD_CONTOUR track(std::vector<RD_CONTOUR> &holes) const;
+    void track(std::vector<RD_CONTOUR> &contours, std::vector<RD_CONTOUR> &holes) const;
+    void track(Geom::PathVector &pv) const;
 
 private:
     SpamRgn &rgn_;

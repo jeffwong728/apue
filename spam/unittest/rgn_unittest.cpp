@@ -1,6 +1,7 @@
 #define BOOST_TEST_MODULE TestSpamRgn
 #include <boost/test/included/unit_test.hpp>
 #include <ui/proc/rgn.h>
+#include <opencv2/highgui.hpp>
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_0_Area)
 {
@@ -260,6 +261,16 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_2)
 BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_0)
 {
     SpamRgn rgn;
+
+    RunTypeDirectionEncoder encoder(rgn);
+    RD_LIST re_list = encoder.encode();
+    BOOST_CHECK_EQUAL(rgn.GetNumRuns(), 0);
+    BOOST_CHECK_EQUAL(re_list.size(), 1);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_1)
+{
+    SpamRgn rgn;
     rgn.AddRun(0, 0, 1);
 
     RunTypeDirectionEncoder encoder(rgn);
@@ -274,7 +285,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_0)
     BOOST_CHECK_EQUAL(re_list[0].QI, 0);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_1)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_2)
 {
     SpamRgn rgn;
     rgn.AddRun(0, 1, 2);
@@ -287,7 +298,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_1)
     BOOST_CHECK_EQUAL(re_list[2].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_2)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_3)
 {
     SpamRgn rgn;
     rgn.AddRun(0, 5, 10);
@@ -300,7 +311,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_2)
     BOOST_CHECK_EQUAL(re_list[2].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_3)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_4)
 {
     SpamRgn rgn;
     rgn.AddRun(1, 5, 10);
@@ -313,7 +324,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_3)
     BOOST_CHECK_EQUAL(re_list[2].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_4)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_5)
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 3);
@@ -332,7 +343,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_4)
     BOOST_CHECK_EQUAL(re_list[6].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_5)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_6)
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 3);
@@ -363,7 +374,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_5)
     BOOST_CHECK_EQUAL(re_list[14].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_6)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_7)
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 5);
@@ -385,7 +396,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_6)
     BOOST_CHECK_EQUAL(re_list[8].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_7)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_8)
 {
     SpamRgn rgn;
     rgn.AddRun(2, 2, 8);
@@ -419,15 +430,40 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_7)
     BOOST_CHECK_EQUAL(re_list[16].CODE, 5);
 }
 
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_9)
+{
+    SpamRgn rgn;
+    rgn.AddRun(1, 2, 8);
+    rgn.AddRun(2, 2, 8);
+    rgn.AddRun(9, 1, 10);
+    rgn.AddRun(10, 1, 10);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    RD_LIST re_list = encoder.encode();
+    BOOST_CHECK_EQUAL(rgn.GetNumRuns(), 4);
+    BOOST_CHECK_EQUAL(re_list.size(), 9);
+    BOOST_CHECK_EQUAL(re_list[1].CODE, 1);
+    BOOST_CHECK_EQUAL(re_list[2].CODE, 2);
+    BOOST_CHECK_EQUAL(re_list[3].CODE, 6);
+    BOOST_CHECK_EQUAL(re_list[4].CODE, 5);
+    BOOST_CHECK_EQUAL(re_list[5].CODE, 1);
+    BOOST_CHECK_EQUAL(re_list[6].CODE, 2);
+    BOOST_CHECK_EQUAL(re_list[7].CODE, 6);
+    BOOST_CHECK_EQUAL(re_list[8].CODE, 5);
+}
+
 BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_0)
 {
     SpamRgn rgn;
     rgn.AddRun(0, 1, 2);
 
     RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
     std::vector<RD_CONTOUR> holes;
-    RD_CONTOUR outer = encoder.track(holes);
+    encoder.track(outers, holes);
+    const RD_CONTOUR &outer = outers.front();
 
+    BOOST_CHECK_EQUAL(outers.size(), 1);
     BOOST_CHECK_EQUAL(outer.size(), 4);
     BOOST_CHECK_EQUAL(holes.size(), 0);
     BOOST_CHECK_EQUAL(outer[0].x, 1);
@@ -449,9 +485,12 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_1)
     rgn.AddRun(4, 1, 5);
 
     RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
     std::vector<RD_CONTOUR> holes;
-    RD_CONTOUR outer = encoder.track(holes);
+    encoder.track(outers, holes);
+    const RD_CONTOUR &outer = outers.front();
 
+    BOOST_CHECK_EQUAL(outers.size(), 1);
     BOOST_CHECK_EQUAL(outer.size(), 4);
     BOOST_CHECK_EQUAL(holes.size(), 0);
     BOOST_CHECK_EQUAL(outer[0].x, 1);
@@ -476,10 +515,13 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_2)
     rgn.AddRun(4, 5, 6);
 
     RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
     std::vector<RD_CONTOUR> holes;
-    RD_CONTOUR outer = encoder.track(holes);
+    encoder.track(outers, holes);
+    const RD_CONTOUR &outer = outers.front();
 
     BOOST_CHECK_EQUAL(rgn.GetNumRuns(), 7);
+    BOOST_CHECK_EQUAL(outers.size(), 1);
     BOOST_CHECK_EQUAL(outer.size(), 20);
     BOOST_CHECK_EQUAL(holes.size(), 0);
     BOOST_CHECK_EQUAL(outer[0].x, 2);
@@ -535,10 +577,13 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_3)
     rgn.AddRun(4, 1, 6);
 
     RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
     std::vector<RD_CONTOUR> holes;
-    RD_CONTOUR outer = encoder.track(holes);
+    encoder.track(outers, holes);
+    const RD_CONTOUR &outer = outers.front();
 
     BOOST_CHECK_EQUAL(rgn.GetNumRuns(), 6);
+    BOOST_CHECK_EQUAL(outers.size(), 1);
     BOOST_CHECK_EQUAL(outer.size(), 4);
     BOOST_CHECK_EQUAL(holes.size(), 1);
     BOOST_CHECK_EQUAL(holes[0].size(), 4);
@@ -558,4 +603,144 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_3)
     BOOST_CHECK_EQUAL(holes[0][2].y, 4);
     BOOST_CHECK_EQUAL(holes[0][3].x, 2);
     BOOST_CHECK_EQUAL(holes[0][3].y, 2);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_4)
+{
+    SpamRgn rgn;
+    rgn.AddRun(1, 1, 7);
+    rgn.AddRun(2, 1, 2);
+    rgn.AddRun(2, 4, 5);
+    rgn.AddRun(2, 6, 7);
+    rgn.AddRun(3, 1, 2);
+    rgn.AddRun(3, 4, 5);
+    rgn.AddRun(3, 6, 7);
+    rgn.AddRun(4, 1, 5);
+    rgn.AddRun(4, 6, 7);
+    rgn.AddRun(5, 1, 2);
+    rgn.AddRun(5, 6, 7);
+    rgn.AddRun(6, 1, 7);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
+    std::vector<RD_CONTOUR> holes;
+    encoder.track(outers, holes);
+    const RD_CONTOUR &outer = outers.front();
+
+    BOOST_CHECK_EQUAL(rgn.GetNumRuns(), 12);
+    BOOST_CHECK_EQUAL(outers.size(), 1);
+    BOOST_CHECK_EQUAL(outer.size(), 4);
+    BOOST_CHECK_EQUAL(holes.size(), 2);
+    BOOST_CHECK_EQUAL(holes[0].size(), 4);
+    BOOST_CHECK_EQUAL(holes[1].size(), 6);
+    BOOST_CHECK_EQUAL(outer[0].x, 1);
+    BOOST_CHECK_EQUAL(outer[0].y, 1);
+    BOOST_CHECK_EQUAL(outer[1].x, 1);
+    BOOST_CHECK_EQUAL(outer[1].y, 7);
+    BOOST_CHECK_EQUAL(outer[2].x, 7);
+    BOOST_CHECK_EQUAL(outer[2].y, 7);
+    BOOST_CHECK_EQUAL(outer[3].x, 7);
+    BOOST_CHECK_EQUAL(outer[3].y, 1);
+    BOOST_CHECK_EQUAL(holes[0][0].x, 4);
+    BOOST_CHECK_EQUAL(holes[0][0].y, 2);
+    BOOST_CHECK_EQUAL(holes[0][1].x, 4);
+    BOOST_CHECK_EQUAL(holes[0][1].y, 4);
+    BOOST_CHECK_EQUAL(holes[0][2].x, 2);
+    BOOST_CHECK_EQUAL(holes[0][2].y, 4);
+    BOOST_CHECK_EQUAL(holes[0][3].x, 2);
+    BOOST_CHECK_EQUAL(holes[0][3].y, 2);
+    BOOST_CHECK_EQUAL(holes[1][0].x, 6);
+    BOOST_CHECK_EQUAL(holes[1][0].y, 2);
+    BOOST_CHECK_EQUAL(holes[1][1].x, 6);
+    BOOST_CHECK_EQUAL(holes[1][1].y, 6);
+    BOOST_CHECK_EQUAL(holes[1][2].x, 2);
+    BOOST_CHECK_EQUAL(holes[1][2].y, 6);
+    BOOST_CHECK_EQUAL(holes[1][3].x, 2);
+    BOOST_CHECK_EQUAL(holes[1][3].y, 5);
+    BOOST_CHECK_EQUAL(holes[1][4].x, 5);
+    BOOST_CHECK_EQUAL(holes[1][4].y, 5);
+    BOOST_CHECK_EQUAL(holes[1][5].x, 5);
+    BOOST_CHECK_EQUAL(holes[1][5].y, 2);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_5)
+{
+    SpamRgn rgn;
+    rgn.AddRun(2, 2, 6);
+    rgn.AddRun(2, 7, 11);
+    rgn.AddRun(3, 2, 3);
+    rgn.AddRun(3, 5, 6);
+    rgn.AddRun(3, 7, 8);
+    rgn.AddRun(3, 10, 11);
+    rgn.AddRun(4, 2, 3);
+    rgn.AddRun(4, 5, 6);
+    rgn.AddRun(4, 7, 8);
+    rgn.AddRun(4, 10, 11);
+    rgn.AddRun(5, 2, 6);
+    rgn.AddRun(5, 7, 11);
+    rgn.AddRun(8, 2, 11);
+    rgn.AddRun(9, 2, 3);
+    rgn.AddRun(9, 5, 8);
+    rgn.AddRun(9, 10, 11);
+    rgn.AddRun(10, 2, 3);
+    rgn.AddRun(10, 5, 8);
+    rgn.AddRun(10, 10, 11);
+    rgn.AddRun(11, 2, 11);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
+    std::vector<RD_CONTOUR> holes;
+    encoder.track(outers, holes);
+    const RD_CONTOUR &outer = outers.front();
+
+    BOOST_REQUIRE_EQUAL(outers.size(), 3);
+    BOOST_REQUIRE_EQUAL(holes.size(), 4);
+    BOOST_REQUIRE_EQUAL(outers[0].size(), 4);
+    BOOST_REQUIRE_EQUAL(outers[1].size(), 4);
+    BOOST_REQUIRE_EQUAL(outers[2].size(), 4);
+    BOOST_REQUIRE_EQUAL(holes[0].size(), 4);
+    BOOST_REQUIRE_EQUAL(holes[1].size(), 4);
+    BOOST_REQUIRE_EQUAL(holes[2].size(), 4);
+    BOOST_REQUIRE_EQUAL(holes[3].size(), 4);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_6)
+{
+    SpamRgn rgn;
+    rgn.AddRun(0, 0, 3);
+    rgn.AddRun(1, 0, 1);
+    rgn.AddRun(1, 2, 3);
+    rgn.AddRun(5, 0, 3);
+    rgn.AddRun(6, 0, 1);
+    rgn.AddRun(6, 2, 3);
+    rgn.AddRun(7, 0, 3);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
+    std::vector<RD_CONTOUR> holes;
+    encoder.track(outers, holes);
+    const RD_CONTOUR &outer = outers.front();
+
+    BOOST_REQUIRE_EQUAL(outers.size(), 2);
+    BOOST_REQUIRE_EQUAL(holes.size(), 1);
+    BOOST_REQUIRE_EQUAL(outers[0].size(), 8);
+    BOOST_REQUIRE_EQUAL(outers[1].size(), 4);
+    BOOST_REQUIRE_EQUAL(holes[0].size(), 4);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_7)
+{
+    SpamRgn rgn;
+    cv::Mat img = cv::Mat::zeros(200, 200, CV_8UC1);
+    cv::putText(img, cv::String("Hello"), cv::Point(20, 80), cv::FONT_HERSHEY_COMPLEX, 1, cv::Scalar(255, 255, 255), 3);
+    cv::putText(img, cv::String("OpenGL"), cv::Point(20, 120), cv::FONT_HERSHEY_COMPLEX, 1, cv::Scalar(255, 255, 255), 3);
+    rgn.AddRun(img);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
+    std::vector<RD_CONTOUR> holes;
+    encoder.track(outers, holes);
+    const RD_CONTOUR &outer = outers.front();
+    BOOST_REQUIRE_EQUAL(outers.size(), 9);
+    BOOST_REQUIRE_EQUAL(holes.size(), 8);
 }

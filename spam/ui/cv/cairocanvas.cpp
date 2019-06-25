@@ -1399,7 +1399,7 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::Op
     crScr->paint();
 }
 
-void CairoCanvas::DrawRegions()
+void CairoCanvas::DrawRegions(Cairo::RefPtr<Cairo::Context> &cr)
 {
     for (const std::string &rgnName : rgnsVisiable_)
     {
@@ -1408,6 +1408,7 @@ void CairoCanvas::DrawRegions()
         {
             for (const SpamRgn &rgn : *itf->second)
             {
+                const Geom::PathVector &pth = rgn.GetPath();
                 rgn.Draw(scrMat_, GetMatScale(), GetMatScale());
             }
         }
@@ -1416,7 +1417,7 @@ void CairoCanvas::DrawRegions()
 
 void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr)
 {
-    DrawRegions();
+    DrawRegions(cr);
     auto station = GetStation();
     if (station)
     {
@@ -1433,7 +1434,7 @@ void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr)
 
 void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr, const SPDrawableNode &highlight)
 {
-    DrawRegions();
+    DrawRegions(cr);
     auto station = GetStation();
     if (station)
     {

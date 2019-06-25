@@ -8,6 +8,11 @@
 #include <tbb/tbb.h>
 #include <tbb/scalable_allocator.h>
 #include <stack>
+#pragma warning( push )
+#pragma warning( disable : 4819 4003 )
+#include <2geom/path-sink.h>
+#include <2geom/path-intersection.h>
+#pragma warning( pop )
 
 namespace
 {
@@ -115,6 +120,8 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
             }
         }
     }
+
+    ClearCacheData();
 }
 
 void SpamRgn::AddRunParallel(const cv::Mat &binaryImage)
@@ -127,6 +134,8 @@ void SpamRgn::AddRunParallel(const cv::Mat &binaryImage)
         tbb::parallel_reduce(tbb::blocked_range<int>(0, binaryImage.rows), enc);
         data_.swap(enc.Runs());
     }
+
+    ClearCacheData();
 }
 
 void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) const
@@ -184,13 +193,18 @@ void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) co
 
 double SpamRgn::Area() const
 {
-    double a = 0;
-    for (const SpamRun &r : data_)
+    if (area_ == boost::none)
     {
-        a += (r.ce - r.cb);
+        double a = 0;
+        for (const SpamRun &r : data_)
+        {
+            a += (r.ce - r.cb);
+        }
+
+        area_ = a;
     }
 
-    return a;
+    return *area_;
 }
 
 SPSpamRgnVector SpamRgn::Connect() const
@@ -247,40 +261,38 @@ SPSpamRgnVector SpamRgn::Connect() const
 
 cv::Rect SpamRgn::BoundingBox() const
 {
-    cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
-    cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
-
-    for (const SpamRun &r : data_)
+    if (bbox_ == boost::none)
     {
-        if (r.l < minPoint.y)
+        cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+        cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
+
+        for (const SpamRun &r : data_)
         {
-            minPoint.y = r.l;
+            if (r.l < minPoint.y) {
+                minPoint.y = r.l;
+            }
+
+            if (r.l > maxPoint.y) {
+                maxPoint.y = r.l;
+            }
+
+            if (r.cb < minPoint.x) {
+                minPoint.x = r.cb;
+            }
+
+            if (r.ce > maxPoint.x) {
+                maxPoint.x = r.ce;
+            }
         }
 
-        if (r.l > maxPoint.y)
-        {
-            maxPoint.y = r.l;
-        }
-
-        if (r.cb < minPoint.x)
-        {
-            minPoint.x = r.cb;
-        }
-
-        if (r.ce > maxPoint.x)
-        {
-            maxPoint.x = r.ce;
+        if (data_.empty()) {
+            bbox_ = cv::Rect();
+        } else {
+            bbox_ = cv::Rect(minPoint, maxPoint);
         }
     }
 
-    if (data_.empty())
-    {
-        return cv::Rect();
-    }
-    else
-    {
-        return cv::Rect(minPoint, maxPoint);
-    }
+    return *bbox_;
 }
 
 bool SpamRgn::Contain(const int r, const int c) const
@@ -378,6 +390,25 @@ AdjacencyList SpamRgn::GetAdjacencyList() const
     return al;
 }
 
+const Geom::PathVector &SpamRgn::GetPath() const
+{
+    if (path_==boost::none)
+    {
+        path_.emplace();
+        RunTypeDirectionEncoder encoder(*const_cast<SpamRgn *>(this));
+        encoder.track(*path_);
+    }
+
+    return *path_;
+}
+
+void SpamRgn::ClearCacheData()
+{
+    area_ = boost::none;
+    path_ = boost::none;
+    bbox_ = boost::none;
+}
+
 RD_LIST RunTypeDirectionEncoder::encode() const
 {
     RD_LIST rd_list;
@@ -422,8 +453,10 @@ RD_LIST RunTypeDirectionEncoder::encode() const
     int P5 = 0;
 
     int l = (*pRunData)[0].l;
-    for (const SpamRun &r : *pRunData)
+    const int numRuns = static_cast<int>(pRunData->size());
+    for (int n=0; n<numRuns; ++n)
     {
+        const SpamRun &r = (*pRunData)[n];
         if (r.l == l)
         {
             C_BUFFER.push_back(r.cb);
@@ -523,6 +556,10 @@ RD_LIST RunTypeDirectionEncoder::encode() const
                         rd_list[P5].W_LINK = P3;
                         P5 = P3;
                     }
+                    else
+                    {
+                        rd_list[P5].W_LINK = P3 + 1;
+                    }
 
                     if (5 == RD_CODE)
                     {
@@ -573,9 +610,8 @@ RD_LIST RunTypeDirectionEncoder::encode() const
 
             P_BUFFER.swap(C_BUFFER);
             C_BUFFER.resize(0);
-            C_BUFFER.push_back(r.cb);
-            C_BUFFER.push_back(r.ce);
-            l = r.l;
+            n -= 1;
+            l += 1;
         }
     }
 
@@ -588,9 +624,8 @@ RD_LIST RunTypeDirectionEncoder::encode() const
     return rd_list;
 }
 
-RD_CONTOUR RunTypeDirectionEncoder::track(std::vector<RD_CONTOUR> &holes) const
+void RunTypeDirectionEncoder::track(std::vector<RD_CONTOUR> &contours, std::vector<RD_CONTOUR> &holes) const
 {
-    RD_CONTOUR outerContour;
     RD_LIST rd_list = encode();
     for (RD_LIST_ENTRY &e : rd_list)
     {
@@ -599,7 +634,8 @@ RD_CONTOUR RunTypeDirectionEncoder::track(std::vector<RD_CONTOUR> &holes) const
             e.FLAG = 1;
             if (1==e.CODE)
             {
-                if (count_[e.CODE]) outerContour.emplace_back(e.X, e.Y);
+                RD_CONTOUR outerContour;
+                outerContour.emplace_back(e.X, e.Y);
                 int nextLink = e.LINK;
                 while (!rd_list[nextLink].FLAG)
                 {
@@ -611,43 +647,72 @@ RD_CONTOUR RunTypeDirectionEncoder::track(std::vector<RD_CONTOUR> &holes) const
                     }
                     nextLink = rd_list[nextLink].LINK;
                 }
+
+                if (!outerContour.empty())
+                {
+                    outerContour.emplace_back(outerContour.back().x, outerContour.front().y);
+                    contours.push_back(std::move(outerContour));
+                }
             }
             else
             {
-                RD_CONTOUR hole;
-                if (count_[e.CODE]) hole.emplace_back(e.X, e.Y);
+                if (9 == e.CODE)
+                {
+                    RD_CONTOUR hole;
+                    hole.emplace_back(e.X, e.Y);
+                    int nextLink = e.LINK;
+                    while (!rd_list[nextLink].FLAG)
+                    {
+                        rd_list[nextLink].FLAG = 1;
+                        if (count_[rd_list[nextLink].CODE])
+                        {
+                            hole.emplace_back(hole.back().x, rd_list[nextLink].Y);
+                            hole.emplace_back(rd_list[nextLink].X, rd_list[nextLink].Y);
+                        }
+                        nextLink = rd_list[nextLink].LINK;
+                    }
+
+                    if (!hole.empty())
+                    {
+                        hole.emplace_back(hole.back().x, hole.front().y);
+                        holes.push_back(std::move(hole));
+                    }
+                }
+            }
+        }
+    }
+}
+
+void RunTypeDirectionEncoder::track(Geom::PathVector &pv) const
+{
+    Geom::PathBuilder pb(pv);
+    RD_LIST rd_list = encode();
+    for (RD_LIST_ENTRY &e : rd_list)
+    {
+        if (!e.FLAG)
+        {
+            e.FLAG = 1;
+            if (1 == e.CODE || 9 == e.CODE)
+            {
+                double lastX  = e.X - 0.5;
+                double firstY = e.Y - 0.5;
+                pb.moveTo(Geom::Point(lastX, firstY));
                 int nextLink = e.LINK;
                 while (!rd_list[nextLink].FLAG)
                 {
                     rd_list[nextLink].FLAG = 1;
                     if (count_[rd_list[nextLink].CODE])
                     {
-                        hole.emplace_back(hole.back().x, rd_list[nextLink].Y);
-                        hole.emplace_back(rd_list[nextLink].X, rd_list[nextLink].Y);
+                        pb.lineTo(Geom::Point(lastX, rd_list[nextLink].Y));
+                        pb.lineTo(Geom::Point(rd_list[nextLink].X-0.5, rd_list[nextLink].Y-0.5));
+                        lastX = rd_list[nextLink].X - 0.5;
                     }
                     nextLink = rd_list[nextLink].LINK;
                 }
 
-                if (!hole.empty())
-                {
-                    holes.push_back(std::move(hole));
-                }
+                pb.moveTo(Geom::Point(lastX, firstY));
+                pb.closePath();
             }
         }
     }
-
-    if (!outerContour.empty())
-    {
-        outerContour.emplace_back(outerContour.back().x, outerContour.front().y);
-    }
-
-    for (auto &hole : holes)
-    {
-        if (!hole.empty())
-        {
-            hole.emplace_back(hole.back().x, hole.front().y);
-        }
-    }
-
-    return outerContour;
 }

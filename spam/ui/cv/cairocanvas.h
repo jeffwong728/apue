@@ -127,7 +127,7 @@ private:
     void DrawBox(wxDC &dc, const Geom::Path &pth);
     void DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
     void DrawEntities(Cairo::RefPtr<Cairo::Context> &cr);
-    void DrawRegions();
+    void DrawRegions(Cairo::RefPtr<Cairo::Context> &cr);
     void DrawEntities(Cairo::RefPtr<Cairo::Context> &cr, const SPDrawableNode &highlight);
     void ConpensateHandle(wxRect &invalidRect) const;
 
