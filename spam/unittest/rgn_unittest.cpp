@@ -744,3 +744,40 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_7)
     BOOST_REQUIRE_EQUAL(outers.size(), 9);
     BOOST_REQUIRE_EQUAL(holes.size(), 8);
 }
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_8)
+{
+    SpamRgn rgn;
+    cv::Mat img = cv::Mat::zeros(200, 200, CV_8UC1);
+    const cv::Point points[1][4] = { {cv::Point(20, 20), cv::Point(20, 100), cv::Point(100, 100), cv::Point(100, 20)}};
+    const cv::Point *ppt[1] = { points[0]};
+    const int npts[1] = { 4 };
+    cv::fillPoly(img, &ppt[0], &npts[0], 1, cv::Scalar(255, 255, 255));
+    rgn.AddRun(img);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
+    std::vector<RD_CONTOUR> holes;
+    encoder.track(outers, holes);
+    BOOST_REQUIRE_EQUAL(outers.size(), 1);
+    BOOST_REQUIRE_EQUAL(outers[0].size(), 4);
+    BOOST_REQUIRE_EQUAL(holes.size(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_9)
+{
+    SpamRgn rgn;
+    cv::Mat img = cv::Mat::zeros(200, 200, CV_8UC1);
+    const cv::Point points[2][5] = { {cv::Point(20, 20), cv::Point(20, 100), cv::Point(60, 60), cv::Point(100, 100), cv::Point(100, 20)}, {cv::Point(60, 80), cv::Point(20, 140), cv::Point(100, 140)}};
+    const cv::Point *ppt[2] = { points[0], points[1] };
+    const int npts[2] = {5, 3};
+    cv::fillPoly(img, &ppt[0], &npts[0], 2, cv::Scalar(255, 255, 255));
+    rgn.AddRun(img);
+
+    RunTypeDirectionEncoder encoder(rgn);
+    std::vector<RD_CONTOUR> outers;
+    std::vector<RD_CONTOUR> holes;
+    encoder.track(outers, holes);
+    BOOST_REQUIRE_EQUAL(outers.size(), 2);
+    BOOST_REQUIRE_EQUAL(holes.size(), 0);
+}

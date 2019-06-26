@@ -42,6 +42,7 @@ using SPSpamRgnVector = std::shared_ptr<SpamRgnVector>;
 using RgnBufferZone = std::unordered_map<std::string, SPSpamRgnVector>;
 using RD_LIST = std::vector<RD_LIST_ENTRY>;
 using RD_CONTOUR = std::vector<cv::Point>;
+using RD_CONTOUR_LIST = std::vector<RD_CONTOUR>;
 
 class SpamRgn
 {
@@ -63,11 +64,13 @@ public:
 
 public:
     double Area() const;
+    int NumHoles() const;
     SPSpamRgnVector Connect() const;
     cv::Rect BoundingBox() const;
     bool Contain(const int r, const int c) const;
     AdjacencyList GetAdjacencyList() const;
     const Geom::PathVector &GetPath() const;
+    uint32_t GetColor() const { return color_; }
 
 private:
     void ClearCacheData();
@@ -78,6 +81,8 @@ private:
     mutable boost::optional<double>           area_;
     mutable boost::optional<cv::Rect>         bbox_;
     mutable boost::optional<Geom::PathVector> path_;
+    mutable boost::optional<RD_CONTOUR_LIST>  contours_;
+    mutable boost::optional<RD_CONTOUR_LIST>  holes_;
 };
 
 class RunTypeDirectionEncoder

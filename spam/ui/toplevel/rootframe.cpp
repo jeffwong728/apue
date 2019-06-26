@@ -46,6 +46,8 @@
 #include <helper/splivarot.h>
 #include <helper/commondef.h>
 #include <boost/algorithm/string.hpp>
+#include <boost/container/flat_map.hpp>
+#include <boost/container/static_vector.hpp>
 #pragma warning( push )
 #pragma warning( disable : 5033 )
 #ifdef pid_t
@@ -423,6 +425,18 @@ void RootFrame::OnAbout(wxCommandEvent& event)
     rgn.AddRun(1, 5, 8);
     rgn.AddRun(1, 50, 81);
     rgn.Connect();
+
+    boost::container::static_vector<int, 3> sVec;
+    sVec.push_back(1);
+    sVec.push_back(2);
+
+    bool bTest[4];
+    auto s = sizeof(bTest);
+    uchar *pTest = reinterpret_cast<uchar *>(&bTest[0]);
+    for (auto i=0; i<s; ++i)
+    {
+        pTest[i] = 204;
+    }
 }
 
 void RootFrame::OnHello(wxCommandEvent& event)

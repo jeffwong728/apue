@@ -207,6 +207,19 @@ double SpamRgn::Area() const
     return *area_;
 }
 
+int SpamRgn::NumHoles() const
+{
+    if (holes_ == boost::none)
+    {
+        holes_.emplace();
+        contours_.emplace();
+        RunTypeDirectionEncoder encoder(*const_cast<SpamRgn *>(this));
+        encoder.track(*contours_, *holes_);
+    }
+
+    return static_cast<int>(holes_->size());
+}
+
 SPSpamRgnVector SpamRgn::Connect() const
 {
     AdjacencyList al = GetAdjacencyList();
@@ -404,9 +417,11 @@ const Geom::PathVector &SpamRgn::GetPath() const
 
 void SpamRgn::ClearCacheData()
 {
-    area_ = boost::none;
-    path_ = boost::none;
-    bbox_ = boost::none;
+    area_       = boost::none;
+    path_       = boost::none;
+    bbox_       = boost::none;
+    contours_   = boost::none;
+    holes_      = boost::none;
 }
 
 RD_LIST RunTypeDirectionEncoder::encode() const
@@ -694,8 +709,8 @@ void RunTypeDirectionEncoder::track(Geom::PathVector &pv) const
             e.FLAG = 1;
             if (1 == e.CODE || 9 == e.CODE)
             {
-                double lastX  = e.X - 0.5;
-                double firstY = e.Y - 0.5;
+                double lastX  = e.X;
+                double firstY = e.Y;
                 pb.moveTo(Geom::Point(lastX, firstY));
                 int nextLink = e.LINK;
                 while (!rd_list[nextLink].FLAG)
@@ -704,13 +719,13 @@ void RunTypeDirectionEncoder::track(Geom::PathVector &pv) const
                     if (count_[rd_list[nextLink].CODE])
                     {
                         pb.lineTo(Geom::Point(lastX, rd_list[nextLink].Y));
-                        pb.lineTo(Geom::Point(rd_list[nextLink].X-0.5, rd_list[nextLink].Y-0.5));
-                        lastX = rd_list[nextLink].X - 0.5;
+                        pb.lineTo(Geom::Point(rd_list[nextLink].X, rd_list[nextLink].Y));
+                        lastX = rd_list[nextLink].X;
                     }
                     nextLink = rd_list[nextLink].LINK;
                 }
 
-                pb.moveTo(Geom::Point(lastX, firstY));
+                pb.lineTo(Geom::Point(lastX, firstY));
                 pb.closePath();
             }
         }

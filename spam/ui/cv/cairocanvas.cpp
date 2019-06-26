@@ -1401,6 +1401,11 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::Op
 
 void CairoCanvas::DrawRegions(Cairo::RefPtr<Cairo::Context> &cr)
 {
+    double ux = 1;
+    double uy = 1;
+    cr->device_to_user_distance(ux, uy);
+    if (ux < uy) ux = uy;
+
     for (const std::string &rgnName : rgnsVisiable_)
     {
         auto itf = rgnBufferZone_.find(rgnName);
@@ -1408,8 +1413,15 @@ void CairoCanvas::DrawRegions(Cairo::RefPtr<Cairo::Context> &cr)
         {
             for (const SpamRgn &rgn : *itf->second)
             {
+                cr->save();
                 const Geom::PathVector &pth = rgn.GetPath();
-                rgn.Draw(scrMat_, GetMatScale(), GetMatScale());
+                Geom::CairoPathSink cairoPathSink(cr->cobj());
+                cairoPathSink.feed(pth);
+                wxColour clr(rgn.GetColor());
+                cr->set_source_rgba(clr.Red() / 255.0, clr.Green() / 255.0, clr.Blue() / 255.0, clr.Alpha() / 255.0);
+                cr->set_line_width(ux);
+                cr->stroke();
+                cr->restore();
             }
         }
     }
