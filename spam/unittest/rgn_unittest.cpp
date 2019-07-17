@@ -1,7 +1,14 @@
 #define BOOST_TEST_MODULE TestSpamRgn
+#include "helper.h"
+#include <cassert>
 #include <boost/test/included/unit_test.hpp>
 #include <ui/proc/rgn.h>
+#include <ui/proc/basic.h>
 #include <opencv2/highgui.hpp>
+#ifdef free
+#undef free
+#endif
+#include <tbb/tbb.h>
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_0_Area)
 {
@@ -25,6 +32,56 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Area)
 
     rgn.clear();
     BOOST_REQUIRE_CLOSE_FRACTION(rgn.Area(), 0.0, 0.1);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_Empty)
+{
+    SpamRgn rgn;
+    const RowRangeList &rrl = rgn.GetRowRanges();
+    BOOST_REQUIRE_EQUAL(rrl.size(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_0)
+{
+    SpamRgn rgn;
+    rgn.AddRun(0, 1, 5);
+    const RowRangeList &rrl = rgn.GetRowRanges();
+    constexpr int Infinity    = std::numeric_limits<int>::max();
+    constexpr int NegInfinity = std::numeric_limits<int>::min();
+    BOOST_REQUIRE_EQUAL(rrl.size(), 3);
+    BOOST_CHECK_EQUAL(rrl[0].row, NegInfinity);
+    BOOST_CHECK_EQUAL(rrl[0].beg, Infinity);
+    BOOST_CHECK_EQUAL(rrl[0].end, Infinity);
+    BOOST_CHECK_EQUAL(rrl[1].row, 0);
+    BOOST_CHECK_EQUAL(rrl[1].beg, 0);
+    BOOST_CHECK_EQUAL(rrl[1].end, 1);
+    BOOST_CHECK_EQUAL(rrl[2].row, Infinity);
+    BOOST_CHECK_EQUAL(rrl[2].beg, Infinity);
+    BOOST_CHECK_EQUAL(rrl[2].end, Infinity);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_1)
+{
+    SpamRgn rgn;
+    rgn.AddRun(1, 1, 5);
+    rgn.AddRun(1, 7, 9);
+    rgn.AddRun(3, 7, 9);
+    const RowRangeList &rrl = rgn.GetRowRanges();
+    constexpr int Infinity = std::numeric_limits<int>::max();
+    constexpr int NegInfinity = std::numeric_limits<int>::min();
+    BOOST_REQUIRE_EQUAL(rrl.size(), 4);
+    BOOST_CHECK_EQUAL(rrl[0].row, NegInfinity);
+    BOOST_CHECK_EQUAL(rrl[0].beg, Infinity);
+    BOOST_CHECK_EQUAL(rrl[0].end, Infinity);
+    BOOST_CHECK_EQUAL(rrl[1].row, 1);
+    BOOST_CHECK_EQUAL(rrl[1].beg, 0);
+    BOOST_CHECK_EQUAL(rrl[1].end, 2);
+    BOOST_CHECK_EQUAL(rrl[2].row, 3);
+    BOOST_CHECK_EQUAL(rrl[2].beg, 2);
+    BOOST_CHECK_EQUAL(rrl[2].end, 3);
+    BOOST_CHECK_EQUAL(rrl[3].row, Infinity);
+    BOOST_CHECK_EQUAL(rrl[3].beg, Infinity);
+    BOOST_CHECK_EQUAL(rrl[3].end, Infinity);
 }
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_Empty)
@@ -256,6 +313,86 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_2)
 
     SPSpamRgnVector rgns = rgn.Connect();
     BOOST_REQUIRE_EQUAL(rgns->size(), 2);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_3)
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+    BOOST_CHECK_EQUAL(rgn->GetData().size(), 234794);
+
+    cv::Mat labels;
+    cv::Mat binImg;
+    tbb::tick_count t1 = tbb::tick_count::now();
+    cv::threshold(grayImg, binImg, 150, 255, cv::THRESH_BINARY);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV threshold spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    t1 = tbb::tick_count::now();
+    int numLabels = cv::connectedComponents(binImg, labels, 8, CV_32S, cv::CCL_GRANA);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV connected components spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    std::vector<cv::Vec4i> hierarchy;
+    std::vector<std::vector<cv::Point>> contours;
+
+    t1 = tbb::tick_count::now();
+    cv::findContours(binImg, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV find contours spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    int numExtContours = 0;
+    for (int i = 0; i < contours.size(); i = hierarchy[i][0])
+    {
+        numExtContours += 1;
+    }
+
+    SPSpamRgnVector rgns = rgn->Connect();
+    BOOST_REQUIRE_EQUAL(rgns->size(), numLabels - 1);
+    BOOST_REQUIRE_EQUAL(rgns->size(), numExtContours);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_4)
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("digits.png");
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+    BOOST_CHECK_EQUAL(rgn->GetData().size(), 89084);
+
+    cv::Mat labels;
+    cv::Mat binImg;
+    tbb::tick_count t1 = tbb::tick_count::now();
+    cv::threshold(grayImg, binImg, 150, 255, cv::THRESH_BINARY);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV threshold spend (digits.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    t1 = tbb::tick_count::now();
+    int numLabels = cv::connectedComponents(binImg, labels, 8, CV_32S, cv::CCL_GRANA);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV connected components spend (digits.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    std::vector<cv::Vec4i> hierarchy;
+    std::vector<std::vector<cv::Point>> contours;
+
+    t1 = tbb::tick_count::now();
+    cv::findContours(binImg, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV find contours spend (digits.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    int numExtContours = 0;
+    for (int i = 0; i < contours.size(); i = hierarchy[i][0])
+    {
+        numExtContours += 1;
+    }
+
+    t1 = tbb::tick_count::now();
+    SPSpamRgnVector rgns = rgn->Connect();
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam connect spend (digits.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    BOOST_REQUIRE_EQUAL(rgns->size(), numLabels - 1);
+    BOOST_REQUIRE_EQUAL(rgns->size(), numExtContours);
 }
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_0)
@@ -780,4 +917,95 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_9)
     encoder.track(outers, holes);
     BOOST_REQUIRE_EQUAL(outers.size(), 2);
     BOOST_REQUIRE_EQUAL(holes.size(), 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_10)
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("img00000.png");
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+
+    UnitTestHelper::Color color{ rgn->GetRed(), rgn->GetGreen(), rgn->GetBlue(), rgn->GetAlpha() };
+    UnitTestHelper::DrawPathToImage(rgn->GetPath(), color, colorImg);
+    UnitTestHelper::WriteImage(colorImg, "img00000.png");
+
+    RunTypeDirectionEncoder encoder(*rgn);
+    std::vector<RD_CONTOUR> outers;
+    std::vector<RD_CONTOUR> holes;
+    encoder.track(outers, holes);
+    BOOST_CHECK_EQUAL(outers.size(), 94);
+    BOOST_CHECK_EQUAL(holes.size(), 36);
+
+    SPSpamRgnVector rgns = rgn->Connect();
+    BOOST_CHECK_EQUAL(rgns->size(), 94);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_PERFORMANCE_0, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    const RowRangeList &rrl = rgn->GetRowRanges();
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam get row ranges times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    BOOST_CHECK_EQUAL(rrl.size(), 2502);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_PERFORMANCE_0, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    const AdjacencyList &al = rgn->GetAdjacencyList();
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam get adjacency list times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(al.size(), 234794);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Threshold_PERFORMANCE_0, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    BasicImgProc::Threshold(grayImg, 150, 255);
+    tbb::tick_count t1 = tbb::tick_count::now();
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam threshold times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(rgn->GetData().size(), 234794);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_PERFORMANCE_0, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+
+    UnitTestHelper::Color color{ rgn->GetRed(), rgn->GetGreen(), rgn->GetBlue(), rgn->GetAlpha() };
+    UnitTestHelper::DrawPathToImage(rgn->GetPath(), color, colorImg);
+    UnitTestHelper::WriteImage(colorImg, "mista.png");
+
+    RunTypeDirectionEncoder encoder(*rgn);
+    std::vector<RD_CONTOUR> outers;
+    std::vector<RD_CONTOUR> holes;
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    encoder.track(outers, holes);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam track times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(outers.size(), 941);
+    BOOST_CHECK_EQUAL(holes.size(), 17622);
+
+
+    t1 = tbb::tick_count::now();
+    SPSpamRgnVector rgns = rgn->Connect();
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam connect times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(rgns->size(), 941);
 }

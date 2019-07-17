@@ -6,6 +6,7 @@
 #include <opencv2/imgproc.hpp>
 #include <boost/optional.hpp>
 #include <boost/container/small_vector.hpp>
+#include <boost/container/static_vector.hpp>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267 4244)
 #include <2geom/path.h>
@@ -19,6 +20,15 @@ struct SpamRun
     int l;  // line number (row) of run
     int cb; // column index of beginning(include) of run
     int ce; // column index of ending(exclude) of run
+};
+
+struct RowRange
+{
+    RowRange() : row(0), beg(0), end(0) {}
+    RowRange(const int r, const int b, const int e) : row(r), beg(b), end(e) {}
+    int row;
+    int beg;
+    int end;
 };
 
 struct RD_LIST_ENTRY
@@ -43,10 +53,15 @@ using RgnBufferZone = std::unordered_map<std::string, SPSpamRgnVector>;
 using RD_LIST = std::vector<RD_LIST_ENTRY>;
 using RD_CONTOUR = std::vector<cv::Point>;
 using RD_CONTOUR_LIST = std::vector<RD_CONTOUR>;
+using SpamRunList = std::vector<SpamRun>;
+using RowRangeList = std::vector<RowRange>;
 
 class SpamRgn
 {
     friend class RunTypeDirectionEncoder;
+    template <typename Pred> friend class GeneralThresholdTBB;
+    template<typename T> friend SPSpamRgn GeneralThreshold(const cv::Mat &, const uchar, const uchar);
+
 public:
     SpamRgn() : color_(0xFFFF0000) {}
     ~SpamRgn() {}
@@ -68,21 +83,29 @@ public:
     SPSpamRgnVector Connect() const;
     cv::Rect BoundingBox() const;
     bool Contain(const int r, const int c) const;
-    AdjacencyList GetAdjacencyList() const;
+    const AdjacencyList &GetAdjacencyList() const;
     const Geom::PathVector &GetPath() const;
+    const RowRangeList &GetRowRanges() const;
     uint32_t GetColor() const { return color_; }
+    uint8_t  GetRed() const { return static_cast<uint8_t>(0xFF & color_); }
+    uint8_t  GetGreen() const { return static_cast<uint8_t>(0xFF & color_ >> 8); }
+    uint8_t  GetBlue() const { return static_cast<uint8_t>(0xFF & color_ >> 16); }
+    uint8_t  GetAlpha() const { return static_cast<uint8_t>(0xFF & color_ >> 24); }
+    SpamRunList &GetData() { return data_; }
 
 private:
     void ClearCacheData();
 
 private:
-    std::vector<SpamRun> data_;
+    SpamRunList data_;
     uint32_t             color_;
     mutable boost::optional<double>           area_;
     mutable boost::optional<cv::Rect>         bbox_;
     mutable boost::optional<Geom::PathVector> path_;
     mutable boost::optional<RD_CONTOUR_LIST>  contours_;
     mutable boost::optional<RD_CONTOUR_LIST>  holes_;
+    mutable boost::optional<RowRangeList>     rowRanges_;
+    mutable boost::optional<AdjacencyList>    adjacencyList_;
 };
 
 class RunTypeDirectionEncoder

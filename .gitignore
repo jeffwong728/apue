@@ -6,3 +6,6 @@ msvs
 install
 config
 /test/examples
+/spam/hoard
+/spam/unittest/rdata
+/spam/unittest/idata

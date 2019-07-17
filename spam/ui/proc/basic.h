@@ -6,6 +6,12 @@
 #include <opencv2/imgproc.hpp>
 #include <boost/core/noncopyable.hpp>
 
+struct PackRun
+{
+    int b;
+    int e;
+};
+
 class BasicImgProc : private boost::noncopyable
 {
 
@@ -14,5 +20,6 @@ public:
 
 public:
     static SPSpamRgn Threshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
+    static SPSpamRgn Threshold2(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
 };
 #endif //SPAM_UI_PROC_BASIC_H

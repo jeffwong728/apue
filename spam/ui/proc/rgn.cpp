@@ -9,7 +9,7 @@
 #include <tbb/scalable_allocator.h>
 #include <stack>
 #pragma warning( push )
-#pragma warning( disable : 4819 4003 )
+#pragma warning( disable : 4819 4003 4267)
 #include <2geom/path-sink.h>
 #include <2geom/path-intersection.h>
 #pragma warning( pop )
@@ -19,6 +19,121 @@ namespace
     constexpr int g_numRgnColors = 12;
     static const uint32_t g_rgnColors[g_numRgnColors] = { 0xFFFF0000, 0xFF00FF00, 0xFF0000FF,
         0xFF800000, 0xFFFFFF00, 0xFF808000, 0xFF008000, 0xFF00FFFF, 0xFF008080, 0xFF000080, 0xFFFF00FF, 0xFF800080 };
+};
+
+class AdjacencyBuilderTBB
+{
+public:
+    AdjacencyBuilderTBB(const SpamRunList &allRuns, const RowRangeList &rowRanges, AdjacencyList &adjacencyList)
+        : allRuns_(allRuns), rowRanges_(rowRanges), adjacencyList_(adjacencyList) {}
+
+public:
+    void operator()(const tbb::blocked_range<int> &r) const
+    {
+        int numRows = r.end() - r.begin();
+        if (1 < numRows)
+        {
+            const int safeBeg = r.begin();
+            const int safeEnd = r.end() - 1;
+            for (auto row = safeBeg; row != safeEnd; ++row)
+            {
+                const RowRange &rowRange = rowRanges_[row];
+                const RowRange &nextRowRange = rowRanges_[row + 1];
+
+                if ((rowRange.row + 1) == nextRowRange.row)
+                {
+                    int nextBegIdx = nextRowRange.beg;
+                    const int nextEndIdx = nextRowRange.end;
+                    for (int runIdx = rowRange.beg; runIdx != rowRange.end; ++runIdx)
+                    {
+                        bool metInter = false;
+                        for (int nextRunIdx = nextBegIdx; nextRunIdx != nextEndIdx; ++nextRunIdx)
+                        {
+                            if (IsRunColumnIntersection(allRuns_[runIdx], allRuns_[nextRunIdx]))
+                            {
+                                metInter = true;
+                                nextBegIdx = nextRunIdx;
+                                adjacencyList_[runIdx].push_back(nextRunIdx);
+                                adjacencyList_[nextRunIdx].push_back(runIdx);
+                            }
+                            else if (metInter)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (numRows)
+        {
+            processFirstRow(r.begin());
+            processLastRow(r.end() - 1);
+        }
+    }
+
+private:
+    void processFirstRow(const int firstRow) const
+    {
+        const RowRange &rowRange = rowRanges_[firstRow];
+        const RowRange &prevRowRange = rowRanges_[firstRow - 1];
+        if ((rowRange.row - 1) == prevRowRange.row)
+        {
+            int prevBegIdx = prevRowRange.beg;
+            const int prevEndIdx = prevRowRange.end;
+            for (int runIdx = rowRange.beg; runIdx != rowRange.end; ++runIdx)
+            {
+                bool metInter = false;
+                for (int prevRunIdx = prevBegIdx; prevRunIdx != prevEndIdx; ++prevRunIdx)
+                {
+                    if (IsRunColumnIntersection(allRuns_[runIdx], allRuns_[prevRunIdx]))
+                    {
+                        metInter = true;
+                        prevBegIdx = prevRunIdx;
+                        adjacencyList_[runIdx].push_back(prevRunIdx);
+                    }
+                    else if (metInter)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    void processLastRow(const int lastRow) const
+    {
+        const RowRange &rowRange = rowRanges_[lastRow];
+        const RowRange &nextRowRange = rowRanges_[lastRow + 1];
+        if ((rowRange.row + 1) == nextRowRange.row)
+        {
+            int nextBegIdx = nextRowRange.beg;
+            const int nextEndIdx = nextRowRange.end;
+            for (int runIdx = rowRange.beg; runIdx != rowRange.end; ++runIdx)
+            {
+                bool metInter = false;
+                for (int nextRunIdx = nextBegIdx; nextRunIdx != nextEndIdx; ++nextRunIdx)
+                {
+                    if (IsRunColumnIntersection(allRuns_[runIdx], allRuns_[nextRunIdx]))
+                    {
+                        metInter = true;
+                        nextBegIdx = nextRunIdx;
+                        adjacencyList_[runIdx].push_back(nextRunIdx);
+                    }
+                    else if (metInter)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+private:
+    const SpamRunList &allRuns_;
+    const RowRangeList &rowRanges_;
+    AdjacencyList &adjacencyList_;
 };
 
 class RunLengthEncoder
@@ -222,9 +337,9 @@ int SpamRgn::NumHoles() const
 
 SPSpamRgnVector SpamRgn::Connect() const
 {
-    AdjacencyList al = GetAdjacencyList();
+    const AdjacencyList &al = GetAdjacencyList();
     std::vector<uint8_t> met(al.size());
-
+    std::vector<int> runStack;
     std::vector<std::vector<int>> rgnIdxs;
     const int numRuns = static_cast<int>(al.size());
     for (int n=0; n<numRuns; ++n)
@@ -232,7 +347,7 @@ SPSpamRgnVector SpamRgn::Connect() const
         if (!met[n])
         {
             rgnIdxs.emplace_back();
-            std::vector<int> runStack(1, n);
+            runStack.push_back(n);
             while (!runStack.empty())
             {
                 const int seedRun = runStack.back();
@@ -247,10 +362,10 @@ SPSpamRgnVector SpamRgn::Connect() const
                     }
                 }
             }
-
-            std::sort(rgnIdxs.back().begin(), rgnIdxs.back().end());
         }
     }
+
+    tbb::parallel_for(size_t(0), rgnIdxs.size(), [&rgnIdxs](size_t i) { std::sort(rgnIdxs[i].begin(), rgnIdxs[i].end()); });
 
     SPSpamRgnVector rgs = std::make_shared<SpamRgnVector>();
     rgs->resize(rgnIdxs.size());
@@ -324,83 +439,20 @@ bool SpamRgn::Contain(const int r, const int c) const
     return false;
 }
 
-AdjacencyList SpamRgn::GetAdjacencyList() const
+const AdjacencyList &SpamRgn::GetAdjacencyList() const
 {
-    AdjacencyList al(data_.size());
-    if (!data_.empty() && data_.back().l > 0)
+    if (adjacencyList_==boost::none)
     {
-        const int numRuns = static_cast<int>(data_.size());
-        std::vector<std::pair<int, int>> rowIndexRanges(data_.back().l+1);
-
-        int prevRun = 0;
-        rowIndexRanges[data_.front().l].first = 0;
-        for (int run = 0; run<numRuns; ++run)
+        adjacencyList_.emplace(data_.size());
+        if (!data_.empty())
         {
-            if (data_[run].l != data_[prevRun].l)
-            {
-                rowIndexRanges[data_[prevRun].l].second = run;
-                rowIndexRanges[data_[run].l].first = run;
-            }
-
-            prevRun = run;
-        }
-        rowIndexRanges[data_[prevRun].l].second = numRuns;
-
-        const int row0StartIndex    = rowIndexRanges[0].first;
-        const int row0EndIndex      = rowIndexRanges[0].second;
-        const int rowMidStartIndex  = rowIndexRanges[0].second;
-        const int rowMidEndIndex    = rowIndexRanges[data_.back().l].first;
-        const int rowLastStartIndex = rowIndexRanges[data_.back().l].first;
-        const int rowLastEndIndex   = rowIndexRanges[data_.back().l].second;
-
-        for (int i=row0StartIndex; i<row0EndIndex; ++i)
-        {
-            const int nextRow = data_[i].l + 1;
-            for (int j = rowIndexRanges[nextRow].first; j < rowIndexRanges[nextRow].second; ++j)
-            {
-                if (IsRunColumnIntersection(data_[i], data_[j]))
-                {
-                    al[i].push_back(j);
-                }
-            }
-        }
-
-        for (int i = rowMidStartIndex; i<rowMidEndIndex; ++i)
-        {
-            const int prevRow = data_[i].l - 1;
-            const int nextRow = data_[i].l + 1;
-
-            for (int j = rowIndexRanges[prevRow].first; j < rowIndexRanges[prevRow].second; ++j)
-            {
-                if (IsRunColumnIntersection(data_[i], data_[j]))
-                {
-                    al[i].push_back(j);
-                }
-            }
-            
-            for (int j = rowIndexRanges[nextRow].first; j < rowIndexRanges[nextRow].second; ++j)
-            {
-                if (IsRunColumnIntersection(data_[i], data_[j]))
-                {
-                    al[i].push_back(j);
-                }
-            }
-        }
-
-        for (int i = rowLastStartIndex; i<rowLastEndIndex; ++i)
-        {
-            const int prevRow = data_[i].l - 1;
-            for (int j = rowIndexRanges[prevRow].first; j < rowIndexRanges[prevRow].second; ++j)
-            {
-                if (IsRunColumnIntersection(data_[i], data_[j]))
-                {
-                    al[i].push_back(j);
-                }
-            }
+            const RowRangeList &rowRanges = GetRowRanges();
+            AdjacencyBuilderTBB adjBuilder(data_, rowRanges, *adjacencyList_);
+            tbb::parallel_for(tbb::blocked_range<int>(1, static_cast<int>(rowRanges.size() - 1)), adjBuilder);
         }
     }
 
-    return al;
+    return *adjacencyList_;
 }
 
 const Geom::PathVector &SpamRgn::GetPath() const
@@ -415,13 +467,49 @@ const Geom::PathVector &SpamRgn::GetPath() const
     return *path_;
 }
 
+const RowRangeList &SpamRgn::GetRowRanges() const
+{
+    if (rowRanges_== boost::none)
+    {
+        rowRanges_.emplace();
+        if (!data_.empty())
+        {
+            constexpr int Infinity = std::numeric_limits<int>::max();
+            constexpr int NegInfinity = std::numeric_limits<int>::min();
+            rowRanges_->reserve(data_.size() + 2);
+            rowRanges_->emplace_back(NegInfinity, Infinity, Infinity);
+
+            int begIdx = 0;
+            int currentRow = data_.front().l;
+
+            const int numRuns = static_cast<int>(data_.size());
+            for (int run = 0; run < numRuns; ++run)
+            {
+                if (data_[run].l != currentRow)
+                {
+                    rowRanges_->emplace_back(currentRow, begIdx, run);
+                    begIdx = run;
+                    currentRow = data_[run].l;
+                }
+            }
+
+            rowRanges_->emplace_back(currentRow, begIdx, numRuns);
+            rowRanges_->emplace_back(Infinity, Infinity, Infinity);
+        }
+    }
+
+    return *rowRanges_;
+}
+
 void SpamRgn::ClearCacheData()
 {
-    area_       = boost::none;
-    path_       = boost::none;
-    bbox_       = boost::none;
-    contours_   = boost::none;
-    holes_      = boost::none;
+    area_           = boost::none;
+    path_           = boost::none;
+    bbox_           = boost::none;
+    contours_       = boost::none;
+    holes_          = boost::none;
+    rowRanges_      = boost::none;
+    adjacencyList_  = boost::none;
 }
 
 RD_LIST RunTypeDirectionEncoder::encode() const
