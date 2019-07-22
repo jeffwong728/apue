@@ -1,6 +1,8 @@
 add_compile_options("/utf-8")
 add_executable(test_SpamRgn rgn_unittest.cpp helper.cpp helper.h ${PROJECT_SOURCE_DIR}/spam/ui/proc/rgn.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/basic.cpp)
+add_executable(test_CVPerf cvperf_unittest.cpp helper.cpp helper.h)
 target_include_directories(test_SpamRgn PRIVATE ${CMAKE_BINARY_DIR}/include)
+target_include_directories(test_CVPerf PRIVATE ${CMAKE_BINARY_DIR}/include)
 
 set(libs)
 list(APPEND libs CAIRO::cairo)
@@ -32,8 +34,11 @@ list(APPEND libs GSL::gsl)
 list(APPEND libs GSL::gslcblas)
 
 target_link_libraries(test_SpamRgn PRIVATE ${libs})
+target_link_libraries(test_CVPerf  PRIVATE ${libs})
 
 if(MSVC)
   target_compile_definitions(test_SpamRgn PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX)
+  target_compile_definitions(test_CVPerf PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX)
   target_compile_options(test_SpamRgn PRIVATE "/MP")
+  target_compile_options(test_CVPerf PRIVATE "/MP")
 endif()

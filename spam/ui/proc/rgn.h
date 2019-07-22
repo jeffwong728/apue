@@ -58,13 +58,14 @@ using RowRangeList = std::vector<RowRange>;
 
 class SpamRgn
 {
+    friend class BasicImgProc;
     friend class RunTypeDirectionEncoder;
     template <typename Pred> friend class GeneralThresholdTBB;
     template<typename T> friend SPSpamRgn GeneralThreshold(const cv::Mat &, const uchar, const uchar);
 
 public:
     SpamRgn() : color_(0xFFFF0000) {}
-    ~SpamRgn() {}
+    ~SpamRgn();
 
 public:
     void swap(SpamRgn &o) { data_.swap(o.data_); ClearCacheData(); }

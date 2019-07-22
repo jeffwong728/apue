@@ -9,6 +9,20 @@
 #undef free
 #endif
 #include <tbb/tbb.h>
+#include <tbb/task_scheduler_init.h>
+
+struct TestSpamRgnConfig {
+    TestSpamRgnConfig() 
+    {
+        std::cout << "global setup" << std::endl; 
+        std::cout << "default_num_threads: " << tbb::task_scheduler_init::default_num_threads() << std::endl;
+        BasicImgProc::Initialize(tbb::task_scheduler_init::default_num_threads());
+    }
+
+    ~TestSpamRgnConfig() { }
+};
+
+BOOST_GLOBAL_FIXTURE(TestSpamRgnConfig);
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_0_Area)
 {
@@ -333,6 +347,18 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_3)
     int numLabels = cv::connectedComponents(binImg, labels, 8, CV_32S, cv::CCL_GRANA);
     t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("CV connected components spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    cv::Mat stats;
+    cv::Mat centroids;
+    t1 = tbb::tick_count::now();
+    cv::connectedComponentsWithStats(binImg, labels, stats, centroids, 8, CV_32S, cv::CCL_GRANA);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV connected components with stats spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    t1 = tbb::tick_count::now();
+    SPSpamRgnVector lrgns = BasicImgProc::Connect(labels, numLabels-1);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("BasicImgProc connect spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
     std::vector<cv::Vec4i> hierarchy;
     std::vector<std::vector<cv::Point>> contours;

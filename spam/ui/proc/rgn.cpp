@@ -1,4 +1,5 @@
 #include "rgn.h"
+#include "basic.h"
 #include <limits>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
@@ -195,6 +196,11 @@ private:
     const int width_;
     std::vector<SpamRun> runs_;
 };
+
+SpamRgn::~SpamRgn() 
+{ 
+    BasicImgProc::ReturnRegion(std::move(data_));
+}
 
 void SpamRgn::AddRun(const cv::Mat &binaryImage)
 {
