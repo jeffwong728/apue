@@ -948,12 +948,12 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_9)
 BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_10)
 {
     cv::Mat grayImg, colorImg;
-    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("img00000.png");
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("scrach.png");
     SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
 
     UnitTestHelper::Color color{ rgn->GetRed(), rgn->GetGreen(), rgn->GetBlue(), rgn->GetAlpha() };
     UnitTestHelper::DrawPathToImage(rgn->GetPath(), color, colorImg);
-    UnitTestHelper::WriteImage(colorImg, "img00000.png");
+    UnitTestHelper::WriteImage(colorImg, "scrach.png");
 
     RunTypeDirectionEncoder encoder(*rgn);
     std::vector<RD_CONTOUR> outers;
@@ -998,7 +998,6 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Threshold_PERFORMANCE_0, *boost::unit_test::en
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
 
-    BasicImgProc::Threshold(grayImg, 150, 255);
     tbb::tick_count t1 = tbb::tick_count::now();
     SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
     tbb::tick_count t2 = tbb::tick_count::now();
@@ -1034,4 +1033,17 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_PERFORMANCE_0, *boost::unit_test::ena
     t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("Spam connect times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(rgns->size(), 941);
+}
+
+BOOST_AUTO_TEST_CASE(test_AlignImageWidth)
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    cv::Mat alignGrayImg = BasicImgProc::AlignImageWidth(grayImg);
+    tbb::tick_count t2 = tbb::tick_count::now();
+
+    BOOST_CHECK_EQUAL(alignGrayImg.step1()%64, 0);
+    BOOST_TEST_MESSAGE("Align gray image width (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 }

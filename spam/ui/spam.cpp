@@ -2,6 +2,7 @@
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "spam.h"
 #include <wx/snglinst.h>
+#include <ui/proc/basic.h>
 #include <ui/toplevel/rootframe.h>
 #include <ui/toplevel/projpanel.h>
 #include <boost/dll/runtime_symbol_info.hpp>
@@ -22,6 +23,7 @@
 #include <boost/algorithm/string.hpp>
 #include <ui/projs/drawablenode.h>
 #include <wxSVG/SVGDocument.h>
+#include <tbb/task_scheduler_init.h>
 
 struct GUILogerTempSwitcher
 {
@@ -139,6 +141,8 @@ bool SpamApp::OnInit()
     const SpamIconPurpose ipTBar = kICON_PURPOSE_TOOLBAR;
     bitmaps_[ipTBar][bm_ImageImport]    = wxBitmap(wxT("res/import_layer_16.png"),  bmt);
     bitmaps_[ipTBar][bm_ImageExport]    = wxBitmap(wxT("res/export_layer_16.png"),  bmt);
+
+    BasicImgProc::Initialize(tbb::task_scheduler_init::default_num_threads());
 
     RootFrame *frame = new RootFrame();
     SetTopWindow(frame);

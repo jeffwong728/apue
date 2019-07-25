@@ -9,3 +9,4 @@ config
 /spam/hoard
 /spam/unittest/rdata
 /spam/unittest/idata
+/spam/vectorclass

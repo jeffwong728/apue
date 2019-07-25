@@ -137,6 +137,15 @@ private:
     AdjacencyList &adjacencyList_;
 };
 
+class RegionConnectorPI
+{
+public:
+    RegionConnectorPI(){}
+
+private:
+
+};
+
 class RunLengthEncoder
 {
 public:
@@ -516,6 +525,29 @@ void SpamRgn::ClearCacheData()
     holes_          = boost::none;
     rowRanges_      = boost::none;
     adjacencyList_  = boost::none;
+}
+
+SPSpamRgnVector SpamRgn::ConnectMT() const
+{
+    const RowRangeList &rowRanges = GetRowRanges();
+    const int numTasks = std::min(10, static_cast<int>(BasicImgProc::GetNumWorkers()));
+    const int averageRunsPerTask = GetNumRuns() / numTasks;
+    boost::container::static_vector<std::pair<int, int>, 10> taskRuns;
+
+    int cRuns = 0;
+    int lastRun = 0;
+    const int vlaidRowIndexEnd = static_cast<int>(rowRanges.size())-1;
+    for (int rowIndex=1; rowIndex<vlaidRowIndexEnd; ++rowIndex)
+    {
+        const auto &rowRange = rowRanges[rowIndex];
+        cRuns += (rowRange.end - rowRange.beg);
+        if (cRuns > averageRunsPerTask)
+        {
+            taskRuns.emplace_back(lastRun, rowRange.end);
+            lastRun = rowRange.end;
+        }
+    }
+    taskRuns.emplace_back(lastRun, GetNumRuns());
 }
 
 RD_LIST RunTypeDirectionEncoder::encode() const

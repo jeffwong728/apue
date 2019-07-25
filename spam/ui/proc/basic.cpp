@@ -1,5 +1,8 @@
 #include "basic.h"
+#include <asmlib.h>
 #include <memory>
+#include <vectorclass/vectorclass.h>
+#include <boost/container/static_vector.hpp>
 #ifdef free
 #undef free
 #endif
@@ -33,52 +36,13 @@ struct MundaneThreshold
     const uchar upper;
 };
 
-template <typename Pred>
-SPSpamRgn GeneralThreshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
+struct SIMDThreshold
 {
-    Pred pred(lowerGray, upperGray);
-    int dph = grayImage.depth();
-    int cnl = grayImage.channels();
-    SPSpamRgn rgn = std::make_shared<SpamRgn>();
-    rgn->data_.reserve(grayImage.rows*grayImage.cols);
-    if (CV_8U == dph && 1 == cnl)
-    {
-        int top = 0;
-        int bot = grayImage.rows;
-        int left = 0;
-        int right = grayImage.cols;
-        for (int r = top; r<bot; ++r)
-        {
-            int cb = -1;
-            const uchar* pRow = grayImage.data + r * grayImage.step1();
-            for (int c = left; c < right; ++c)
-            {
-                if (pred(pRow[c]))
-                {
-                    if (cb < 0)
-                    {
-                        cb = c;
-                    }
-                }
-                else
-                {
-                    if (cb > -1)
-                    {
-                        rgn->data_.push_back({ r, cb, c });
-                        cb = -1;
-                    }
-                }
-            }
-
-            if (cb > -1)
-            {
-                rgn->data_.push_back({ r, cb, right });
-            }
-        }
-    }
-
-    return rgn;
-}
+    SIMDThreshold(const uchar lowerGray, const uchar upperGray) : lower(lowerGray), upper(upperGray) {}
+    bool operator()(const uchar grayVal) const { return grayVal > lower; }
+    const uchar lower;
+    const uchar upper;
+};
 
 template <typename Pred>
 class GeneralThresholdPI
@@ -90,8 +54,8 @@ public:
 public:
     void operator()() const
     {
-        int left = 0;
-        int right = grayImage_.cols;
+        constexpr int left = 0;
+        const int right = grayImage_.cols;
 
         constexpr int blockSize = 1024*4;
         rgnList.splice(rgnList.end(), runListPool_, runListPool_.cbegin());
@@ -105,61 +69,41 @@ public:
         for (auto l = beg_; l != end_; ++l)
         {
             int cb = -1;
-            for (int c = left; c < right; ++c)
-            {
-                if (pred_(pRow[c]))
-                {
-                    if (cb < 0)
-                    {
-                        cb = c;
-                    }
-                }
-                else
-                {
-                    if (cb > -1)
-                    {
-                        if (numRuns == blockSize)
-                        {
-                            rgnList.splice(rgnList.end(), runListPool_, runListPool_.cbegin());
+            const uchar* pPixel = pRow + left;
+            for (int c = left; c < right; ++c) {
+                if (pred_(*pPixel)) {
+                    if (cb < 0) { cb = c; }
+                } else {
+                    if (cb > -1) {
+                        if (numRuns == blockSize) {
                             numRuns = 0;
+                            rgnList.splice(rgnList.end(), runListPool_, runListPool_.cbegin());
                             rgnList.back().resize(blockSize);
                             pRuns = rgnList.back().data();
                         }
-
-                        pRuns[numRuns].l = l;
-                        pRuns[numRuns].cb = cb;
-                        pRuns[numRuns].ce = c;
-                        numRuns += 1;
-                        cb = -1;
+                        pRuns[numRuns].l = l; pRuns[numRuns].cb = cb; pRuns[numRuns].ce = c; numRuns += 1; cb = -1;
                     }
                 }
+                pPixel += 1;
             }
 
             pRow += stride;
 
-            if (cb > -1)
-            {
-                if (numRuns == blockSize)
-                {
+            if (cb > -1) {
+                if (numRuns == blockSize) {
                     rgnList.splice(rgnList.end(), runListPool_, runListPool_.cbegin());
                     numRuns = 0;
                     rgnList.back().resize(blockSize);
                     pRuns = rgnList.back().data();
                 }
 
-                pRuns[numRuns].l = l;
-                pRuns[numRuns].cb = cb;
-                pRuns[numRuns].ce = right;
-                numRuns += 1;
+                pRuns[numRuns].l = l; pRuns[numRuns].cb = cb; pRuns[numRuns].ce = right; numRuns += 1;
             }
         }
 
-        if (numRuns)
-        {
+        if (numRuns) {
             rgnList.back().resize(numRuns);
-        }
-        else
-        {
+        } else {
             runListPool_.splice(runListPool_.end(), rgnList, --rgnList.cend());
         }
     }
@@ -172,6 +116,179 @@ public:
     const int beg_;
     const int end_;
 };
+
+template<>
+struct GeneralThresholdPI<SIMDThreshold>
+{
+public:
+    GeneralThresholdPI(const cv::Mat &grayImage, const SIMDThreshold &pred, const int b, const int e, SpamRunListPool &pool)
+        : grayImage_(grayImage), pred_(pred), beg_(b), end_(e), runListPool_(pool) {  }
+
+public:
+    void operator()() const
+    {
+        const int width = grayImage_.cols;
+        constexpr int blockSize = 1024 * 4;
+        constexpr int simdSize = 32;
+        rgnList.splice(rgnList.end(), runListPool_, runListPool_.cbegin());
+        rgnList.back().resize(blockSize);
+        auto pRuns = rgnList.back().data();
+        int numRuns = 0;
+
+        bool sOk[simdSize] = {false};
+        vcl::Vec32uc lowThresh(pred_.lower);
+        const auto stride = grayImage_.step1();
+        const uchar* pRow = grayImage_.data + beg_ * stride;
+        const int regularWidth = width & (-simdSize);
+
+        vcl::Vec32uc blockPixels;
+        for (auto l = beg_; l != end_; ++l)
+        {
+            int c, cb = -1;
+            const uchar* pPixel = pRow;
+            for (c = 0; c < regularWidth; c += simdSize)
+            {
+                blockPixels.load(pPixel);
+                pPixel += simdSize;
+                vcl::Vec32cb r = blockPixels > lowThresh;
+                auto numBright = vcl::horizontal_count(r);
+
+                if (cb<0 && !numBright)
+                {
+                    continue;
+                }
+
+                if (cb>0 && simdSize == numBright)
+                {
+                    continue;
+                }
+
+                r.store(sOk);
+                for (int i=0; i< simdSize; ++i)
+                {
+                    if (sOk[i]) {
+                        if (cb < 0) { cb = c+i; }
+                    } else {
+                        if (cb > -1) {
+                            if (numRuns == blockSize) {
+                                numRuns = 0;
+                                rgnList.splice(rgnList.end(), runListPool_, runListPool_.cbegin());
+                                rgnList.back().resize(blockSize);
+                                pRuns = rgnList.back().data();
+                            }
+                            pRuns[numRuns].l = l; pRuns[numRuns].cb = cb; pRuns[numRuns].ce = c+i; numRuns += 1; cb = -1;
+                        }
+                    }
+                }
+            }
+
+            for (; c < width; ++c)
+            {
+                if (pred_(*pPixel)) {
+                    if (cb < 0) { cb = c; }
+                } else {
+                    if (cb > -1) {
+                        if (numRuns == blockSize) {
+                            numRuns = 0;
+                            rgnList.splice(rgnList.end(), runListPool_, runListPool_.cbegin());
+                            rgnList.back().resize(blockSize);
+                            pRuns = rgnList.back().data();
+                        }
+                        pRuns[numRuns].l = l; pRuns[numRuns].cb = cb; pRuns[numRuns].ce = c; numRuns += 1; cb = -1;
+                    }
+                }
+                pPixel += 1;
+            }
+
+            pRow += stride;
+
+            if (cb > -1) {
+                if (numRuns == blockSize) {
+                    rgnList.splice(rgnList.end(), runListPool_, runListPool_.cbegin());
+                    numRuns = 0;
+                    rgnList.back().resize(blockSize);
+                    pRuns = rgnList.back().data();
+                }
+
+                pRuns[numRuns].l = l; pRuns[numRuns].cb = cb; pRuns[numRuns].ce = width; numRuns += 1;
+            }
+        }
+
+        if (numRuns) {
+            rgnList.back().resize(numRuns);
+        }
+        else {
+            runListPool_.splice(runListPool_.end(), rgnList, --rgnList.cend());
+        }
+    }
+
+public:
+    mutable SpamRunListPool rgnList;
+    const cv::Mat &grayImage_;
+    const SIMDThreshold &pred_;
+    SpamRunListPool &runListPool_;
+    const int beg_;
+    const int end_;
+};
+
+template <typename Pred>
+SPSpamRgn ThresholdPI_impl(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
+{
+    int dph = grayImage.depth();
+    int cnl = grayImage.channels();
+    SPSpamRgn rgn = std::make_shared<SpamRgn>();
+    SpamRunList &runList = rgn->GetData();
+
+    if (CV_8U == dph && 1 == cnl)
+    {
+        Pred pred(lowerGray, upperGray);
+        const int numTasks = std::min(10, static_cast<int>(BasicImgProc::s_runList_pools_.size()));
+        const int rowStep = grayImage.rows / numTasks;
+        boost::container::static_vector<GeneralThresholdPI<Pred>, 10> fObjs;
+        for (int t = 0; t < numTasks - 1; ++t)
+        {
+            fObjs.emplace_back(grayImage, pred, rowStep*t, rowStep*(t + 1), BasicImgProc::s_runList_pools_[t]);
+        }
+        fObjs.emplace_back(grayImage, pred, rowStep*(numTasks - 1), grayImage.rows, BasicImgProc::s_runList_pools_[numTasks - 1]);
+
+        switch (numTasks)
+        {
+        case 1: fObjs[0](); break;
+        case 2: tbb::parallel_invoke(fObjs[0], fObjs[1]); break;
+        case 4: tbb::parallel_invoke(fObjs[0], fObjs[1], fObjs[2], fObjs[3]); break;
+        case 6: tbb::parallel_invoke(fObjs[0], fObjs[1], fObjs[2], fObjs[3], fObjs[4], fObjs[5]); break;
+        case 8: tbb::parallel_invoke(fObjs[0], fObjs[1], fObjs[2], fObjs[3], fObjs[4], fObjs[5], fObjs[6], fObjs[7]); break;
+        case 10: tbb::parallel_invoke(fObjs[0], fObjs[1], fObjs[2], fObjs[3], fObjs[4], fObjs[5], fObjs[6], fObjs[7], fObjs[8], fObjs[9]); break;
+        default: break;
+        }
+
+        SpamRunListTBB::size_type numRuns = 0;
+        for (const auto &fObj : fObjs)
+        {
+            for (const auto &rgnItem : fObj.rgnList)
+            {
+                numRuns += rgnItem.size();
+            }
+        }
+
+        runList.swap(BasicImgProc::s_rgn_pool_.back());
+        BasicImgProc::s_rgn_pool_.pop_back();
+        runList.resize(numRuns);
+
+        auto pDest = runList.data();
+        for (int t = 0; t < numTasks; ++t)
+        {
+            for (const auto &rgnItem : fObjs[t].rgnList)
+            {
+                std::memcpy(pDest, rgnItem.data(), rgnItem.size() * sizeof(rgnItem.front()));
+                pDest += rgnItem.size();
+            }
+            BasicImgProc::s_runList_pools_[t].splice(BasicImgProc::s_runList_pools_[t].end(), fObjs[t].rgnList);
+        }
+    }
+
+    return rgn;
+}
 
 void BasicImgProc::Initialize(const int numWorkerThread)
 {
@@ -202,139 +319,39 @@ void BasicImgProc::ReturnRegion(SpamRunList &&rgn)
     }
 }
 
+cv::Mat BasicImgProc::AlignImageWidth(const cv::Mat &img)
+{
+    constexpr int alignSize = 64;
+    const auto stride = static_cast<int>(img.step1());
+    const auto alignStride = stride & ~(alignSize - 1);
+    if (alignStride == stride)
+    {
+        return img;
+    }
+    else
+    {
+        const auto alignWidth = (img.cols + alignSize - 1) & ~(alignSize - 1);
+        cv::Mat alignedMat(img.rows, alignWidth, img.type());
+        cv::Mat roiMat = alignedMat.colRange(0, img.cols);
+        img.copyTo(roiMat);
+        return roiMat;
+    }
+}
+
 SPSpamRgn BasicImgProc::Threshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
 {
-    int dph = grayImage.depth();
-    int cnl = grayImage.channels();
-    SPSpamRgn rgn = std::make_shared<SpamRgn>();
-    SpamRunList &runList = rgn->GetData();
-
-    if (CV_8U == dph && 1 == cnl)
+    if (0 == lowerGray)
     {
-        if (0 == lowerGray)
-        {
-            DarkThreshold pred(lowerGray, upperGray);
-            const int rowStep = grayImage.rows / 4;
-            GeneralThresholdPI f0(grayImage, pred, 0, rowStep, s_runList_pools_[0]);
-            GeneralThresholdPI f1(grayImage, pred, rowStep, rowStep * 2, s_runList_pools_[1]);
-            GeneralThresholdPI f2(grayImage, pred, rowStep*2, rowStep * 3, s_runList_pools_[2]);
-            GeneralThresholdPI f3(grayImage, pred, rowStep*3, rowStep * 4, s_runList_pools_[3]);
-
-            tbb::parallel_invoke(f0, f1, f2, f3);
-
-            SpamRunListPool *rgnLists[]{ &f0.rgnList , &f1.rgnList, &f2.rgnList, &f3.rgnList};
-
-            SpamRunListTBB::size_type numRuns = 0;
-            for (const auto &rgnList : rgnLists)
-            {
-                for (const auto &rgnItem : *rgnList)
-                {
-                    numRuns += rgnItem.size();
-                }
-            }
-
-            runList.swap(s_rgn_pool_.back());
-            s_rgn_pool_.pop_back();
-            runList.resize(numRuns);
-
-            auto pDest = runList.data();
-            for (const auto &rgnList : rgnLists)
-            {
-                for (const auto &rgnItem : *rgnList)
-                {
-                    std::memcpy(pDest, rgnItem.data(), rgnItem.size() * sizeof(rgnItem.front()));
-                    pDest += rgnItem.size();
-                }
-            }
-
-            s_runList_pools_[0].splice(s_runList_pools_[0].end(), f0.rgnList);
-            s_runList_pools_[1].splice(s_runList_pools_[1].end(), f1.rgnList);
-            s_runList_pools_[2].splice(s_runList_pools_[2].end(), f2.rgnList);
-            s_runList_pools_[3].splice(s_runList_pools_[3].end(), f3.rgnList);
-        }
-        else if (255 == upperGray)
-        {
-            BrightThreshold pred(lowerGray, upperGray);
-            const int rowStep = grayImage.rows / 4;
-            GeneralThresholdPI f0(grayImage, pred, 0, rowStep, s_runList_pools_[0]);
-            GeneralThresholdPI f1(grayImage, pred, rowStep, rowStep * 2, s_runList_pools_[1]);
-            GeneralThresholdPI f2(grayImage, pred, rowStep * 2, rowStep * 3, s_runList_pools_[2]);
-            GeneralThresholdPI f3(grayImage, pred, rowStep * 3, rowStep * 4, s_runList_pools_[3]);
-
-            tbb::parallel_invoke(f0, f1, f2, f3);
-            SpamRunListPool *rgnLists[]{ &f0.rgnList , &f1.rgnList, &f2.rgnList, &f3.rgnList};
-
-            SpamRunListTBB::size_type numRuns = 0;
-            for (const auto &rgnList : rgnLists)
-            {
-                for (const auto &rgnItem : *rgnList)
-                {
-                    numRuns += rgnItem.size();
-                }
-            }
-
-            runList.swap(s_rgn_pool_.back());
-            s_rgn_pool_.pop_back();
-            runList.resize(numRuns);
-
-            auto pDest = runList.data();
-            for (const auto &rgnList : rgnLists)
-            {
-                for (const auto &rgnItem : *rgnList)
-                {
-                    std::memcpy(pDest, rgnItem.data(), rgnItem.size() * sizeof(rgnItem.front()));
-                    pDest += rgnItem.size();
-                }
-            }
-
-            s_runList_pools_[0].splice(s_runList_pools_[0].end(), f0.rgnList);
-            s_runList_pools_[1].splice(s_runList_pools_[1].end(), f1.rgnList);
-            s_runList_pools_[2].splice(s_runList_pools_[2].end(), f2.rgnList);
-            s_runList_pools_[3].splice(s_runList_pools_[3].end(), f3.rgnList);
-        }
-        else
-        {
-            MundaneThreshold pred(lowerGray, upperGray);
-            const int rowStep = grayImage.rows / 4;
-            GeneralThresholdPI f0(grayImage, pred, 0, rowStep, s_runList_pools_[0]);
-            GeneralThresholdPI f1(grayImage, pred, rowStep, rowStep * 2, s_runList_pools_[1]);
-            GeneralThresholdPI f2(grayImage, pred, rowStep * 2, rowStep * 3, s_runList_pools_[2]);
-            GeneralThresholdPI f3(grayImage, pred, rowStep * 3, rowStep * 4, s_runList_pools_[3]);
-
-            tbb::parallel_invoke(f0, f1, f2, f3);
-            SpamRunListPool *rgnLists[]{ &f0.rgnList , &f1.rgnList, &f2.rgnList, &f3.rgnList };
-
-            SpamRunListTBB::size_type numRuns = 0;
-            for (const auto &rgnList : rgnLists)
-            {
-                for (const auto &rgnItem : *rgnList)
-                {
-                    numRuns += rgnItem.size();
-                }
-            }
-
-            runList.swap(s_rgn_pool_.back());
-            s_rgn_pool_.pop_back();
-            runList.resize(numRuns);
-
-            auto pDest = runList.data();
-            for (const auto &rgnList : rgnLists)
-            {
-                for (const auto &rgnItem : *rgnList)
-                {
-                    std::memcpy(pDest, rgnItem.data(), rgnItem.size() * sizeof(rgnItem.front()));
-                    pDest += rgnItem.size();
-                }
-            }
-
-            s_runList_pools_[0].splice(s_runList_pools_[0].end(), f0.rgnList);
-            s_runList_pools_[1].splice(s_runList_pools_[1].end(), f1.rgnList);
-            s_runList_pools_[2].splice(s_runList_pools_[2].end(), f2.rgnList);
-            s_runList_pools_[3].splice(s_runList_pools_[3].end(), f3.rgnList);
-        }
+        return ThresholdPI_impl<DarkThreshold>(grayImage, lowerGray, upperGray);
     }
-
-    return rgn;
+    else if (255 == upperGray)
+    {
+        return ThresholdPI_impl<SIMDThreshold>(grayImage, lowerGray, upperGray);
+    }
+    else
+    {
+        return ThresholdPI_impl<MundaneThreshold>(grayImage, lowerGray, upperGray);
+    }
 }
 
 SPSpamRgnVector BasicImgProc::Connect(const cv::Mat &labels, const int numLabels)
@@ -365,7 +382,7 @@ SPSpamRgnVector BasicImgProc::Connect(const cv::Mat &labels, const int numLabels
             {
                 if (cb > -1)
                 {
-                    //rgns[pRow[cb]-1].data_.push_back({ r, cb, c });
+                    rgns[pRow[cb]-1].data_.push_back({ r, cb, c });
                     cb = -1;
                 }
             }
@@ -373,7 +390,7 @@ SPSpamRgnVector BasicImgProc::Connect(const cv::Mat &labels, const int numLabels
 
         if (cb > -1)
         {
-            //rgns[pRow[cb]-1].data_.push_back({ r, cb, right });
+            rgns[pRow[cb]-1].data_.push_back({ r, cb, right });
         }
     }
 
