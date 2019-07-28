@@ -13,13 +13,19 @@
 #include <2geom/pathvector.h>
 #pragma warning( pop )
 
-struct SpamRun
+union SpamRun
 {
-    SpamRun() : l(0), cb(0), ce(0) {}
-    SpamRun(const int ll, const int bb, const int ee) : l(ll), cb(bb), ce(ee) {}
-    int l;  // line number (row) of run
-    int cb; // column index of beginning(include) of run
-    int ce; // column index of ending(exclude) of run
+    SpamRun() : pad(0) {}
+    SpamRun(const int16_t ll, const int16_t bb, const int16_t ee) : row(ll), colb(bb), cole(ee), label(0) {}
+    SpamRun(const int16_t ll, const int16_t bb, const int16_t ee, const uint16_t lab) : row(ll), colb(bb), cole(ee), label(lab) {}
+    int64_t pad;
+    struct
+    {
+        int16_t row;  // line number (row) of run
+        int16_t colb; // column index of beginning(include) of run
+        int16_t cole; // column index of ending(exclude) of run
+        uint16_t label;
+    };
 };
 
 struct RowRange
@@ -70,7 +76,7 @@ public:
     void clear() { data_.clear(); ClearCacheData(); }
 
 public:
-    void AddRun(const int l, const int cb, const int ce) { data_.push_back({ l, cb, ce }); ClearCacheData(); }
+    void AddRun(const int16_t l, const int16_t cb, const int16_t ce) { data_.push_back({ l, cb, ce }); ClearCacheData(); }
     void AddRun(const cv::Mat &binaryImage);
     void AddRunParallel(const cv::Mat &binaryImage);
     void Draw(const cv::Mat &dstImage, const double sx, const double sy) const;
@@ -81,7 +87,7 @@ public:
     int NumHoles() const;
     SPSpamRgnVector Connect() const;
     cv::Rect BoundingBox() const;
-    bool Contain(const int r, const int c) const;
+    bool Contain(const int16_t r, const int16_t c) const;
     const AdjacencyList &GetAdjacencyList() const;
     const Geom::PathVector &GetPath() const;
     const RowRangeList &GetRowRanges() const;
@@ -128,7 +134,7 @@ private:
 
 inline bool IsRunColumnIntersection(const SpamRun &r1, const SpamRun &r2)
 {
-    return !(r1.ce < r2.cb || r2.ce < r1.cb);
+    return !(r1.cole < r2.colb || r2.cole < r1.colb);
 }
 
 #endif //SPAM_UI_PROC_REGION_H

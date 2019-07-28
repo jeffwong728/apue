@@ -16,6 +16,7 @@ using SpamRunListList = std::vector<std::unique_ptr<SpamRunListTBB>, tbb::scalab
 class BasicImgProc : private boost::noncopyable
 {
     template <typename Pred> friend SPSpamRgn ThresholdPI_impl(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
+    template <typename Pred> friend SPSpamRgn ThresholdTBBReduce_impl(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
 public:
     BasicImgProc() = delete;
 

@@ -53,6 +53,25 @@ BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0)
     }
 }
 
+BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_1)
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
+
+    std::vector<cv::Mat> pyrs;
+    tbb::tick_count t1 = tbb::tick_count::now();
+    cv::buildPyramid(grayImg, pyrs, 4, cv::BORDER_REFLECT);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV build pyramid spend (board-01.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    int id = 0;
+    for (const cv::Mat &pyr : pyrs)
+    {
+        std::string fileName = std::string("board-01_pyr_") + std::to_string(id++) + ".png";
+        UnitTestHelper::WriteImage(pyr, fileName);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(test_CV_GaussianBlur_Performance_0)
 {
     cv::Mat grayImg, colorImg;

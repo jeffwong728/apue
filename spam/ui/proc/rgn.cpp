@@ -161,16 +161,16 @@ public:
         , width_(x.width_)
     {}
 
-    void operator()(const tbb::blocked_range<int>& br)
+    void operator()(const tbb::blocked_range<int16_t>& br)
     {
-        int left = 0;
-        int right = width_;
-        int end = br.end();
-        for (int r = br.begin(); r != end; ++r)
+        int16_t left = 0;
+        int16_t right = width_;
+        int16_t end = br.end();
+        for (int16_t r = br.begin(); r != end; ++r)
         {
-            int cb = -1;
+            int16_t cb = -1;
             const uchar* pRow = firstPixel_ + r * stride_;
-            for (int c = left; c < right; ++c)
+            for (int16_t c = left; c < right; ++c)
             {
                 if (pRow[c])
                 {
@@ -202,7 +202,7 @@ public:
 private:
     const uchar* const firstPixel_;
     const size_t stride_;
-    const int width_;
+    const int16_t width_;
     std::vector<SpamRun> runs_;
 };
 
@@ -217,15 +217,15 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
     int cnl = binaryImage.channels();
     if (CV_8U == dph && 1 == cnl)
     {
-        int top = 0;
-        int bot = binaryImage.rows;
-        int left = 0;
-        int right = binaryImage.cols;
-        for (int r = top; r<bot; ++r)
+        int16_t top = 0;
+        int16_t bot = binaryImage.rows;
+        int16_t left = 0;
+        int16_t right = binaryImage.cols;
+        for (int16_t r = top; r<bot; ++r)
         {
-            int cb = -1;
+            int16_t cb = -1;
             const uchar* pRow = binaryImage.data + r * binaryImage.step1();
-            for (int c = left; c < right; ++c)
+            for (int16_t c = left; c < right; ++c)
             {
                 if (pRow[c])
                 {
@@ -261,7 +261,7 @@ void SpamRgn::AddRunParallel(const cv::Mat &binaryImage)
     if (CV_8U == dph && 1 == cnl)
     {
         RunLengthEncoder enc(binaryImage);
-        tbb::parallel_reduce(tbb::blocked_range<int>(0, binaryImage.rows), enc);
+        tbb::parallel_reduce(tbb::blocked_range<int16_t>(0, binaryImage.rows), enc);
         data_.swap(enc.Runs());
     }
 
@@ -281,9 +281,9 @@ void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) co
         double maxy = sy * (bbox.y + bbox.height + 1);
         for (double y = miny; y < maxy; ++y)
         {
-            int or = cv::saturate_cast<int>(y / sy - 0.5);
-            auto lb = std::lower_bound(data_.cbegin(), data_.cend(), or, [](const SpamRun &run, const int val) { return  run.l < val; });
-            if (lb != data_.cend() && or == lb->l)
+            int16_t or = cv::saturate_cast<int16_t>(y / sy - 0.5);
+            auto lb = std::lower_bound(data_.cbegin(), data_.cend(), or, [](const SpamRun &run, const int16_t val) { return  run.row < val; });
+            if (lb != data_.cend() && or == lb->row)
             {
                 int r = cv::saturate_cast<int>(y);
                 if (r >= 0 && r<dstImage.rows)
@@ -291,12 +291,12 @@ void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) co
                     auto pRow = dstImage.data + r * dstImage.step1();
                     for (double x = minx; x<maxx; ++x)
                     {
-                        int oc = cv::saturate_cast<int>(x / sx - 0.5);
+                        int16_t oc = cv::saturate_cast<int16_t>(x / sx - 0.5);
                         auto itRun = lb;
                         bool cInside = false;
-                        while (itRun != data_.cend() && or == itRun->l)
+                        while (itRun != data_.cend() && or == itRun->row)
                         {
-                            if (oc < itRun->ce && oc >= itRun->cb)
+                            if (oc < itRun->cole && oc >= itRun->colb)
                             {
                                 cInside = true;
                                 break;
@@ -328,7 +328,7 @@ double SpamRgn::Area() const
         double a = 0;
         for (const SpamRun &r : data_)
         {
-            a += (r.ce - r.cb);
+            a += (r.cole - r.colb);
         }
 
         area_ = a;
@@ -406,25 +406,25 @@ cv::Rect SpamRgn::BoundingBox() const
 {
     if (bbox_ == boost::none)
     {
-        cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
-        cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
+        cv::Point minPoint{ std::numeric_limits<int16_t>::max(), std::numeric_limits<int16_t>::max() };
+        cv::Point maxPoint{ std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::min() };
 
         for (const SpamRun &r : data_)
         {
-            if (r.l < minPoint.y) {
-                minPoint.y = r.l;
+            if (r.row < minPoint.y) {
+                minPoint.y = r.row;
             }
 
-            if (r.l > maxPoint.y) {
-                maxPoint.y = r.l;
+            if (r.row > maxPoint.y) {
+                maxPoint.y = r.row;
             }
 
-            if (r.cb < minPoint.x) {
-                minPoint.x = r.cb;
+            if (r.colb < minPoint.x) {
+                minPoint.x = r.colb;
             }
 
-            if (r.ce > maxPoint.x) {
-                maxPoint.x = r.ce;
+            if (r.cole > maxPoint.x) {
+                maxPoint.x = r.cole;
             }
         }
 
@@ -438,12 +438,12 @@ cv::Rect SpamRgn::BoundingBox() const
     return *bbox_;
 }
 
-bool SpamRgn::Contain(const int r, const int c) const
+bool SpamRgn::Contain(const int16_t r, const int16_t c) const
 {
-    auto lb = std::lower_bound(data_.cbegin(), data_.cend(), r, [](const SpamRun &run, const int val) { return val < run.l; });
-    while (lb != data_.cend() && r == lb->l)
+    auto lb = std::lower_bound(data_.cbegin(), data_.cend(), r, [](const SpamRun &run, const int16_t val) { return val < run.row; });
+    while (lb != data_.cend() && r == lb->row)
     {
-        if (c<lb->ce && c>=lb->cb)
+        if (c<lb->cole && c>=lb->colb)
         {
             return true;
         }
@@ -495,16 +495,16 @@ const RowRangeList &SpamRgn::GetRowRanges() const
             rowRanges_->emplace_back(NegInfinity, Infinity, Infinity);
 
             int begIdx = 0;
-            int currentRow = data_.front().l;
+            int16_t currentRow = data_.front().row;
 
             const int numRuns = static_cast<int>(data_.size());
             for (int run = 0; run < numRuns; ++run)
             {
-                if (data_[run].l != currentRow)
+                if (data_[run].row != currentRow)
                 {
                     rowRanges_->emplace_back(currentRow, begIdx, run);
                     begIdx = run;
-                    currentRow = data_[run].l;
+                    currentRow = data_[run].row;
                 }
             }
 
@@ -548,6 +548,8 @@ SPSpamRgnVector SpamRgn::ConnectMT() const
         }
     }
     taskRuns.emplace_back(lastRun, GetNumRuns());
+
+    return std::make_shared<SpamRgnVector>();
 }
 
 RD_LIST RunTypeDirectionEncoder::encode() const
@@ -562,9 +564,9 @@ RD_LIST RunTypeDirectionEncoder::encode() const
         return rd_list;
     }
 
-    std::vector<int> P_BUFFER;
-    std::vector<int> C_BUFFER;
-    constexpr int Infinity = std::numeric_limits<int>::max();
+    std::vector<int16_t> P_BUFFER;
+    std::vector<int16_t> C_BUFFER;
+    constexpr int16_t Infinity = std::numeric_limits<int16_t>::max();
     P_BUFFER.push_back(Infinity);
 
     bool extended = false;
@@ -573,9 +575,9 @@ RD_LIST RunTypeDirectionEncoder::encode() const
     if (rgn_.data_.capacity() >= rgn_.data_.size()+2)
     {
         extended = true;
-        const int lastRun = rgn_.data_.back().l;
-        rgn_.data_.emplace_back(lastRun + 1, Infinity, Infinity);
-        rgn_.data_.emplace_back(lastRun + 2, Infinity, Infinity);
+        const int16_t lastRow = rgn_.data_.back().row;
+        rgn_.data_.emplace_back(lastRow + 1, Infinity, Infinity);
+        rgn_.data_.emplace_back(lastRow + 2, Infinity, Infinity);
         pRunData = &rgn_.data_;
     }
     else
@@ -583,9 +585,9 @@ RD_LIST RunTypeDirectionEncoder::encode() const
         runData.resize(rgn_.data_.size() + 2);
         ::memcpy(&runData[0], &rgn_.data_[0], sizeof(runData[0])*rgn_.data_.size());
 
-        const int lastRun = rgn_.data_.back().l;
-        runData[rgn_.data_.size()]   = SpamRun(lastRun + 1, Infinity, Infinity);
-        runData[rgn_.data_.size()+1] = SpamRun(lastRun+2, Infinity, Infinity);
+        const int16_t lastRow = rgn_.data_.back().row;
+        runData[rgn_.data_.size()]   = SpamRun(lastRow + 1, Infinity, Infinity);
+        runData[rgn_.data_.size()+1] = SpamRun(lastRow + 2, Infinity, Infinity);
         pRunData = &runData;
     }
 
@@ -593,15 +595,15 @@ RD_LIST RunTypeDirectionEncoder::encode() const
     int P4 = 1;
     int P5 = 0;
 
-    int l = (*pRunData)[0].l;
+    int16_t l = (*pRunData)[0].row;
     const int numRuns = static_cast<int>(pRunData->size());
     for (int n=0; n<numRuns; ++n)
     {
         const SpamRun &r = (*pRunData)[n];
-        if (r.l == l)
+        if (r.row == l)
         {
-            C_BUFFER.push_back(r.cb);
-            C_BUFFER.push_back(r.ce);
+            C_BUFFER.push_back(r.colb);
+            C_BUFFER.push_back(r.cole);
         }
         else
         {
@@ -610,9 +612,9 @@ RD_LIST RunTypeDirectionEncoder::encode() const
             int P1 = 0;
             int P2 = 0;
             int State = 0;
-            int X1 = P_BUFFER[P1];
-            int X2 = C_BUFFER[P2];
-            int X  = X2;
+            int16_t X1 = P_BUFFER[P1];
+            int16_t X2 = C_BUFFER[P2];
+            int16_t X  = X2;
 
             bool stay = true;
             while (stay)
