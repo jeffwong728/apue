@@ -163,9 +163,9 @@ public:
 
     void operator()(const tbb::blocked_range<int16_t>& br)
     {
-        int16_t left = 0;
-        int16_t right = width_;
-        int16_t end = br.end();
+        constexpr int16_t left = 0;
+        const int16_t right = width_;
+        const int16_t end = br.end();
         for (int16_t r = br.begin(); r != end; ++r)
         {
             int16_t cb = -1;
@@ -183,7 +183,7 @@ public:
                 {
                     if (cb > -1)
                     {
-                        runs_.push_back({ r, cb, c });
+                        runs_.emplace_back(r, cb, c );
                         cb = -1;
                     }
                 }
@@ -191,7 +191,7 @@ public:
 
             if (cb > -1)
             {
-                runs_.push_back({ r, cb, right });
+                runs_.emplace_back(r, cb, right);
             }
         }
     }

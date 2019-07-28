@@ -16,6 +16,7 @@
 union SpamRun
 {
     SpamRun() : pad(0) {}
+    SpamRun(const SpamRun &r) : pad(r.pad) {}
     SpamRun(const int16_t ll, const int16_t bb, const int16_t ee) : row(ll), colb(bb), cole(ee), label(0) {}
     SpamRun(const int16_t ll, const int16_t bb, const int16_t ee, const uint16_t lab) : row(ll), colb(bb), cole(ee), label(lab) {}
     int64_t pad;

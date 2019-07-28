@@ -184,14 +184,17 @@ list(APPEND libs GLIB::gobject)
 list(APPEND libs GSL::gsl)
 list(APPEND libs GSL::gslcblas)
 list(APPEND libs WXSVG::WXSVG)
+list(APPEND libs ASMLIB::ASMLIB)
 
 target_link_libraries(ui_core PUBLIC ${libs})
 
 if(MSVC)
-  target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX)
+  target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX VCL_NAMESPACE=vcl)
   target_compile_definitions(ui_core PRIVATE BOOST_PYTHON_NO_LIB BOOST_PYTHON_STATIC_LIB BOOST_PYTHON_STATIC_MODULE PY_MAJOR_VERSION=2 PY_MINOR_VERSION=7)
-  target_compile_options(ui_core PRIVATE "/MP")
 endif()
+
+target_compile_options(ui_core PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
+target_compile_options(ui_core PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>)
 
 target_include_directories(ui_core PRIVATE ${Boost_INCLUDE_DIR})
 target_include_directories(ui_core PRIVATE ${CMAKE_BINARY_DIR}/include)

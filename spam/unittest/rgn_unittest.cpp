@@ -348,17 +348,17 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_3)
     t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("CV connected components spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
+    t1 = tbb::tick_count::now();
+    SPSpamRgnVector lrgns = BasicImgProc::Connect(labels, numLabels - 1);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam label connect spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
     cv::Mat stats;
     cv::Mat centroids;
     t1 = tbb::tick_count::now();
     cv::connectedComponentsWithStats(binImg, labels, stats, centroids, 8, CV_32S, cv::CCL_GRANA);
     t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("CV connected components with stats spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
-
-    t1 = tbb::tick_count::now();
-    SPSpamRgnVector lrgns = BasicImgProc::Connect(labels, numLabels-1);
-    t2 = tbb::tick_count::now();
-    BOOST_TEST_MESSAGE("BasicImgProc connect spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
     std::vector<cv::Vec4i> hierarchy;
     std::vector<std::vector<cv::Point>> contours;
@@ -398,6 +398,11 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_4)
     t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("CV connected components spend (digits.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
+    t1 = tbb::tick_count::now();
+    SPSpamRgnVector rgns = BasicImgProc::Connect(labels, numLabels);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam label connect spend (digits.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
     std::vector<cv::Vec4i> hierarchy;
     std::vector<std::vector<cv::Point>> contours;
 
@@ -413,7 +418,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_4)
     }
 
     t1 = tbb::tick_count::now();
-    SPSpamRgnVector rgns = rgn->Connect();
+    rgns = rgn->Connect();
     t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("Spam connect spend (digits.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
