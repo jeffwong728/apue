@@ -11,15 +11,20 @@
 #include <tbb/tbb.h>
 #include <tbb/task_scheduler_init.h>
 
-struct TestSpamRgnConfig {
+struct TestSpamRgnConfig 
+{
     TestSpamRgnConfig() 
     {
-        std::cout << "global setup" << std::endl; 
-        std::cout << "default_num_threads: " << tbb::task_scheduler_init::default_num_threads() << std::endl;
+        std::cout << "Global setup" << std::endl; 
+        std::cout << "Default number of threads: " << tbb::task_scheduler_init::default_num_threads() << std::endl;
         BasicImgProc::Initialize(tbb::task_scheduler_init::default_num_threads());
     }
 
-    ~TestSpamRgnConfig() { }
+    ~TestSpamRgnConfig() 
+    {
+        std::cout << "Clear test images cache..." << std::endl;
+        UnitTestHelper::ClearImagesCache();
+    }
 };
 
 BOOST_GLOBAL_FIXTURE(TestSpamRgnConfig);
@@ -626,8 +631,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_0)
     rgn.AddRun(0, 1, 2);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     const RD_CONTOUR &outer = outers.front();
 
@@ -653,8 +658,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_1)
     rgn.AddRun(4, 1, 5);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     const RD_CONTOUR &outer = outers.front();
 
@@ -683,8 +688,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_2)
     rgn.AddRun(4, 5, 6);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     const RD_CONTOUR &outer = outers.front();
 
@@ -745,8 +750,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_3)
     rgn.AddRun(4, 1, 6);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     const RD_CONTOUR &outer = outers.front();
 
@@ -790,8 +795,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_4)
     rgn.AddRun(6, 1, 7);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     const RD_CONTOUR &outer = outers.front();
 
@@ -856,8 +861,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_5)
     rgn.AddRun(11, 2, 11);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     const RD_CONTOUR &outer = outers.front();
 
@@ -884,8 +889,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_6)
     rgn.AddRun(7, 0, 3);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     const RD_CONTOUR &outer = outers.front();
 
@@ -905,8 +910,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_7)
     rgn.AddRun(img);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     const RD_CONTOUR &outer = outers.front();
     BOOST_REQUIRE_EQUAL(outers.size(), 9);
@@ -924,8 +929,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_8)
     rgn.AddRun(img);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     BOOST_REQUIRE_EQUAL(outers.size(), 1);
     BOOST_REQUIRE_EQUAL(outers[0].size(), 4);
@@ -943,8 +948,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_9)
     rgn.AddRun(img);
 
     RunTypeDirectionEncoder encoder(rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     BOOST_REQUIRE_EQUAL(outers.size(), 2);
     BOOST_REQUIRE_EQUAL(holes.size(), 0);
@@ -961,8 +966,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_10)
     UnitTestHelper::WriteImage(colorImg, "scrach.png");
 
     RunTypeDirectionEncoder encoder(*rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
     encoder.track(outers, holes);
     BOOST_CHECK_EQUAL(outers.size(), 94);
     BOOST_CHECK_EQUAL(holes.size(), 36);
@@ -1022,8 +1027,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_PERFORMANCE_0, *boost::unit_test::ena
     UnitTestHelper::WriteImage(colorImg, "mista.png");
 
     RunTypeDirectionEncoder encoder(*rgn);
-    std::vector<RD_CONTOUR> outers;
-    std::vector<RD_CONTOUR> holes;
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
 
     tbb::tick_count t1 = tbb::tick_count::now();
     encoder.track(outers, holes);

@@ -263,6 +263,7 @@ public:
     {
         const int16_t width = static_cast<int16_t>(labelImage_.cols);
         constexpr int16_t simdSize = 8;
+        constexpr uint32_t wSimdSize = 8;
 
         bool sOk[simdSize] = { false };
         const auto stride = labelImage_.step1();
@@ -278,7 +279,7 @@ public:
             for (c = 0; c < regularWidth; c += simdSize, pPixel += simdSize)
             {
                 blockPixels.load(pPixel);
-                vcl::Vec16sb r = blockPixels > 0;
+                vcl::Vec8ib r = blockPixels > 0;
                 auto numBright = vcl::horizontal_count(r);
 
                 if (cb < 0 && !numBright)
@@ -286,7 +287,7 @@ public:
                     continue;
                 }
 
-                if (cb > 0 && simdSize == numBright)
+                if (cb > 0 && wSimdSize == numBright)
                 {
                     continue;
                 }
@@ -437,6 +438,25 @@ cv::Mat BasicImgProc::AlignImageWidth(const cv::Mat &img)
     }
 }
 
+cv::Mat BasicImgProc::Binarize(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
+{
+    cv::Mat binImg;
+    if (0 == lowerGray)
+    {
+        cv::threshold(grayImage, binImg, upperGray, 255, cv::THRESH_BINARY_INV);
+    }
+    else if (255 == upperGray)
+    {
+        cv::threshold(grayImage, binImg, lowerGray, 255, cv::THRESH_BINARY);
+    }
+    else
+    {
+        cv::inRange(grayImage, 155, 255, binImg);
+    }
+
+    return binImg;
+}
+
 SPSpamRgn BasicImgProc::Threshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
 {
     if (0 == lowerGray)
@@ -497,7 +517,7 @@ SPSpamRgnVector BasicImgProc::Connect(const cv::Mat &labels, const int numLabels
         int rgnIdx = 1;
         for (SpamRgn &rgn : rgns)
         {
-            rgn.GetData().reserve(numRunsOfRgn[rgnIdx++]);
+            rgn.GetData().reserve(numRunsOfRgn[rgnIdx++]+2);
         }
 
         for (const auto &fObj : fObjs)

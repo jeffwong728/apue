@@ -29,10 +29,15 @@ public:
     using Color = std::array<uint8_t, 4>;
 
 public:
+    static void ClearImagesCache();
     static cv::Mat GetImage(const std::experimental::filesystem::path &rPath);
     static void WriteImage(const cv::Mat &img, const std::experimental::filesystem::path &rPath);
     static std::tuple<cv::Mat, cv::Mat> GetGrayScaleImage(const std::experimental::filesystem::path &rPath);
     static void DrawPathToImage(const Geom::PathVector &pth, const Color& color, cv::Mat &img);
+
+private:
+    static std::map<std::string, cv::Mat> s_images_cache_;
+    static std::map<std::string, std::tuple<cv::Mat, cv::Mat>> s_gray_images_cache_;
 };
 
 #endif //SPAM_UNITTEST_HELPER_H

@@ -26,6 +26,7 @@ public:
 
 public:
     static cv::Mat AlignImageWidth(const cv::Mat &img);
+    static cv::Mat Binarize(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
     static SPSpamRgn Threshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
     static SPSpamRgnVector Connect(const cv::Mat &labels, const int numLabels);
     static int GetNumWorkers() { return static_cast<int>(s_runList_pools_.size()); }

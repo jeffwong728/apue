@@ -7,6 +7,7 @@
 #include <boost/optional.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
+#include <tbb/scalable_allocator.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267 4244)
 #include <2geom/path.h>
@@ -58,10 +59,25 @@ using SPSpamRgn = std::shared_ptr<SpamRgn>;
 using SPSpamRgnVector = std::shared_ptr<SpamRgnVector>;
 using RgnBufferZone = std::unordered_map<std::string, SPSpamRgnVector>;
 using RD_LIST = std::vector<RD_LIST_ENTRY>;
-using RD_CONTOUR = std::vector<cv::Point>;
-using RD_CONTOUR_LIST = std::vector<RD_CONTOUR>;
+using RD_CONTOUR = std::vector<cv::Point, tbb::scalable_allocator<cv::Point>>;
+using RD_CONTOUR_LIST = std::vector<RD_CONTOUR, tbb::scalable_allocator<RD_CONTOUR>>;
 using SpamRunList = std::vector<SpamRun>;
 using RowRangeList = std::vector<RowRange>;
+
+struct SpamContour
+{
+    void moveTo(const int x, const int y) { start.x = x; start.y = y; }
+    void lineTo(const int x, const int y) { points.emplace_back(x, y); }
+    cv::Point start;
+    RD_CONTOUR points;
+};
+
+using ContourVector = std::vector<SpamContour, tbb::scalable_allocator<SpamContour>>;
+struct RegionContourCollection
+{
+    ContourVector holes;
+    ContourVector outers;
+};
 
 class SpamRgn
 {
@@ -69,7 +85,7 @@ class SpamRgn
     friend class RunTypeDirectionEncoder;
 
 public:
-    SpamRgn() : color_(0xFFFF0000) {}
+    SpamRgn();
     ~SpamRgn();
 
 public:
@@ -91,6 +107,7 @@ public:
     bool Contain(const int16_t r, const int16_t c) const;
     const AdjacencyList &GetAdjacencyList() const;
     const Geom::PathVector &GetPath() const;
+    const RegionContourCollection &GetContours() const;
     const RowRangeList &GetRowRanges() const;
     uint32_t GetColor() const { return color_; }
     uint8_t  GetRed() const { return static_cast<uint8_t>(0xFF & color_); }
@@ -106,13 +123,12 @@ private:
 private:
     SpamRunList data_;
     uint32_t             color_;
-    mutable boost::optional<double>           area_;
-    mutable boost::optional<cv::Rect>         bbox_;
-    mutable boost::optional<Geom::PathVector> path_;
-    mutable boost::optional<RD_CONTOUR_LIST>  contours_;
-    mutable boost::optional<RD_CONTOUR_LIST>  holes_;
-    mutable boost::optional<RowRangeList>     rowRanges_;
-    mutable boost::optional<AdjacencyList>    adjacencyList_;
+    mutable boost::optional<double>                   area_;
+    mutable boost::optional<cv::Rect>                 bbox_;
+    mutable boost::optional<Geom::PathVector>         path_;
+    mutable boost::optional<RegionContourCollection>  contours_;
+    mutable boost::optional<RowRangeList>             rowRanges_;
+    mutable boost::optional<AdjacencyList>            adjacencyList_;
 };
 
 class RunTypeDirectionEncoder
@@ -122,8 +138,9 @@ public:
 
 public:
     RD_LIST encode() const;
-    void track(std::vector<RD_CONTOUR> &contours, std::vector<RD_CONTOUR> &holes) const;
+    void track(RD_CONTOUR_LIST &contours, RD_CONTOUR_LIST &holes) const;
     void track(Geom::PathVector &pv) const;
+    void track(RegionContourCollection &rcc) const;
 
 private:
     SpamRgn &rgn_;

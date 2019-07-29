@@ -234,15 +234,17 @@ void ProcBox::ReThreshold()
     int selChannel = channelChoice_->GetSelection();
     if (selChannel>=0 && selChannel<static_cast<int>(imgs_.size()))
     {
-        int minGray = hist_->GetThumbs()[0];
-        int maxGray = hist_->GetThumbs()[1];
-        cv::Mat grayImg = imgs_[selChannel];
-        SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, minGray, maxGray);
-
         CairoCanvas *cav = Spam::FindCanvas(uuidStation_);
         if (cav && nameText_)
         {
-            SPSpamRgnVector rgns = rgn->Connect();
+            int minGray = hist_->GetThumbs()[0];
+            int maxGray = hist_->GetThumbs()[1];
+
+            cv::Mat labels;
+            cv::Mat binImg = BasicImgProc::Binarize(imgs_[selChannel], minGray, maxGray);
+            int numLabels = cv::connectedComponents(binImg, labels, 8, CV_32S, cv::CCL_GRANA);
+
+            SPSpamRgnVector rgns = BasicImgProc::Connect(labels, numLabels - 1);
             cav->PushRegionsIntoBufferZone(nameText_->GetValue().ToStdString(), rgns);
             cav->ClearVisiableRegions();
             cav->SetVisiableRegion(nameText_->GetValue().ToStdString());

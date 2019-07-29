@@ -14,10 +14,44 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <cairomm/win32_surface.h>
-//#include <tbb/tbb.h>
 #include <ui/misc/scopedtimer.h>
 #include <ui/evts.h>
 #include <2geom/cairo-path-sink.h>
+#ifdef free
+#undef free
+#endif
+#include <tbb/tbb.h>
+
+class CairoRegionContourSink
+{
+public:
+    CairoRegionContourSink(cairo_t *cr) : cr_(cr) {}
+    void feed(const RegionContourCollection &contoursCollection)
+    {
+        feedContours(contoursCollection.outers);
+        feedContours(contoursCollection.holes);
+    }
+
+    void feedContours(const ContourVector &contours)
+    {
+        for (const auto &outer : contours)
+        {
+            if (!outer.points.empty())
+            {
+                ::cairo_move_to(cr_, outer.start.x, outer.start.y);
+                for (const auto &pt : outer.points)
+                {
+                    ::cairo_line_to(cr_, pt.x, pt.y);
+                }
+
+                ::cairo_close_path(cr_);
+            }
+        }
+    }
+
+private:
+    cairo_t *cr_;
+};
 
 CairoCanvas::CairoCanvas(wxWindow* parent, const std::string &cvWinName, const wxString &uuidStation, const wxSize& size)
 : wxScrolledCanvas(parent, wxID_ANY, wxPoint(0, 0), size)
@@ -1411,12 +1445,19 @@ void CairoCanvas::DrawRegions(Cairo::RefPtr<Cairo::Context> &cr)
         auto itf = rgnBufferZone_.find(rgnName);
         if (itf != rgnBufferZone_.end())
         {
-            for (const SpamRgn &rgn : *itf->second)
+            tbb::parallel_for(tbb::blocked_range<size_t>(0, itf->second->size()), [=](const tbb::blocked_range<size_t>& r) {
+                for (size_t i = r.begin(); i != r.end(); ++i) 
+                { 
+                    (*(itf->second))[i].GetContours(); 
+                }
+            });
+
+            for (const SpamRgn &rgn : *(itf->second))
             {
                 cr->save();
-                const Geom::PathVector &pth = rgn.GetPath();
-                Geom::CairoPathSink cairoPathSink(cr->cobj());
-                cairoPathSink.feed(pth);
+                const RegionContourCollection &contours = rgn.GetContours();
+                CairoRegionContourSink cairoContourSink(cr->cobj());
+                cairoContourSink.feed(contours);
                 wxColour clr(rgn.GetColor());
                 cr->set_source_rgba(clr.Red() / 255.0, clr.Green() / 255.0, clr.Blue() / 255.0, clr.Alpha() / 255.0);
                 cr->set_line_width(ux);

@@ -18,6 +18,7 @@
 namespace
 {
     constexpr int g_numRgnColors = 12;
+    static int g_color_index_s = 0;
     static const uint32_t g_rgnColors[g_numRgnColors] = { 0xFFFF0000, 0xFF00FF00, 0xFF0000FF,
         0xFF800000, 0xFFFFFF00, 0xFF808000, 0xFF008000, 0xFF00FFFF, 0xFF008080, 0xFF000080, 0xFFFF00FF, 0xFF800080 };
 };
@@ -206,7 +207,16 @@ private:
     std::vector<SpamRun> runs_;
 };
 
-SpamRgn::~SpamRgn() 
+SpamRgn::SpamRgn()
+{
+    if (g_color_index_s > g_numRgnColors - 1)
+    {
+        g_color_index_s = 0;
+    }
+    color_ = g_rgnColors[g_color_index_s++];
+}
+
+SpamRgn::~SpamRgn()
 { 
     BasicImgProc::ReturnRegion(std::move(data_));
 }
@@ -339,15 +349,15 @@ double SpamRgn::Area() const
 
 int SpamRgn::NumHoles() const
 {
-    if (holes_ == boost::none)
+    if (contours_ == boost::none)
     {
-        holes_.emplace();
+        contours_.emplace();
         contours_.emplace();
         RunTypeDirectionEncoder encoder(*const_cast<SpamRgn *>(this));
-        encoder.track(*contours_, *holes_);
+        encoder.track(*contours_);
     }
 
-    return static_cast<int>(holes_->size());
+    return static_cast<int>(contours_->holes.size());
 }
 
 SPSpamRgnVector SpamRgn::Connect() const
@@ -395,8 +405,6 @@ SPSpamRgnVector SpamRgn::Connect() const
         {
             rgn.data_[rr] = data_[rgnIdx[rr]];
         }
-
-        rgn.color_ = g_rgnColors[r%g_numRgnColors];
     }
 
     return rgs;
@@ -482,6 +490,18 @@ const Geom::PathVector &SpamRgn::GetPath() const
     return *path_;
 }
 
+const RegionContourCollection &SpamRgn::GetContours() const
+{
+    if (contours_ == boost::none)
+    {
+        contours_.emplace();
+        RunTypeDirectionEncoder encoder(*const_cast<SpamRgn *>(this));
+        encoder.track(*contours_);
+    }
+
+    return *contours_;
+}
+
 const RowRangeList &SpamRgn::GetRowRanges() const
 {
     if (rowRanges_== boost::none)
@@ -522,7 +542,7 @@ void SpamRgn::ClearCacheData()
     path_           = boost::none;
     bbox_           = boost::none;
     contours_       = boost::none;
-    holes_          = boost::none;
+    contours_       = boost::none;
     rowRanges_      = boost::none;
     adjacencyList_  = boost::none;
 }
@@ -767,7 +787,7 @@ RD_LIST RunTypeDirectionEncoder::encode() const
     return rd_list;
 }
 
-void RunTypeDirectionEncoder::track(std::vector<RD_CONTOUR> &contours, std::vector<RD_CONTOUR> &holes) const
+void RunTypeDirectionEncoder::track(RD_CONTOUR_LIST &contours, RD_CONTOUR_LIST &holes) const
 {
     RD_LIST rd_list = encode();
     for (RD_LIST_ENTRY &e : rd_list)
@@ -855,6 +875,41 @@ void RunTypeDirectionEncoder::track(Geom::PathVector &pv) const
 
                 pb.lineTo(Geom::Point(lastX, firstY));
                 pb.closePath();
+            }
+        }
+    }
+}
+
+void RunTypeDirectionEncoder::track(RegionContourCollection &rcc) const
+{
+    RD_LIST rd_list = encode();
+    for (RD_LIST_ENTRY &e : rd_list)
+    {
+        if (!e.FLAG)
+        {
+            e.FLAG = 1;
+            if (1 == e.CODE || 9 == e.CODE)
+            {
+                int lastX  = e.X;
+                int firstY = e.Y;
+                SpamContour *outerContour = (1 == e.CODE) ? &rcc.outers.emplace_back() : &rcc.holes.emplace_back();
+                outerContour->moveTo(lastX, firstY);
+                int nextLink = e.LINK;
+                while (!rd_list[nextLink].FLAG)
+                {
+                    rd_list[nextLink].FLAG = 1;
+                    if (count_[rd_list[nextLink].CODE])
+                    {
+                        const auto X = rd_list[nextLink].X;
+                        const auto Y = rd_list[nextLink].Y;
+                        outerContour->lineTo(lastX, Y);
+                        outerContour->lineTo(X, Y);
+                        lastX = X;
+                    }
+                    nextLink = rd_list[nextLink].LINK;
+                }
+
+                outerContour->lineTo(lastX, firstY);
             }
         }
     }
