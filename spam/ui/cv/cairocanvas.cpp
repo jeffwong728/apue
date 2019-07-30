@@ -967,26 +967,9 @@ void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const SPSpa
         thumbMat = cv::Mat::zeros(srcMat_.rows, srcMat_.cols, CV_8UC4);
     }
 
-    auto imgSurf = Cairo::ImageSurface::create(thumbMat.data, Cairo::Surface::Format::RGB24, thumbMat.cols, thumbMat.rows, thumbMat.step1());
-    auto cr = Cairo::Context::create(imgSurf);
-    cr->scale((thumbMat.cols + 0.0) / srcMat_.cols, (thumbMat.rows + 0.0) / srcMat_.rows);
-
-    double ux = 1;
-    double uy = 1;
-    cr->device_to_user_distance(ux, uy);
-    if (ux < uy) ux = uy;
-
     for (const SpamRgn &rgn : *rgns)
     {
-        cr->save();
-        const RegionContourCollection &contours = rgn.GetContours();
-        CairoRegionContourSink cairoContourSink(cr->cobj());
-        cairoContourSink.feed(contours);
-        wxColour clr(rgn.GetColor());
-        cr->set_source_rgba(clr.Red() / 255.0, clr.Green() / 255.0, clr.Blue() / 255.0, clr.Alpha() / 255.0);
-        cr->set_line_width(ux);
-        cr->stroke();
-        cr->restore();
+        rgn.Draw(thumbMat, (thumbMat.cols + 0.0) / srcMat_.cols, (thumbMat.rows + 0.0) / srcMat_.rows);
     }
 
     wxImage thumbImg;

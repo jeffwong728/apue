@@ -321,7 +321,7 @@ void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) co
                             if (c >= 0 && c<dstImage.cols)
                             {
                                 auto pPixel = reinterpret_cast<uint32_t *>(pRow + c * 4);
-                                *pPixel = color_;
+                                *pPixel = 0xFF0000;
                             }
                         }
                     }
