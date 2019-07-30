@@ -38,6 +38,7 @@ set(svg_SRC
 )
 
 add_library(svg STATIC "${svg_SRC}")
+set_target_properties (svg PROPERTIES FOLDER thirdparty)
 
 if(MSVC)
   target_compile_definitions(svg PRIVATE _CRT_SECURE_NO_WARNINGS)

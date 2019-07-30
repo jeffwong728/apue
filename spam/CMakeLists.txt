@@ -16,6 +16,7 @@ add_subdirectory(ui)
 add_subdirectory(unittest)
 
 add_executable(spam WIN32 init.cpp msvc_recommended_pragmas.h)
+set_target_properties (spam PROPERTIES FOLDER spam)
 target_link_libraries(spam PRIVATE ui_core 2geom helper svg util livarot stub cv_hdf)
 
 if(MSVC)

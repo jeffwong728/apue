@@ -134,6 +134,7 @@ if(MSVC)
 endif()
 
 add_library(ui_core STATIC ${ui_core_SRCS} ${ui_core_HEADERS})
+set_target_properties (ui_core PROPERTIES FOLDER spam)
 
 function(assign_source_group)
     foreach(_source IN ITEMS ${ARGN})

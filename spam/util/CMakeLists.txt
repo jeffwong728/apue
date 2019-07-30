@@ -12,6 +12,7 @@ set(util_SRC
 )
 
 add_library(util STATIC "${util_SRC}")
+set_target_properties (util PROPERTIES FOLDER thirdparty)
 target_include_directories(util PRIVATE ${Boost_INCLUDE_DIR})
 target_include_directories(util PRIVATE ${CMAKE_BINARY_DIR}/include)
 

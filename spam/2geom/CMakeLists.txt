@@ -139,6 +139,7 @@ set(2geom_SRC
 
 # make lib for 2geom_LIB
 add_library(2geom STATIC "${2geom_SRC}")
+set_target_properties (2geom PROPERTIES FOLDER thirdparty)
 
 set(libs)
 list(APPEND libs CAIRO::cairo)

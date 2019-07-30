@@ -8,6 +8,10 @@
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
 #include <wx/wxhtml.h>
+#ifdef free
+#undef free
+#endif
+#include <tbb/tbb.h>
 
 ProcBox::ProcBox(wxWindow* parent)
 : ToolBox(parent, kSpamID_TOOLPAGE_PROC, wxT("Process"), std::vector<wxString>(), kSpamID_TOOLBOX_PROC_GUARD - kSpamID_TOOLBOX_PROC_ENHANCEMENT, kSpamID_TOOLBOX_PROC_ENHANCEMENT)
@@ -245,6 +249,14 @@ void ProcBox::ReThreshold()
             int numLabels = cv::connectedComponents(binImg, labels, 8, CV_32S, cv::CCL_GRANA);
 
             SPSpamRgnVector rgns = BasicImgProc::Connect(labels, numLabels - 1);
+
+            tbb::parallel_for(tbb::blocked_range<size_t>(0, rgns->size()), [&rgns](const tbb::blocked_range<size_t>& r) {
+                for (size_t i = r.begin(); i != r.end(); ++i)
+                {
+                    (*rgns)[i].GetContours();
+                }
+            });
+
             cav->PushRegionsIntoBufferZone(nameText_->GetValue().ToStdString(), rgns);
             cav->ClearVisiableRegions();
             cav->SetVisiableRegion(nameText_->GetValue().ToStdString());

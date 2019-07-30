@@ -17,6 +17,7 @@ set(stub_SRC
 )
 
 add_library(stub STATIC "${stub_SRC}")
+set_target_properties (stub PROPERTIES FOLDER spam)
 target_include_directories(stub PRIVATE ${Boost_INCLUDE_DIR})
 target_include_directories(stub PRIVATE ${CMAKE_BINARY_DIR}/include)
 

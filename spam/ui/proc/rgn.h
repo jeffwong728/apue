@@ -61,7 +61,7 @@ using RgnBufferZone = std::unordered_map<std::string, SPSpamRgnVector>;
 using RD_LIST = std::vector<RD_LIST_ENTRY>;
 using RD_CONTOUR = std::vector<cv::Point, tbb::scalable_allocator<cv::Point>>;
 using RD_CONTOUR_LIST = std::vector<RD_CONTOUR, tbb::scalable_allocator<RD_CONTOUR>>;
-using SpamRunList = std::vector<SpamRun>;
+using SpamRunList = std::vector<SpamRun, tbb::scalable_allocator<SpamRun>>;
 using RowRangeList = std::vector<RowRange>;
 
 struct SpamContour

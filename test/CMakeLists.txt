@@ -2,9 +2,13 @@ add_compile_options("/utf-8")
 #add_executable(test WIN32 wrapsizer.cpp ustring.cpp)
 add_executable(SampleFilterFuzz main.cpp)
 add_executable(sample WIN32 thumbnail/thumbnaildlg.h thumbnail/thumbnailctrl.h thumbnail/thumbnaildlg.cpp thumbnail/sample.cpp thumbnail/thumbnailctrl.cpp)
-
 add_executable(Camera examples/SimpleWithFunctors.cpp)
 add_library(hellopy SHARED hellopy.cpp)
+
+set_target_properties (SampleFilterFuzz PROPERTIES FOLDER samples)
+set_target_properties (sample PROPERTIES FOLDER samples)
+set_target_properties (Camera PROPERTIES FOLDER samples)
+set_target_properties (hellopy PROPERTIES FOLDER samples)
 
 set(libs)
 list(APPEND libs ZLIB::ZLIB)
@@ -91,6 +95,7 @@ endif()
 
 include(GoogleTest)
 add_executable(test_executable sample1.cc sample1_unittest.cc)
+set_target_properties (test_executable PROPERTIES FOLDER unittest)
 target_link_libraries(test_executable PRIVATE GTest::GTest GTest::Main)
 gtest_add_tests(TARGET test_executable TEST_SUFFIX .noArgs TEST_LIST noArgsTests)
 

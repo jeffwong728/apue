@@ -17,6 +17,7 @@ endif()
 
 # make lib for 2geom_LIB
 add_library(helper STATIC "${helper_SRC}")
+set_target_properties (helper PROPERTIES FOLDER spam)
 
 set(libs)
 list(APPEND libs hdf5::hdf5_cpp-static)

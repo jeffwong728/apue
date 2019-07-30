@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.12.1)
 project(apue)
 enable_testing()
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     get_filename_component(absInstallPath "install/${CMAKE_PROJECT_NAME}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_LIST_DIR}")

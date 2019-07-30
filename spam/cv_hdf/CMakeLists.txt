@@ -12,6 +12,7 @@ endif()
 
 # make lib for cv_hdf_LIB
 add_library(cv_hdf STATIC "${cv_hdf_SRC}")
+set_target_properties (cv_hdf PROPERTIES FOLDER thirdparty)
 
 set(libs)
 list(APPEND libs hdf5::hdf5_cpp-static)

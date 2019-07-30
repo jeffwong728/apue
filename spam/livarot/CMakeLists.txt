@@ -44,6 +44,7 @@ set(livarot_SRC
 )
 
 add_library(livarot STATIC "${livarot_SRC}")
+set_target_properties (livarot PROPERTIES FOLDER thirdparty)
 
 if(MSVC)
   target_compile_definitions(livarot PRIVATE _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS)

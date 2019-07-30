@@ -198,13 +198,13 @@ public:
     }
 
     void join(const RunLengthEncoder& y) { runs_.insert(runs_.begin(), y.runs_.cbegin(), y.runs_.cend()); }
-    std::vector<SpamRun> &Runs() { return runs_; }
+    SpamRunList &Runs() { return runs_; }
 
 private:
     const uchar* const firstPixel_;
     const size_t stride_;
     const int16_t width_;
-    std::vector<SpamRun> runs_;
+    SpamRunList runs_;
 };
 
 SpamRgn::SpamRgn()
@@ -227,10 +227,10 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
     int cnl = binaryImage.channels();
     if (CV_8U == dph && 1 == cnl)
     {
-        int16_t top = 0;
-        int16_t bot = binaryImage.rows;
-        int16_t left = 0;
-        int16_t right = binaryImage.cols;
+        constexpr int16_t top = 0;
+        const int16_t bot = binaryImage.rows;
+        constexpr int16_t left = 0;
+        const int16_t right = binaryImage.cols;
         for (int16_t r = top; r<bot; ++r)
         {
             int16_t cb = -1;
@@ -248,7 +248,7 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
                 {
                     if (cb > -1)
                     {
-                        data_.push_back({ r, cb, c });
+                        data_.emplace_back(r, cb, c );
                         cb = -1;
                     }
                 }
@@ -256,7 +256,7 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
 
             if (cb > -1)
             {
-                data_.push_back({ r, cb, right });
+                data_.emplace_back(r, cb, right );
             }
         }
     }
@@ -590,8 +590,8 @@ RD_LIST RunTypeDirectionEncoder::encode() const
     P_BUFFER.push_back(Infinity);
 
     bool extended = false;
-    std::vector<SpamRun> runData;
-    const std::vector<SpamRun> *pRunData = nullptr;
+    SpamRunList runData;
+    const SpamRunList *pRunData = nullptr;
     if (rgn_.data_.capacity() >= rgn_.data_.size()+2)
     {
         extended = true;

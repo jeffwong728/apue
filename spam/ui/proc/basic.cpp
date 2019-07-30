@@ -263,7 +263,7 @@ public:
     {
         const int16_t width = static_cast<int16_t>(labelImage_.cols);
         constexpr int16_t simdSize = 8;
-        constexpr uint32_t wSimdSize = 8;
+        constexpr uint32_t wSimdSize = simdSize;
 
         bool sOk[simdSize] = { false };
         const auto stride = labelImage_.step1();
@@ -451,7 +451,7 @@ cv::Mat BasicImgProc::Binarize(const cv::Mat &grayImage, const uchar lowerGray, 
     }
     else
     {
-        cv::inRange(grayImage, 155, 255, binImg);
+        cv::inRange(grayImage, lowerGray, upperGray, binImg);
     }
 
     return binImg;

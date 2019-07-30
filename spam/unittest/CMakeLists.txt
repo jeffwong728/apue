@@ -1,8 +1,20 @@
 add_compile_options("/utf-8")
+include(GoogleTest)
+
 add_executable(test_SpamRgn rgn_unittest.cpp helper.cpp helper.h ${PROJECT_SOURCE_DIR}/spam/ui/proc/rgn.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/basic.cpp)
 add_executable(test_CVPerf cvperf_unittest.cpp helper.cpp helper.h)
+add_executable(test_CVMatch cv_match_gtest.cpp helper.cpp helper.h)
+
+target_link_libraries(test_CVMatch PRIVATE GTest::GTest GTest::Main)
+gtest_discover_tests(test_CVMatch TEST_SUFFIX .noArgs TEST_LIST noArgsTests)
+
 target_include_directories(test_SpamRgn PRIVATE ${CMAKE_BINARY_DIR}/include)
 target_include_directories(test_CVPerf PRIVATE ${CMAKE_BINARY_DIR}/include)
+target_include_directories(test_CVMatch PRIVATE ${CMAKE_BINARY_DIR}/include)
+
+set_target_properties (test_SpamRgn PROPERTIES FOLDER unittest)
+set_target_properties (test_CVPerf PROPERTIES FOLDER unittest)
+set_target_properties (test_CVMatch PROPERTIES FOLDER unittest)
 
 set(libs)
 list(APPEND libs CAIRO::cairo)
@@ -36,11 +48,17 @@ list(APPEND libs ASMLIB::ASMLIB)
 
 target_link_libraries(test_SpamRgn PRIVATE ${libs})
 target_link_libraries(test_CVPerf  PRIVATE ${libs})
+target_link_libraries(test_CVMatch PRIVATE ${libs})
 
 if(MSVC)
   target_compile_definitions(test_SpamRgn PRIVATE __AVX2__ _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX VCL_NAMESPACE=vcl)
-  target_compile_definitions(test_CVPerf PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX)
-  target_compile_options(test_SpamRgn PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
-  target_compile_options(test_SpamRgn PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>)
-  target_compile_options(test_CVPerf PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
+  target_compile_definitions(test_CVPerf PRIVATE __AVX2__ _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX)
+  target_compile_definitions(test_CVMatch PRIVATE __AVX2__ _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX)
 endif()
+
+target_compile_options(test_SpamRgn PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
+target_compile_options(test_SpamRgn PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>)
+target_compile_options(test_CVPerf PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
+target_compile_options(test_CVPerf PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>)
+target_compile_options(test_CVMatch PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
+target_compile_options(test_CVMatch PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>)
