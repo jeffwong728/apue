@@ -19,7 +19,7 @@ public:
 
 public:
     bool IsContainer() const wxOVERRIDE { return false; }
-    std::shared_ptr<SpamRgn> ToRegion() const;
+    SPSpamRgn ToRegion() const;
 
 public:
     EntitySigType GetCreateSigType() const wxOVERRIDE;

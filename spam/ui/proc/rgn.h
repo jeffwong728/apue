@@ -95,12 +95,14 @@ public:
 public:
     void AddRun(const int16_t l, const int16_t cb, const int16_t ce) { data_.push_back({ l, cb, ce }); ClearCacheData(); }
     void AddRun(const cv::Mat &binaryImage);
+    void AddRun(const Geom::PathVector &pv);
     void AddRunParallel(const cv::Mat &binaryImage);
     void Draw(const cv::Mat &dstImage, const double sx, const double sy) const;
     int GetNumRuns() const { return static_cast<int>(data_.size()); }
 
 public:
     double Area() const;
+    cv::Point2d Centroid() const;
     int NumHoles() const;
     SPSpamRgnVector Connect() const;
     cv::Rect BoundingBox() const;
@@ -119,11 +121,13 @@ public:
 private:
     void ClearCacheData();
     SPSpamRgnVector ConnectMT() const;
+    static bool IsPointInside(const Geom::PathVector &pv, const Geom::Point &pt);
 
 private:
     SpamRunList data_;
     uint32_t             color_;
     mutable boost::optional<double>                   area_;
+    mutable boost::optional<cv::Point2d>              centroid_;
     mutable boost::optional<cv::Rect>                 bbox_;
     mutable boost::optional<Geom::PathVector>         path_;
     mutable boost::optional<RegionContourCollection>  contours_;

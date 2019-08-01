@@ -264,6 +264,46 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
     ClearCacheData();
 }
 
+void SpamRgn::AddRun(const Geom::PathVector &pv)
+{
+    clear();
+    Geom::OptRect bbox = pv.boundsFast();
+    if (bbox)
+    {
+        int t = cvFloor(bbox.get().top());
+        int b = cvCeil(bbox.get().bottom());
+        int l = cvFloor(bbox.get().left());
+        int r = cvCeil(bbox.get().right());
+        for (int l = t; l < b; ++l)
+        {
+            int cb = -1;
+            for (int c = l; c < r; ++c)
+            {
+                if (IsPointInside(pv, Geom::Point(c, l)))
+                {
+                    if (cb < 0)
+                    {
+                        cb = c;
+                    }
+                }
+                else
+                {
+                    if (cb > 0)
+                    {
+                        data_.emplace_back(l, cb, c);
+                        cb = -1;
+                    }
+                }
+            }
+
+            if (cb > 0)
+            {
+                data_.emplace_back(l, cb, r);
+            }
+        }
+    }
+}
+
 void SpamRgn::AddRunParallel(const cv::Mat &binaryImage)
 {
     int dph = binaryImage.depth();
@@ -336,15 +376,38 @@ double SpamRgn::Area() const
     if (area_ == boost::none)
     {
         double a = 0;
+        double x = 0;
+        double y = 0;
         for (const SpamRun &r : data_)
         {
-            a += (r.cole - r.colb);
+            const auto n = r.cole - r.colb;
+            a += n;
+            x += (r.cole - 1 + r.colb) * n / 2.0;
+            y += r.row * n;
         }
 
         area_ = a;
+        if (a>0)
+        {
+            centroid_.emplace(x / a, y / a);
+        }
+        else
+        {
+            centroid_.emplace(0, 0);
+        }
     }
 
     return *area_;
+}
+
+cv::Point2d SpamRgn::Centroid() const
+{
+    if (centroid_ == boost::none)
+    {
+        Area();
+    }
+
+    return *centroid_;
 }
 
 int SpamRgn::NumHoles() const
@@ -545,6 +608,7 @@ void SpamRgn::ClearCacheData()
     contours_       = boost::none;
     rowRanges_      = boost::none;
     adjacencyList_  = boost::none;
+    centroid_       = boost::none;
 }
 
 SPSpamRgnVector SpamRgn::ConnectMT() const
@@ -570,6 +634,28 @@ SPSpamRgnVector SpamRgn::ConnectMT() const
     taskRuns.emplace_back(lastRun, GetNumRuns());
 
     return std::make_shared<SpamRgnVector>();
+}
+
+bool SpamRgn::IsPointInside(const Geom::PathVector &pv, const Geom::Point &pt)
+{
+    if (!pv.empty())
+    {
+        int numWinding = 0;
+        for (const Geom::Path &pth : pv)
+        {
+            if (Geom::contains(pth, pt))
+            {
+                numWinding += 1;
+            }
+        }
+
+        if (numWinding & 1)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 RD_LIST RunTypeDirectionEncoder::encode() const

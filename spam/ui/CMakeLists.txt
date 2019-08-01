@@ -60,6 +60,7 @@ set(ui_core_SRCS
   fsm/beziergontool.cpp
   proc/rgn.cpp
   proc/basic.cpp
+  proc/pixeltmpl.cpp
 )
 
 set(ui_core_HEADERS 
@@ -127,6 +128,7 @@ set(ui_core_HEADERS
   fsm/events.h
   proc/rgn.h
   proc/basic.h
+  proc/pixeltmpl.h
 )
 
 if(MSVC)

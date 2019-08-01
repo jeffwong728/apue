@@ -16,9 +16,9 @@ GeomNode::~GeomNode()
 {
 }
 
-std::shared_ptr<SpamRgn> GeomNode::ToRegion() const
+SPSpamRgn GeomNode::ToRegion() const
 {
-    std::shared_ptr<SpamRgn> rgn = std::make_shared<SpamRgn>();
+    SPSpamRgn rgn = std::make_shared<SpamRgn>();
     Geom::OptRect bbox = GetBoundingBox();
     Geom::PathVector pv;
     BuildPath(pv);

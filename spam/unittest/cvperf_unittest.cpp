@@ -67,12 +67,20 @@ BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0)
     BOOST_CHECK_EQUAL(pyrs.size(), 5);
     BOOST_TEST_MESSAGE("CV build pyramid spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
+    cv::Mat borderImg;
+    t1 = tbb::tick_count::now();
+    cv::copyMakeBorder(pyrs[4], borderImg, 64, 64, 64, 64, cv::BORDER_CONSTANT, 0);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV copy make border spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
     int id = 0;
     for (const cv::Mat &pyr : pyrs)
     {
         std::string fileName = std::string("mista_pyr_") + std::to_string(id++) + ".png";
         UnitTestHelper::WriteImage(pyr, fileName);
     }
+
+    UnitTestHelper::WriteImage(borderImg, std::string("mista_pyr_border.png"));
 }
 
 BOOST_AUTO_TEST_CASE(test_CV_GaussianBlur_Performance_0)

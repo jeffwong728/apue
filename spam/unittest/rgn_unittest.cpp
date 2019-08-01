@@ -33,6 +33,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_0_Area)
 {
     SpamRgn rgn;
     BOOST_REQUIRE_CLOSE_FRACTION(rgn.Area(), 0.0, 0.1);
+    BOOST_REQUIRE_CLOSE_FRACTION(rgn.Centroid().x, 0.0, 0.1);
+    BOOST_REQUIRE_CLOSE_FRACTION(rgn.Centroid().y, 0.0, 0.1);
 }
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_1_Area)
@@ -40,6 +42,8 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_1_Area)
     SpamRgn rgn;
     rgn.AddRun(0, 0, 1);
     BOOST_REQUIRE_CLOSE_FRACTION(rgn.Area(), 1.0, 0.1);
+    BOOST_REQUIRE_CLOSE_FRACTION(rgn.Centroid().x, 0.0, 0.1);
+    BOOST_REQUIRE_CLOSE_FRACTION(rgn.Centroid().y, 0.0, 0.1);
 }
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_Area)
@@ -48,9 +52,10 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Area)
     rgn.AddRun(0, 0, 1);
     rgn.AddRun(0, 3, 10);
     BOOST_REQUIRE_CLOSE_FRACTION(rgn.Area(), 8.0, 0.1);
+    BOOST_REQUIRE_CLOSE_FRACTION(rgn.Centroid().x, 42.0 / 8, 0.1);
+    BOOST_REQUIRE_CLOSE_FRACTION(rgn.Centroid().y, 0.0, 0.1);
 
     rgn.clear();
-    BOOST_REQUIRE_CLOSE_FRACTION(rgn.Area(), 0.0, 0.1);
 }
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_Empty)

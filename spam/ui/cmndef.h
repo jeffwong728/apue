@@ -162,6 +162,13 @@ enum
     kSpamID_STATION_THUMBNAIL_SAVE
 };
 
+enum class SpamResult
+{
+    kSpamResult_OK,
+    kSpamResult_TM_EMPTY_TEMPL_REGION,
+    kSpamResult_ERROR
+};
+
 enum SpamIconPurpose
 {
     kICON_PURPOSE_TOOLBOX,
