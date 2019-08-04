@@ -42,6 +42,7 @@ public:
     SpamResult CreatePixelTemplate(const PixelTmplCreateData &createData);
 
 private:
+    SpamResult verifyCreateData(const PixelTmplCreateData &createData);
     SpamResult calcCentreOfGravity(const PixelTmplCreateData &createData);
 
 private:

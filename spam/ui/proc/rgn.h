@@ -86,6 +86,7 @@ class SpamRgn
 
 public:
     SpamRgn();
+    SpamRgn(const Geom::PathVector &pv);
     ~SpamRgn();
 
 public:

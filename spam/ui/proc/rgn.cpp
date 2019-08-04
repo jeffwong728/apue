@@ -216,6 +216,12 @@ SpamRgn::SpamRgn()
     color_ = g_rgnColors[g_color_index_s++];
 }
 
+SpamRgn::SpamRgn(const Geom::PathVector &pv)
+    : SpamRgn()
+{
+    AddRun(pv);
+}
+
 SpamRgn::~SpamRgn()
 { 
     BasicImgProc::ReturnRegion(std::move(data_));
@@ -267,38 +273,39 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
 void SpamRgn::AddRun(const Geom::PathVector &pv)
 {
     clear();
+    constexpr int negInf = std::numeric_limits<int>::min();
     Geom::OptRect bbox = pv.boundsFast();
     if (bbox)
     {
         int t = cvFloor(bbox.get().top());
-        int b = cvCeil(bbox.get().bottom());
+        int b = cvCeil(bbox.get().bottom())+1;
         int l = cvFloor(bbox.get().left());
-        int r = cvCeil(bbox.get().right());
-        for (int l = t; l < b; ++l)
+        int r = cvCeil(bbox.get().right())+1;
+        for (int row = t; row < b; ++row)
         {
-            int cb = -1;
+            int cb = negInf;
             for (int c = l; c < r; ++c)
             {
-                if (IsPointInside(pv, Geom::Point(c, l)))
+                if (IsPointInside(pv, Geom::Point(c, row)))
                 {
-                    if (cb < 0)
+                    if (cb == negInf)
                     {
                         cb = c;
                     }
                 }
                 else
                 {
-                    if (cb > 0)
+                    if (cb != negInf)
                     {
-                        data_.emplace_back(l, cb, c);
-                        cb = -1;
+                        data_.emplace_back(row, cb, c);
+                        cb = negInf;
                     }
                 }
             }
 
-            if (cb > 0)
+            if (cb != negInf)
             {
-                data_.emplace_back(l, cb, r);
+                data_.emplace_back(row, cb, r);
             }
         }
     }
@@ -325,23 +332,23 @@ void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) co
     if (CV_8U == dph && 4 == cnl)
     {
         cv::Rect bbox = BoundingBox();
-        double minx = sx * bbox.x;
-        double miny = sy * bbox.y;
-        double maxx = sx * (bbox.x + bbox.width + 1);
-        double maxy = sy * (bbox.y + bbox.height + 1);
-        for (double y = miny; y < maxy; ++y)
+        int minx = cvFloor(sx * bbox.x);
+        int miny = cvFloor(sy * bbox.y);
+        int maxx = cvCeil(sx * (bbox.x + bbox.width + 1));
+        int maxy = cvCeil(sy * (bbox.y + bbox.height + 1));
+        for (int y = miny; y < maxy; ++y)
         {
-            int16_t or = cv::saturate_cast<int16_t>(y / sy - 0.5);
+            int16_t or = static_cast<int>(cvRound(y / sy - 0.5));
             auto lb = std::lower_bound(data_.cbegin(), data_.cend(), or, [](const SpamRun &run, const int16_t val) { return  run.row < val; });
             if (lb != data_.cend() && or == lb->row)
             {
-                int r = cv::saturate_cast<int>(y);
+                int r = y;
                 if (r >= 0 && r<dstImage.rows)
                 {
                     auto pRow = dstImage.data + r * dstImage.step1();
-                    for (double x = minx; x<maxx; ++x)
+                    for (int x = minx; x<maxx; ++x)
                     {
-                        int16_t oc = cv::saturate_cast<int16_t>(x / sx - 0.5);
+                        int16_t oc = static_cast<int>(cvRound(x / sx - 0.5));
                         auto itRun = lb;
                         bool cInside = false;
                         while (itRun != data_.cend() && or == itRun->row)
@@ -357,7 +364,7 @@ void SpamRgn::Draw(const cv::Mat &dstImage, const double sx, const double sy) co
 
                         if (cInside)
                         {
-                            int c = cv::saturate_cast<int>(x);
+                            int c = x;
                             if (c >= 0 && c<dstImage.cols)
                             {
                                 auto pPixel = reinterpret_cast<uint32_t *>(pRow + c * 4);

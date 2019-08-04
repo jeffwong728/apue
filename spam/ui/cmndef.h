@@ -162,13 +162,6 @@ enum
     kSpamID_STATION_THUMBNAIL_SAVE
 };
 
-enum class SpamResult
-{
-    kSpamResult_OK,
-    kSpamResult_TM_EMPTY_TEMPL_REGION,
-    kSpamResult_ERROR
-};
-
 enum SpamIconPurpose
 {
     kICON_PURPOSE_TOOLBOX,
@@ -239,8 +232,17 @@ enum class StatusIconType
 enum class SpamResult
 {
     kSR_SUCCESS,
+    kSR_OK = kSR_SUCCESS,
     kSR_SUCCESS_NOOP,
-    kSR_FAILURE
+    kSR_IMAGE_EMPTY,
+    kSR_IMAGE_TYPE_NOT_SUPPORTED,
+    kSR_IMAGE_CORRUPTED,
+    kSR_TM_EMPTY_TEMPL_REGION,
+    kSR_TM_PYRAMID_LEVEL_INVALID,
+    kSR_TM_PYRAMID_LEVEL_TOO_LARGE,
+    kSR_TM_ANGLE_RANGE_INVALID,
+    kSR_ERROR,
+    kSR_FAILURE = kSR_ERROR
 };
 
 typedef boost::mpl::vector<int, long, double> OptTypes0;
