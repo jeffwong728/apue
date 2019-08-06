@@ -30,6 +30,7 @@ public:
     static SPSpamRgn Threshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
     static SPSpamRgnVector Connect(const cv::Mat &labels, const int numLabels);
     static int GetNumWorkers() { return static_cast<int>(s_runList_pools_.size()); }
+    static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz);
 
 private:
     static std::vector<SpamRunListPool> s_runList_pools_;

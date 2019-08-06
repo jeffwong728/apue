@@ -182,6 +182,64 @@ TEST(RgnCentroidTest, Rectangle)
     EXPECT_DOUBLE_EQ(rgn3.Centroid().y, 3.5);
 }
 
+TEST(RgnMinCircleTest, Empty)
+{
+    SpamRgn rgn;
+    Geom::Circle c = rgn.MinCircle();
+    EXPECT_TRUE(c.isDegenerate());
+}
+
+TEST(RgnMinCircleTest, Single)
+{
+    SpamRgn rgn;
+    rgn.AddRun(1, 1, 2);
+    Geom::Circle c = rgn.MinCircle();
+    EXPECT_DOUBLE_EQ(c.center(Geom::X), 1);
+    EXPECT_DOUBLE_EQ(c.center(Geom::Y), 1);
+}
+
+TEST(RgnMinCircleTest, Circle)
+{
+    SpamRgn rgn;
+    rgn.AddRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(10, 20), 50))));
+
+    Geom::Circle c = rgn.MinCircle();
+    EXPECT_NEAR(c.radius(), 50, 1e-3);
+    EXPECT_DOUBLE_EQ(c.center(Geom::X), 10);
+    EXPECT_DOUBLE_EQ(c.center(Geom::Y), 20);
+}
+
+TEST(RgnMinCircleTest, Rectangle)
+{
+    SpamRgn rgn;
+    for (int8_t row = 1; row < 100; ++row)
+    {
+        rgn.AddRun(row, 10, 21);
+    }
+
+    Geom::Rect rect(Geom::Point(10, 1), Geom::Point(20, 99));
+    Geom::Circle c = rgn.MinCircle();
+    EXPECT_NEAR(c.radius(), rect.diameter() / 2, 1e-3);
+    EXPECT_DOUBLE_EQ(c.center(Geom::X), 15);
+    EXPECT_DOUBLE_EQ(c.center(Geom::Y), 50);
+}
+
+TEST(RgnMinCircleTest, RotatedRect)
+{
+    Geom::Rect rect(Geom::Point(-1, -2), Geom::Point(20, 10));
+    Geom::Path pth(rect);
+    Geom::PathVector pv(pth);
+    pv *= Geom::Translate(-9.5, -4) * Geom::Rotate::from_degrees(60) * Geom::Translate(9.5, 4);
+
+    SpamRgn rgn;
+    rgn.AddRun(pv);
+
+    Geom::Circle c = rgn.MinCircle();
+    EXPECT_NEAR(c.radius(), rect.diameter()/2, 1);
+    EXPECT_DOUBLE_EQ(c.center(Geom::X), 9.5);
+    EXPECT_DOUBLE_EQ(c.center(Geom::Y), 4);
+}
+
 TEST(RgnPyramidTest, Circle)
 {
     Geom::PathVector pv(Geom::Path(Geom::Circle(Geom::Point(100, 200), 50)));
@@ -242,6 +300,19 @@ TEST(RgnPyramidTest, Disjoint)
 
     EXPECT_DOUBLE_EQ(rgn0.Centroid().x, rgn1.Centroid().x);
     EXPECT_DOUBLE_EQ(rgn0.Centroid().y, rgn1.Centroid().y);
+}
+
+TEST(PointSetTest, Circle)
+{
+    SpamRgn maskRgn(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(32, 24), 20))));
+    PointSet maskPoints(maskRgn);
+
+    cv::Mat bkImg(48, 64, CV_8UC1, cv::Scalar());
+    for (const cv::Point &pt : maskPoints)
+    {
+        bkImg.at<uint8_t>(pt) = 0xFF;
+    }
+    UnitTestHelper::WriteImage(bkImg, "PointSetTest_Circle.png");
 }
 
 }

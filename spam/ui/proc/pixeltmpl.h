@@ -20,6 +20,7 @@ struct PixelTmplData
 {
     std::vector<cv::Point> pixlLocs;
     std::vector<float>     pixlVals;
+    double                 angle;
 };
 
 struct PixelTmplCreateData
@@ -27,7 +28,8 @@ struct PixelTmplCreateData
     const cv::Mat &srcImg;
     const Geom::PathVector &tmplRgn;
     const Geom::PathVector &roi;
-    const cv::Range &angleRange;
+    const int angleStart;
+    const int angleExtent;
     const int pyramidLevel;
     const cv::TemplateMatchModes matchMode;
 };
@@ -52,6 +54,7 @@ private:
     std::vector<SpamRgn>     tmpl_rgns_;
     std::vector<SpamRgn>     search_rois_;
     std::vector<PixelTmplData> tmpl_datas_;
+    std::vector<cv::Mat> pyrs_;
     cv::Range angle_range_;
 };
 

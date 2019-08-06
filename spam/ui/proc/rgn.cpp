@@ -278,9 +278,9 @@ void SpamRgn::AddRun(const Geom::PathVector &pv)
     if (bbox)
     {
         int t = cvFloor(bbox.get().top());
-        int b = cvCeil(bbox.get().bottom())+1;
+        int b = cvCeil(bbox.get().bottom()) + 1;
         int l = cvFloor(bbox.get().left());
-        int r = cvCeil(bbox.get().right())+1;
+        int r = cvCeil(bbox.get().right()) + 1;
         for (int row = t; row < b; ++row)
         {
             int cb = negInf;
@@ -415,6 +415,43 @@ cv::Point2d SpamRgn::Centroid() const
     }
 
     return *centroid_;
+}
+
+Geom::Circle SpamRgn::MinCircle() const
+{
+    if (minCircle_ == boost::none)
+    {
+        float radius = 0;
+        cv::Point2f center;
+        std::vector<cv::Point> points;
+        points.reserve(data_.size()*2);
+
+        for (const SpamRun &r : data_)
+        {
+            const auto n = r.cole - r.colb;
+            if (1==n)
+            {
+                points.emplace_back(r.colb, r.row);
+            }
+            else
+            {
+                points.emplace_back(r.colb, r.row);
+                points.emplace_back(r.cole-1, r.row);
+            }
+        }
+
+        if (points.empty())
+        {
+            minCircle_.emplace(0.0, 0.0, 0.0);
+        }
+        else
+        {
+            cv::minEnclosingCircle(points, center, radius);
+            minCircle_.emplace(center.x, center.y, radius);
+        }
+    }
+
+    return *minCircle_;
 }
 
 int SpamRgn::NumHoles() const
@@ -616,6 +653,8 @@ void SpamRgn::ClearCacheData()
     rowRanges_      = boost::none;
     adjacencyList_  = boost::none;
     centroid_       = boost::none;
+    minBox_         = boost::none;
+    minCircle_      = boost::none;
 }
 
 SPSpamRgnVector SpamRgn::ConnectMT() const
@@ -663,6 +702,41 @@ bool SpamRgn::IsPointInside(const Geom::PathVector &pv, const Geom::Point &pt)
     }
 
     return false;
+}
+
+PointSet::PointSet(const SpamRgn &rgn)
+{
+    for (const SpamRun &run : rgn.GetData())
+    {
+        for (int16_t col = run.colb; col < run.cole; ++col)
+        {
+            emplace_back(col, run.row);
+        }
+    }
+}
+
+PointSet::PointSet(const SpamRgn &rgn, const cv::Point &offset)
+{
+    for (const SpamRun &run : rgn.GetData())
+    {
+        for (int16_t col = run.colb; col < run.cole; ++col)
+        {
+            emplace_back(col + offset.x, run.row + offset.y);
+        }
+    }
+}
+
+bool PointSet::IsInsideImage(const cv::Size &imgSize) const
+{
+    for (const cv::Point &point : *this)
+    {
+        if (point.x<0 || point.x>=imgSize.width || point.y < 0 || point.y >= imgSize.height)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 RD_LIST RunTypeDirectionEncoder::encode() const

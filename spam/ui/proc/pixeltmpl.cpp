@@ -42,7 +42,7 @@ SpamResult PixelTemplate::verifyCreateData(const PixelTmplCreateData &createData
 
     if (createData.srcImg.empty())
     {
-        return SpamResult::kSR_IMAGE_EMPTY;
+        return SpamResult::kSR_IMG_EMPTY;
     }
 
     int topWidth  = createData.srcImg.cols;
@@ -58,17 +58,7 @@ SpamResult PixelTemplate::verifyCreateData(const PixelTmplCreateData &createData
         return SpamResult::kSR_TM_PYRAMID_LEVEL_TOO_LARGE;
     }
 
-    if (createData.angleRange.start > createData.angleRange.end)
-    {
-        return SpamResult::kSR_TM_ANGLE_RANGE_INVALID;
-    }
-
-    if (createData.angleRange.start < -180 || createData.angleRange.start > 180)
-    {
-        return SpamResult::kSR_TM_ANGLE_RANGE_INVALID;
-    }
-
-    if (createData.angleRange.end < -180 || createData.angleRange.end > 180)
+    if (createData.angleExtent>360 || createData.angleExtent<0)
     {
         return SpamResult::kSR_TM_ANGLE_RANGE_INVALID;
     }
@@ -93,17 +83,51 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
         s *= 0.5;
     }
 
+    cv::Mat tmplImg;
+    cv::medianBlur(createData.srcImg, tmplImg, 5);
+    cv::buildPyramid(tmplImg, pyrs_, createData.pyramidLevel, cv::BORDER_REFLECT);
+    SpamRgn maskRgn(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 5))));
+    PointSet maskPoints(maskRgn);
+
     for (int l=0; l < createData.pyramidLevel; ++l)
     {
-        SpamRgn rgn(tmplRgns[l]);
+        const SpamRgn rgn(tmplRgns[l]);
         cv::Point anchorPoint{cvRound(rgn.Centroid().x), cvRound(rgn.Centroid().y)};
 
-        SpamRgn originRgn(tmplRgns[l]*Geom::Translate(anchorPoint.x, anchorPoint.y));
+        Geom::Circle minCircle = rgn.MinCircle();
+        if (minCircle.radius()<5)
+        {
+            return SpamResult::kSR_TM_TEMPL_REGION_TOO_SMALL;
+        }
 
-        float radius = 0;
-        cv::Point2f center;
-        std::vector<cv::Point> points;
-        cv::minEnclosingCircle(points, center, radius);
+        const auto angleStep = Geom::deg_from_rad(std::acos(1 - 2 / (minCircle.radius()*minCircle.radius())));
+        if (angleStep<0.3)
+        {
+            return SpamResult::kSR_TM_TEMPL_REGION_TOO_LARGE;
+        }
+
+        const cv::Mat &pyrImg = pyrs_[l];
+        for (double ang = 0; ang < createData.angleExtent; ang += angleStep)
+        {
+            const double deg = createData.angleStart + ang;
+            SpamRgn originRgn(tmplRgns[l] * Geom::Translate(-anchorPoint.x, -anchorPoint.y)* Geom::Rotate::from_degrees(deg));
+
+            PointSet pointSetOrigin(originRgn);
+            PointSet pointSetTmpl(originRgn, anchorPoint);
+
+            if (!pointSetTmpl.IsInsideImage(cv::Size(pyrImg.cols, pyrImg.rows)))
+            {
+                return SpamResult::kSR_TM_TEMPL_REGION_OUT_OF_RANGE;
+            }
+
+            std::vector<cv::Point> pixlLocs;
+            std::vector<float>     pixlVals;
+            const int numPoints = static_cast<int>(pointSetTmpl.size());
+            for (int n=0; n<numPoints; ++n)
+            {
+
+            }
+        }
     }
 
     return SpamResult::kSR_OK;

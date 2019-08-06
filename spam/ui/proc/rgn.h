@@ -10,6 +10,7 @@
 #include <tbb/scalable_allocator.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267 4244)
+#include <2geom/circle.h>
 #include <2geom/path.h>
 #include <2geom/pathvector.h>
 #pragma warning( pop )
@@ -104,6 +105,7 @@ public:
 public:
     double Area() const;
     cv::Point2d Centroid() const;
+    Geom::Circle MinCircle() const;
     int NumHoles() const;
     SPSpamRgnVector Connect() const;
     cv::Rect BoundingBox() const;
@@ -118,6 +120,7 @@ public:
     uint8_t  GetBlue() const { return static_cast<uint8_t>(0xFF & color_ >> 16); }
     uint8_t  GetAlpha() const { return static_cast<uint8_t>(0xFF & color_ >> 24); }
     SpamRunList &GetData() { return data_; }
+    const SpamRunList &GetData() const { return data_; }
 
 private:
     void ClearCacheData();
@@ -130,10 +133,22 @@ private:
     mutable boost::optional<double>                   area_;
     mutable boost::optional<cv::Point2d>              centroid_;
     mutable boost::optional<cv::Rect>                 bbox_;
+    mutable boost::optional<cv::RotatedRect>          minBox_;
+    mutable boost::optional<Geom::Circle>             minCircle_;
     mutable boost::optional<Geom::PathVector>         path_;
     mutable boost::optional<RegionContourCollection>  contours_;
     mutable boost::optional<RowRangeList>             rowRanges_;
     mutable boost::optional<AdjacencyList>            adjacencyList_;
+};
+
+class PointSet : public std::vector<cv::Point>
+{
+public:
+    PointSet(const SpamRgn &rgn);
+    PointSet(const SpamRgn &rgn, const cv::Point &offset);
+
+public:
+    bool IsInsideImage(const cv::Size &imgSize) const;
 };
 
 class RunTypeDirectionEncoder
