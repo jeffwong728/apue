@@ -1,5 +1,6 @@
 #ifndef SPAM_UI_COMMON_DEFINE_H
 #define SPAM_UI_COMMON_DEFINE_H
+#include "errdef.h"
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
@@ -227,25 +228,6 @@ enum class StatusIconType
     kSIT_ERROR,
     kSIT_WARNING,
     kSIT_INFO
-};
-
-enum class SpamResult
-{
-    kSR_SUCCESS,
-    kSR_OK = kSR_SUCCESS,
-    kSR_SUCCESS_NOOP,
-    kSR_IMG_EMPTY,
-    kSR_IMG_TYPE_NOT_SUPPORTED,
-    kSR_IMG_CORRUPTED,
-    kSR_TM_EMPTY_TEMPL_REGION,
-    kSR_TM_TEMPL_REGION_TOO_SMALL,
-    kSR_TM_TEMPL_REGION_TOO_LARGE,
-    kSR_TM_TEMPL_REGION_OUT_OF_RANGE,
-    kSR_TM_PYRAMID_LEVEL_INVALID,
-    kSR_TM_PYRAMID_LEVEL_TOO_LARGE,
-    kSR_TM_ANGLE_RANGE_INVALID,
-    kSR_ERROR,
-    kSR_FAILURE = kSR_ERROR
 };
 
 typedef boost::mpl::vector<int, long, double> OptTypes0;

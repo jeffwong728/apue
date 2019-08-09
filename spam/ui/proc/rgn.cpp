@@ -270,6 +270,31 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
     ClearCacheData();
 }
 
+void SpamRgn::SetRun(const Geom::PathVector &pv)
+{
+    clear();
+    Geom::OptRect bbox = pv.boundsFast();
+    if (bbox)
+    {
+        int t = cvFloor(bbox.get().top());
+        int b = cvCeil(bbox.get().bottom()) + 1;
+        int l = cvFloor(bbox.get().left());
+        int r = cvCeil(bbox.get().right()) + 1;
+        cv::Rect rect(cv::Point(l-3, t-3), cv::Point(r+3, b+3));
+        cv::Mat mask = BasicImgProc::PathToMask(pv*Geom::Translate(-rect.x, -rect.y), rect.size());
+        AddRun(mask);
+
+        for (SpamRun &run : data_)
+        {
+            run.colb += rect.x;
+            run.cole += rect.x;
+            run.row  += rect.y;
+        }
+    }
+
+    ClearCacheData();
+}
+
 void SpamRgn::AddRun(const Geom::PathVector &pv)
 {
     clear();
@@ -723,6 +748,37 @@ PointSet::PointSet(const SpamRgn &rgn, const cv::Point &offset)
         {
             emplace_back(col + offset.x, run.row + offset.y);
         }
+    }
+}
+
+cv::Rect PointSet::BoundingBox() const
+{
+    cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+    cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
+
+    for (const cv::Point &pt : *this)
+    {
+        if (pt.y < minPoint.y) {
+            minPoint.y = pt.y;
+        }
+
+        if (pt.y > maxPoint.y) {
+            maxPoint.y = pt.y;
+        }
+
+        if (pt.x < minPoint.x) {
+            minPoint.x = pt.x;
+        }
+
+        if (pt.x > maxPoint.x) {
+            maxPoint.x = pt.x;
+        }
+    }
+
+    if (empty()) {
+        return cv::Rect();
+    } else {
+        return cv::Rect(minPoint, cv::Size(maxPoint.x - minPoint.x + 1, maxPoint.y - minPoint.y + 1));
     }
 }
 

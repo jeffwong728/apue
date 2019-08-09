@@ -312,7 +312,11 @@ TEST(PointSetTest, Circle)
     {
         bkImg.at<uint8_t>(pt) = 0xFF;
     }
-    UnitTestHelper::WriteImage(bkImg, "PointSetTest_Circle.png");
+
+    SpamRgn rgn;
+    rgn.SetRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(32, 24), 20))));
+    EXPECT_DOUBLE_EQ(rgn.Centroid().x, 32.0);
+    EXPECT_DOUBLE_EQ(rgn.Centroid().y, 24.0);
 }
 
 }

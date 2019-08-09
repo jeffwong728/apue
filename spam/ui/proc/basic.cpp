@@ -3,7 +3,12 @@
 #include <memory>
 #include <vectorclass/vectorclass.h>
 #include <boost/container/static_vector.hpp>
+#pragma warning( push )
+#pragma warning( disable : 4819 4003 4267 )
+#include <2geom/2geom.h>
+#include <2geom/path-intersection.h>
 #include <2geom/cairo-path-sink.h>
+#pragma warning( pop )
 #ifdef IN
 #undef IN
 #endif
@@ -550,6 +555,7 @@ cv::Mat BasicImgProc::PathToMask(const Geom::PathVector &pv, const cv::Size &sz)
     cv::Mat mask(sz.height, sz.width, CV_8UC1, imgData.get(), step);
     auto imgSurf = Cairo::ImageSurface::create(mask.data, Cairo::Surface::Format::A8, mask.cols, mask.rows, static_cast<int>(mask.step1()));
     auto cr = Cairo::Context::create(imgSurf);
+    cr->translate(0.5, 0.5);
 
     Geom::CairoPathSink cairoPathSink(cr->cobj());
     cairoPathSink.feed(pv);

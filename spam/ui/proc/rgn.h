@@ -98,6 +98,7 @@ public:
     void AddRun(const int16_t l, const int16_t cb, const int16_t ce) { data_.push_back({ l, cb, ce }); ClearCacheData(); }
     void AddRun(const cv::Mat &binaryImage);
     void AddRun(const Geom::PathVector &pv);
+    void SetRun(const Geom::PathVector &pv);
     void AddRunParallel(const cv::Mat &binaryImage);
     void Draw(const cv::Mat &dstImage, const double sx, const double sy) const;
     int GetNumRuns() const { return static_cast<int>(data_.size()); }
@@ -144,8 +145,10 @@ private:
 class PointSet : public std::vector<cv::Point>
 {
 public:
+    PointSet() {}
     PointSet(const SpamRgn &rgn);
     PointSet(const SpamRgn &rgn, const cv::Point &offset);
+    cv::Rect BoundingBox() const;
 
 public:
     bool IsInsideImage(const cv::Size &imgSize) const;
