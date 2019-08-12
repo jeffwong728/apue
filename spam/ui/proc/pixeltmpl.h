@@ -21,12 +21,13 @@
 using PixelValueSequence = boost::variant<std::vector<int16_t>, std::vector<int32_t>, std::vector<float>>;
 struct PixelTmplData
 {
-    PixelTmplData(const double a, const double s) : angle(a), scale(s) {}
+    PixelTmplData(const float a, const float s) : angle(a), scale(s) {}
     PixelValueSequence     pixlVals;
     PointSet               pixlLocs;
-    cv::Rect               bbox;
-    double                 angle;
-    double                 scale;
+    cv::Point              minPoint;
+    cv::Point              maxPoint;
+    float                  angle;
+    float                  scale;
 };
 
 struct LayerTmplData
@@ -55,14 +56,20 @@ public:
     ~PixelTemplate();
 
 public:
+    SpamResult matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
     SpamResult CreatePixelTemplate(const PixelTmplCreateData &createData);
     const std::vector<LayerTmplData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
+    const cv::Mat &TopScoreMat() const { return top_layer_score_; }
 
 private:
     void destroyData();
     SpamResult verifyCreateData(const PixelTmplCreateData &createData);
     SpamResult calcCentreOfGravity(const PixelTmplCreateData &createData);
     static uint8_t getMinMaxGrayScale(const cv::Mat &img, const PointSet &maskPoints, const cv::Point &point);
+
+private:
+    cv::Mat top_layer_score_;
+    cv::Mat top_layer_angle_;
 
 private:
     int pyramid_level_;

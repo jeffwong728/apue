@@ -118,4 +118,25 @@ TEST(CVImageTranslateTest, Rectangle)
     UnitTestHelper::WriteImage(dst, "translate_rect_dst.png");
 }
 
+TEST(CVMatTest, Create)
+{
+    cv::Mat topImg;
+    topImg.create(48, 64, CV_16SC1);
+    topImg.create(48, 64, CV_16SC1);
+    topImg = cv::Scalar(0);
+
+    cv::Mat angImg;
+    angImg.create(48, 64, CV_32F);
+    angImg = cv::Scalar(0);
+
+    EXPECT_EQ(topImg.rows, 48);
+    EXPECT_EQ(topImg.cols, 64);
+    EXPECT_EQ(topImg.elemSize1(), 2);
+    EXPECT_EQ(topImg.step1(), 64);
+    EXPECT_EQ(angImg.rows, 48);
+    EXPECT_EQ(angImg.cols, 64);
+    EXPECT_EQ(angImg.elemSize1(), 4);
+    EXPECT_EQ(angImg.step1(), 64);
+}
+
 }

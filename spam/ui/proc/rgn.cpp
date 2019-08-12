@@ -751,7 +751,7 @@ PointSet::PointSet(const SpamRgn &rgn, const cv::Point &offset)
     }
 }
 
-cv::Rect PointSet::BoundingBox() const
+std::pair<cv::Point, cv::Point> PointSet::MinMax() const
 {
     cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
     cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
@@ -776,9 +776,9 @@ cv::Rect PointSet::BoundingBox() const
     }
 
     if (empty()) {
-        return cv::Rect();
+        return std::make_pair(cv::Point(), cv::Point());
     } else {
-        return cv::Rect(minPoint, cv::Size(maxPoint.x - minPoint.x + 1, maxPoint.y - minPoint.y + 1));
+        return std::make_pair(minPoint, maxPoint);
     }
 }
 

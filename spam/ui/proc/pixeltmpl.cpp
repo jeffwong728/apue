@@ -2,6 +2,7 @@
 #include "basic.h"
 #include <limits>
 #include <stack>
+#include <vectorclass/vectorclass.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267)
 #include <2geom/path-sink.h>
@@ -22,6 +23,93 @@ PixelTemplate::~PixelTemplate()
 { 
 }
 
+SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle)
+{
+    if (pyramid_tmpl_datas_.empty() || pyramid_level_ != static_cast<int>(pyramid_tmpl_datas_.size()))
+    {
+        return SpamResult::kSR_TM_CORRUPTED_TEMPL_DATA;
+    }
+
+    cv::buildPyramid(img, pyrs_, pyramid_level_-1, cv::BORDER_REFLECT);
+    const cv::Mat &topLayer = pyrs_.back();
+
+    top_layer_score_.create(topLayer.rows, topLayer.cols, CV_16SC1);
+    top_layer_angle_.create(topLayer.rows, topLayer.cols, CV_32F);
+
+    top_layer_score_ = cv::Scalar(0);
+    top_layer_angle_ = cv::Scalar(0);
+
+    const int topSad = sad + 5 * (pyramid_level_ - 1);
+    auto outsideImg = [&topLayer](const cv::Point &point) { if (point.x < 0 || point.x >= topLayer.cols || point.y < 0 || point.y >= topLayer.rows) { return true; } else { return false; }};
+    const LayerTmplData &topLayerTmplData = pyramid_tmpl_datas_.back();
+
+    constexpr int32_t simdSize = 16;
+    std::array<int16_t, 16> tempData;
+    const int nRows = topLayer.rows;
+    const int nCols = topLayer.cols;
+    for (int row = 0; row < nRows; ++row)
+    {
+        const uchar *p = topLayer.ptr<uchar>(row);
+        for (int col = 0; col < nCols; ++col)
+        {
+            cv::Point originPt{col, row};
+            int16_t minSAD = std::numeric_limits<int16_t>::max();
+            float minAng = topLayerTmplData.tmplDatas.front().angle;
+            for (int t = 0; t < static_cast<int>(topLayerTmplData.tmplDatas.size()); ++t)
+            {
+                const PixelTmplData &ptd = topLayerTmplData.tmplDatas[t];
+
+                if (outsideImg(originPt + ptd.minPoint) || outsideImg(originPt + ptd.maxPoint))
+                {
+                    continue;
+                }
+
+                int32_t sum = 0;
+                const int32_t numPoints = static_cast<int32_t>(ptd.pixlLocs.size());
+                const int16_t regularSize = numPoints & (-simdSize);
+                const auto &pixlVals = boost::get<std::vector<int16_t>>(ptd.pixlVals);
+
+                int32_t n = 0;
+                vcl::Vec16s sumVec(0);
+                for (; n < regularSize; n += simdSize)
+                {
+                    for (int m=0; m<16; ++m)
+                    {
+                        tempData[m] = static_cast<int16_t>(topLayer.at<uint8_t>(ptd.pixlLocs[n+m] + originPt));
+                    }
+
+                    vcl::Vec16s tempVec0, tempVec1;
+                    tempVec0.load(tempData.data());
+                    tempVec1.load(pixlVals.data() + n);
+                    sumVec += vcl::abs(tempVec0 - tempVec1);
+                }
+
+                int16_t partialSum = vcl::horizontal_add(sumVec);
+                for (; n < numPoints; ++n)
+                {
+                    const cv::Point &pt = ptd.pixlLocs[n];
+                    partialSum += std::abs(pixlVals[n] - topLayer.at<uint8_t>(pt + originPt));
+                }
+
+                int16_t sad = static_cast<int16_t>(partialSum / numPoints);
+                if (sad < minSAD)
+                {
+                    minSAD = sad;
+                    minAng = ptd.angle;
+                }
+            }
+
+            if (minSAD < topSad)
+            {
+                top_layer_angle_.at<float>(originPt)   = minAng;
+                top_layer_score_.at<int16_t>(originPt) = minSAD;
+            }
+        }
+    }
+
+    return SpamResult::kSR_OK;
+}
+
 SpamResult PixelTemplate::CreatePixelTemplate(const PixelTmplCreateData &createData)
 {
     SpamResult sr = verifyCreateData(createData);
@@ -37,6 +125,9 @@ SpamResult PixelTemplate::CreatePixelTemplate(const PixelTmplCreateData &createD
         destroyData();
         return sr;
     }
+
+    pyramid_level_ = createData.pyramidLevel;
+    match_mode_    = createData.matchMode;
 
     return SpamResult::kSR_OK;
 }
@@ -104,7 +195,7 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
 
     cv::Mat tmplImg;
     cv::medianBlur(createData.srcImg, tmplImg, 5);
-    cv::buildPyramid(tmplImg, pyrs_, createData.pyramidLevel, cv::BORDER_REFLECT);
+    cv::buildPyramid(tmplImg, pyrs_, createData.pyramidLevel-1, cv::BORDER_REFLECT);
     SpamRgn maskRgn(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 5))));
     PointSet maskPoints(maskRgn);
 
@@ -156,7 +247,7 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
                 return SpamResult::kSR_TM_TEMPL_REGION_OUT_OF_RANGE;
             }
 
-            ltl.tmplDatas.emplace_back(deg, 1.0);
+            ltl.tmplDatas.emplace_back(static_cast<float>(deg), 1.f);
             PixelTmplData &ptd = ltl.tmplDatas.back();
 
             ptd.pixlVals = std::vector<int16_t>();
@@ -176,7 +267,9 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
                 return SpamResult::kSR_TM_TEMPL_INSIGNIFICANT;
             }
 
-            ptd.bbox = pixlLocs.BoundingBox();
+            const auto minMaxPoints = pixlLocs.MinMax();
+            ptd.minPoint = minMaxPoints.first;
+            ptd.maxPoint = minMaxPoints.second;
         }
     }
 

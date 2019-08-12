@@ -148,7 +148,7 @@ public:
     PointSet() {}
     PointSet(const SpamRgn &rgn);
     PointSet(const SpamRgn &rgn, const cv::Point &offset);
-    cv::Rect BoundingBox() const;
+    std::pair<cv::Point, cv::Point> MinMax() const;
 
 public:
     bool IsInsideImage(const cv::Size &imgSize) const;
