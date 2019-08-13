@@ -18,7 +18,7 @@
 #include <2geom/pathvector.h>
 #pragma warning( pop )
 
-using PixelValueSequence = boost::variant<std::vector<int16_t>, std::vector<int32_t>, std::vector<float>>;
+using PixelValueSequence = boost::variant<std::vector<int16_t>, std::vector<float>>;
 struct PixelTmplData
 {
     PixelTmplData(const float a, const float s) : angle(a), scale(s) {}

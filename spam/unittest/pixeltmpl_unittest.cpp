@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Big, *boost::unit_test::enable_if<fal
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<fals
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
     tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -100, 200, 4, cv::TM_SQDIFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 4, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -140,9 +140,8 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<fals
     BOOST_TEST_MESSAGE("Match pixel template (board-01.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
     const cv::Mat &topScoreMat = pixelTmpl.TopScoreMat();
-    cv::Mat scoreMat, dst;
-    topScoreMat.convertTo(scoreMat, CV_8UC1);
-    cv::equalizeHist(scoreMat, dst);
+    cv::Mat dst;
+    cv::equalizeHist(topScoreMat, dst);
 
     std::string fileName = std::string("board_01_top_layer_score.png");
     UnitTestHelper::WriteImage(dst, fileName);
@@ -154,10 +153,10 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
 
     const Geom::PathVector roi;
-    const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
+    const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2300, 2150));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -30, 60, 5, cv::TM_SQDIFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 6, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -174,9 +173,8 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     BOOST_TEST_MESSAGE("Match pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
     const cv::Mat &topScoreMat = pixelTmpl.TopScoreMat();
-    cv::Mat scoreMat, dst;
-    topScoreMat.convertTo(scoreMat, CV_8UC1);
-    cv::equalizeHist(scoreMat, dst);
+    cv::Mat dst;
+    cv::equalizeHist(topScoreMat, dst);
 
     std::string fileName = std::string("mista_tmpl_top_layer_score.png");
     UnitTestHelper::WriteImage(dst, fileName);

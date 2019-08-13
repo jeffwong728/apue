@@ -33,7 +33,7 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
     cv::buildPyramid(img, pyrs_, pyramid_level_-1, cv::BORDER_REFLECT);
     const cv::Mat &topLayer = pyrs_.back();
 
-    top_layer_score_.create(topLayer.rows, topLayer.cols, CV_16SC1);
+    top_layer_score_.create(topLayer.rows, topLayer.cols, CV_8UC1);
     top_layer_angle_.create(topLayer.rows, topLayer.cols, CV_32F);
 
     top_layer_score_ = cv::Scalar(0);
@@ -44,16 +44,22 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
     const LayerTmplData &topLayerTmplData = pyramid_tmpl_datas_.back();
 
     constexpr int32_t simdSize = 16;
-    std::array<int16_t, 16> tempData;
+    std::array<int16_t, simdSize> tempData;
     const int nRows = topLayer.rows;
     const int nCols = topLayer.cols;
+
+    std::vector<const uint8_t *> pRows(nRows);
     for (int row = 0; row < nRows; ++row)
     {
-        const uchar *p = topLayer.ptr<uchar>(row);
+        pRows[row] = topLayer.ptr<uint8_t>(row);
+    }
+
+    for (int row = 0; row < nRows; ++row)
+    {
         for (int col = 0; col < nCols; ++col)
         {
             cv::Point originPt{col, row};
-            int16_t minSAD = std::numeric_limits<int16_t>::max();
+            int32_t minSAD = std::numeric_limits<int32_t>::max();
             float minAng = topLayerTmplData.tmplDatas.front().angle;
             for (int t = 0; t < static_cast<int>(topLayerTmplData.tmplDatas.size()); ++t)
             {
@@ -64,18 +70,21 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
                     continue;
                 }
 
-                int32_t sum = 0;
                 const int32_t numPoints = static_cast<int32_t>(ptd.pixlLocs.size());
-                const int16_t regularSize = numPoints & (-simdSize);
+                const int32_t regularSize = numPoints & (-simdSize);
                 const auto &pixlVals = boost::get<std::vector<int16_t>>(ptd.pixlVals);
+                const cv::Point *pPixlLocs = ptd.pixlLocs.data();
 
                 int32_t n = 0;
                 vcl::Vec16s sumVec(0);
                 for (; n < regularSize; n += simdSize)
                 {
-                    for (int m=0; m<16; ++m)
+                    for (int m=0; m<simdSize; ++m)
                     {
-                        tempData[m] = static_cast<int16_t>(topLayer.at<uint8_t>(ptd.pixlLocs[n+m] + originPt));
+                        const int x = pPixlLocs->x + col;
+                        const int y = pPixlLocs->y + row;
+                        tempData[m] = pRows[y][x];
+                        pPixlLocs += 1;
                     }
 
                     vcl::Vec16s tempVec0, tempVec1;
@@ -84,14 +93,16 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
                     sumVec += vcl::abs(tempVec0 - tempVec1);
                 }
 
-                int16_t partialSum = vcl::horizontal_add(sumVec);
+                int32_t partialSum = vcl::horizontal_add_x(sumVec);
                 for (; n < numPoints; ++n)
                 {
-                    const cv::Point &pt = ptd.pixlLocs[n];
-                    partialSum += std::abs(pixlVals[n] - topLayer.at<uint8_t>(pt + originPt));
+                    const int x = pPixlLocs->x + col;
+                    const int y = pPixlLocs->y + row;
+                    partialSum += std::abs(pixlVals[n] - pRows[y][x]);
+                    pPixlLocs += 1;
                 }
 
-                int16_t sad = static_cast<int16_t>(partialSum / numPoints);
+                int32_t sad = partialSum / numPoints;
                 if (sad < minSAD)
                 {
                     minSAD = sad;
@@ -102,7 +113,7 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
             if (minSAD < topSad)
             {
                 top_layer_angle_.at<float>(originPt)   = minAng;
-                top_layer_score_.at<int16_t>(originPt) = minSAD;
+                top_layer_score_.at<uint8_t>(originPt) = static_cast<uint8_t>(255-minSAD);
             }
         }
     }
