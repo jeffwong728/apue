@@ -51,25 +51,47 @@ struct PixelTmplCreateData
 
 class PixelTemplate
 {
+    struct Candidate
+    {
+        Candidate() : row(0), col(0), score(0.f), angle(0.f), scale(1.f) {}
+        Candidate(const int r, const int c, const float s, const float a) : row(r), col(c), score(s), angle(a), scale(1.f) {}
+        int row;
+        int col;
+        float score;
+        float angle;
+        float scale;
+    };
+
+    struct CandidateRun
+    {
+        int row;
+        int colb;
+        int cole;
+        Candidate bestCandidate;
+    };
+
+    using CandidateGroup = std::vector<CandidateRun>;
+    using CandidateList  = std::vector<Candidate, tbb::scalable_allocator<Candidate>>;
+
+    friend struct SADTopLayerScaner;
+
 public:
     PixelTemplate();
     ~PixelTemplate();
 
 public:
     SpamResult matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
+    SpamResult matchTemplateTBB(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
     SpamResult CreatePixelTemplate(const PixelTmplCreateData &createData);
     const std::vector<LayerTmplData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
-    const cv::Mat &TopScoreMat() const { return top_layer_score_; }
+    cv::Mat GetTopScoreMat() const;
 
 private:
     void destroyData();
     SpamResult verifyCreateData(const PixelTmplCreateData &createData);
     SpamResult calcCentreOfGravity(const PixelTmplCreateData &createData);
     static uint8_t getMinMaxGrayScale(const cv::Mat &img, const PointSet &maskPoints, const cv::Point &point);
-
-private:
-    cv::Mat top_layer_score_;
-    cv::Mat top_layer_angle_;
+    void matchTemplateTopLayer(const int sad, const int rowStart, const int rowEnd);
 
 private:
     int pyramid_level_;
@@ -79,6 +101,8 @@ private:
     std::vector<SpamRgn>     search_rois_;
     std::vector<LayerTmplData> pyramid_tmpl_datas_;
     std::vector<cv::Mat> pyrs_;
+    std::vector<const uint8_t *> row_ptrs_;
+    CandidateList candidates_;
 };
 
 #endif //SPAM_UI_PROC_PIXEL_TEMPLATE_H
