@@ -24,6 +24,7 @@ struct PixelTmplData
     PixelTmplData(const float a, const float s) : angle(a), scale(s) {}
     PixelValueSequence     pixlVals;
     PointSet               pixlLocs;
+    std::vector<int>       belowCandidates;
     cv::Point              minPoint;
     cv::Point              maxPoint;
     float                  angle;
@@ -32,9 +33,9 @@ struct PixelTmplData
 
 struct LayerTmplData
 {
-    LayerTmplData(const double as, const double ss) : angleStep(as), scaleStep(ss) {}
-    double angleStep;
-    double scaleStep;
+    LayerTmplData(const float as, const float ss) : angleStep(as), scaleStep(ss) {}
+    float angleStep;
+    float scaleStep;
     std::vector<PixelTmplData> tmplDatas;
 };
 
@@ -49,11 +50,47 @@ struct PixelTmplCreateData
     const cv::TemplateMatchModes matchMode;
 };
 
+struct AngleRange
+{
+    AngleRange(const float s, const float e)
+        : start(normalize(s)), end(normalize(e))
+    {
+    }
+
+    float normalize(const float a)
+    {
+        float angle = a;
+        while (angle < -180) angle += 360;
+        while (angle > 180) angle -= 360;
+        return angle;
+    }
+
+    bool contains(const float a)
+    {
+        float na = normalize(a);
+        if (start < end)
+        {
+            return !(na > end || na < start);
+        }
+        else
+        {
+            return !(na > end && na < start);
+        }
+    }
+
+    float start;
+    float end;
+};
+
 class PixelTemplate
 {
-    struct Candidate
+public:
+    class Candidate
     {
+    public:
         Candidate() : row(0), col(0), score(0.f), angle(0.f), scale(1.f) {}
+        Candidate(const int r, const int c) : row(r), col(c), score(0.f), angle(0.f), scale(1.f) {}
+        Candidate(const int r, const int c, const float s) : row(r), col(c), score(s), angle(0.f), scale(1.f) {}
         Candidate(const int r, const int c, const float s, const float a) : row(r), col(c), score(s), angle(a), scale(1.f) {}
         int row;
         int col;
@@ -62,16 +99,34 @@ class PixelTemplate
         float scale;
     };
 
-    struct CandidateRun
+    class CandidateGroup;
+    using CandidateList = std::vector<Candidate, tbb::scalable_allocator<Candidate>>;
+    using CandidateGroupList = std::vector<CandidateGroup>;
+
+    class CandidateRun
     {
+    public:
+        CandidateRun() : row(0), colb(0), cole(0) {}
+        CandidateRun(const int r, const int cb, const int ce) : row(r), colb(cb), cole(ce) {}
+        bool IsColumnIntersection(const CandidateRun &r) const { return !(cole < r.colb || r.cole < colb); }
         int row;
         int colb;
         int cole;
-        Candidate bestCandidate;
+        Candidate best;
     };
 
-    using CandidateGroup = std::vector<CandidateRun>;
-    using CandidateList  = std::vector<Candidate, tbb::scalable_allocator<Candidate>>;
+    class CandidateGroup : public std::vector<CandidateRun>
+    {
+    public:
+        CandidateGroup() {}
+        CandidateGroup(CandidateList &candidates);
+        void RLEncodeCandidates(CandidateList &candidates);
+        void Connect(CandidateGroupList &candidateGroups);
+        RowRangeList row_ranges;
+        AdjacencyList adjacency_list;
+        std::vector<int> run_stack;
+        std::vector<std::vector<int>> rgn_idxs;
+    };
 
     friend struct SADTopLayerScaner;
 
@@ -81,7 +136,6 @@ public:
 
 public:
     SpamResult matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
-    SpamResult matchTemplateTBB(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
     SpamResult CreatePixelTemplate(const PixelTmplCreateData &createData);
     const std::vector<LayerTmplData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;
@@ -90,8 +144,9 @@ private:
     void destroyData();
     SpamResult verifyCreateData(const PixelTmplCreateData &createData);
     SpamResult calcCentreOfGravity(const PixelTmplCreateData &createData);
+    void linkTemplatesBetweenLayers();
     static uint8_t getMinMaxGrayScale(const cv::Mat &img, const PointSet &maskPoints, const cv::Point &point);
-    void matchTemplateTopLayer(const int sad, const int rowStart, const int rowEnd);
+    void supressNoneMaximum();
 
 private:
     int pyramid_level_;
@@ -103,6 +158,8 @@ private:
     std::vector<cv::Mat> pyrs_;
     std::vector<const uint8_t *> row_ptrs_;
     CandidateList candidates_;
+    CandidateGroup candidate_runs_;
+    CandidateGroupList candidate_groups_;
 };
 
 #endif //SPAM_UI_PROC_PIXEL_TEMPLATE_H

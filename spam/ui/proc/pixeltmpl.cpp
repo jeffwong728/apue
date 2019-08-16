@@ -38,91 +38,7 @@ struct SADTopLayerScaner
     SADTopLayerScaner(const PixelTemplate *const pixTmpl, const int s) : tmpl(pixTmpl), sad(s) {}
     SADTopLayerScaner(SADTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), sad(s.sad) { }
 
-    void operator()(const tbb::blocked_range<int>& br) 
-    {
-        const cv::Mat &topLayer = tmpl->pyrs_.back();
-        const int nCols = topLayer.cols;
-        constexpr int32_t simdSize = 16;
-        std::array<int16_t, simdSize> tempData;
-        const LayerTmplData &topLayerTmplData = tmpl->pyramid_tmpl_datas_.back();
-        OutsideImageBox oib(topLayer.cols, topLayer.rows);
-        const int topSad = sad + 5 * (tmpl->pyramid_level_ - 1);
-        const int rowStart = br.begin();
-        const int rowEnd   = br.end();
-
-        for (int row = rowStart; row < rowEnd; ++row)
-        {
-            for (int col = 0; col < nCols; ++col)
-            {
-                cv::Point originPt{ col, row };
-                int32_t cIncrease = 0;
-                int32_t minSAD = std::numeric_limits<int32_t>::max();
-                float minAng = topLayerTmplData.tmplDatas.front().angle;
-                for (int t = 0; t < static_cast<int>(topLayerTmplData.tmplDatas.size()); ++t)
-                {
-                    const PixelTmplData &ptd = topLayerTmplData.tmplDatas[t];
-
-                    if (oib(originPt + ptd.minPoint) || oib(originPt + ptd.maxPoint))
-                    {
-                        continue;
-                    }
-
-                    const int32_t numPoints = static_cast<int32_t>(ptd.pixlLocs.size());
-                    const int32_t regularSize = numPoints & (-simdSize);
-                    const auto &pixlVals = boost::get<std::vector<int16_t>>(ptd.pixlVals);
-                    const cv::Point *pPixlLocs = ptd.pixlLocs.data();
-
-                    int32_t n = 0;
-                    int32_t partialSum = 0;
-                    for (; n < regularSize; n += simdSize)
-                    {
-                        for (int m = 0; m < simdSize; ++m)
-                        {
-                            const int x = pPixlLocs->x + col;
-                            const int y = pPixlLocs->y + row;
-                            tempData[m] = tmpl->row_ptrs_[y][x];
-                            pPixlLocs += 1;
-                        }
-
-                        vcl::Vec16s tempVec0, tempVec1;
-                        tempVec0.load(tempData.data());
-                        tempVec1.load(pixlVals.data() + n);
-                        partialSum += vcl::horizontal_add(vcl::abs(tempVec0 - tempVec1));
-                        if (partialSum > numPoints * topSad)
-                        {
-                            break;
-                        }
-                    }
-
-                    if (n < regularSize)
-                    {
-                        continue;
-                    }
-
-                    for (; n < numPoints; ++n)
-                    {
-                        const int x = pPixlLocs->x + col;
-                        const int y = pPixlLocs->y + row;
-                        partialSum += std::abs(pixlVals[n] - tmpl->row_ptrs_[y][x]);
-                        pPixlLocs += 1;
-                    }
-
-                    int32_t sad = partialSum / numPoints;
-                    if (sad < minSAD)
-                    {
-                        minSAD = sad;
-                        minAng = ptd.angle;
-                    }
-                }
-
-                if (minSAD < topSad)
-                {
-                    candidates.emplace_back(row, col, static_cast<float>(255 - minSAD), minAng);
-                }
-            }
-        }
-    }
-
+    void operator()(const tbb::blocked_range<int>& br);
     void join(SADTopLayerScaner& rhs) { candidates.insert(candidates.end(), rhs.candidates.cbegin(), rhs.candidates.cend()); }
 
     const int sad;
@@ -130,46 +46,24 @@ struct SADTopLayerScaner
     PixelTemplate::CandidateList candidates;
 };
 
-PixelTemplate::PixelTemplate()
-    : pyramid_level_(4)
+void SADTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
 {
-}
-
-PixelTemplate::~PixelTemplate()
-{ 
-}
-
-SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle)
-{
-    if (pyramid_tmpl_datas_.empty() || pyramid_level_ != static_cast<int>(pyramid_tmpl_datas_.size()))
-    {
-        return SpamResult::kSR_TM_CORRUPTED_TEMPL_DATA;
-    }
-
-    cv::buildPyramid(img, pyrs_, pyramid_level_-1, cv::BORDER_REFLECT);
-    const cv::Mat &topLayer = pyrs_.back();
-
-    const int topSad = sad + 5 * (pyramid_level_ - 1);
-    OutsideImageBox oib(topLayer.cols, topLayer.rows);
-    const LayerTmplData &topLayerTmplData = pyramid_tmpl_datas_.back();
-
+    const cv::Mat &topLayer = tmpl->pyrs_.back();
+    const int nCols = topLayer.cols;
     constexpr int32_t simdSize = 16;
     std::array<int16_t, simdSize> tempData;
-    const int nRows = topLayer.rows;
-    const int nCols = topLayer.cols;
+    const LayerTmplData &topLayerTmplData = tmpl->pyramid_tmpl_datas_.back();
+    OutsideImageBox oib(topLayer.cols, topLayer.rows);
+    const int topSad = sad + 5 * (tmpl->pyramid_level_ - 1);
+    const int rowStart = br.begin();
+    const int rowEnd = br.end();
 
-    row_ptrs_.clear();
-    row_ptrs_.resize(nRows);
-    for (int row = 0; row < nRows; ++row)
-    {
-        row_ptrs_[row] = topLayer.ptr<uint8_t>(row);
-    }
-
-    for (int row = 0; row < nRows; ++row)
+    for (int row = rowStart; row < rowEnd; ++row)
     {
         for (int col = 0; col < nCols; ++col)
         {
-            cv::Point originPt{col, row};
+            cv::Point originPt{ col, row };
+            int32_t cIncrease = 0;
             int32_t minSAD = std::numeric_limits<int32_t>::max();
             float minAng = topLayerTmplData.tmplDatas.front().angle;
             for (int t = 0; t < static_cast<int>(topLayerTmplData.tmplDatas.size()); ++t)
@@ -187,29 +81,37 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
                 const cv::Point *pPixlLocs = ptd.pixlLocs.data();
 
                 int32_t n = 0;
-                vcl::Vec16s sumVec(0);
+                int32_t partialSum = 0;
                 for (; n < regularSize; n += simdSize)
                 {
-                    for (int m=0; m<simdSize; ++m)
+                    for (int m = 0; m < simdSize; ++m)
                     {
                         const int x = pPixlLocs->x + col;
                         const int y = pPixlLocs->y + row;
-                        tempData[m] = row_ptrs_[y][x];
+                        tempData[m] = tmpl->row_ptrs_[y][x];
                         pPixlLocs += 1;
                     }
 
                     vcl::Vec16s tempVec0, tempVec1;
                     tempVec0.load(tempData.data());
                     tempVec1.load(pixlVals.data() + n);
-                    sumVec += vcl::abs(tempVec0 - tempVec1);
+                    partialSum += vcl::horizontal_add(vcl::abs(tempVec0 - tempVec1));
+                    if (partialSum > numPoints * topSad)
+                    {
+                        break;
+                    }
                 }
 
-                int32_t partialSum = vcl::horizontal_add_x(sumVec);
+                if (n < regularSize)
+                {
+                    continue;
+                }
+
                 for (; n < numPoints; ++n)
                 {
                     const int x = pPixlLocs->x + col;
                     const int y = pPixlLocs->y + row;
-                    partialSum += std::abs(pixlVals[n] - row_ptrs_[y][x]);
+                    partialSum += std::abs(pixlVals[n] - tmpl->row_ptrs_[y][x]);
                     pPixlLocs += 1;
                 }
 
@@ -223,15 +125,173 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
 
             if (minSAD < topSad)
             {
-                candidates_.emplace_back(row, col, static_cast<float>(255 - minSAD), minAng);
+                candidates.emplace_back(row, col, static_cast<float>(255 - minSAD), minAng);
             }
         }
     }
-
-    return SpamResult::kSR_OK;
 }
 
-SpamResult PixelTemplate::matchTemplateTBB(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle)
+PixelTemplate::CandidateGroup::CandidateGroup(CandidateList &candidates)
+{
+    RLEncodeCandidates(candidates);
+}
+
+void PixelTemplate::CandidateGroup::RLEncodeCandidates(CandidateList &candidates)
+{
+    resize(0);
+    std::sort(candidates.begin(), candidates.end(), [](const Candidate &l, const Candidate &r)
+    {
+        return (l.row < r.row) || (l.row == r.row && l.col < r.col);
+    });
+
+    if (!candidates.empty())
+    {
+        constexpr int negInf = std::numeric_limits<int>::min();
+        int colb = candidates.front().col;
+        int preRow = candidates.front().row;
+        int preCol = candidates.front().col - 1;
+        Candidate bestCandidate = candidates.front();
+        for (const Candidate &candidate : candidates)
+        {
+            if (candidate.row != preRow)
+            {
+                emplace_back(preRow, colb, preCol + 1).best = bestCandidate;
+                colb = candidate.col;
+                bestCandidate = candidate;
+            }
+            else
+            {
+                if (candidate.col != (preCol + 1))
+                {
+                    emplace_back(preRow, colb, preCol + 1).best = bestCandidate;
+                    colb = candidate.col;
+                    bestCandidate = candidate;
+                }
+            }
+
+            preRow = candidate.row;
+            preCol = candidate.col;
+
+            if (candidate.score > bestCandidate.score)
+            {
+                bestCandidate = candidate;
+            }
+        }
+
+        emplace_back(preRow, colb, preCol + 1).best = bestCandidate;
+    }
+}
+
+void PixelTemplate::CandidateGroup::Connect(CandidateGroupList &candidateGroups)
+{
+    row_ranges.resize(0);
+    adjacency_list.resize(size());
+    candidateGroups.resize(0);
+
+    if (!empty())
+    {
+        int begIdx = 0;
+        int16_t currentRow = front().row;
+        row_ranges.reserve(size());
+
+        const CandidateRun *runs = data();
+        const int numRuns = static_cast<int>(size());
+        for (int run = 0; run < numRuns; ++run)
+        {
+            if (runs[run].row != currentRow)
+            {
+                row_ranges.emplace_back(currentRow, begIdx, run);
+                begIdx = run;
+                currentRow = runs[run].row;
+            }
+        }
+        row_ranges.emplace_back(currentRow, begIdx, numRuns);
+
+        const int endRow = static_cast<int>(row_ranges.size() - 1);
+        for (auto row = 0; row < endRow; ++row)
+        {
+            const RowRange &rowRange = row_ranges[row];
+            const RowRange &nextRowRange = row_ranges[row + 1];
+
+            if ((rowRange.row + 1) == nextRowRange.row)
+            {
+                int nextBegIdx = nextRowRange.beg;
+                const int nextEndIdx = nextRowRange.end;
+                for (int runIdx = rowRange.beg; runIdx != rowRange.end; ++runIdx)
+                {
+                    bool metInter = false;
+                    for (int nextRunIdx = nextBegIdx; nextRunIdx != nextEndIdx; ++nextRunIdx)
+                    {
+                        if (runs[runIdx].IsColumnIntersection(runs[nextRunIdx]))
+                        {
+                            metInter = true;
+                            nextBegIdx = nextRunIdx;
+                            adjacency_list[runIdx].push_back(nextRunIdx);
+                            adjacency_list[nextRunIdx].push_back(runIdx);
+                        }
+                        else if (metInter)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        run_stack.resize(0);
+        rgn_idxs.resize(0);
+        std::vector<uint8_t> met(adjacency_list.size());
+        for (int n = 0; n < numRuns; ++n)
+        {
+            if (!met[n])
+            {
+                rgn_idxs.emplace_back();
+                run_stack.push_back(n);
+                while (!run_stack.empty())
+                {
+                    const int seedRun = run_stack.back();
+                    run_stack.pop_back();
+                    if (!met[seedRun])
+                    {
+                        met[seedRun] = 1;
+                        rgn_idxs.back().push_back(seedRun);
+                        for (const int a : adjacency_list[seedRun])
+                        {
+                            run_stack.push_back(a);
+                        }
+                    }
+                }
+
+                std::sort(rgn_idxs.back().begin(), rgn_idxs.back().end());
+            }
+        }
+
+        candidateGroups.resize(rgn_idxs.size());
+        const int numRgns = static_cast<int>(rgn_idxs.size());
+        for (int r = 0; r < numRgns; ++r)
+        {
+            CandidateGroup &rgn = candidateGroups[r];
+            const std::vector<int> &rgnIdx = rgn_idxs[r];
+            const int numRgnRuns = static_cast<int>(rgnIdx.size());
+            rgn.resize(numRgnRuns);
+            for (int rr = 0; rr < numRgnRuns; ++rr)
+            {
+                rgn[rr] = runs[rgnIdx[rr]];
+            }
+        }
+    }
+}
+
+PixelTemplate::PixelTemplate()
+    : pyramid_level_(4)
+{
+}
+
+PixelTemplate::~PixelTemplate()
+{ 
+}
+
+SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle)
 {
     if (pyramid_tmpl_datas_.empty() ||
         pyramid_level_ != static_cast<int>(pyramid_tmpl_datas_.size()))
@@ -255,12 +315,14 @@ SpamResult PixelTemplate::matchTemplateTBB(const cv::Mat &img, const int sad, cv
     SADTopLayerScaner sadScaner(this, sad);
     tbb::parallel_reduce(tbb::blocked_range<int>(0, nRows), sadScaner);
     candidates_.swap(sadScaner.candidates);
+    supressNoneMaximum();
 
     return SpamResult::kSR_OK;
 }
 
 SpamResult PixelTemplate::CreatePixelTemplate(const PixelTmplCreateData &createData)
 {
+    destroyData();
     SpamResult sr = verifyCreateData(createData);
     if (SpamResult::kSR_OK != sr)
     {
@@ -274,6 +336,8 @@ SpamResult PixelTemplate::CreatePixelTemplate(const PixelTmplCreateData &createD
         destroyData();
         return sr;
     }
+
+    linkTemplatesBetweenLayers();
 
     pyramid_level_ = createData.pyramidLevel;
     match_mode_    = createData.matchMode;
@@ -370,7 +434,7 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
             return SpamResult::kSR_TM_TEMPL_REGION_TOO_LARGE;
         }
 
-        pyramid_tmpl_datas_.emplace_back(angleStep, 0.0);
+        pyramid_tmpl_datas_.emplace_back(static_cast<float>(angleStep), 0.f);
         LayerTmplData &ltl = pyramid_tmpl_datas_.back();
 
         const cv::Mat &pyrImg = pyrs_[l];
@@ -425,6 +489,29 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
     return SpamResult::kSR_OK;
 }
 
+void PixelTemplate::linkTemplatesBetweenLayers()
+{
+    const int topLayerIndex = static_cast<int>(pyramid_tmpl_datas_.size()-1);
+    for (int layer = topLayerIndex; layer > 0; --layer)
+    {
+        LayerTmplData &ltd = pyramid_tmpl_datas_[layer];
+        LayerTmplData &belowLtd = pyramid_tmpl_datas_[layer-1];
+        for (PixelTmplData &ptd : ltd.tmplDatas)
+        {
+            Geom::Angle lowerAngle{ ptd.angle - ltd.angleStep };
+            Geom::Angle upperAngle{ ptd.angle + ltd.angleStep };
+            Geom::AngleInterval angleRange(lowerAngle, upperAngle);
+            for (int t=0; t< belowLtd.tmplDatas.size(); ++t)
+            {
+                if (angleRange.contains(Geom::Angle(belowLtd.tmplDatas[t].angle)))
+                {
+                    ptd.belowCandidates.push_back(t);
+                }
+            }
+        }
+    }
+}
+
 uint8_t PixelTemplate::getMinMaxGrayScale(const cv::Mat &img, const PointSet &maskPoints, const cv::Point &point)
 {
     cv::Rect imageBox(0, 0, img.cols, img.rows);
@@ -451,86 +538,24 @@ uint8_t PixelTemplate::getMinMaxGrayScale(const cv::Mat &img, const PointSet &ma
     return (minGrayScale < maxGrayScale) ? (maxGrayScale - minGrayScale) : 0;
 }
 
-void PixelTemplate::matchTemplateTopLayer(const int sad, const int rowStart, const int rowEnd)
+void PixelTemplate::supressNoneMaximum()
 {
-    const cv::Mat &topLayer = pyrs_.back();
-    const int nCols = topLayer.cols;
-    constexpr int32_t simdSize = 16;
-    std::array<int16_t, simdSize> tempData;
-    const LayerTmplData &topLayerTmplData = pyramid_tmpl_datas_.back();
-    OutsideImageBox oib(topLayer.cols, topLayer.rows);
-    const int topSad = sad + 5 * (pyramid_level_ - 1);
+    candidate_runs_.RLEncodeCandidates(candidates_);
+    candidate_runs_.Connect(candidate_groups_);
+    candidates_.resize(candidate_groups_.size());
 
-    for (int row = rowStart; row < rowEnd; ++row)
+    Candidate *candidates = candidates_.data();
+    for (const CandidateGroup &cg : candidate_groups_)
     {
-        for (int col = 0; col < nCols; ++col)
+        *candidates = cg.front().best;
+        for (const CandidateRun &cr : cg)
         {
-            cv::Point originPt{ col, row };
-            int32_t cIncrease = 0;
-            int32_t minSAD = std::numeric_limits<int32_t>::max();
-            float minAng = topLayerTmplData.tmplDatas.front().angle;
-            for (int t = 0; t < static_cast<int>(topLayerTmplData.tmplDatas.size()); ++t)
+            if (cr.best.score > candidates->score)
             {
-                const PixelTmplData &ptd = topLayerTmplData.tmplDatas[t];
-
-                if (oib(originPt + ptd.minPoint) || oib(originPt + ptd.maxPoint))
-                {
-                    continue;
-                }
-
-                const int32_t numPoints = static_cast<int32_t>(ptd.pixlLocs.size());
-                const int32_t regularSize = numPoints & (-simdSize);
-                const auto &pixlVals = boost::get<std::vector<int16_t>>(ptd.pixlVals);
-                const cv::Point *pPixlLocs = ptd.pixlLocs.data();
-
-                int32_t n = 0;
-                int32_t partialSum = 0;
-                for (; n < regularSize; n += simdSize)
-                {
-                    for (int m = 0; m < simdSize; ++m)
-                    {
-                        const int x = pPixlLocs->x + col;
-                        const int y = pPixlLocs->y + row;
-                        tempData[m] = row_ptrs_[y][x];
-                        pPixlLocs += 1;
-                    }
-
-                    vcl::Vec16s tempVec0, tempVec1;
-                    tempVec0.load(tempData.data());
-                    tempVec1.load(pixlVals.data() + n);
-                    partialSum += vcl::horizontal_add(vcl::abs(tempVec0 - tempVec1));
-                    if (partialSum > numPoints * topSad)
-                    {
-                        break;
-                    }
-                }
-
-                if (n < regularSize)
-                {
-                    continue;
-                }
-
-                for (; n < numPoints; ++n)
-                {
-                    const int x = pPixlLocs->x + col;
-                    const int y = pPixlLocs->y + row;
-                    partialSum += std::abs(pixlVals[n] - row_ptrs_[y][x]);
-                    pPixlLocs += 1;
-                }
-
-                int32_t sad = partialSum / numPoints;
-                if (sad < minSAD)
-                {
-                    minSAD = sad;
-                    minAng = ptd.angle;
-                }
-            }
-
-            if (minSAD < topSad)
-            {
-                candidates_.emplace_back(row, col, static_cast<float>(255 - minSAD), minAng);
+                *candidates = cr.best;
             }
         }
+        candidates += 1;
     }
 }
 
