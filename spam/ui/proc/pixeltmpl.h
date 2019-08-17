@@ -88,15 +88,16 @@ public:
     class Candidate
     {
     public:
-        Candidate() : row(0), col(0), score(0.f), angle(0.f), scale(1.f) {}
-        Candidate(const int r, const int c) : row(r), col(c), score(0.f), angle(0.f), scale(1.f) {}
-        Candidate(const int r, const int c, const float s) : row(r), col(c), score(s), angle(0.f), scale(1.f) {}
-        Candidate(const int r, const int c, const float s, const float a) : row(r), col(c), score(s), angle(a), scale(1.f) {}
+        Candidate() : row(0), col(0), score(0.f), mindex(-1) {}
+        Candidate(const int r, const int c) : row(r), col(c), score(0.f), mindex(-1), label(0) {}
+        Candidate(const int r, const int c, const float s) : row(r), col(c), score(s), mindex(-1), label(0) {}
+        Candidate(const int r, const int c, const int m, const float s) : row(r), col(c), mindex(m), score(s), label(0) {}
+        Candidate(const int r, const int c, const int m, const int l) : row(r), col(c), mindex(m), score(0.f), label(l) {}
         int row;
         int col;
+        int mindex;
+        int label;
         float score;
-        float angle;
-        float scale;
     };
 
     class CandidateGroup;
@@ -139,6 +140,7 @@ public:
     SpamResult CreatePixelTemplate(const PixelTmplCreateData &createData);
     const std::vector<LayerTmplData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;
+    cv::Point2f GetCenter() const { return cfs_.front(); }
 
 private:
     void destroyData();
@@ -158,6 +160,8 @@ private:
     std::vector<cv::Mat> pyrs_;
     std::vector<const uint8_t *> row_ptrs_;
     CandidateList candidates_;
+    CandidateList top_candidates_;
+    CandidateList final_candidates_;
     CandidateGroup candidate_runs_;
     CandidateGroupList candidate_groups_;
 };

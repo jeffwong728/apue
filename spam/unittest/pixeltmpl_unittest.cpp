@@ -149,13 +149,26 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_CandidateRun_MultipleRuns)
 
 BOOST_AUTO_TEST_CASE(test_AngleInterval)
 {
-    BOOST_CHECK(AngleRange(0, 10).contains(5));
-    BOOST_CHECK(AngleRange(-10, 10).contains(5));
-    BOOST_CHECK(AngleRange(-10, 10).contains(-5));
-    BOOST_CHECK(AngleRange(350, 10).contains(-5));
+    BOOST_CHECK_EQUAL(AngleRange(0, 10).contains(5), true);
+    BOOST_CHECK_EQUAL(AngleRange(-10, 10).contains(5), true);
+    BOOST_CHECK_EQUAL(AngleRange(-10, 10).contains(-5), true);
+    BOOST_CHECK_EQUAL(AngleRange(350, 10).contains(-5), true);
+    BOOST_CHECK_EQUAL(AngleRange(10, 350).contains(-5), false);
+    BOOST_CHECK_EQUAL(AngleRange(90, -90).contains(180), true);
+    BOOST_CHECK_EQUAL(AngleRange(-90, 90).contains(180), false);
+    BOOST_CHECK_EQUAL(AngleRange(-190, -170).contains(180), true);
+    BOOST_CHECK_EQUAL(AngleRange(-190, -170).contains(-180), true);
+    BOOST_CHECK_EQUAL(AngleRange(-190, -170).contains(-200), false);
+    BOOST_CHECK_EQUAL(AngleRange(-190, -170).contains(200), false);
+    BOOST_CHECK_EQUAL(AngleRange(-190, -170).contains(-190), true);
+    BOOST_CHECK_EQUAL(AngleRange(-190, -170).contains(-170), true);
+    BOOST_CHECK_EQUAL(AngleRange(170, 190).contains(180), true);
+    BOOST_CHECK_EQUAL(AngleRange(170, 190).contains(-180), true);
+    BOOST_CHECK_EQUAL(AngleRange(170, 190).contains(160), false);
+    BOOST_CHECK_EQUAL(AngleRange(170, 190).contains(-160), false);
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Small, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Small, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -236,7 +249,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Big, *boost::unit_test::enable_if<fal
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -257,13 +270,24 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<fals
 
     cv::Point2f pos;
     float angle = 0;
-    t1 = tbb::tick_count::now();
-    pixelTmpl.matchTemplate(grayImg, 10, pos, angle);
-    t2 = tbb::tick_count::now();
-    BOOST_TEST_MESSAGE("Match pixel template (board-01.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-03.png");
 
-    std::string fileName = std::string("board_01_top_layer_score.png");
+    t1 = tbb::tick_count::now();
+    sr = pixelTmpl.matchTemplate(grayImg, 50, pos, angle);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Match pixel template (board-03.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    std::string fileName = std::string("board_03_top_layer_score.png");
     UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
+
+    if (SpamResult::kSR_SUCCESS == sr)
+    {
+        UnitTestHelper::Color color{ 255, 0, 0, 255 };
+        cv::Point2f pt = pixelTmpl.GetCenter();
+        const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
+        UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+        UnitTestHelper::WriteImage(colorImg, std::string("board_03_tmpl_match.png"));
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>())
@@ -275,7 +299,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -1, 2, 5, cv::TM_SQDIFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 5, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -288,10 +312,22 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     float angle = 0;
 
     t1 = tbb::tick_count::now();
-    pixelTmpl.matchTemplate(grayImg, 20, pos, angle);
+    sr = pixelTmpl.matchTemplate(grayImg, 20, pos, angle);
     t2 = tbb::tick_count::now();
+    BOOST_CHECK_CLOSE(pos.x, 2100.f, 1e-3f);
+    BOOST_CHECK_CLOSE(pos.y, 1949.f, 1e-3f);
+    BOOST_CHECK_CLOSE(angle, 0.26284039f, 1e-3f);
     BOOST_TEST_MESSAGE("Match pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
     std::string fileName = std::string("mista_tmpl_top_layer_score.png");
     UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
+
+    if (SpamResult::kSR_SUCCESS == sr)
+    {
+        UnitTestHelper::Color color{ 255, 0, 0, 255 };
+        cv::Point2f pt = pixelTmpl.GetCenter();
+        const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
+        UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+        UnitTestHelper::WriteImage(colorImg, std::string("mista_tmpl_match.png"));
+    }
 }
