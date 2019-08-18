@@ -144,6 +144,7 @@ public:
 
 private:
     void destroyData();
+    void clearCacheMatchData();
     SpamResult verifyCreateData(const PixelTmplCreateData &createData);
     SpamResult calcCentreOfGravity(const PixelTmplCreateData &createData);
     void linkTemplatesBetweenLayers();

@@ -2,6 +2,7 @@
 #include "helper.h"
 #include <cassert>
 #include <boost/test/included/unit_test.hpp>
+#include <boost/filesystem.hpp>
 #include <vectorclass/instrset.h>
 #include <vectorclass/vectorclass.h>
 #include <opencv2/highgui.hpp>
@@ -255,11 +256,11 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<true
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
 
     const Geom::PathVector roi;
-    const Geom::Rect rect1(Geom::Point(143, 121), Geom::Point(465, 177));
+    const Geom::Rect rect1(Geom::Point(185, 198), Geom::Point(399, 286));
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
-    tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -100, 200, 4, cv::TM_SQDIFF };
+    //tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 5, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -268,25 +269,38 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<true
     BOOST_TEST_MESSAGE("Create pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
 
-    cv::Point2f pos;
-    float angle = 0;
-    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-03.png");
+    boost::filesystem::path utRootDir = std::getenv("SPAM_UNITTEST_ROOT");
+    utRootDir.append("idata");
+    utRootDir.append("images");
+    utRootDir.append("board");
 
-    t1 = tbb::tick_count::now();
-    sr = pixelTmpl.matchTemplate(grayImg, 50, pos, angle);
-    t2 = tbb::tick_count::now();
-    BOOST_TEST_MESSAGE("Match pixel template (board-03.png): " << (t2 - t1).seconds() * 1000 << "ms");
-
-    std::string fileName = std::string("board_03_top_layer_score.png");
-    UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
-
-    if (SpamResult::kSR_SUCCESS == sr)
+    boost::filesystem::path baseDir = std::getenv("SPAM_UNITTEST_ROOT");
+    baseDir.append("idata");
+    for (boost::filesystem::directory_entry& x : boost::filesystem::directory_iterator(utRootDir))
     {
-        UnitTestHelper::Color color{ 255, 0, 0, 255 };
-        cv::Point2f pt = pixelTmpl.GetCenter();
-        const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
-        UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
-        UnitTestHelper::WriteImage(colorImg, std::string("board_03_tmpl_match.png"));
+        if (boost::filesystem::is_regular_file(x.path()) && x.path().extension()==".png")
+        {
+            cv::Point2f pos;
+            float angle = 0;
+            std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage(boost::filesystem::relative(x.path(), baseDir).string());
+
+            t1 = tbb::tick_count::now();
+            sr = pixelTmpl.matchTemplate(grayImg, 20, pos, angle);
+            t2 = tbb::tick_count::now();
+            BOOST_TEST_MESSAGE(std::string("Match pixel template (")+x.path().filename().string() +")" << (t2 - t1).seconds() * 1000 << "ms");
+
+            std::string fileName = std::string("top_layer_")+x.path().filename().string();
+            UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
+
+            if (SpamResult::kSR_SUCCESS == sr)
+            {
+                UnitTestHelper::Color color{ 255, 0, 0, 255 };
+                cv::Point2f pt = pixelTmpl.GetCenter();
+                const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
+                UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+                UnitTestHelper::WriteImage(colorImg, std::string("match_") + x.path().filename().string());
+            }
+        }
     }
 }
 

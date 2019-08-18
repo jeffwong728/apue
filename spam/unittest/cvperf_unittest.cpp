@@ -83,6 +83,34 @@ BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0)
     UnitTestHelper::WriteImage(borderImg, std::string("mista_pyr_border.png"));
 }
 
+BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_1)
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
+
+    std::vector<cv::Mat> pyrs;
+    tbb::tick_count t1 = tbb::tick_count::now();
+    cv::buildPyramid(grayImg, pyrs, 5, cv::BORDER_REFLECT);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_CHECK_EQUAL(pyrs.size(), 6);
+    BOOST_TEST_MESSAGE("CV build pyramid spend (board-01.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    cv::Mat borderImg;
+    t1 = tbb::tick_count::now();
+    cv::copyMakeBorder(pyrs[4], borderImg, 64, 64, 64, 64, cv::BORDER_CONSTANT, 0);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV copy make border spend (board-01.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    int id = 0;
+    for (const cv::Mat &pyr : pyrs)
+    {
+        std::string fileName = std::string("board-01_pyr_") + std::to_string(id++) + ".png";
+        UnitTestHelper::WriteImage(pyr, fileName);
+    }
+
+    UnitTestHelper::WriteImage(borderImg, std::string("board-01_pyr_border.png"));
+}
+
 BOOST_AUTO_TEST_CASE(test_CV_GaussianBlur_Performance_0)
 {
     cv::Mat grayImg, colorImg;

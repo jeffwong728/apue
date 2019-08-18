@@ -184,6 +184,7 @@ void PixelTemplate::CandidateGroup::RLEncodeCandidates(CandidateList &candidates
 void PixelTemplate::CandidateGroup::Connect(CandidateGroupList &candidateGroups)
 {
     row_ranges.resize(0);
+    adjacency_list.resize(0);
     adjacency_list.resize(size());
     candidateGroups.resize(0);
 
@@ -292,8 +293,7 @@ PixelTemplate::~PixelTemplate()
 
 SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle)
 {
-    candidates_.resize(0);
-    final_candidates_.resize(0);
+    clearCacheMatchData();
 
     pos.x = 0.f;
     pos.y = 0.f;
@@ -536,6 +536,16 @@ void PixelTemplate::destroyData()
     search_rois_.clear();
     pyramid_tmpl_datas_.clear();
     pyrs_.clear();
+}
+
+void PixelTemplate::clearCacheMatchData()
+{
+    row_ptrs_.resize(0);
+    candidates_.resize(0);
+    top_candidates_.resize(0);
+    final_candidates_.resize(0);
+    candidate_runs_.resize(0);
+    candidate_groups_.resize(0);
 }
 
 SpamResult PixelTemplate::verifyCreateData(const PixelTmplCreateData &createData)
