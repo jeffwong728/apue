@@ -18,25 +18,59 @@
 #include <2geom/pathvector.h>
 #pragma warning( pop )
 
-using PixelValueSequence = boost::variant<std::vector<int16_t>, std::vector<float>>;
-struct PixelTmplData
+using PixelValueSequence = std::vector<int16_t>;
+using NCCValueSequence = std::vector<uint8_t>;
+using Point3iSet = std::vector<cv::Point3i>;
+using NCCValuePairSequence = std::vector<std::pair<uint8_t, uint8_t>>;
+using PointPairSet = std::vector<std::pair<cv::Point, cv::Point>>;
+
+enum TemplPart
 {
-    PixelTmplData(const float a, const float s) : angle(a), scale(s) {}
-    PixelValueSequence     pixlVals;
-    PointSet               pixlLocs;
-    std::vector<int>       belowCandidates;
-    cv::Point              minPoint;
-    cv::Point              maxPoint;
-    float                  angle;
-    float                  scale;
+    kTP_WaveBack = 0,
+    kTP_WaveMiddle = 1,
+    kTP_WaveFront = 2,
+    kTP_WaveGuard = 3
 };
 
-struct LayerTmplData
+struct PixelTemplData
 {
-    LayerTmplData(const float as, const float ss) : angleStep(as), scaleStep(ss) {}
+    PixelTemplData(const float a, const float s) : angle(a), scale(s) {}
+    PixelValueSequence pixlVals;
+    PointSet           pixlLocs;
+    std::vector<int>   mindices;
+    cv::Point          minPoint;
+    cv::Point          maxPoint;
+    float              angle;
+    float              scale;
+};
+
+struct NCCTemplData
+{
+    NCCTemplData(const float a, const float s) : angle(a), scale(s) {}
+    Point3iSet           partialLocs;
+    NCCValueSequence     partialVals;
+    Point3iSet           residualLocs;
+    NCCValueSequence     residualVals;
+    PointPairSet         residualBoundaries;
+    NCCValuePairSequence residualBoundaryVals;
+    std::vector<int>     mindices;
+    cv::Point            minPoint;
+    cv::Point            maxPoint;
+    int                  cPartialBack;
+    int                  cPartialFront;
+    float                angle;
+    float                scale;
+};
+
+using PixelTemplDatas = std::vector<PixelTemplData>;
+using NCCTemplDatas = std::vector<NCCTemplData>;
+using TemplDataSequence = boost::variant<PixelTemplDatas, NCCTemplDatas>;
+struct LayerTemplData
+{
+    LayerTemplData(const float as, const float ss) : angleStep(as), scaleStep(ss) {}
     float angleStep;
     float scaleStep;
-    std::vector<PixelTmplData> tmplDatas;
+    TemplDataSequence tmplDatas;
 };
 
 struct PixelTmplCreateData
@@ -130,6 +164,7 @@ public:
     };
 
     friend struct SADTopLayerScaner;
+    friend struct SADCandidateScaner;
 
 public:
     PixelTemplate();
@@ -138,7 +173,7 @@ public:
 public:
     SpamResult matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
     SpamResult CreatePixelTemplate(const PixelTmplCreateData &createData);
-    const std::vector<LayerTmplData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
+    const std::vector<LayerTemplData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;
     cv::Point2f GetCenter() const { return cfs_.front(); }
 
@@ -150,6 +185,7 @@ private:
     void linkTemplatesBetweenLayers();
     static uint8_t getMinMaxGrayScale(const cv::Mat &img, const PointSet &maskPoints, const cv::Point &point);
     void supressNoneMaximum();
+    void changeToNCCTemplate();
 
 private:
     int pyramid_level_;
@@ -157,7 +193,7 @@ private:
     std::vector<cv::Point2f> cfs_; // centre of referance
     std::vector<SpamRgn>     tmpl_rgns_;
     std::vector<SpamRgn>     search_rois_;
-    std::vector<LayerTmplData> pyramid_tmpl_datas_;
+    std::vector<LayerTemplData> pyramid_tmpl_datas_;
     std::vector<cv::Mat> pyrs_;
     std::vector<const uint8_t *> row_ptrs_;
     CandidateList candidates_;

@@ -46,13 +46,22 @@ struct SADTopLayerScaner
     PixelTemplate::CandidateList candidates;
 };
 
+struct SADCandidateScaner
+{
+    SADCandidateScaner(PixelTemplate *const pixTmpl, const int s, const int l) : tmpl(pixTmpl), sad(s), layer(l) {}
+    void operator()(const tbb::blocked_range<int>& r) const;
+    const int sad;
+    const int layer;
+    PixelTemplate *const tmpl;
+};
+
 void SADTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
 {
     const cv::Mat &topLayer = tmpl->pyrs_.back();
     const int nCols = topLayer.cols;
     constexpr int32_t simdSize = 16;
     std::array<int16_t, simdSize> tempData;
-    const LayerTmplData &topLayerTmplData = tmpl->pyramid_tmpl_datas_.back();
+    const LayerTemplData &topLayerTemplData = tmpl->pyramid_tmpl_datas_.back();
     OutsideImageBox oib(topLayer.cols, topLayer.rows);
     const int topSad = sad + 5 * (tmpl->pyramid_level_ - 1);
     const int rowStart = br.begin();
@@ -65,9 +74,10 @@ void SADTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
             cv::Point originPt{ col, row };
             int32_t minSAD = std::numeric_limits<int32_t>::max();
             int bestTmplIndex = 0;
-            for (int t = 0; t < static_cast<int>(topLayerTmplData.tmplDatas.size()); ++t)
+            const auto &tmplDatas = boost::get<PixelTemplDatas>(topLayerTemplData.tmplDatas);
+            for (int t = 0; t < static_cast<int>(tmplDatas.size()); ++t)
             {
-                const PixelTmplData &ptd = topLayerTmplData.tmplDatas[t];
+                const PixelTemplData &ptd = tmplDatas[t];
 
                 if (oib(originPt + ptd.minPoint) || oib(originPt + ptd.maxPoint))
                 {
@@ -76,7 +86,7 @@ void SADTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
 
                 const int32_t numPoints = static_cast<int32_t>(ptd.pixlLocs.size());
                 const int32_t regularSize = numPoints & (-simdSize);
-                const auto &pixlVals = boost::get<std::vector<int16_t>>(ptd.pixlVals);
+                const auto &pixlVals = ptd.pixlVals;
                 const cv::Point *pPixlLocs = ptd.pixlLocs.data();
 
                 int32_t n = 0;
@@ -126,6 +136,96 @@ void SADTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
             {
                 candidates.emplace_back(row, col, bestTmplIndex, static_cast<float>(255 - minSAD));
             }
+        }
+    }
+}
+
+void SADCandidateScaner::operator()(const tbb::blocked_range<int>& r) const
+{
+    LayerTemplData &ltd = tmpl->pyramid_tmpl_datas_[layer];
+    const cv::Mat &layerMat = tmpl->pyrs_[layer];
+    constexpr int32_t simdSize = 16;
+    std::array<int16_t, simdSize> tempData;
+    OutsideImageBox oib(layerMat.cols, layerMat.rows);
+    const int layerSad = sad + 5 * layer;
+    const auto &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
+    const auto &upperTmplDatas = boost::get<PixelTemplDatas>(tmpl->pyramid_tmpl_datas_[layer + 1].tmplDatas);
+
+    for (int c=r.begin(); c!=r.end(); ++c)
+    {
+        PixelTemplate::Candidate &candidate = tmpl->final_candidates_[c];
+        const int row = candidate.row;
+        const int col = candidate.col;
+        cv::Point originPt{ col, row };
+        int32_t minSAD = std::numeric_limits<int32_t>::max();
+        int bestTmplIndex = 0;
+        const std::vector<int> &tmplIndices = upperTmplDatas[candidate.mindex].mindices;
+        for (const int tmplIndex : tmplIndices)
+        {
+            const PixelTemplData &ptd = tmplDatas[tmplIndex];
+
+            if (oib(originPt + ptd.minPoint) || oib(originPt + ptd.maxPoint))
+            {
+                continue;
+            }
+
+            const int32_t numPoints = static_cast<int32_t>(ptd.pixlLocs.size());
+            const int32_t regularSize = numPoints & (-simdSize);
+            const auto &pixlVals = ptd.pixlVals;
+            const cv::Point *pPixlLocs = ptd.pixlLocs.data();
+
+            int32_t n = 0;
+            int32_t partialSum = 0;
+            for (; n < regularSize; n += simdSize)
+            {
+                for (int m = 0; m < simdSize; ++m)
+                {
+                    const int x = pPixlLocs->x + col;
+                    const int y = pPixlLocs->y + row;
+                    tempData[m] = tmpl->row_ptrs_[y][x];
+                    pPixlLocs += 1;
+                }
+
+                vcl::Vec16s tempVec0, tempVec1;
+                tempVec0.load(tempData.data());
+                tempVec1.load(pixlVals.data() + n);
+                partialSum += vcl::horizontal_add(vcl::abs(tempVec0 - tempVec1));
+                if (partialSum > numPoints * layerSad)
+                {
+                    break;
+                }
+            }
+
+            if (n < regularSize)
+            {
+                continue;
+            }
+
+            for (; n < numPoints; ++n)
+            {
+                const int x = pPixlLocs->x + col;
+                const int y = pPixlLocs->y + row;
+                partialSum += std::abs(pixlVals[n] - tmpl->row_ptrs_[y][x]);
+                pPixlLocs += 1;
+            }
+
+            int32_t sad = partialSum / numPoints;
+            if (sad < minSAD)
+            {
+                minSAD = sad;
+                bestTmplIndex = tmplIndex;
+            }
+        }
+
+        if (minSAD < layerSad)
+        {
+            candidate.mindex = bestTmplIndex;
+            candidate.score = static_cast<float>(255 - minSAD);
+        }
+        else
+        {
+            candidate.mindex = -1;
+            candidate.score = 0.f;
         }
     }
 }
@@ -340,99 +440,17 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
     const int layerIndex = static_cast<int>(pyramid_tmpl_datas_.size() - 2);
     for (int layer = layerIndex; layer >= 0; --layer)
     {
-        LayerTmplData &ltd = pyramid_tmpl_datas_[layer];
         const cv::Mat &layerMat = pyrs_[layer];
-        const int nLayerCols = layerMat.cols;
         const int nLayerRows = layerMat.rows;
-        constexpr int32_t simdSize = 16;
-        std::array<int16_t, simdSize> tempData;
-        const LayerTmplData &layerTmplData = pyramid_tmpl_datas_[layer];
-        OutsideImageBox oib(layerMat.cols, layerMat.rows);
-        const int layerSad = sad + 5 * layer;
 
-        row_ptrs_.clear();
+        row_ptrs_.resize(0);
         row_ptrs_.resize(nLayerRows);
         for (int row = 0; row < nLayerRows; ++row)
         {
             row_ptrs_[row] = layerMat.ptr<uint8_t>(row);
         }
 
-        for (Candidate &candidate : final_candidates_)
-        {
-            const int row = candidate.row;
-            const int col = candidate.col;
-            cv::Point originPt{ col, row };
-            int32_t minSAD = std::numeric_limits<int32_t>::max();
-            int bestTmplIndex = 0;
-            const std::vector<int> &tmplIndices = pyramid_tmpl_datas_[layer + 1].tmplDatas[candidate.mindex].belowCandidates;
-            for (const int tmplIndex : tmplIndices)
-            {
-                const PixelTmplData &ptd = ltd.tmplDatas[tmplIndex];
-
-                if (oib(originPt + ptd.minPoint) || oib(originPt + ptd.maxPoint))
-                {
-                    continue;
-                }
-
-                const int32_t numPoints = static_cast<int32_t>(ptd.pixlLocs.size());
-                const int32_t regularSize = numPoints & (-simdSize);
-                const auto &pixlVals = boost::get<std::vector<int16_t>>(ptd.pixlVals);
-                const cv::Point *pPixlLocs = ptd.pixlLocs.data();
-
-                int32_t n = 0;
-                int32_t partialSum = 0;
-                for (; n < regularSize; n += simdSize)
-                {
-                    for (int m = 0; m < simdSize; ++m)
-                    {
-                        const int x = pPixlLocs->x + col;
-                        const int y = pPixlLocs->y + row;
-                        tempData[m] = row_ptrs_[y][x];
-                        pPixlLocs += 1;
-                    }
-
-                    vcl::Vec16s tempVec0, tempVec1;
-                    tempVec0.load(tempData.data());
-                    tempVec1.load(pixlVals.data() + n);
-                    partialSum += vcl::horizontal_add(vcl::abs(tempVec0 - tempVec1));
-                    if (partialSum > numPoints * layerSad)
-                    {
-                        break;
-                    }
-                }
-
-                if (n < regularSize)
-                {
-                    continue;
-                }
-
-                for (; n < numPoints; ++n)
-                {
-                    const int x = pPixlLocs->x + col;
-                    const int y = pPixlLocs->y + row;
-                    partialSum += std::abs(pixlVals[n] - row_ptrs_[y][x]);
-                    pPixlLocs += 1;
-                }
-
-                int32_t sad = partialSum / numPoints;
-                if (sad < minSAD)
-                {
-                    minSAD = sad;
-                    bestTmplIndex = tmplIndex;
-                }
-            }
-
-            if (minSAD < layerSad)
-            {
-                candidate.mindex = bestTmplIndex;
-                candidate.score = static_cast<float>(255 - minSAD);
-            }
-            else
-            {
-                candidate.mindex = -1;
-                candidate.score = 0.f;
-            }
-        }
+        tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), SADCandidateScaner(this, sad, layer));
 
         for (Candidate &candidate : candidates_)
         {
@@ -492,7 +510,8 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
     {
         pos.x = static_cast<float>(bestCandidate.col);
         pos.y = static_cast<float>(bestCandidate.row);
-        angle = pyramid_tmpl_datas_[0].tmplDatas[bestCandidate.mindex].angle;
+        const auto &tmplDatas = boost::get<PixelTemplDatas>(pyramid_tmpl_datas_[0].tmplDatas);
+        angle = tmplDatas[bestCandidate.mindex].angle;
 
         return SpamResult::kSR_OK;
     }
@@ -627,10 +646,12 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
         }
 
         pyramid_tmpl_datas_.emplace_back(static_cast<float>(angleStep), 0.f);
-        LayerTmplData &ltl = pyramid_tmpl_datas_.back();
+        LayerTemplData &ltd = pyramid_tmpl_datas_.back();
 
         const cv::Mat &pyrImg = pyrs_[l];
         const cv::Point &pyrImgCenter{ pyrImg.cols / 2, pyrImg.rows / 2 };
+        ltd.tmplDatas = PixelTemplDatas();
+        auto &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
 
         transMat.at<double>(0, 2) = pyrImgCenter.x - anchorPoint.x;
         transMat.at<double>(1, 2) = pyrImgCenter.y - anchorPoint.y;
@@ -652,10 +673,9 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
                 return SpamResult::kSR_TM_TEMPL_REGION_OUT_OF_RANGE;
             }
 
-            ltl.tmplDatas.emplace_back(static_cast<float>(deg), 1.f);
-            PixelTmplData &ptd = ltl.tmplDatas.back();
+            tmplDatas.emplace_back(static_cast<float>(deg), 1.f);
+            PixelTemplData &ptd = tmplDatas.back();
 
-            ptd.pixlVals = std::vector<int16_t>();
             PointSet &pixlLocs = ptd.pixlLocs;
             const int numPoints = static_cast<int>(pointSetTmpl.size());
             for (int n=0; n<numPoints; ++n)
@@ -663,7 +683,7 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
                 if (getMinMaxGrayScale(transRotPyrImg, maskPoints, pointSetTmpl[n]) > 10)
                 {
                     pixlLocs.push_back(pointSetOrigin[n]);
-                    boost::get<std::vector<int16_t>>(ptd.pixlVals).push_back(transRotPyrImg.at<uint8_t>(pointSetTmpl[n]));
+                    ptd.pixlVals.push_back(transRotPyrImg.at<uint8_t>(pointSetTmpl[n]));
                 }
             }
 
@@ -686,16 +706,18 @@ void PixelTemplate::linkTemplatesBetweenLayers()
     const int topLayerIndex = static_cast<int>(pyramid_tmpl_datas_.size()-1);
     for (int layer = topLayerIndex; layer > 0; --layer)
     {
-        LayerTmplData &ltd = pyramid_tmpl_datas_[layer];
-        LayerTmplData &belowLtd = pyramid_tmpl_datas_[layer-1];
-        for (PixelTmplData &ptd : ltd.tmplDatas)
+        LayerTemplData &ltd = pyramid_tmpl_datas_[layer];
+        LayerTemplData &belowLtd = pyramid_tmpl_datas_[layer-1];
+        auto &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
+        const auto &belowTmplDatas = boost::get<PixelTemplDatas>(belowLtd.tmplDatas);
+        for (PixelTemplData &ptd : tmplDatas)
         {
             AngleRange angleRange(ptd.angle - ltd.angleStep, ptd.angle + ltd.angleStep);
-            for (int t=0; t< belowLtd.tmplDatas.size(); ++t)
+            for (int t=0; t< belowTmplDatas.size(); ++t)
             {
-                if (angleRange.contains(belowLtd.tmplDatas[t].angle))
+                if (angleRange.contains(belowTmplDatas[t].angle))
                 {
-                    ptd.belowCandidates.push_back(t);
+                    ptd.mindices.push_back(t);
                 }
             }
         }
@@ -749,6 +771,23 @@ void PixelTemplate::supressNoneMaximum()
     }
 
     top_candidates_.assign(candidates_.cbegin(), candidates_.cend());
+}
+
+void PixelTemplate::changeToNCCTemplate()
+{
+    for (LayerTemplData &ltd : pyramid_tmpl_datas_)
+    {
+        NCCTemplDatas ntds;
+        PixelTemplDatas &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
+        for (PixelTemplData &ptd : tmplDatas)
+        {
+            ntds.emplace_back(ptd.angle, ptd.scale);
+            NCCTemplData &ntd = ntds.back();
+            ntd.minPoint = ptd.minPoint;
+            ntd.maxPoint = ptd.maxPoint;
+            ntd.mindices = ptd.mindices;
+        }
+    }
 }
 
 cv::Mat PixelTemplate::GetTopScoreMat() const

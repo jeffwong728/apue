@@ -188,20 +188,21 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Small, *boost::unit_test::enable_if<f
     BOOST_TEST_MESSAGE("Create pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
 
-    const std::vector<LayerTmplData> &tmplDatas = pixelTmpl.GetTmplDatas();
+    const std::vector<LayerTemplData> &tmplDatas = pixelTmpl.GetTmplDatas();
     for (int l=0; l < static_cast<int>(tmplDatas.size()); ++l)
     {
-        const LayerTmplData &ltd = tmplDatas[l];
-        for (int t = 0; t < static_cast<int>(ltd.tmplDatas.size()); ++t)
+        const LayerTemplData &ltd = tmplDatas[l];
+        const auto &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
+        for (int t = 0; t < static_cast<int>(tmplDatas.size()); ++t)
         {
             int i = 0;
-            const PixelTmplData &ptd = ltd.tmplDatas[t];
+            const PixelTemplData &ptd = tmplDatas[t];
             const int width = ptd.maxPoint.x - ptd.minPoint.x + 1;
             const int height = ptd.maxPoint.y - ptd.minPoint.y + 1;
             cv::Mat tmplMat(height, width, CV_8UC1, cv::Scalar(128, 128, 128));
             for (const cv::Point &pt : ptd.pixlLocs)
             {
-                tmplMat.at<uint8_t>(pt - ptd.minPoint) = static_cast<uint8_t>(boost::get<std::vector<int16_t>>(ptd.pixlVals)[i++]);
+                tmplMat.at<uint8_t>(pt - ptd.minPoint) = static_cast<uint8_t>(ptd.pixlVals[i++]);
             }
 
             std::string fileName = std::string("mista_tmpl_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
@@ -228,20 +229,21 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Big, *boost::unit_test::enable_if<fal
     BOOST_TEST_MESSAGE("Create pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
 
-    const std::vector<LayerTmplData> &tmplDatas = pixelTmpl.GetTmplDatas();
+    const std::vector<LayerTemplData> &tmplDatas = pixelTmpl.GetTmplDatas();
     for (int l = 3; l < static_cast<int>(tmplDatas.size()); ++l)
     {
-        const LayerTmplData &ltd = tmplDatas[l];
-        for (int t = 0; t < static_cast<int>(ltd.tmplDatas.size()); ++t)
+        const LayerTemplData &ltd = tmplDatas[l];
+        const auto &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
+        for (int t = 0; t < static_cast<int>(tmplDatas.size()); ++t)
         {
             int i = 0;
-            const PixelTmplData &ptd = ltd.tmplDatas[t];
+            const PixelTemplData &ptd = tmplDatas[t];
             const int width = ptd.maxPoint.x - ptd.minPoint.x + 1;
             const int height = ptd.maxPoint.y - ptd.minPoint.y + 1;
             cv::Mat tmplMat(height, width, CV_8UC1, cv::Scalar(128, 128, 128));
             for (const cv::Point &pt : ptd.pixlLocs)
             {
-                tmplMat.at<uint8_t>(pt - ptd.minPoint) = static_cast<uint8_t>(boost::get<std::vector<int16_t>>(ptd.pixlVals)[i++]);
+                tmplMat.at<uint8_t>(pt - ptd.minPoint) = static_cast<uint8_t>(ptd.pixlVals[i++]);
             }
 
             std::string fileName = std::string("mista_tmpl_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
@@ -260,7 +262,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<true
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
     //tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 5, cv::TM_SQDIFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 4, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -328,8 +330,9 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     t1 = tbb::tick_count::now();
     sr = pixelTmpl.matchTemplate(grayImg, 20, pos, angle);
     t2 = tbb::tick_count::now();
-    BOOST_CHECK_CLOSE(pos.x, 2100.f, 1e-3f);
-    BOOST_CHECK_CLOSE(pos.y, 1949.f, 1e-3f);
+    cv::Point2f pt = pixelTmpl.GetCenter();
+    BOOST_CHECK_CLOSE(pos.x, pt.x, 1e-3f);
+    BOOST_CHECK_CLOSE(pos.y, pt.y, 1e-3f);
     BOOST_CHECK_CLOSE(angle, 0.26284039f, 1e-3f);
     BOOST_TEST_MESSAGE("Match pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
@@ -339,7 +342,6 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     if (SpamResult::kSR_SUCCESS == sr)
     {
         UnitTestHelper::Color color{ 255, 0, 0, 255 };
-        cv::Point2f pt = pixelTmpl.GetCenter();
         const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
         UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
         UnitTestHelper::WriteImage(colorImg, std::string("mista_tmpl_match.png"));
