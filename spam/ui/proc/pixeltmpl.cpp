@@ -46,6 +46,74 @@ struct SADTopLayerScaner
     PixelTemplate::CandidateList candidates;
 };
 
+struct NCCTopLayerScaner
+{
+    using NCCValueList = std::vector<uint32_t, tbb::scalable_allocator<uint32_t>>;
+    NCCTopLayerScaner(const PixelTemplate *const pixTmpl, const double s) : tmpl(pixTmpl), score(s) {}
+    NCCTopLayerScaner(NCCTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), score(s.score) { }
+
+    void operator()(const tbb::blocked_range<int>& br);
+    void join(SADTopLayerScaner& rhs) { candidates.insert(candidates.end(), rhs.candidates.cbegin(), rhs.candidates.cend()); }
+
+    int64_t sumVector(const NCCValueList &vec)
+    {
+        vcl::Vec8ui sumVec(0);
+        const uint32_t *pVals = vec.data();
+        constexpr int simdSize = 8;
+        const int numItems = static_cast<int>(vec.size());
+        for (int n = 0; n < numItems; n += simdSize)
+        {
+            vcl::Vec8ui tempVec;
+            tempVec.load(pVals);
+            sumVec += tempVec;
+            pVals += 8;
+        }
+
+        return vcl::horizontal_add(sumVec);
+    }
+
+    int64_t squareSumVector(const NCCValueList &vec)
+    {
+        vcl::Vec8ui sumVec(0);
+        const uint32_t *pVals = vec.data();
+        constexpr int simdSize = 8;
+        const int numItems = static_cast<int>(vec.size());
+        for (int n = 0; n < numItems; n += simdSize)
+        {
+            vcl::Vec8ui tempVec;
+            tempVec.load(pVals);
+            sumVec += (tempVec * tempVec);
+            pVals += 8;
+        }
+
+        return vcl::horizontal_add(sumVec);
+    }
+
+    int64_t dotSumVector(const NCCValueList &vec1, const NCCValueList &vec2)
+    {
+        vcl::Vec8ui sumVec(0);
+        const uint32_t *pVals1 = vec1.data();
+        const uint32_t *pVals2 = vec2.data();
+        constexpr int simdSize = 8;
+        const int numItems = static_cast<int>(vec1.size());
+        for (int n = 0; n < numItems; n += simdSize)
+        {
+            vcl::Vec8ui tempVec1, tempVec2;
+            tempVec1.load(pVals1);
+            tempVec2.load(pVals2);
+            sumVec += (tempVec1 * tempVec2);
+            pVals1 += 8;
+            pVals2 += 8;
+        }
+
+        return vcl::horizontal_add(sumVec);
+    }
+
+    const double score;
+    const PixelTemplate *const tmpl;
+    PixelTemplate::CandidateList candidates;
+};
+
 struct SADCandidateScaner
 {
     SADCandidateScaner(PixelTemplate *const pixTmpl, const int s, const int l) : tmpl(pixTmpl), sad(s), layer(l) {}
@@ -136,6 +204,136 @@ void SADTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
             {
                 candidates.emplace_back(row, col, bestTmplIndex, static_cast<float>(255 - minSAD));
             }
+        }
+    }
+}
+
+void NCCTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
+{
+    const cv::Mat &layerMat = tmpl->pyrs_.back();
+    const int nLayerCols = layerMat.cols;
+    const LayerTemplData &layerTempls = tmpl->pyramid_tmpl_datas_.back();
+    OutsideImageBox oib(layerMat.cols, layerMat.rows);
+    const double layerMinScore = std::max(0.5, score - 0.05 * (tmpl->pyramid_level_ - 1));
+    const int rowStart = br.begin();
+    const int rowEnd = br.end();
+    const NCCTemplDatas &tmplDatas = boost::get<NCCTemplDatas>(layerTempls.tmplDatas);
+    const int numLayerTempls = static_cast<int>(tmplDatas.size());
+
+    constexpr int simdSize = 8;
+    std::vector<uint32_t, tbb::scalable_allocator<uint32_t>> tmplAVals, tmplBVals;
+    std::vector<uint32_t, tbb::scalable_allocator<uint32_t>> partAVals[kTP_WaveGuard], partBVals[kTP_WaveGuard];
+
+    std::map<int, PixelTemplate::Candidate, tbb::scalable_allocator<std::pair<const int, PixelTemplate::Candidate>>> aCandidates;
+    for (int t=0; t<numLayerTempls; ++t)
+    {
+        int64_t partASum    = -1, partABackSum    = -1, partAFrontSum    = -1;
+        int64_t partASqrSum = -1, partABackSqrSum = -1, partAFrontSqrSum = -1;
+        int64_t partBSum    = -1, partBBackSum    = -1, partBFrontSum    = -1;
+        int64_t partBSqrSum = -1, partBBackSqrSum = -1, partBFrontSqrSum = -1;
+        const NCCTemplData &ntd  = tmplDatas[t];
+
+        tmplAVals.resize((static_cast<int>(ntd.partAVals.size()) + simdSize - 1) & (-simdSize), 0);
+        tmplBVals.resize((static_cast<int>(ntd.partBVals.size()) + simdSize - 1) & (-simdSize), 0);
+
+        uint32_t *pTmplAVals = tmplAVals.data();
+        uint32_t *pTmplBVals = tmplBVals.data();
+        for (uint8_t v : ntd.partAVals)
+        {
+            *pTmplAVals = v; pTmplAVals += 1;
+        }
+
+        for (uint8_t v : ntd.partBVals)
+        {
+            *pTmplBVals = v; pTmplBVals += 1;
+        }
+
+        partAVals[kTP_WaveBack].resize((ntd.cPartABoundaries + simdSize - 1) & (-simdSize), 0);
+        partAVals[kTP_WaveFront].resize((ntd.cPartABoundaries + simdSize - 1) & (-simdSize), 0);
+        partAVals[kTP_WaveMiddle].resize((static_cast<int>(ntd.partAVals.size()) + simdSize - 1) & (-simdSize), 0);
+        partBVals[kTP_WaveBack].resize((static_cast<int>(ntd.partBBoundaries.size()) + simdSize - 1) & (-simdSize), 0);
+        partBVals[kTP_WaveFront].resize((static_cast<int>(ntd.partBBoundaries.size()) + simdSize - 1) & (-simdSize), 0);
+        partBVals[kTP_WaveMiddle].resize((static_cast<int>(ntd.partBVals.size()) + simdSize - 1) & (-simdSize), 0);
+
+        for (int row = rowStart; row < rowEnd; ++row)
+        {
+            for (int col = 0; col < nLayerCols; ++col)
+            {
+                cv::Point originPt{ col, row };
+                if (oib(originPt + ntd.minPoint) || oib(originPt + ntd.maxPoint))
+                {
+                    continue;
+                }
+                if (partASum<0)
+                {
+                    uint32_t *pPartAVals[kTP_WaveGuard]{ partAVals[kTP_WaveBack].data(), partAVals[kTP_WaveFront].data(), partAVals[kTP_WaveMiddle].data() };
+                    uint32_t *pPartBVals[kTP_WaveGuard]{ partBVals[kTP_WaveBack].data(), partBVals[kTP_WaveFront].data(), partBVals[kTP_WaveMiddle].data() };
+
+                    for (const cv::Point3i &pt3 : ntd.partALocs)
+                    {
+                        const int x = pt3.x + col;
+                        const int y = pt3.y + row;
+                        const uint8_t val = tmpl->row_ptrs_[y][x];
+                        *pPartAVals[kTP_WaveMiddle] = val; pPartAVals[kTP_WaveMiddle] += 1;
+                        switch (pt3.z)
+                        {
+                        case kTP_WaveBack:
+                            *pPartAVals[kTP_WaveBack] = val; pPartAVals[kTP_WaveBack] += 1;
+                            break;
+
+                        case kTP_WaveFront:
+                            *pPartAVals[kTP_WaveFront] = val; pPartAVals[kTP_WaveFront] += 1;
+                            break;
+
+                        default:
+                            break;
+                        }
+                    }
+
+                    for (const cv::Point3i &pt3 : ntd.partBLocs)
+                    {
+                        const int x = pt3.x + col;
+                        const int y = pt3.y + row;
+                        const uint8_t val = tmpl->row_ptrs_[y][x];
+                        *pPartBVals[kTP_WaveMiddle] = val; pPartBVals[kTP_WaveMiddle] += 1;
+                        switch (pt3.z)
+                        {
+                        case kTP_WaveBack:
+                            *pPartBVals[kTP_WaveBack] = val; pPartBVals[kTP_WaveBack] += 1;
+                            break;
+
+                        case kTP_WaveFront:
+                            *pPartBVals[kTP_WaveFront] = val; pPartBVals[kTP_WaveFront] += 1;
+                            break;
+
+                        default:
+                            break;
+                        }
+                    }
+
+                    partASum         = sumVector(partAVals[kTP_WaveMiddle]);
+                    partABackSum     = sumVector(partAVals[kTP_WaveBack]);
+                    partAFrontSum    = sumVector(partAVals[kTP_WaveFront]);
+                    partASqrSum      = squareSumVector(partAVals[kTP_WaveMiddle]);
+                    partABackSqrSum  = squareSumVector(partAVals[kTP_WaveBack]);
+                    partAFrontSqrSum = squareSumVector(partAVals[kTP_WaveFront]);
+                    partBSum         = sumVector(partBVals[kTP_WaveMiddle]);
+                    partBBackSum     = sumVector(partBVals[kTP_WaveBack]);
+                    partBFrontSum    = sumVector(partBVals[kTP_WaveFront]);
+                    partBSqrSum      = squareSumVector(partBVals[kTP_WaveMiddle]);
+                    partBBackSqrSum  = squareSumVector(partBVals[kTP_WaveBack]);
+                    partBFrontSqrSum = squareSumVector(partBVals[kTP_WaveFront]);
+                }
+                else
+                {
+
+                }
+            }
+
+            partASum = -1; partABackSum = -1; partAFrontSum = -1;
+            partASqrSum = -1; partABackSqrSum = -1; partAFrontSqrSum = -1;
+            partBSum = -1; partBBackSum = -1; partBFrontSum = -1;
+            partBSqrSum = -1; partBBackSqrSum = -1; partBFrontSqrSum = -1;
         }
     }
 }
@@ -391,7 +589,7 @@ PixelTemplate::~PixelTemplate()
 { 
 }
 
-SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle)
+SpamResult PixelTemplate::matchPixelTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle)
 {
     clearCacheMatchData();
 
@@ -513,7 +711,7 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
         const auto &tmplDatas = boost::get<PixelTemplDatas>(pyramid_tmpl_datas_[0].tmplDatas);
         angle = tmplDatas[bestCandidate.mindex].angle;
 
-        return SpamResult::kSR_OK;
+        return SpamResult::kSR_SUCCESS;
     }
     else
     {
@@ -521,18 +719,23 @@ SpamResult PixelTemplate::matchTemplate(const cv::Mat &img, const int sad, cv::P
     }
 }
 
-SpamResult PixelTemplate::CreatePixelTemplate(const PixelTmplCreateData &createData)
+SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float score, cv::Point2f &pos, float &angle)
+{
+    return SpamResult::kSR_SUCCESS;
+}
+
+SpamResult PixelTemplate::CreateTemplate(const PixelTmplCreateData &createData)
 {
     destroyData();
     SpamResult sr = verifyCreateData(createData);
-    if (SpamResult::kSR_OK != sr)
+    if (SpamResult::kSR_SUCCESS != sr)
     {
         destroyData();
         return sr;
     }
 
     sr = calcCentreOfGravity(createData);
-    if (SpamResult::kSR_OK != sr)
+    if (SpamResult::kSR_SUCCESS != sr)
     {
         destroyData();
         return sr;
@@ -543,7 +746,17 @@ SpamResult PixelTemplate::CreatePixelTemplate(const PixelTmplCreateData &createD
     pyramid_level_ = createData.pyramidLevel;
     match_mode_    = createData.matchMode;
 
-    return SpamResult::kSR_OK;
+    if (cv::TM_CCOEFF_NORMED==match_mode_)
+    {
+        sr = changeToNCCTemplate();
+        if (SpamResult::kSR_SUCCESS != sr)
+        {
+            destroyData();
+            return sr;
+        }
+    }
+
+    return SpamResult::kSR_SUCCESS;
 }
 
 void PixelTemplate::destroyData()
@@ -773,7 +986,7 @@ void PixelTemplate::supressNoneMaximum()
     top_candidates_.assign(candidates_.cbegin(), candidates_.cend());
 }
 
-void PixelTemplate::changeToNCCTemplate()
+SpamResult PixelTemplate::changeToNCCTemplate()
 {
     for (LayerTemplData &ltd : pyramid_tmpl_datas_)
     {
@@ -786,8 +999,139 @@ void PixelTemplate::changeToNCCTemplate()
             ntd.minPoint = ptd.minPoint;
             ntd.maxPoint = ptd.maxPoint;
             ntd.mindices = ptd.mindices;
+
+            const int numTotalPoints = static_cast<int>(ptd.pixlLocs.size());
+            int partitionIndex = static_cast<int>(ptd.pixlLocs.size()*0.2);
+
+            if (partitionIndex<1)
+            {
+                return SpamResult::kSR_TM_TEMPL_REGION_TOO_SMALL;
+            }
+
+            for (int n=partitionIndex; n<numTotalPoints; ++n)
+            {
+                if (ptd.pixlLocs[n].y != ptd.pixlLocs[n-1].y)
+                {
+                    partitionIndex = n;
+                    break;
+                }
+            }
+
+            if (partitionIndex==(numTotalPoints-1))
+            {
+                return SpamResult::kSR_TM_TEMPL_REGION_TOO_SMALL;
+            }
+
+            ntd.partASum = 0;
+            ntd.partBSum = 0;
+            ntd.partASqrSum = 0;
+            ntd.partBSqrSum = 0;
+            ntd.cPartABoundaries = 0;
+            for (int n=0; n<partitionIndex; ++n)
+            {
+                bool backPoint = (0 == n || (ptd.pixlLocs[n].y != ptd.pixlLocs[n - 1].y) || (ptd.pixlLocs[n].x != (ptd.pixlLocs[n - 1].x + 1)));
+                bool frontPoint = ((partitionIndex - 1) == n || (ptd.pixlLocs[n].y != ptd.pixlLocs[n + 1].y) || (ptd.pixlLocs[n].x != (ptd.pixlLocs[n + 1].x - 1)));
+
+                if (backPoint && !frontPoint)
+                {
+                    ntd.partALocs.emplace_back(ptd.pixlLocs[n].x, ptd.pixlLocs[n].y, kTP_WaveBack);
+                    ntd.partAVals.push_back(static_cast<uint8_t>(ptd.pixlVals[n]));
+                    ntd.cPartABoundaries += 1;
+                    ntd.partASum += ptd.pixlVals[n];
+                    ntd.partASqrSum += (ptd.pixlVals[n] * ptd.pixlVals[n]);
+                }
+
+                if (frontPoint && !backPoint)
+                {
+                    ntd.partALocs.emplace_back(ptd.pixlLocs[n].x, ptd.pixlLocs[n].y, kTP_WaveFront);
+                    ntd.partAVals.push_back(static_cast<uint8_t>(ptd.pixlVals[n]));
+                    ntd.partASum += ptd.pixlVals[n];
+                    ntd.partASqrSum += (ptd.pixlVals[n] * ptd.pixlVals[n]);
+                }
+
+                if (!frontPoint && !backPoint)
+                {
+                    ntd.partALocs.emplace_back(ptd.pixlLocs[n].x, ptd.pixlLocs[n].y, kTP_WaveMiddle);
+                    ntd.partAVals.push_back(static_cast<uint8_t>(ptd.pixlVals[n]));
+                    ntd.partASum += ptd.pixlVals[n];
+                    ntd.partASqrSum += (ptd.pixlVals[n] * ptd.pixlVals[n]);
+                }
+            }
+
+            if (ntd.partALocs.size() < 3)
+            {
+                return SpamResult::kSR_TM_TEMPL_REGION_TOO_SMALL;
+            }
+
+            for (int n = partitionIndex; n < numTotalPoints; ++n)
+            {
+                bool backPoint = (0 == n || (ptd.pixlLocs[n].y != ptd.pixlLocs[n - 1].y) || (ptd.pixlLocs[n].x != (ptd.pixlLocs[n - 1].x + 1)));
+                bool frontPoint = ((numTotalPoints - 1) == n || (ptd.pixlLocs[n].y != ptd.pixlLocs[n + 1].y) || (ptd.pixlLocs[n].x != (ptd.pixlLocs[n + 1].x - 1)));
+
+                if (backPoint && !frontPoint)
+                {
+                    ntd.partBLocs.emplace_back(ptd.pixlLocs[n].x, ptd.pixlLocs[n].y, kTP_WaveBack);
+                    ntd.partBVals.push_back(static_cast<uint8_t>(ptd.pixlVals[n]));
+                    ntd.partBBoundaries.emplace_back(ptd.pixlLocs[n], cv::Point());
+                    ntd.partBSum += ptd.pixlVals[n];
+                    ntd.partBSqrSum += (ptd.pixlVals[n] * ptd.pixlVals[n]);
+                }
+
+                if (frontPoint && !backPoint)
+                {
+                    ntd.partBLocs.emplace_back(ptd.pixlLocs[n].x, ptd.pixlLocs[n].y, kTP_WaveFront);
+                    ntd.partBVals.push_back(static_cast<uint8_t>(ptd.pixlVals[n]));
+                    ntd.partBBoundaries.back().second = ptd.pixlLocs[n];
+                    ntd.partBSum += ptd.pixlVals[n];
+                    ntd.partBSqrSum += (ptd.pixlVals[n] * ptd.pixlVals[n]);
+                }
+
+                if (!frontPoint && !backPoint)
+                {
+                    ntd.partBLocs.emplace_back(ptd.pixlLocs[n].x, ptd.pixlLocs[n].y, kTP_WaveMiddle);
+                    ntd.partBVals.push_back(static_cast<uint8_t>(ptd.pixlVals[n]));
+                    ntd.partBSum += ptd.pixlVals[n];
+                    ntd.partBSqrSum += (ptd.pixlVals[n] * ptd.pixlVals[n]);
+                }
+            }
+
+            if (ntd.partBLocs.size() < 3)
+            {
+                return SpamResult::kSR_TM_TEMPL_REGION_TOO_SMALL;
+            }
+
+            int64_t numPoints = static_cast<int64_t>(ntd.partALocs.size() + ntd.partBLocs.size());
+            int64_t sqrSum = ntd.partASqrSum + ntd.partBSqrSum;
+            int64_t sum = ntd.partASum + ntd.partBSum;
+            int64_t A = numPoints * sqrSum;
+            int64_t B = sum * sum;
+            if (A <= B)
+            {
+                return SpamResult::kSR_TM_TEMPL_INSIGNIFICANT;
+            }
+            else
+            {
+                ntd.norm = std::sqrt(static_cast<double>(A - B)) / std::sqrt(static_cast<double>(numPoints));
+            }
+
+            A = numPoints * numPoints * ntd.partBSqrSum;
+            B = static_cast<int64_t>(ntd.partBLocs.size()) * sum * sum;
+            int64_t C = 2 * numPoints * sum * ntd.partBSum;
+            int64_t D = A + B - C;
+            if (D <= 0)
+            {
+                return SpamResult::kSR_TM_TEMPL_INSIGNIFICANT;
+            }
+            else
+            {
+                ntd.betaz = std::sqrt(D) / static_cast<double>(numPoints);
+            }
         }
+
+        ltd.tmplDatas = ntds;
     }
+
+    return SpamResult::kSR_SUCCESS;
 }
 
 cv::Mat PixelTemplate::GetTopScoreMat() const

@@ -27,8 +27,8 @@ using PointPairSet = std::vector<std::pair<cv::Point, cv::Point>>;
 enum TemplPart
 {
     kTP_WaveBack = 0,
-    kTP_WaveMiddle = 1,
-    kTP_WaveFront = 2,
+    kTP_WaveFront = 1,
+    kTP_WaveMiddle = 2,
     kTP_WaveGuard = 3
 };
 
@@ -46,18 +46,32 @@ struct PixelTemplData
 
 struct NCCTemplData
 {
-    NCCTemplData(const float a, const float s) : angle(a), scale(s) {}
-    Point3iSet           partialLocs;
-    NCCValueSequence     partialVals;
-    Point3iSet           residualLocs;
-    NCCValueSequence     residualVals;
-    PointPairSet         residualBoundaries;
-    NCCValuePairSequence residualBoundaryVals;
+    NCCTemplData(const float a, const float s)
+        : angle(a)
+        , scale(s)
+        , partASum(0)
+        , partBSum(0)
+        , partASqrSum(0)
+        , partBSqrSum(0)
+        , cPartABoundaries(0)
+        , betaz(0)
+        , norm(0) {}
+
+    Point3iSet           partALocs;
+    NCCValueSequence     partAVals;
+    Point3iSet           partBLocs;
+    NCCValueSequence     partBVals;
+    PointPairSet         partBBoundaries;
     std::vector<int>     mindices;
     cv::Point            minPoint;
     cv::Point            maxPoint;
-    int                  cPartialBack;
-    int                  cPartialFront;
+    int64_t              partASum;
+    int64_t              partBSum;
+    int64_t              partASqrSum;
+    int64_t              partBSqrSum;
+    double               betaz;
+    double               norm;
+    int                  cPartABoundaries;
     float                angle;
     float                scale;
 };
@@ -165,14 +179,16 @@ public:
 
     friend struct SADTopLayerScaner;
     friend struct SADCandidateScaner;
+    friend struct NCCTopLayerScaner;
 
 public:
     PixelTemplate();
     ~PixelTemplate();
 
 public:
-    SpamResult matchTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
-    SpamResult CreatePixelTemplate(const PixelTmplCreateData &createData);
+    SpamResult matchPixelTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
+    SpamResult matchNCCTemplate(const cv::Mat &img, const float score, cv::Point2f &pos, float &angle);
+    SpamResult CreateTemplate(const PixelTmplCreateData &createData);
     const std::vector<LayerTemplData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;
     cv::Point2f GetCenter() const { return cfs_.front(); }
@@ -185,7 +201,7 @@ private:
     void linkTemplatesBetweenLayers();
     static uint8_t getMinMaxGrayScale(const cv::Mat &img, const PointSet &maskPoints, const cv::Point &point);
     void supressNoneMaximum();
-    void changeToNCCTemplate();
+    SpamResult changeToNCCTemplate();
 
 private:
     int pyramid_level_;

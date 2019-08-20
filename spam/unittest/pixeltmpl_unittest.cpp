@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Small, *boost::unit_test::enable_if<f
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
-    SpamResult sr = pixelTmpl.CreatePixelTemplate(tmplCreateData);
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
     tbb::tick_count t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("Create pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Big, *boost::unit_test::enable_if<fal
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
-    SpamResult sr = pixelTmpl.CreatePixelTemplate(tmplCreateData);
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
     tbb::tick_count t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("Create pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
@@ -252,7 +252,57 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Big, *boost::unit_test::enable_if<fal
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_NCCTmpl_Create_Big, *boost::unit_test::enable_if<true>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    const Geom::PathVector roi;
+    const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
+    const Geom::Path pth(rect);
+    const Geom::PathVector tmplRgn(pth);
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 10, 5, cv::TM_CCOEFF_NORMED };
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    PixelTemplate pixelTmpl;
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Create ncc template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
+
+    const std::vector<LayerTemplData> &tmplDatas = pixelTmpl.GetTmplDatas();
+    for (int l = 0; l < static_cast<int>(tmplDatas.size()); ++l)
+    {
+        const LayerTemplData &ltd = tmplDatas[l];
+        const auto &tmplDatas = boost::get<NCCTemplDatas>(ltd.tmplDatas);
+        for (int t = 0; t < static_cast<int>(tmplDatas.size()); ++t)
+        {
+            int i = 0;
+            const NCCTemplData &ptd = tmplDatas[t];
+            const int width = ptd.maxPoint.x - ptd.minPoint.x + 1;
+            const int height = ptd.maxPoint.y - ptd.minPoint.y + 1;
+            cv::Mat tmplMat(height, width, CV_8UC4, cv::Scalar(0, 0, 0, 255));
+            for (const cv::Point3i &pt3 : ptd.partALocs)
+            {
+                cv::Point pt(pt3.x, pt3.y);
+                uint32_t typeVals[3]{ 0xFF00FF00, 0xFFFF0000, 0xFFFFFFFF };
+                tmplMat.at<uint32_t>(pt - ptd.minPoint) = typeVals[pt3.z];
+            }
+
+            for (const cv::Point3i &pt3 : ptd.partBLocs)
+            {
+                cv::Point pt(pt3.x, pt3.y);
+                uint32_t typeVals[3]{ 0xFF00FFFF, 0xFFFFFF00, 0xFF808080 };
+                tmplMat.at<uint32_t>(pt - ptd.minPoint) = typeVals[pt3.z];
+            }
+
+            std::string fileName = std::string("mista_ncc_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
+            UnitTestHelper::WriteImage(tmplMat, fileName);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -262,11 +312,11 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<true
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
     //tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 4, cv::TM_SQDIFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 5, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
-    SpamResult sr = pixelTmpl.CreatePixelTemplate(tmplCreateData);
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
     tbb::tick_count t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("Create pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
@@ -287,7 +337,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<true
             std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage(boost::filesystem::relative(x.path(), baseDir).string());
 
             t1 = tbb::tick_count::now();
-            sr = pixelTmpl.matchTemplate(grayImg, 20, pos, angle);
+            sr = pixelTmpl.matchPixelTemplate(grayImg, 20, pos, angle);
             t2 = tbb::tick_count::now();
             BOOST_TEST_MESSAGE(std::string("Match pixel template (")+x.path().filename().string() +")" << (t2 - t1).seconds() * 1000 << "ms");
 
@@ -319,7 +369,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
-    SpamResult sr = pixelTmpl.CreatePixelTemplate(tmplCreateData);
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
     tbb::tick_count t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("Create pixel template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
@@ -328,7 +378,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     float angle = 0;
 
     t1 = tbb::tick_count::now();
-    sr = pixelTmpl.matchTemplate(grayImg, 20, pos, angle);
+    sr = pixelTmpl.matchPixelTemplate(grayImg, 20, pos, angle);
     t2 = tbb::tick_count::now();
     cv::Point2f pt = pixelTmpl.GetCenter();
     BOOST_CHECK_CLOSE(pos.x, pt.x, 1e-3f);
