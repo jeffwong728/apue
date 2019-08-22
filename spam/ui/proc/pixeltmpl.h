@@ -23,12 +23,13 @@ using NCCValueSequence = std::vector<uint8_t>;
 using Point3iSet = std::vector<cv::Point3i>;
 using NCCValuePairSequence = std::vector<std::pair<uint8_t, uint8_t>>;
 using PointPairSet = std::vector<std::pair<cv::Point, cv::Point>>;
+using RegularNCCValues = std::vector<uint32_t, tbb::scalable_allocator<uint32_t>>;
 
 enum TemplPart
 {
-    kTP_WaveBack = 0,
-    kTP_WaveFront = 1,
-    kTP_WaveMiddle = 2,
+    kTP_WaveMiddle = 0,
+    kTP_WaveBack = 1,
+    kTP_WaveFront = 2,
     kTP_WaveGuard = 3
 };
 
@@ -76,9 +77,32 @@ struct NCCTemplData
     float                scale;
 };
 
+struct BruteForceNCCTemplData
+{
+    BruteForceNCCTemplData(const float a, const float s)
+        : angle(a)
+        , scale(s)
+        , sum(0)
+        , sqrSum(0)
+        , norm(0) {}
+
+    PointSet         locs;
+    NCCValueSequence vals;
+    RegularNCCValues regVals;
+    std::vector<int> mindices;
+    cv::Point        minPoint;
+    cv::Point        maxPoint;
+    int64_t          sum;
+    int64_t          sqrSum;
+    double           norm;
+    float            angle;
+    float            scale;
+};
+
 using PixelTemplDatas = std::vector<PixelTemplData>;
 using NCCTemplDatas = std::vector<NCCTemplData>;
-using TemplDataSequence = boost::variant<PixelTemplDatas, NCCTemplDatas>;
+using BFNCCTemplDatas = std::vector<BruteForceNCCTemplData>;
+using TemplDataSequence = boost::variant<PixelTemplDatas, NCCTemplDatas, BFNCCTemplDatas>;
 struct LayerTemplData
 {
     LayerTemplData(const float as, const float ss) : angleStep(as), scaleStep(ss) {}
@@ -180,6 +204,8 @@ public:
     friend struct SADTopLayerScaner;
     friend struct SADCandidateScaner;
     friend struct NCCTopLayerScaner;
+    friend struct BFNCCTopLayerScaner;
+    friend struct BFNCCCandidateScaner;
 
 public:
     PixelTemplate();
@@ -187,7 +213,7 @@ public:
 
 public:
     SpamResult matchPixelTemplate(const cv::Mat &img, const int sad, cv::Point2f &pos, float &angle);
-    SpamResult matchNCCTemplate(const cv::Mat &img, const float score, cv::Point2f &pos, float &angle);
+    SpamResult matchNCCTemplate(const cv::Mat &img, const float minScore, cv::Point2f &pos, float &angle, float &score);
     SpamResult CreateTemplate(const PixelTmplCreateData &createData);
     const std::vector<LayerTemplData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;
@@ -202,6 +228,9 @@ private:
     static uint8_t getMinMaxGrayScale(const cv::Mat &img, const PointSet &maskPoints, const cv::Point &point);
     void supressNoneMaximum();
     SpamResult changeToNCCTemplate();
+    SpamResult changeToBruteForceNCCTemplate();
+    static double calcValue1(const int64_t T, const int64_t S, const int64_t n);
+    static double calcValue2(const int64_t T, const int64_t S, const int64_t Sp, const int64_t n, const int64_t np);
 
 private:
     int pyramid_level_;
@@ -218,5 +247,35 @@ private:
     CandidateGroup candidate_runs_;
     CandidateGroupList candidate_groups_;
 };
+
+inline double PixelTemplate::calcValue1(const int64_t T, const int64_t S, const int64_t n)
+{
+    int64_t A = n * T;
+    int64_t B = S * S;
+    if (A <= B)
+    {
+        return -1.0;
+    }
+    else
+    {
+        return std::sqrt(static_cast<double>(A - B)) / std::sqrt(static_cast<double>(n));
+    }
+}
+
+inline double PixelTemplate::calcValue2(const int64_t Tp, const int64_t S, const int64_t Sp, const int64_t n, const int64_t np)
+{
+    int64_t A = n * n * Tp;
+    int64_t B = np * S * S;
+    int64_t C = 2 * n * S * Sp;
+    int64_t D = A + B - C;
+    if (D <= 0)
+    {
+        return -1.0;
+    }
+    else
+    {
+        return std::sqrt(D) / static_cast<double>(n);
+    }
+}
 
 #endif //SPAM_UI_PROC_PIXEL_TEMPLATE_H

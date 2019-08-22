@@ -2,6 +2,67 @@
 #include <cassert>
 #include <opencv2/highgui.hpp>
 #include <gtest/gtest.h>
+#include <random>
+#include <algorithm>
+#include <vectorclass/vectorclass.h>
+constexpr int simdSize = 8;
+
+double calcValue1(const int64_t T, const int64_t S, const int64_t n)
+{
+    int64_t A = n * T;
+    int64_t B = S * S;
+    if (A <= B)
+    {
+        return -1.0;
+    }
+    else
+    {
+        return std::sqrt(static_cast<double>(A - B)) / std::sqrt(static_cast<double>(n));
+    }
+}
+
+void sequenceSum(std::vector<uint32_t> &vec, int64_t &sum, int64 &sqrSum)
+{
+    vec.resize((static_cast<int>(vec.size()) + simdSize - 1) & (-simdSize), 0);
+
+    vcl::Vec8ui sumVec(0);
+    vcl::Vec8ui sqrSumVec(0);
+    const uint32_t *pVals = vec.data();
+    const int numItems = static_cast<int>(vec.size());
+    for (int n = 0; n < numItems; n += simdSize)
+    {
+        vcl::Vec8ui tempVec;
+        tempVec.load(pVals);
+        sumVec += tempVec;
+        sqrSumVec += (tempVec * tempVec);
+        pVals += 8;
+    }
+
+    sum = vcl::horizontal_add(sumVec);
+    sqrSum = vcl::horizontal_add(sqrSumVec);
+}
+
+int64_t sequenceDot(std::vector<uint32_t> &vec1, std::vector<uint32_t> &vec2)
+{
+    vec1.resize((static_cast<int>(vec1.size()) + simdSize - 1) & (-simdSize), 0);
+    vec2.resize((static_cast<int>(vec2.size()) + simdSize - 1) & (-simdSize), 0);
+
+    vcl::Vec8ui sumVec(0);
+    const uint32_t *pVals1 = vec1.data();
+    const uint32_t *pVals2 = vec2.data();
+    const int numItems = static_cast<int>(vec1.size());
+    for (int n = 0; n < numItems; n += simdSize)
+    {
+        vcl::Vec8ui tempVec1, tempVec2;
+        tempVec1.load(pVals1);
+        tempVec2.load(pVals2);
+        sumVec += (tempVec1 * tempVec2);
+        pVals1 += 8;
+        pVals2 += 8;
+    }
+
+    return vcl::horizontal_add(sumVec);
+}
 
 namespace {
 TEST(CVFloorTest, Positive)
@@ -137,6 +198,148 @@ TEST(CVMatTest, Create)
     EXPECT_EQ(angImg.cols, 64);
     EXPECT_EQ(angImg.elemSize1(), 4);
     EXPECT_EQ(angImg.step1(), 64);
+}
+
+TEST(NCCFormulaTest, Equal)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint32_t> dist(0, 100);
+
+    std::vector<uint32_t> tmpl(100);
+    std::generate(tmpl.begin(), tmpl.end(), [&]() { return dist(gen); });
+    std::vector<uint32_t> part(tmpl);
+
+    int64_t tmplSum=0, tmplSqrSum=0;
+    int64_t partSum=0, partSqrSum=0;
+    sequenceSum(tmpl, tmplSum, tmplSqrSum);
+    sequenceSum(part, partSum, partSqrSum);
+
+    double tmplVal1 = calcValue1(tmplSqrSum, tmplSum, 100);
+    double partVal1 = calcValue1(partSqrSum, partSum, 100);
+
+    double ncc = (sequenceDot(tmpl, part) - (tmplSum*partSum) / 100.0) / (tmplVal1*partVal1);
+    EXPECT_DOUBLE_EQ(ncc, 1.0);
+}
+
+TEST(NCCFormulaTest, PositiveCorelation)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint32_t> dist(0, 100);
+
+    std::vector<uint32_t> tmpl(100);
+    std::generate(tmpl.begin(), tmpl.end(), [&]() { return dist(gen); });
+    std::vector<uint32_t> part;
+    for (const uint32_t v : tmpl)
+    {
+        part.push_back(v*3+5);
+    }
+
+    int64_t tmplSum = 0, tmplSqrSum = 0;
+    int64_t partSum = 0, partSqrSum = 0;
+    sequenceSum(tmpl, tmplSum, tmplSqrSum);
+    sequenceSum(part, partSum, partSqrSum);
+
+    double tmplVal1 = calcValue1(tmplSqrSum, tmplSum, 100);
+    double partVal1 = calcValue1(partSqrSum, partSum, 100);
+
+    double ncc = (sequenceDot(tmpl, part) - (tmplSum*partSum) / 100.0) / (tmplVal1*partVal1);
+    EXPECT_DOUBLE_EQ(ncc, 1.0);
+}
+
+TEST(NCCFormulaTest, NegtiveCorelation)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint32_t> dist(0, 100);
+
+    std::vector<uint32_t> tmpl(100);
+    std::generate(tmpl.begin(), tmpl.end(), [&]() { return dist(gen); });
+    std::vector<uint32_t> part;
+    for (const uint32_t v : tmpl)
+    {
+        part.push_back(static_cast<uint32_t>(static_cast<int32_t>(v) * (-3) + 1000));
+    }
+
+    int64_t tmplSum = 0, tmplSqrSum = 0;
+    int64_t partSum = 0, partSqrSum = 0;
+    sequenceSum(tmpl, tmplSum, tmplSqrSum);
+    sequenceSum(part, partSum, partSqrSum);
+
+    double tmplVal1 = calcValue1(tmplSqrSum, tmplSum, 100);
+    double partVal1 = calcValue1(partSqrSum, partSum, 100);
+
+    double ncc = (sequenceDot(tmpl, part) - (tmplSum*partSum) / 100.0) / (tmplVal1*partVal1);
+    EXPECT_NEAR(ncc, -1.0, 1e-9);
+}
+
+TEST(NCCFormulaTest, Zero)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint32_t> dist(0, 100);
+
+    std::vector<uint32_t> tmpl(100);
+    std::generate(tmpl.begin(), tmpl.end(), [&]() { return dist(gen); });
+    std::vector<uint32_t> part(100, 0);
+
+    int64_t tmplSum = 0, tmplSqrSum = 0;
+    int64_t partSum = 0, partSqrSum = 0;
+    sequenceSum(tmpl, tmplSum, tmplSqrSum);
+    sequenceSum(part, partSum, partSqrSum);
+
+    double tmplVal1 = calcValue1(tmplSqrSum, tmplSum, 100);
+    double partVal1 = calcValue1(partSqrSum, partSum, 100);
+
+    double ncc = (sequenceDot(tmpl, part) - (tmplSum*partSum) / 100.0) / (tmplVal1*partVal1);
+    EXPECT_DOUBLE_EQ(ncc, 0.0);
+}
+
+TEST(NCCFormulaTest, SameValue)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint32_t> dist(0, 100);
+
+    std::vector<uint32_t> tmpl(100);
+    std::generate(tmpl.begin(), tmpl.end(), [&]() { return dist(gen); });
+    std::vector<uint32_t> part(100, 9);
+
+    int64_t tmplSum = 0, tmplSqrSum = 0;
+    int64_t partSum = 0, partSqrSum = 0;
+    sequenceSum(tmpl, tmplSum, tmplSqrSum);
+    sequenceSum(part, partSum, partSqrSum);
+
+    double tmplVal1 = calcValue1(tmplSqrSum, tmplSum, 100);
+    double partVal1 = calcValue1(partSqrSum, partSum, 100);
+
+    double ncc = (sequenceDot(tmpl, part) - (tmplSum*partSum) / 100.0) / (tmplVal1*partVal1);
+    EXPECT_DOUBLE_EQ(ncc, 0.0);
+}
+
+TEST(NCCFormulaTest, RandomValue)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint32_t> dist(0, 100);
+
+    std::vector<uint32_t> tmpl(100);
+    std::generate(tmpl.begin(), tmpl.end(), [&]() { return dist(gen); });
+    std::vector<uint32_t> part(100);
+    std::generate(part.begin(), part.end(), [&]() { return dist(gen); });
+
+    int64_t tmplSum = 0, tmplSqrSum = 0;
+    int64_t partSum = 0, partSqrSum = 0;
+    sequenceSum(tmpl, tmplSum, tmplSqrSum);
+    sequenceSum(part, partSum, partSqrSum);
+
+    double tmplVal1 = calcValue1(tmplSqrSum, tmplSum, 100);
+    double partVal1 = calcValue1(partSqrSum, partSum, 100);
+
+    double ncc = (sequenceDot(tmpl, part) - (tmplSum*partSum) / 100.0) / (tmplVal1*partVal1);
+    EXPECT_LT(ncc, 1.0);
+    EXPECT_GT(ncc, -1.0);
 }
 
 }

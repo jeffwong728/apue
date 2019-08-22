@@ -252,7 +252,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Big, *boost::unit_test::enable_if<fal
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_NCCTmpl_Create_Big, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_NCCTmpl_Create_Big, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -285,15 +285,15 @@ BOOST_AUTO_TEST_CASE(test_NCCTmpl_Create_Big, *boost::unit_test::enable_if<true>
             for (const cv::Point3i &pt3 : ptd.partALocs)
             {
                 cv::Point pt(pt3.x, pt3.y);
-                uint32_t typeVals[3]{ 0xFF00FF00, 0xFFFF0000, 0xFFFFFFFF };
-                tmplMat.at<uint32_t>(pt - ptd.minPoint) = typeVals[pt3.z];
+                uint32_t typeVals[3]{0xFFFF0000, 0xFFFFFFFF, 0xFF00FF00};
+                //tmplMat.at<uint32_t>(pt - ptd.minPoint) = typeVals[pt3.z];
             }
 
             for (const cv::Point3i &pt3 : ptd.partBLocs)
             {
                 cv::Point pt(pt3.x, pt3.y);
-                uint32_t typeVals[3]{ 0xFF00FFFF, 0xFFFFFF00, 0xFF808080 };
-                tmplMat.at<uint32_t>(pt - ptd.minPoint) = typeVals[pt3.z];
+                uint32_t typeVals[3]{ 0xFFFFFF00, 0xFF808080, 0xFF00FFFF };
+                //tmplMat.at<uint32_t>(pt - ptd.minPoint) = typeVals[pt3.z];
             }
 
             std::string fileName = std::string("mista_ncc_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
@@ -311,7 +311,6 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<fals
     const Geom::Rect rect1(Geom::Point(185, 198), Geom::Point(399, 286));
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
-    //tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
     PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 5, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
@@ -365,7 +364,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 5, cv::TM_SQDIFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 6, 5, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -395,5 +394,130 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
         const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
         UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
         UnitTestHelper::WriteImage(colorImg, std::string("mista_tmpl_match.png"));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Big, *boost::unit_test::enable_if<false>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    const Geom::PathVector roi;
+    const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
+    const Geom::Path pth(rect);
+    const Geom::PathVector tmplRgn(pth);
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 5, cv::TM_CCOEFF_NORMED };
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    PixelTemplate pixelTmpl;
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Create ncc template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
+
+    cv::Point2f pos;
+    float angle = 0, score=0;
+
+    t1 = tbb::tick_count::now();
+    sr = pixelTmpl.matchNCCTemplate(grayImg, 0.9f, pos, angle, score);
+    t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Match ncc template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    std::string fileName = std::string("mista_ncc_top_layer_score.png");
+    UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
+}
+
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<true>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
+
+    const Geom::PathVector roi;
+    const Geom::Rect rect1(Geom::Point(185, 198), Geom::Point(399, 286));
+    const Geom::Path pth(rect1);
+    Geom::PathVector tmplRgn(pth);
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 5, cv::TM_CCOEFF_NORMED };
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    PixelTemplate pixelTmpl;
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Create brute force template (board-01.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
+
+    boost::filesystem::path utRootDir = std::getenv("SPAM_UNITTEST_ROOT");
+    utRootDir.append("idata");
+    utRootDir.append("images");
+    utRootDir.append("board");
+
+    boost::filesystem::path baseDir = std::getenv("SPAM_UNITTEST_ROOT");
+    baseDir.append("idata");
+    for (boost::filesystem::directory_entry& x : boost::filesystem::directory_iterator(utRootDir))
+    {
+        if (boost::filesystem::is_regular_file(x.path()) && x.path().extension() == ".png")
+        {
+            cv::Point2f pos;
+            float angle = 0, score = 0;
+            std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage(boost::filesystem::relative(x.path(), baseDir).string());
+
+            t1 = tbb::tick_count::now();
+            sr = pixelTmpl.matchNCCTemplate(grayImg, 0.8f, pos, angle, score);
+            t2 = tbb::tick_count::now();
+            cv::Point2f pt = pixelTmpl.GetCenter();
+            BOOST_TEST_MESSAGE(std::string("Match brute force ncc template (") + x.path().filename().string() + ") " \
+                << (t2 - t1).seconds() * 1000 << "ms (" << pos.x << ", " << pos.y << ", " << angle << "), with score=" << score);
+
+            std::string fileName = std::string("top_layer_") + x.path().filename().string();
+            UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
+
+            if (SpamResult::kSR_SUCCESS == sr)
+            {
+                UnitTestHelper::Color color{ 255, 0, 0, 255 };
+                cv::Point2f pt = pixelTmpl.GetCenter();
+                const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
+                UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+                UnitTestHelper::WriteImage(colorImg, std::string("match_") + x.path().filename().string());
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<false>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    const Geom::PathVector roi;
+    const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2300, 2150));
+    const Geom::Path pth(rect);
+    const Geom::PathVector tmplRgn(pth);
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 6, cv::TM_CCOEFF };
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    PixelTemplate pixelTmpl;
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Create bruteforce ncc template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
+
+    cv::Point2f pos;
+    float angle = 0, score=0;
+
+    t1 = tbb::tick_count::now();
+    sr = pixelTmpl.matchNCCTemplate(grayImg, 0.9f, pos, angle, score);
+    t2 = tbb::tick_count::now();
+    cv::Point2f pt = pixelTmpl.GetCenter();
+    BOOST_TEST_MESSAGE("Match bruteforce ncc template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    std::string fileName = std::string("mista_bruteforce_ncc_top_layer_score.png");
+    UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
+
+    if (SpamResult::kSR_SUCCESS == sr)
+    {
+        UnitTestHelper::Color color{ 255, 0, 0, 255 };
+        const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
+        UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+        UnitTestHelper::WriteImage(colorImg, std::string("mista_tmpl_match.png"));
+        BOOST_TEST_MESSAGE("Template (mista.png) matched at: (" << pos.x << ", " << pos.y <<", "<< angle << "), with score=" << score);
     }
 }
