@@ -63,6 +63,7 @@ struct NCCTopLayerScaner
     PixelTemplate::CandidateList candidates;
 };
 
+template<bool TouchBorder>
 struct BFNCCTopLayerScaner
 {
     using NCCValueList = std::vector<uint32_t, tbb::scalable_allocator<uint32_t>>;
@@ -86,6 +87,7 @@ struct SADCandidateScaner
     PixelTemplate *const tmpl;
 };
 
+template<bool TouchBorder>
 struct BFNCCCandidateScaner
 {
     BFNCCCandidateScaner(PixelTemplate *const pixTmpl, const double s, const int l) : tmpl(pixTmpl), score(s), layer(l) {}
@@ -390,7 +392,8 @@ void NCCTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
     }
 }
 
-void BFNCCTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
+template<bool TouchBorder>
+void BFNCCTopLayerScaner<TouchBorder>::operator()(const tbb::blocked_range<int>& br)
 {
     const cv::Mat &layerMat = tmpl->pyrs_.back();
     const int nLayerCols = layerMat.cols;
@@ -402,17 +405,16 @@ void BFNCCTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
     const BFNCCTemplDatas &tmplDatas = boost::get<BFNCCTemplDatas>(layerTempls.tmplDatas);
     const int numLayerTempls = static_cast<int>(tmplDatas.size());
 
-    constexpr int simdSize = 8;
     std::vector<uint32_t, tbb::scalable_allocator<uint32_t>> partVals;
-
     std::map<int, PixelTemplate::Candidate, std::less<int>, tbb::scalable_allocator<std::pair<const int, PixelTemplate::Candidate>>> aCandidates;
+
     for (int t = 0; t < numLayerTempls; ++t)
     {
         const BruteForceNCCTemplData &ntd = tmplDatas[t];
         const int64_t numPoints  = static_cast<int64_t>(ntd.vals.size());
         const int64_t tmplSum    = ntd.sum;
         partVals.resize(0);
-        partVals.resize((static_cast<int>(ntd.vals.size()) + simdSize - 1) & (-simdSize), 0);
+        partVals.resize(ntd.regVals.size(), 0);
 
         for (int row = rowStart; row < rowEnd; ++row)
         {
@@ -420,20 +422,30 @@ void BFNCCTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
             {
                 cv::Point originPt{ col, row };
                 uint32_t *pPartVals = partVals.data();
-                if (oib(originPt + ntd.minPoint) || oib(originPt + ntd.maxPoint))
-                {
-                    for (const cv::Point &pt : ntd.locs)
+
+                if (TouchBorder) {
+                    if (oib(originPt + ntd.minPoint) || oib(originPt + ntd.maxPoint))
                     {
-                        cv::Point tPt{ pt.x + col, pt.y + row };
-                        if (!oib(tPt))
+                        for (const cv::Point &pt : ntd.locs)
                         {
-                            *pPartVals = tmpl->row_ptrs_[tPt.y][tPt.x];
+                            cv::Point tPt{ pt.x + col, pt.y + row };
+                            if (!oib(tPt)) {
+                                *pPartVals = tmpl->row_ptrs_[tPt.y][tPt.x];
+                            }
+                            pPartVals += 1;
                         }
-                        pPartVals += 1;
                     }
-                }
-                else
-                {
+                    else {
+                        for (const cv::Point &pt : ntd.locs)
+                        {
+                            *pPartVals = tmpl->row_ptrs_[pt.y + row][pt.x + col];
+                            pPartVals += 1;
+                        }
+                    }
+                } else {
+                    if (oib(originPt + ntd.minPoint) || oib(originPt + ntd.maxPoint)) {
+                        continue;
+                    }
                     for (const cv::Point &pt : ntd.locs)
                     {
                         *pPartVals = tmpl->row_ptrs_[pt.y + row][pt.x + col];
@@ -566,7 +578,8 @@ void SADCandidateScaner::operator()(const tbb::blocked_range<int>& r) const
     }
 }
 
-void BFNCCCandidateScaner::operator()(const tbb::blocked_range<int>& r) const
+template<bool TouchBorder>
+void BFNCCCandidateScaner<TouchBorder>::operator()(const tbb::blocked_range<int>& r) const
 {
     LayerTemplData &ltd = tmpl->pyramid_tmpl_datas_[layer];
     const cv::Mat &layerMat = tmpl->pyrs_[layer];
@@ -592,20 +605,28 @@ void BFNCCCandidateScaner::operator()(const tbb::blocked_range<int>& r) const
             partVals.resize(ntd.regVals.size(), 0);
             uint32_t *pPartVals = partVals.data();
 
-            if (oib(originPt + ntd.minPoint) || oib(originPt + ntd.maxPoint))
-            {
-                for (const cv::Point &pt : ntd.locs)
+            if (TouchBorder) {
+                if (oib(originPt + ntd.minPoint) || oib(originPt + ntd.maxPoint))
                 {
-                    cv::Point tPt{ pt.x + col, pt.y + row };
-                    if (!oib(tPt))
+                    for (const cv::Point &pt : ntd.locs)
                     {
-                        *pPartVals = tmpl->row_ptrs_[tPt.y][tPt.x];
+                        cv::Point tPt{ pt.x + col, pt.y + row };
+                        if (!oib(tPt)) {
+                            *pPartVals = tmpl->row_ptrs_[tPt.y][tPt.x];
+                        }
+                        pPartVals += 1;
                     }
-                    pPartVals += 1;
+                } else {
+                    for (const cv::Point &pt : ntd.locs)
+                    {
+                        *pPartVals = tmpl->row_ptrs_[pt.y + row][pt.x + col];
+                        pPartVals += 1;
+                    }
                 }
-            }
-            else
-            {
+            } else {
+                if (oib(originPt + ntd.minPoint) || oib(originPt + ntd.maxPoint)) {
+                    continue;
+                }
                 for (const cv::Point &pt : ntd.locs)
                 {
                     *pPartVals = tmpl->row_ptrs_[pt.y + row][pt.x + col];
@@ -967,7 +988,7 @@ SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float minSc
     if (cv::TM_CCOEFF == match_mode_ ||
         cv::TM_CCOEFF_NORMED == match_mode_)
     {
-        BFNCCTopLayerScaner bfNCCScaner(this, minScore);
+        BFNCCTopLayerScaner<false> bfNCCScaner(this, minScore);
         tbb::parallel_reduce(tbb::blocked_range<int>(0, nTopRows), bfNCCScaner);
         candidates_.swap(bfNCCScaner.candidates);
     }
@@ -1001,7 +1022,7 @@ SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float minSc
             row_ptrs_[row] = layerMat.ptr<uint8_t>(row);
         }
 
-        tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), BFNCCCandidateScaner(this, minScore, layer));
+        tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), BFNCCCandidateScaner<false>(this, minScore, layer));
 
         for (Candidate &candidate : candidates_)
         {

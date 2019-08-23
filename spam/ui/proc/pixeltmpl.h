@@ -204,8 +204,8 @@ public:
     friend struct SADTopLayerScaner;
     friend struct SADCandidateScaner;
     friend struct NCCTopLayerScaner;
-    friend struct BFNCCTopLayerScaner;
-    friend struct BFNCCCandidateScaner;
+    template<bool TouchBorder> friend struct BFNCCTopLayerScaner;
+    template<bool TouchBorder> friend struct BFNCCCandidateScaner;
 
 public:
     PixelTemplate();

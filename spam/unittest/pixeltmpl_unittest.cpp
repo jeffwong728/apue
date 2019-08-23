@@ -491,7 +491,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<fals
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2300, 2150));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 6, cv::TM_CCOEFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -30, 60, 6, cv::TM_CCOEFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -503,6 +503,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<fals
     cv::Point2f pos;
     float angle = 0, score=0;
 
+    cv::blur(grayImg, grayImg, cv::Size(5, 5));
     t1 = tbb::tick_count::now();
     sr = pixelTmpl.matchNCCTemplate(grayImg, 0.9f, pos, angle, score);
     t2 = tbb::tick_count::now();
