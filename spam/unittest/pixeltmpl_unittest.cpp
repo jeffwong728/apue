@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Big, *boost::unit_test::enable_if<false>
     UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -462,6 +462,60 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<true
 
             t1 = tbb::tick_count::now();
             sr = pixelTmpl.matchNCCTemplate(grayImg, 0.8f, pos, angle, score);
+            t2 = tbb::tick_count::now();
+            cv::Point2f pt = pixelTmpl.GetCenter();
+            BOOST_TEST_MESSAGE(std::string("Match brute force ncc template (") + x.path().filename().string() + ") " \
+                << (t2 - t1).seconds() * 1000 << "ms (" << pos.x << ", " << pos.y << ", " << angle << "), with score=" << score);
+
+            std::string fileName = std::string("top_layer_") + x.path().filename().string();
+            UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
+
+            if (SpamResult::kSR_SUCCESS == sr)
+            {
+                UnitTestHelper::Color color{ 255, 0, 0, 255 };
+                cv::Point2f pt = pixelTmpl.GetCenter();
+                const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
+                UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+                UnitTestHelper::WriteImage(colorImg, std::string("match_") + x.path().filename().string());
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Gaskets, *boost::unit_test::enable_if<true>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("gasket\\filename000.jpg");
+
+    const Geom::PathVector roi;
+    const Geom::Rect rect1(Geom::Point(163, 197), Geom::Point(340, 340));
+    const Geom::Path pth(rect1);
+    Geom::PathVector tmplRgn(pth);
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 360, 5, cv::TM_CCOEFF_NORMED };
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    PixelTemplate pixelTmpl;
+    SpamResult sr = pixelTmpl.CreateTemplate(tmplCreateData);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Create brute force gasket template: " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
+
+    boost::filesystem::path utRootDir = std::getenv("SPAM_UNITTEST_ROOT");
+    utRootDir.append("idata");
+    utRootDir.append("gasket");
+
+    boost::filesystem::path baseDir = std::getenv("SPAM_UNITTEST_ROOT");
+    baseDir.append("idata");
+    for (boost::filesystem::directory_entry& x : boost::filesystem::directory_iterator(utRootDir))
+    {
+        if (boost::filesystem::is_regular_file(x.path()) && x.path().extension() == ".jpg")
+        {
+            cv::Point2f pos;
+            float angle = 0, score = 0;
+            std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage(boost::filesystem::relative(x.path(), baseDir).string());
+
+            t1 = tbb::tick_count::now();
+            sr = pixelTmpl.matchNCCTemplate(grayImg, 0.65f, pos, angle, score);
             t2 = tbb::tick_count::now();
             cv::Point2f pt = pixelTmpl.GetCenter();
             BOOST_TEST_MESSAGE(std::string("Match brute force ncc template (") + x.path().filename().string() + ") " \

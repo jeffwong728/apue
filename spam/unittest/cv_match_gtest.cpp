@@ -64,6 +64,21 @@ int64_t sequenceDot(std::vector<uint32_t> &vec1, std::vector<uint32_t> &vec2)
     return vcl::horizontal_add(sumVec);
 }
 
+uint8_t getGraySubpix(const cv::Mat& img, const cv::Point2f &pt)
+{
+    cv::Point tlPt{ cvFloor(pt.x), cvFloor(pt.y) };
+    cv::Point trPt{ tlPt.x + 1, tlPt.y };
+    cv::Point blPt{ tlPt.x, tlPt.y + 1 };
+    cv::Point brPt{ tlPt.x + 1, tlPt.y + 1 };
+
+    float rx = pt.x - tlPt.x;
+    float tx = 1 - rx;
+    float ry = pt.y - tlPt.y;
+    float ty = 1 - ry;
+
+    return static_cast<uint8_t>(cvRound(img.at<uint8_t>(tlPt)*tx*ty + img.at<uint8_t>(trPt)*rx*ty + img.at<uint8_t>(blPt)*tx*ry + img.at<uint8_t>(brPt)*rx*ry));
+}
+
 namespace {
 TEST(CVFloorTest, Positive)
 {
@@ -177,6 +192,59 @@ TEST(CVImageTranslateTest, Rectangle)
 
     dst += transImg;
     UnitTestHelper::WriteImage(dst, "translate_rect_dst.png");
+}
+
+TEST(CVTransform, Point)
+{
+    cv::Point2f srcPt{20, 30};
+    cv::Point2f pivPt{30, 40};
+    cv::Mat rotMat = cv::getRotationMatrix2D(pivPt, -60, 1.0);
+
+    std::vector<cv::Point2f> srcPts{ srcPt };
+    std::vector<cv::Point2f> dstPts{ srcPt };
+    cv::transform(srcPts, dstPts, rotMat);
+
+    cv::Mat img(48, 64, CV_8UC3, cv::Scalar());
+    cv::drawMarker(img, pivPt, CV_RGB(255, 255, 255), cv::MARKER_CROSS, 5, 1);
+    cv::drawMarker(img, srcPt, CV_RGB(255, 0, 0), cv::MARKER_CROSS, 5, 1);
+    cv::drawMarker(img, dstPts[0], CV_RGB(0, 255, 0), cv::MARKER_CROSS, 5, 1);
+    UnitTestHelper::WriteImage(img, "transform_point.png");
+
+    Geom::Point gPt = Geom::Point(srcPt.x, srcPt.y) * Geom::Translate(-pivPt.x, -pivPt.y)*Geom::Rotate::from_degrees(60)*Geom::Translate(pivPt.x, pivPt.y);
+    EXPECT_FLOAT_EQ(dstPts[0].x, static_cast<float>(gPt.x()));
+    EXPECT_FLOAT_EQ(dstPts[0].y, static_cast<float>(gPt.y()));
+}
+
+TEST(CVInterpolate, Bilinear)
+{
+    cv::Mat img = (cv::Mat_<uint8_t>(3, 3) << 1, 2, 3, 40, 50, 60, 170, 180, 190);
+    cv::Mat patch;
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(0.5f, 0.5f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(0.5f, 0.5f)));
+
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(0.3f, 0.3f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(0.3f, 0.3f)));
+
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(0.3f, 0.7f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(0.3f, 0.7f)));
+
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(0.7f, 0.3f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(0.7f, 0.3f)));
+
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(0.7f, 0.7f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(0.7f, 0.7f)));
+
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(1.7f, 0.3f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(1.7f, 0.3f)));
+
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(0.7f, 1.3f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(0.7f, 1.3f)));
+
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(1.7f, 1.3f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(1.7f, 1.3f)));
+
+    cv::getRectSubPix(img, cv::Size(1, 1), cv::Point2f(1.3f, 1.7f), patch);
+    EXPECT_EQ(patch.at<uint8_t>(0, 0), getGraySubpix(img, cv::Point2f(1.3f, 1.7f)));
 }
 
 TEST(CVMatTest, Create)

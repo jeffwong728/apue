@@ -988,7 +988,7 @@ SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float minSc
     if (cv::TM_CCOEFF == match_mode_ ||
         cv::TM_CCOEFF_NORMED == match_mode_)
     {
-        BFNCCTopLayerScaner<false> bfNCCScaner(this, minScore);
+        BFNCCTopLayerScaner<true> bfNCCScaner(this, minScore);
         tbb::parallel_reduce(tbb::blocked_range<int>(0, nTopRows), bfNCCScaner);
         candidates_.swap(bfNCCScaner.candidates);
     }
@@ -1022,7 +1022,7 @@ SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float minSc
             row_ptrs_[row] = layerMat.ptr<uint8_t>(row);
         }
 
-        tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), BFNCCCandidateScaner<false>(this, minScore, layer));
+        tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), BFNCCCandidateScaner<true>(this, minScore, layer));
 
         for (Candidate &candidate : candidates_)
         {
@@ -1104,7 +1104,7 @@ SpamResult PixelTemplate::CreateTemplate(const PixelTmplCreateData &createData)
         return sr;
     }
 
-    sr = calcCentreOfGravity(createData);
+    sr = fastCreateTemplate(createData);
     if (SpamResult::kSR_SUCCESS != sr)
     {
         destroyData();
@@ -1202,7 +1202,6 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
     }
 
     cv::Mat tmplImg;
-    //cv::medianBlur(createData.srcImg, tmplImg, 5);
     cv::buildPyramid(createData.srcImg, pyrs_, createData.pyramidLevel-1, cv::BORDER_REFLECT);
     SpamRgn maskRgn(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 5))));
     PointSet maskPoints(maskRgn);
@@ -1272,6 +1271,118 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
             }
 
             if (pixlLocs.size()<3)
+            {
+                return SpamResult::kSR_TM_TEMPL_INSIGNIFICANT;
+            }
+
+            const auto minMaxPoints = pixlLocs.MinMax();
+            ptd.minPoint = minMaxPoints.first;
+            ptd.maxPoint = minMaxPoints.second;
+        }
+    }
+
+    return SpamResult::kSR_OK;
+}
+
+SpamResult PixelTemplate::fastCreateTemplate(const PixelTmplCreateData &createData)
+{
+    if (createData.tmplRgn.empty())
+    {
+        return SpamResult::kSR_TM_EMPTY_TEMPL_REGION;
+    }
+
+    std::vector<Geom::PathVector> tmplRgns;
+    tmplRgns.push_back(createData.tmplRgn);
+
+    double s = 0.5;
+    for (int l = 1; l < createData.pyramidLevel; ++l)
+    {
+        tmplRgns.push_back(createData.tmplRgn*Geom::Scale(s, s));
+        s *= 0.5;
+    }
+
+    cv::buildPyramid(createData.srcImg, pyrs_, createData.pyramidLevel - 1, cv::BORDER_REFLECT);
+    SpamRgn maskRgn(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 5))));
+    PointSet maskPoints(maskRgn);
+
+    for (int l = 0; l < createData.pyramidLevel; ++l)
+    {
+        const SpamRgn rgn(tmplRgns[l]);
+        cv::Point anchorPoint{ cvRound(rgn.Centroid().x), cvRound(rgn.Centroid().y) };
+        cfs_.emplace_back(static_cast<float>(anchorPoint.x), static_cast<float>(anchorPoint.y));
+
+        Geom::Circle minCircle = rgn.MinCircle();
+        if (minCircle.radius() < 5)
+        {
+            return SpamResult::kSR_TM_TEMPL_REGION_TOO_SMALL;
+        }
+
+        const auto angleStep = Geom::deg_from_rad(std::acos(1 - 2 / (minCircle.radius()*minCircle.radius())));
+        if (angleStep < 0.3)
+        {
+            return SpamResult::kSR_TM_TEMPL_REGION_TOO_LARGE;
+        }
+
+        pyramid_tmpl_datas_.emplace_back(static_cast<float>(angleStep), 0.f);
+        LayerTemplData &ltd = pyramid_tmpl_datas_.back();
+
+        const cv::Mat &pyrImg = pyrs_[l];
+        ltd.tmplDatas = PixelTemplDatas();
+        auto &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
+        std::map<int, uint8_t> minMaxDiffs;
+
+        for (double ang = 0; ang < createData.angleExtent; ang += angleStep)
+        {
+            const double deg = createData.angleStart + ang;
+            SpamRgn originRgn(tmplRgns[l] * Geom::Translate(-anchorPoint.x, -anchorPoint.y)* Geom::Rotate::from_degrees(-deg));
+
+            PointSet pointSetOrigin(originRgn);
+            PointSet pointSetTmpl(originRgn, anchorPoint);
+            std::vector<cv::Point2f> tmplPoints;
+            tmplPoints.reserve(pointSetTmpl.size());
+            for (const cv::Point &pt : pointSetTmpl)
+            {
+                tmplPoints.emplace_back(static_cast<float>(pt.x), static_cast<float>(pt.y));
+            }
+
+            std::vector<cv::Point2f> tmplSrcPts;
+            cv::Mat rotMat = cv::getRotationMatrix2D(anchorPoint, -deg, 1.0);
+            cv::transform(tmplPoints, tmplSrcPts, rotMat);
+
+            tmplDatas.emplace_back(static_cast<float>(deg), 1.f);
+            PixelTemplData &ptd = tmplDatas.back();
+
+            PointSet &pixlLocs = ptd.pixlLocs;
+            const int numPoints = static_cast<int>(pointSetTmpl.size());
+            for (int n = 0; n < numPoints; ++n)
+            {
+                const cv::Point2f &tmplSrcPt = tmplSrcPts[n];
+                const cv::Point tmplSrcPti(tmplSrcPt);
+
+                uint8_t minMaxDiff = 0;
+                auto itF = minMaxDiffs.find(tmplSrcPti.y * pyrImg.cols + tmplSrcPti.x);
+                if (itF != minMaxDiffs.end())
+                {
+                    minMaxDiff = itF->second;
+                }
+                else
+                {
+                    minMaxDiff = getMinMaxGrayScale(pyrImg, maskPoints, tmplSrcPti);
+                    minMaxDiffs[tmplSrcPti.y * pyrImg.cols + tmplSrcPti.x] = minMaxDiff;
+                }
+
+                if (minMaxDiff > 10)
+                {
+                    int16_t grayVal = PixelTemplate::getGrayScaleSubpix(pyrImg, tmplSrcPt);
+                    if (grayVal >= 0)
+                    {
+                        pixlLocs.push_back(pointSetOrigin[n]);
+                        ptd.pixlVals.push_back(grayVal);
+                    }
+                }
+            }
+
+            if (pixlLocs.size() < 3)
             {
                 return SpamResult::kSR_TM_TEMPL_INSIGNIFICANT;
             }
