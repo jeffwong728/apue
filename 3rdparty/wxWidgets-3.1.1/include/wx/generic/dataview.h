@@ -278,14 +278,14 @@ public:
     virtual bool SetHeaderAttr(const wxItemAttr& attr) wxOVERRIDE;
 
     virtual bool SetAlternateRowColour(const wxColour& colour) wxOVERRIDE;
-    void SetHighlightLine(const int hl) { m_highlightRow = hl; }
-    int GetHighlightLine() const { return m_highlightRow; }
-    wxDataViewItem FindItemByRow(unsigned int row) const { return GetItemByRow(row); }
-    int FindRowByItem(const wxDataViewItem & item) const { return GetRowByItem(item); }
+
     // This method is specific to generic wxDataViewCtrl implementation and
     // should not be used in portable code.
     wxColour GetAlternateRowColour() const { return m_alternateRowColour; }
-
+    int GetHighlightLine() const { return m_highlightRow; }
+    void SetHighlightLine(const int hlRow) { m_highlightRow = hlRow; }
+    wxDataViewItem FindItemByRow(unsigned int row) const { return GetItemByRow(row); }
+    int FindRowByItem(const wxDataViewItem & item) const {return GetRowByItem(item); }
     // The returned pointer is null if the control has wxDV_NO_HEADER style.
     //
     // This method is only available in the generic versions.

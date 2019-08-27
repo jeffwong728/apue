@@ -764,12 +764,12 @@
 /*
  * Define if your compiler has std::unordered_map
  */
-#cmakedefine HAVE_STD_UNORDERED_MAP
+#cmakedefine HAVE_STD_UNORDERED_MAP 1
 
 /*
  * Define if your compiler has std::unordered_set
  */
-#cmakedefine HAVE_STD_UNORDERED_SET
+#cmakedefine HAVE_STD_UNORDERED_SET 1
 
 /*
  * Define if your compiler has std::tr1::unordered_map
