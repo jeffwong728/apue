@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Small, *boost::unit_test::enable_if<f
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
     tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 4, cv::TM_SQDIFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 5, 4, cv::TM_CCOEFF_NORMED };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -192,17 +192,17 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Small, *boost::unit_test::enable_if<f
     for (int l=0; l < static_cast<int>(tmplDatas.size()); ++l)
     {
         const LayerTemplData &ltd = tmplDatas[l];
-        const auto &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
+        const auto &tmplDatas = boost::get<BFNCCTemplDatas>(ltd.tmplDatas);
         for (int t = 0; t < static_cast<int>(tmplDatas.size()); ++t)
         {
             int i = 0;
-            const PixelTemplData &ptd = tmplDatas[t];
+            const BruteForceNCCTemplData &ptd = tmplDatas[t];
             const int width = ptd.maxPoint.x - ptd.minPoint.x + 1;
             const int height = ptd.maxPoint.y - ptd.minPoint.y + 1;
             cv::Mat tmplMat(height, width, CV_8UC1, cv::Scalar(128, 128, 128));
-            for (const cv::Point &pt : ptd.pixlLocs)
+            for (const cv::Point &pt : ptd.locs)
             {
-                tmplMat.at<uint8_t>(pt - ptd.minPoint) = static_cast<uint8_t>(ptd.pixlVals[i++]);
+                tmplMat.at<uint8_t>(pt - ptd.minPoint) = static_cast<uint8_t>(ptd.vals[i++]);
             }
 
             std::string fileName = std::string("mista_tmpl_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
@@ -274,26 +274,18 @@ BOOST_AUTO_TEST_CASE(test_NCCTmpl_Create_Big, *boost::unit_test::enable_if<false
     for (int l = 0; l < static_cast<int>(tmplDatas.size()); ++l)
     {
         const LayerTemplData &ltd = tmplDatas[l];
-        const auto &tmplDatas = boost::get<NCCTemplDatas>(ltd.tmplDatas);
+        const auto &tmplDatas = boost::get<BFNCCTemplDatas>(ltd.tmplDatas);
         for (int t = 0; t < static_cast<int>(tmplDatas.size()); ++t)
         {
             int i = 0;
-            const NCCTemplData &ptd = tmplDatas[t];
+            const BruteForceNCCTemplData &ptd = tmplDatas[t];
             const int width = ptd.maxPoint.x - ptd.minPoint.x + 1;
             const int height = ptd.maxPoint.y - ptd.minPoint.y + 1;
-            cv::Mat tmplMat(height, width, CV_8UC4, cv::Scalar(0, 0, 0, 255));
-            for (const cv::Point3i &pt3 : ptd.partALocs)
+            cv::Mat tmplMat(height, width, CV_8UC1, cv::Scalar(128, 128, 128));
+            for (const cv::Point &pt : ptd.locs)
             {
-                cv::Point pt(pt3.x, pt3.y);
                 uint32_t typeVals[3]{0xFFFF0000, 0xFFFFFFFF, 0xFF00FF00};
-                //tmplMat.at<uint32_t>(pt - ptd.minPoint) = typeVals[pt3.z];
-            }
-
-            for (const cv::Point3i &pt3 : ptd.partBLocs)
-            {
-                cv::Point pt(pt3.x, pt3.y);
-                uint32_t typeVals[3]{ 0xFFFFFF00, 0xFF808080, 0xFF00FFFF };
-                //tmplMat.at<uint32_t>(pt - ptd.minPoint) = typeVals[pt3.z];
+                tmplMat.at<uint8_t>(pt - ptd.minPoint) = static_cast<uint8_t>(ptd.vals[i++]);
             }
 
             std::string fileName = std::string("mista_ncc_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
@@ -427,7 +419,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Big, *boost::unit_test::enable_if<false>
     UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -482,7 +474,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<fals
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Gaskets, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Gaskets, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("gasket\\filename000.jpg");
@@ -545,7 +537,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<fals
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2300, 2150));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -30, 60, 6, cv::TM_CCOEFF };
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -10, 10, 6, cv::TM_CCOEFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -557,7 +549,6 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<fals
     cv::Point2f pos;
     float angle = 0, score=0;
 
-    cv::blur(grayImg, grayImg, cv::Size(5, 5));
     t1 = tbb::tick_count::now();
     sr = pixelTmpl.matchNCCTemplate(grayImg, 0.9f, pos, angle, score);
     t2 = tbb::tick_count::now();

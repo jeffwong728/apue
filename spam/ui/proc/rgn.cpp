@@ -219,7 +219,13 @@ SpamRgn::SpamRgn()
 SpamRgn::SpamRgn(const Geom::PathVector &pv)
     : SpamRgn()
 {
-    AddRun(pv);
+    SetRun(pv, std::vector<uint8_t>());
+}
+
+SpamRgn::SpamRgn(const Geom::PathVector &pv, std::vector<uint8_t> &buf)
+    : SpamRgn()
+{
+    SetRun(pv, buf);
 }
 
 SpamRgn::~SpamRgn()
@@ -270,7 +276,7 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
     ClearCacheData();
 }
 
-void SpamRgn::SetRun(const Geom::PathVector &pv)
+void SpamRgn::SetRun(const Geom::PathVector &pv, std::vector<uint8_t> &buf)
 {
     clear();
     Geom::OptRect bbox = pv.boundsFast();
@@ -281,7 +287,7 @@ void SpamRgn::SetRun(const Geom::PathVector &pv)
         int l = cvFloor(bbox.get().left());
         int r = cvCeil(bbox.get().right()) + 1;
         cv::Rect rect(cv::Point(l-3, t-3), cv::Point(r+3, b+3));
-        cv::Mat mask = BasicImgProc::PathToMask(pv*Geom::Translate(-rect.x, -rect.y), rect.size());
+        cv::Mat mask = BasicImgProc::PathToMask(pv*Geom::Translate(-rect.x, -rect.y), rect.size(), buf);
         AddRun(mask);
 
         for (SpamRun &run : data_)

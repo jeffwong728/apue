@@ -565,3 +565,22 @@ cv::Mat BasicImgProc::PathToMask(const Geom::PathVector &pv, const cv::Size &sz)
     mask = mask.clone();
     return mask;
 }
+
+cv::Mat BasicImgProc::PathToMask(const Geom::PathVector &pv, const cv::Size &sz, std::vector<uint8_t> &buf)
+{
+    int step = Cairo::ImageSurface::format_stride_for_width(Cairo::Surface::Format::A8, sz.width);
+    buf.resize(0);
+    buf.resize(sz.height*step);
+
+    cv::Mat mask(sz.height, sz.width, CV_8UC1, buf.data(), step);
+    auto imgSurf = Cairo::ImageSurface::create(mask.data, Cairo::Surface::Format::A8, mask.cols, mask.rows, static_cast<int>(mask.step1()));
+    auto cr = Cairo::Context::create(imgSurf);
+    cr->translate(0.5, 0.5);
+
+    Geom::CairoPathSink cairoPathSink(cr->cobj());
+    cairoPathSink.feed(pv);
+    cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
+    cr->fill();
+
+    return mask;
+}

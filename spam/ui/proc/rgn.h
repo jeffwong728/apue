@@ -88,6 +88,7 @@ class SpamRgn
 public:
     SpamRgn();
     SpamRgn(const Geom::PathVector &pv);
+    SpamRgn(const Geom::PathVector &pv, std::vector<uint8_t> &buf);
     ~SpamRgn();
 
 public:
@@ -98,7 +99,7 @@ public:
     void AddRun(const int16_t l, const int16_t cb, const int16_t ce) { data_.push_back({ l, cb, ce }); ClearCacheData(); }
     void AddRun(const cv::Mat &binaryImage);
     void AddRun(const Geom::PathVector &pv);
-    void SetRun(const Geom::PathVector &pv);
+    void SetRun(const Geom::PathVector &pv, std::vector<uint8_t> &buf);
     void AddRunParallel(const cv::Mat &binaryImage);
     void Draw(const cv::Mat &dstImage, const double sx, const double sy) const;
     int GetNumRuns() const { return static_cast<int>(data_.size()); }

@@ -314,7 +314,7 @@ TEST(PointSetTest, Circle)
     }
 
     SpamRgn rgn;
-    rgn.SetRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(32, 24), 20))));
+    rgn.SetRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(32, 24), 20))), std::vector<uint8_t>());
     EXPECT_DOUBLE_EQ(rgn.Centroid().x, 32.0);
     EXPECT_DOUBLE_EQ(rgn.Centroid().y, 24.0);
 }

@@ -1104,7 +1104,7 @@ SpamResult PixelTemplate::CreateTemplate(const PixelTmplCreateData &createData)
         return sr;
     }
 
-    sr = fastCreateTemplate(createData);
+    sr = calcCentreOfGravity(createData);
     if (SpamResult::kSR_SUCCESS != sr)
     {
         destroyData();
@@ -1209,10 +1209,11 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
     cv::Mat transPyrImg;
     cv::Mat transRotPyrImg;
     cv::Mat transMat = (cv::Mat_<double>(2, 3) << 1, 0, 0, 0, 1, 0);
+    std::vector<uint8_t> maskBuf;
 
     for (int l=0; l < createData.pyramidLevel; ++l)
     {
-        const SpamRgn rgn(tmplRgns[l]);
+        SpamRgn rgn(tmplRgns[l], maskBuf);
         cv::Point anchorPoint{cvRound(rgn.Centroid().x), cvRound(rgn.Centroid().y)};
         cfs_.emplace_back(static_cast<float>(anchorPoint.x), static_cast<float>(anchorPoint.y));
 
@@ -1232,18 +1233,19 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
         LayerTemplData &ltd = pyramid_tmpl_datas_.back();
 
         const cv::Mat &pyrImg = pyrs_[l];
-        const cv::Point &pyrImgCenter{ pyrImg.cols / 2, pyrImg.rows / 2 };
+        const cv::Point pyrImgCenter{ pyrImg.cols / 2, pyrImg.rows / 2 };
         ltd.tmplDatas = PixelTemplDatas();
         auto &tmplDatas = boost::get<PixelTemplDatas>(ltd.tmplDatas);
 
         transMat.at<double>(0, 2) = pyrImgCenter.x - anchorPoint.x;
         transMat.at<double>(1, 2) = pyrImgCenter.y - anchorPoint.y;
         cv::warpAffine(pyrImg, transPyrImg, transMat, cv::Size(pyrImg.cols, pyrImg.rows));
+        std::map<int, uint8_t> minMaxDiffs;
 
         for (double ang = 0; ang < createData.angleExtent; ang += angleStep)
         {
             const double deg = createData.angleStart + ang;
-            SpamRgn originRgn(tmplRgns[l] * Geom::Translate(-anchorPoint.x, -anchorPoint.y)* Geom::Rotate::from_degrees(-deg));
+            SpamRgn originRgn(tmplRgns[l] * Geom::Translate(-anchorPoint.x, -anchorPoint.y)* Geom::Rotate::from_degrees(-deg), maskBuf);
 
             PointSet pointSetOrigin(originRgn);
             PointSet pointSetTmpl(originRgn, pyrImgCenter);
@@ -1263,7 +1265,20 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
             const int numPoints = static_cast<int>(pointSetTmpl.size());
             for (int n=0; n<numPoints; ++n)
             {
-                if (getMinMaxGrayScale(transRotPyrImg, maskPoints, pointSetTmpl[n]) > 10)
+                uint8_t minMaxDiff = 0;
+                const cv::Point &tmplPt = pointSetTmpl[n];
+                auto itF = minMaxDiffs.find(tmplPt.y * pyrImg.cols + tmplPt.x);
+                if (itF != minMaxDiffs.end())
+                {
+                    minMaxDiff = itF->second;
+                }
+                else
+                {
+                    minMaxDiff = getMinMaxGrayScale(transRotPyrImg, maskPoints, tmplPt);
+                    minMaxDiffs[tmplPt.y * pyrImg.cols + tmplPt.x] = minMaxDiff;
+                }
+
+                if (minMaxDiff > 10)
                 {
                     pixlLocs.push_back(pointSetOrigin[n]);
                     ptd.pixlVals.push_back(transRotPyrImg.at<uint8_t>(pointSetTmpl[n]));
@@ -1304,10 +1319,11 @@ SpamResult PixelTemplate::fastCreateTemplate(const PixelTmplCreateData &createDa
     cv::buildPyramid(createData.srcImg, pyrs_, createData.pyramidLevel - 1, cv::BORDER_REFLECT);
     SpamRgn maskRgn(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 5))));
     PointSet maskPoints(maskRgn);
+    std::vector<uint8_t> maskBuf;
 
     for (int l = 0; l < createData.pyramidLevel; ++l)
     {
-        const SpamRgn rgn(tmplRgns[l]);
+        const SpamRgn rgn(tmplRgns[l], maskBuf);
         cv::Point anchorPoint{ cvRound(rgn.Centroid().x), cvRound(rgn.Centroid().y) };
         cfs_.emplace_back(static_cast<float>(anchorPoint.x), static_cast<float>(anchorPoint.y));
 
@@ -1334,7 +1350,7 @@ SpamResult PixelTemplate::fastCreateTemplate(const PixelTmplCreateData &createDa
         for (double ang = 0; ang < createData.angleExtent; ang += angleStep)
         {
             const double deg = createData.angleStart + ang;
-            SpamRgn originRgn(tmplRgns[l] * Geom::Translate(-anchorPoint.x, -anchorPoint.y)* Geom::Rotate::from_degrees(-deg));
+            const SpamRgn originRgn(tmplRgns[l] * Geom::Translate(-anchorPoint.x, -anchorPoint.y)* Geom::Rotate::from_degrees(-deg), maskBuf);
 
             PointSet pointSetOrigin(originRgn);
             PointSet pointSetTmpl(originRgn, anchorPoint);

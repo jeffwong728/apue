@@ -31,6 +31,7 @@ public:
     static SPSpamRgnVector Connect(const cv::Mat &labels, const int numLabels);
     static int GetNumWorkers() { return static_cast<int>(s_runList_pools_.size()); }
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz);
+    static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz, std::vector<uint8_t> &buf);
 
 private:
     static std::vector<SpamRunListPool> s_runList_pools_;
