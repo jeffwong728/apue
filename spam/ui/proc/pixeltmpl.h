@@ -122,36 +122,44 @@ struct PixelTmplCreateData
     const cv::TemplateMatchModes matchMode;
 };
 
+template<typename TAngle>
 struct AngleRange
 {
-    AngleRange(const float s, const float e)
+    AngleRange(const TAngle s, const TAngle e)
         : start(normalize(s)), end(normalize(e))
     {
     }
 
-    float normalize(const float a)
+    TAngle normalize(const TAngle a)
     {
-        float angle = a;
+        TAngle angle = a;
         while (angle < -180) angle += 360;
         while (angle > 180) angle -= 360;
         return angle;
     }
 
-    bool contains(const float a)
+    bool contains(const TAngle a)
     {
-        float na = normalize(a);
-        if (start < end)
-        {
+        TAngle na = normalize(a);
+        if (start < end) {
             return !(na > end || na < start);
-        }
-        else
-        {
+        } else {
             return !(na > end && na < start);
         }
     }
 
-    float start;
-    float end;
+    bool between(const TAngle a)
+    {
+        TAngle na = normalize(a);
+        if (start < end) {
+            return na < end && na > start;
+        } else {
+            return na < end || na > start;
+        }
+    }
+
+    TAngle start;
+    TAngle end;
 };
 
 class PixelTemplate
@@ -223,13 +231,14 @@ private:
     void destroyData();
     void clearCacheMatchData();
     SpamResult verifyCreateData(const PixelTmplCreateData &createData);
-    SpamResult calcCentreOfGravity(const PixelTmplCreateData &createData);
+    SpamResult calcCreateTemplate(const PixelTmplCreateData &createData);
     SpamResult fastCreateTemplate(const PixelTmplCreateData &createData);
     void linkTemplatesBetweenLayers();
     static uint8_t getMinMaxGrayScale(const cv::Mat &img, const PointSet &maskPoints, const cv::Point &point);
     void supressNoneMaximum();
     SpamResult changeToNCCTemplate();
     SpamResult changeToBruteForceNCCTemplate();
+    void processToplayerSearchROI(const PixelTmplCreateData &createData);
     static double calcValue1(const int64_t T, const int64_t S, const int64_t n);
     static double calcValue2(const int64_t T, const int64_t S, const int64_t Sp, const int64_t n, const int64_t np);
     static int16_t getGrayScaleSubpix(const cv::Mat& img, const cv::Point2f &pt);
@@ -239,10 +248,12 @@ private:
     cv::TemplateMatchModes match_mode_;
     std::vector<cv::Point2f> cfs_; // centre of referance
     std::vector<SpamRgn>     tmpl_rgns_;
-    std::vector<SpamRgn>     search_rois_;
     std::vector<LayerTemplData> pyramid_tmpl_datas_;
     std::vector<cv::Mat> pyrs_;
     std::vector<const uint8_t *> row_ptrs_;
+    SpamRgn          top_layer_full_domain_;
+    SpamRgn          top_layer_search_roi_;
+    Geom::PathVector top_layer_search_roi_g_;
     CandidateList candidates_;
     CandidateList top_candidates_;
     CandidateList final_candidates_;

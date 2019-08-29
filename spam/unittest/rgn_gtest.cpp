@@ -139,22 +139,22 @@ TEST(PointInRectangleTest, Big)
 TEST(RgnCentroidTest, Circle)
 {
     SpamRgn rgn0;
-    rgn0.AddRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 50))));
+    rgn0.SetRegion(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 50))));
     EXPECT_NEAR(rgn0.Centroid().x, 0.0, 0.01);
     EXPECT_NEAR(rgn0.Centroid().y, 0.0, 0.01);
 
     SpamRgn rgn1;
-    rgn1.AddRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(2, 2), 50))));
+    rgn1.SetRegion(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(2, 2), 50))));
     EXPECT_NEAR(rgn1.Centroid().x, 2.0, 0.01);
     EXPECT_NEAR(rgn1.Centroid().y, 2.0, 0.01);
 
     SpamRgn rgn2;
-    rgn2.AddRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(-2, -2), 50))));
+    rgn2.SetRegion(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(-2, -2), 50))));
     EXPECT_NEAR(rgn2.Centroid().x, -2.0, 0.01);
     EXPECT_NEAR(rgn2.Centroid().y, -2.0, 0.01);
 
     SpamRgn rgn3;
-    rgn3.AddRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(10, 10), 50))));
+    rgn3.SetRegion(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(10, 10), 50))));
     EXPECT_NEAR(rgn3.Centroid().x, 10.0, 0.01);
     EXPECT_NEAR(rgn3.Centroid().y, 10.0, 0.01);
 }
@@ -162,22 +162,22 @@ TEST(RgnCentroidTest, Circle)
 TEST(RgnCentroidTest, Rectangle)
 {
     SpamRgn rgn0;
-    rgn0.AddRun(Geom::PathVector(Geom::Path(Geom::Rect(Geom::Point(0, 0), Geom::Point(1, 1)))));
+    rgn0.SetRegion(Geom::PathVector(Geom::Path(Geom::Rect(Geom::Point(0, 0), Geom::Point(1, 1)))));
     EXPECT_DOUBLE_EQ(rgn0.Centroid().x, 0.0);
     EXPECT_DOUBLE_EQ(rgn0.Centroid().y, 0.0);
 
     SpamRgn rgn1;
-    rgn1.AddRun(Geom::PathVector(Geom::Path(Geom::Rect(Geom::Point(1, 1), Geom::Point(3, 3)))));
+    rgn1.SetRegion(Geom::PathVector(Geom::Path(Geom::Rect(Geom::Point(1, 1), Geom::Point(3, 3)))));
     EXPECT_DOUBLE_EQ(rgn1.Centroid().x, 1.5);
     EXPECT_DOUBLE_EQ(rgn1.Centroid().y, 1.5);
 
     SpamRgn rgn2;
-    rgn2.AddRun(Geom::PathVector(Geom::Path(Geom::Rect(Geom::Point(-1, -1), Geom::Point(1, 1)))));
+    rgn2.SetRegion(Geom::PathVector(Geom::Path(Geom::Rect(Geom::Point(-1, -1), Geom::Point(1, 1)))));
     EXPECT_DOUBLE_EQ(rgn2.Centroid().x, -0.5);
     EXPECT_DOUBLE_EQ(rgn2.Centroid().y, -0.5);
 
     SpamRgn rgn3;
-    rgn3.AddRun(Geom::PathVector(Geom::Path(Geom::Rect(Geom::Point(-1, -2), Geom::Point(20, 10)))));
+    rgn3.SetRegion(Geom::PathVector(Geom::Path(Geom::Rect(Geom::Point(-1, -2), Geom::Point(20, 10)))));
     EXPECT_DOUBLE_EQ(rgn3.Centroid().x, 9);
     EXPECT_DOUBLE_EQ(rgn3.Centroid().y, 3.5);
 }
@@ -201,7 +201,7 @@ TEST(RgnMinCircleTest, Single)
 TEST(RgnMinCircleTest, Circle)
 {
     SpamRgn rgn;
-    rgn.AddRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(10, 20), 50))));
+    rgn.SetRegion(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(10, 20), 50))));
 
     Geom::Circle c = rgn.MinCircle();
     EXPECT_NEAR(c.radius(), 50, 1e-3);
@@ -232,7 +232,7 @@ TEST(RgnMinCircleTest, RotatedRect)
     pv *= Geom::Translate(-9.5, -4) * Geom::Rotate::from_degrees(60) * Geom::Translate(9.5, 4);
 
     SpamRgn rgn;
-    rgn.AddRun(pv);
+    rgn.SetRegion(pv);
 
     Geom::Circle c = rgn.MinCircle();
     EXPECT_NEAR(c.radius(), rect.diameter()/2, 1);
@@ -314,7 +314,7 @@ TEST(PointSetTest, Circle)
     }
 
     SpamRgn rgn;
-    rgn.SetRun(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(32, 24), 20))), std::vector<uint8_t>());
+    rgn.SetRegion(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(32, 24), 20))), std::vector<uint8_t>());
     EXPECT_DOUBLE_EQ(rgn.Centroid().x, 32.0);
     EXPECT_DOUBLE_EQ(rgn.Centroid().y, 24.0);
 }

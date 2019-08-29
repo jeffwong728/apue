@@ -219,13 +219,13 @@ SpamRgn::SpamRgn()
 SpamRgn::SpamRgn(const Geom::PathVector &pv)
     : SpamRgn()
 {
-    SetRun(pv, std::vector<uint8_t>());
+    SetRegion(pv, std::vector<uint8_t>());
 }
 
 SpamRgn::SpamRgn(const Geom::PathVector &pv, std::vector<uint8_t> &buf)
     : SpamRgn()
 {
-    SetRun(pv, buf);
+    SetRegion(pv, buf);
 }
 
 SpamRgn::~SpamRgn()
@@ -276,7 +276,7 @@ void SpamRgn::AddRun(const cv::Mat &binaryImage)
     ClearCacheData();
 }
 
-void SpamRgn::SetRun(const Geom::PathVector &pv, std::vector<uint8_t> &buf)
+void SpamRgn::SetRegion(const Geom::PathVector &pv, std::vector<uint8_t> &buf)
 {
     clear();
     Geom::OptRect bbox = pv.boundsFast();
@@ -301,7 +301,28 @@ void SpamRgn::SetRun(const Geom::PathVector &pv, std::vector<uint8_t> &buf)
     ClearCacheData();
 }
 
-void SpamRgn::AddRun(const Geom::PathVector &pv)
+void SpamRgn::SetRegion(const cv::Rect &rect)
+{
+    clear();
+    data_.resize(rect.height);
+
+    const int16_t colBeg = static_cast<int16_t>(rect.x);
+    const int16_t colEnd = static_cast<int16_t>(rect.x + rect.width);
+    const int16_t rowBeg = static_cast<int16_t>(rect.y);
+    const int16_t rowEnd = static_cast<int16_t>(rect.y + rect.height);
+
+    SpamRun *pRun = data_.data();
+    for (int16_t row=rowBeg; row<rowEnd; ++row)
+    {
+        pRun->row = row;
+        pRun->colb = colBeg;
+        pRun->cole = colEnd;
+        pRun->label = 0;
+        pRun += 1;
+    }
+}
+
+void SpamRgn::SetRegion(const Geom::PathVector &pv)
 {
     clear();
     constexpr int negInf = std::numeric_limits<int>::min();

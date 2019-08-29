@@ -419,7 +419,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Big, *boost::unit_test::enable_if<false>
     UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -528,16 +528,16 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Gaskets, *boost::unit_test::enable_if<fa
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
 
-    const Geom::PathVector roi;
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2300, 2150));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -10, 10, 6, cv::TM_CCOEFF };
+    const Geom::PathVector roi(pth);
+    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -1, 2, 6, cv::TM_CCOEFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;

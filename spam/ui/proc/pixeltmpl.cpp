@@ -35,14 +35,15 @@ struct OutsideImageBox
 
 struct SADTopLayerScaner
 {
-    SADTopLayerScaner(const PixelTemplate *const pixTmpl, const int s) : tmpl(pixTmpl), sad(s) {}
-    SADTopLayerScaner(SADTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), sad(s.sad) { }
+    SADTopLayerScaner(const PixelTemplate *const pixTmpl, const SpamRunList *const r, const int s) : tmpl(pixTmpl), roi(r), sad(s) {}
+    SADTopLayerScaner(SADTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), roi(s.roi), sad(s.sad) { }
 
     void operator()(const tbb::blocked_range<int>& br);
     void join(SADTopLayerScaner& rhs) { candidates.insert(candidates.end(), rhs.candidates.cbegin(), rhs.candidates.cend()); }
 
     const int sad;
     const PixelTemplate *const tmpl;
+    const SpamRunList *const roi;
     PixelTemplate::CandidateList candidates;
 };
 
@@ -67,14 +68,15 @@ template<bool TouchBorder>
 struct BFNCCTopLayerScaner
 {
     using NCCValueList = std::vector<uint32_t, tbb::scalable_allocator<uint32_t>>;
-    BFNCCTopLayerScaner(const PixelTemplate *const pixTmpl, const double s) : tmpl(pixTmpl), score(s) {}
-    BFNCCTopLayerScaner(BFNCCTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), score(s.score) { }
+    BFNCCTopLayerScaner(const PixelTemplate *const pixTmpl, const SpamRun *const r, const double s) : tmpl(pixTmpl), roi(r), score(s) {}
+    BFNCCTopLayerScaner(BFNCCTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), roi(s.roi), score(s.score) { }
 
     void operator()(const tbb::blocked_range<int>& br);
     void join(BFNCCTopLayerScaner& rhs) { candidates.insert(candidates.end(), rhs.candidates.cbegin(), rhs.candidates.cend()); }
 
     const double score;
     const PixelTemplate *const tmpl;
+    const SpamRun *const roi;
     PixelTemplate::CandidateList candidates;
 };
 
@@ -400,8 +402,8 @@ void BFNCCTopLayerScaner<TouchBorder>::operator()(const tbb::blocked_range<int>&
     const LayerTemplData &layerTempls = tmpl->pyramid_tmpl_datas_.back();
     OutsideImageBox oib(layerMat.cols, layerMat.rows);
     const double layerMinScore = std::max(0.5, score - 0.1 * (tmpl->pyramid_level_ - 1));
-    const int rowStart = br.begin();
-    const int rowEnd = br.end();
+    const int runStart = br.begin();
+    const int runEnd = br.end();
     const BFNCCTemplDatas &tmplDatas = boost::get<BFNCCTemplDatas>(layerTempls.tmplDatas);
     const int numLayerTempls = static_cast<int>(tmplDatas.size());
 
@@ -416,9 +418,13 @@ void BFNCCTopLayerScaner<TouchBorder>::operator()(const tbb::blocked_range<int>&
         partVals.resize(0);
         partVals.resize(ntd.regVals.size(), 0);
 
-        for (int row = rowStart; row < rowEnd; ++row)
+        for (int run = runStart; run < runEnd; ++run)
         {
-            for (int col = 0; col < nLayerCols; ++col)
+            const int row = roi[run].row;
+            const int colStart = roi[run].colb;
+            const int colEnd = roi[run].cole;
+
+            for (int col = colStart; col < colEnd; ++col)
             {
                 cv::Point originPt{ col, row };
                 uint32_t *pPartVals = partVals.data();
@@ -854,9 +860,20 @@ SpamResult PixelTemplate::matchPixelTemplate(const cv::Mat &img, const int sad, 
         row_ptrs_[row] = topLayer.ptr<uint8_t>(row);
     }
 
-    SADTopLayerScaner sadScaner(this, sad);
-    tbb::parallel_reduce(tbb::blocked_range<int>(0, nTopRows), sadScaner);
-    candidates_.swap(sadScaner.candidates);
+    if (top_layer_search_roi_.GetData().empty())
+    {
+        top_layer_full_domain_.SetRegion(cv::Rect(0, 0, nTopCols, nTopRows));
+        SADTopLayerScaner sadScaner(this, &top_layer_full_domain_.GetData(), sad);
+        tbb::parallel_reduce(tbb::blocked_range<int>(0, nTopRows), sadScaner);
+        candidates_.swap(sadScaner.candidates);
+    }
+    else
+    {
+        SADTopLayerScaner sadScaner(this, &top_layer_search_roi_.GetData(), sad);
+        tbb::parallel_reduce(tbb::blocked_range<int>(0, nTopRows), sadScaner);
+        candidates_.swap(sadScaner.candidates);
+    }
+
     supressNoneMaximum();
 
     final_candidates_.resize(0);
@@ -988,9 +1005,21 @@ SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float minSc
     if (cv::TM_CCOEFF == match_mode_ ||
         cv::TM_CCOEFF_NORMED == match_mode_)
     {
-        BFNCCTopLayerScaner<true> bfNCCScaner(this, minScore);
-        tbb::parallel_reduce(tbb::blocked_range<int>(0, nTopRows), bfNCCScaner);
-        candidates_.swap(bfNCCScaner.candidates);
+        if (top_layer_search_roi_.GetData().empty())
+        {
+            top_layer_full_domain_.SetRegion(cv::Rect(0, 0, nTopCols, nTopRows));
+            const int numRuns = static_cast<int>(top_layer_full_domain_.GetData().size());
+            BFNCCTopLayerScaner<true> bfNCCScaner(this, top_layer_full_domain_.GetData().data(), minScore);
+            tbb::parallel_reduce(tbb::blocked_range<int>(0, numRuns), bfNCCScaner);
+            candidates_.swap(bfNCCScaner.candidates);
+        }
+        else
+        {
+            const int numRuns = static_cast<int>(top_layer_search_roi_.GetData().size());
+            BFNCCTopLayerScaner<true> bfNCCScaner(this, top_layer_search_roi_.GetData().data(), minScore);
+            tbb::parallel_reduce(tbb::blocked_range<int>(0, numRuns), bfNCCScaner);
+            candidates_.swap(bfNCCScaner.candidates);
+        }
     }
 
     supressNoneMaximum();
@@ -1104,7 +1133,7 @@ SpamResult PixelTemplate::CreateTemplate(const PixelTmplCreateData &createData)
         return sr;
     }
 
-    sr = calcCentreOfGravity(createData);
+    sr = fastCreateTemplate(createData);
     if (SpamResult::kSR_SUCCESS != sr)
     {
         destroyData();
@@ -1127,6 +1156,8 @@ SpamResult PixelTemplate::CreateTemplate(const PixelTmplCreateData &createData)
         }
     }
 
+    processToplayerSearchROI(createData);
+
     return SpamResult::kSR_SUCCESS;
 }
 
@@ -1136,7 +1167,8 @@ void PixelTemplate::destroyData()
     match_mode_ = cv::TM_SQDIFF;
     cfs_.clear();
     tmpl_rgns_.clear();
-    search_rois_.clear();
+    top_layer_search_roi_.clear();
+    top_layer_search_roi_g_.clear();
     pyramid_tmpl_datas_.clear();
     pyrs_.clear();
 }
@@ -1184,7 +1216,7 @@ SpamResult PixelTemplate::verifyCreateData(const PixelTmplCreateData &createData
     return SpamResult::kSR_OK;
 }
 
-SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createData)
+SpamResult PixelTemplate::calcCreateTemplate(const PixelTmplCreateData &createData)
 {
     if (createData.tmplRgn.empty())
     {
@@ -1293,6 +1325,12 @@ SpamResult PixelTemplate::calcCentreOfGravity(const PixelTmplCreateData &createD
             const auto minMaxPoints = pixlLocs.MinMax();
             ptd.minPoint = minMaxPoints.first;
             ptd.maxPoint = minMaxPoints.second;
+
+            AngleRange<double> angleRange{ deg , deg + angleStep };
+            if (angleRange.between(0))
+            {
+                ang = -angleStep - createData.angleStart;
+            }
         }
     }
 
@@ -1406,6 +1444,12 @@ SpamResult PixelTemplate::fastCreateTemplate(const PixelTmplCreateData &createDa
             const auto minMaxPoints = pixlLocs.MinMax();
             ptd.minPoint = minMaxPoints.first;
             ptd.maxPoint = minMaxPoints.second;
+
+            AngleRange<double> angleRange{ deg , deg + angleStep };
+            if (angleRange.between(0))
+            {
+                ang = -angleStep - createData.angleStart;
+            }
         }
     }
 
@@ -1423,7 +1467,7 @@ void PixelTemplate::linkTemplatesBetweenLayers()
         const auto &belowTmplDatas = boost::get<PixelTemplDatas>(belowLtd.tmplDatas);
         for (PixelTemplData &ptd : tmplDatas)
         {
-            AngleRange angleRange(ptd.angle - ltd.angleStep, ptd.angle + ltd.angleStep);
+            AngleRange<float> angleRange(ptd.angle - ltd.angleStep, ptd.angle + ltd.angleStep);
             for (int t=0; t< belowTmplDatas.size(); ++t)
             {
                 if (angleRange.contains(belowTmplDatas[t].angle))
@@ -1670,6 +1714,21 @@ SpamResult PixelTemplate::changeToBruteForceNCCTemplate()
     }
 
     return SpamResult::kSR_SUCCESS;
+}
+
+void PixelTemplate::processToplayerSearchROI(const PixelTmplCreateData &createData)
+{
+    if (createData.roi.empty())
+    {
+        top_layer_search_roi_.clear();
+        top_layer_search_roi_g_.clear();
+    }
+    else
+    {
+        double s = std::pow(0.5, createData.pyramidLevel-1);
+        top_layer_search_roi_g_ = createData.roi*Geom::Scale(s, s);
+        top_layer_search_roi_.SetRegion(top_layer_search_roi_g_, std::vector<uint8_t>());
+    }
 }
 
 cv::Mat PixelTemplate::GetTopScoreMat() const

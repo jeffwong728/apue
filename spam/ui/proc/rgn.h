@@ -92,14 +92,16 @@ public:
     ~SpamRgn();
 
 public:
+    bool isEmpty() const {};
     void swap(SpamRgn &o) { data_.swap(o.data_); ClearCacheData(); }
-    void clear() { data_.clear(); ClearCacheData(); }
+    void clear() { data_.resize(0); ClearCacheData(); }
 
 public:
     void AddRun(const int16_t l, const int16_t cb, const int16_t ce) { data_.push_back({ l, cb, ce }); ClearCacheData(); }
     void AddRun(const cv::Mat &binaryImage);
-    void AddRun(const Geom::PathVector &pv);
-    void SetRun(const Geom::PathVector &pv, std::vector<uint8_t> &buf);
+    void SetRegion(const cv::Rect &rect);
+    void SetRegion(const Geom::PathVector &pv);
+    void SetRegion(const Geom::PathVector &pv, std::vector<uint8_t> &buf);
     void AddRunParallel(const cv::Mat &binaryImage);
     void Draw(const cv::Mat &dstImage, const double sx, const double sy) const;
     int GetNumRuns() const { return static_cast<int>(data_.size()); }
