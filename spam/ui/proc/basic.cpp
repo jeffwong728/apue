@@ -584,3 +584,42 @@ cv::Mat BasicImgProc::PathToMask(const Geom::PathVector &pv, const cv::Size &sz,
 
     return mask;
 }
+
+void BasicImgProc::Transform(const cv::Mat &grayImage, cv::Mat &dst, const cv::Mat &transMat, const cv::Rect &mask)
+{
+    dst.create(grayImage.rows, grayImage.cols, grayImage.type());
+    dst = 0;
+
+    const int rowBeg = std::max(0, mask.y);
+    const int colBeg = std::max(0, mask.x);
+    const int rowEnd = std::min(grayImage.rows, mask.y + mask.height);
+    const int colEnd = std::min(grayImage.cols, mask.x + mask.width);
+
+    std::vector<cv::Point2f> maskPoints;
+    if (rowBeg < rowEnd && colBeg < colEnd)
+    {
+        maskPoints.reserve((rowEnd - rowBeg) * (colEnd - colBeg));
+    }
+
+    for (int row = rowBeg; row < rowEnd; ++row)
+    {
+        for (int col = colBeg; col < colEnd; ++col)
+        {
+            maskPoints.emplace_back(static_cast<float>(col), static_cast<float>(row));
+        }
+    }
+
+    std::vector<cv::Point2f> maskSrcPts;
+    cv::transform(maskPoints, maskSrcPts, transMat);
+
+    const cv::Point2f *pMaskSrcPt = maskSrcPts.data();
+    for (int row = rowBeg; row < rowEnd; ++row)
+    {
+        for (int col = colBeg; col < colEnd; ++col)
+        {
+            const int16_t grayVal = getGrayScaleSubpix(grayImage, *pMaskSrcPt);
+            dst.at<uint8_t>(row, col) = cv::saturate_cast<uint8_t>(grayVal);
+            pMaskSrcPt += 1;
+        }
+    }
+}

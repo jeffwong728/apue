@@ -319,4 +319,29 @@ TEST(PointSetTest, Circle)
     EXPECT_DOUBLE_EQ(rgn.Centroid().y, 24.0);
 }
 
+TEST(BasicImgProcTest, Transform)
+{
+    cv::Mat img(480, 640, CV_8UC1, cv::Scalar());
+    for (int row = 0; row < 480; row += 30)
+    {
+        for (int col = 0; col < 640;col += 30)
+        {
+            cv::drawMarker(img, cv::Point(col, row), CV_RGB(255, 255, 255), cv::MARKER_CROSS, 10, 1);
+        }
+    }
+
+    cv::Mat invMat;
+    cv::Point2f pivPt{ 240, 320 };
+    cv::Mat rotMat = cv::getRotationMatrix2D(pivPt, 30, 1.0);
+    cv::invertAffineTransform(rotMat, invMat);
+
+    cv::Mat dst;
+    BasicImgProc::Transform(img, dst, invMat, cv::Rect(0, 0, 640, 480));
+    UnitTestHelper::WriteImage(img, "transform_mask_src.png");
+    UnitTestHelper::WriteImage(dst, "transform_mask_dst.png");
+
+    cv::warpAffine(img, dst, rotMat, cv::Size(dst.cols, dst.rows), cv::INTER_LINEAR);
+    UnitTestHelper::WriteImage(dst, "transform_cv_dst.png");
+}
+
 }

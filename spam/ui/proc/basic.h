@@ -32,9 +32,37 @@ public:
     static int GetNumWorkers() { return static_cast<int>(s_runList_pools_.size()); }
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz);
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz, std::vector<uint8_t> &buf);
+    static void Transform(const cv::Mat &grayImage, cv::Mat &dst, const cv::Mat &transMat, const cv::Rect &mask);
+
+public:
+    static int16_t getGrayScaleSubpix(const cv::Mat& grayImage, const cv::Point2f &pt);
 
 private:
     static std::vector<SpamRunListPool> s_runList_pools_;
     static std::vector<SpamRunList> s_rgn_pool_;
 };
+
+inline int16_t BasicImgProc::getGrayScaleSubpix(const cv::Mat& img, const cv::Point2f &pt)
+{
+    cv::Point tlPt{ cvFloor(pt.x), cvFloor(pt.y) };
+    cv::Point trPt{ tlPt.x + 1, tlPt.y };
+    cv::Point blPt{ tlPt.x, tlPt.y + 1 };
+    cv::Point brPt{ tlPt.x + 1, tlPt.y + 1 };
+
+    cv::Rect imageBox(0, 0, img.cols, img.rows);
+    if (imageBox.contains(tlPt) && imageBox.contains(brPt))
+    {
+        float rx = pt.x - tlPt.x;
+        float tx = 1 - rx;
+        float ry = pt.y - tlPt.y;
+        float ty = 1 - ry;
+
+        return static_cast<int16_t>(cvRound(img.at<uint8_t>(tlPt)*tx*ty + img.at<uint8_t>(trPt)*rx*ty + img.at<uint8_t>(blPt)*tx*ry + img.at<uint8_t>(brPt)*rx*ry));
+    }
+    else
+    {
+        return -1;
+    }
+}
+
 #endif //SPAM_UI_PROC_BASIC_H

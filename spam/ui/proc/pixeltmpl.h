@@ -241,7 +241,6 @@ private:
     void processToplayerSearchROI(const PixelTmplCreateData &createData);
     static double calcValue1(const int64_t T, const int64_t S, const int64_t n);
     static double calcValue2(const int64_t T, const int64_t S, const int64_t Sp, const int64_t n, const int64_t np);
-    static int16_t getGrayScaleSubpix(const cv::Mat& img, const cv::Point2f &pt);
 
 private:
     int pyramid_level_;
@@ -290,28 +289,4 @@ inline double PixelTemplate::calcValue2(const int64_t Tp, const int64_t S, const
         return std::sqrt(D) / static_cast<double>(n);
     }
 }
-
-inline int16_t PixelTemplate::getGrayScaleSubpix(const cv::Mat& img, const cv::Point2f &pt)
-{
-    cv::Point tlPt{ cvFloor(pt.x), cvFloor(pt.y) };
-    cv::Point trPt{ tlPt.x + 1, tlPt.y };
-    cv::Point blPt{ tlPt.x, tlPt.y + 1 };
-    cv::Point brPt{ tlPt.x + 1, tlPt.y + 1 };
-
-    cv::Rect imageBox(0, 0, img.cols, img.rows);
-    if (imageBox.contains(tlPt) && imageBox.contains(brPt))
-    {
-        float rx = pt.x - tlPt.x;
-        float tx = 1 - rx;
-        float ry = pt.y - tlPt.y;
-        float ty = 1 - ry;
-
-        return static_cast<int16_t>(cvRound(img.at<uint8_t>(tlPt)*tx*ty + img.at<uint8_t>(trPt)*rx*ty + img.at<uint8_t>(blPt)*tx*ry + img.at<uint8_t>(brPt)*rx*ry));
-    }
-    else
-    {
-        return -1;
-    }
-}
-
 #endif //SPAM_UI_PROC_PIXEL_TEMPLATE_H

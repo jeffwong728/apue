@@ -1427,7 +1427,7 @@ SpamResult PixelTemplate::fastCreateTemplate(const PixelTmplCreateData &createDa
 
                 if (minMaxDiff > 10)
                 {
-                    int16_t grayVal = PixelTemplate::getGrayScaleSubpix(pyrImg, tmplSrcPt);
+                    int16_t grayVal = BasicImgProc::getGrayScaleSubpix(pyrImg, tmplSrcPt);
                     if (grayVal >= 0)
                     {
                         pixlLocs.push_back(pointSetOrigin[n]);

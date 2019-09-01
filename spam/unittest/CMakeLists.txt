@@ -8,7 +8,7 @@ add_executable(test_CVPerf cvperf_unittest.cpp helper.cpp helper.h)
 add_executable(test_Rgn rgn_gtest.cpp helper.cpp helper.h ${PROJECT_SOURCE_DIR}/spam/ui/proc/rgn.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/basic.cpp)
 add_executable(test_RgnPerf rgn_unittest.cpp helper.cpp helper.h ${PROJECT_SOURCE_DIR}/spam/ui/proc/rgn.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/basic.cpp)
 add_executable(test_VclPerf vcl_unittest.cpp helper.cpp helper.h ${PROJECT_SOURCE_DIR}/spam/vectorclass/instrset_detect.cpp)
-add_executable(test_PixelTmplPerf pixeltmpl_unittest.cpp helper.cpp helper.h ${PROJECT_SOURCE_DIR}/spam/ui/proc/rgn.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/basic.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/pixeltmpl.cpp ${PROJECT_SOURCE_DIR}/spam/vectorclass/instrset_detect.cpp)
+add_executable(test_PixelTmplPerf pixeltmpl_unittest.cpp helper.cpp helper.h ${PROJECT_SOURCE_DIR}/spam/ui/proc/rgn.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/basic.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/gradient.cpp ${PROJECT_SOURCE_DIR}/spam/ui/proc/pixeltmpl.cpp ${PROJECT_SOURCE_DIR}/spam/vectorclass/instrset_detect.cpp)
 
 set(alltargets)
 list(APPEND alltargets test_Simd)

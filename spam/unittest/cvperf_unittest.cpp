@@ -111,6 +111,27 @@ BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_1)
     UnitTestHelper::WriteImage(borderImg, std::string("board-01_pyr_border.png"));
 }
 
+BOOST_AUTO_TEST_CASE(test_CV_Sobel_Performance_0)
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    std::vector<cv::Mat> pyrs;
+    
+    cv::buildPyramid(grayImg, pyrs, 4, cv::BORDER_REFLECT);
+    BOOST_CHECK_EQUAL(pyrs.size(), 5);
+
+    int id = 0;
+    for (const cv::Mat &pyr : pyrs)
+    {
+        cv::Mat dx, dy;
+        tbb::tick_count t1 = tbb::tick_count::now();
+        cv::spatialGradient(pyr, dx, dy);
+        tbb::tick_count t2 = tbb::tick_count::now();
+        BOOST_TEST_MESSAGE("CV spatial gradient level "<<id++<<" spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    }
+}
+
 BOOST_AUTO_TEST_CASE(test_CV_GaussianBlur_Performance_0)
 {
     cv::Mat grayImg, colorImg;
