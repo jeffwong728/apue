@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE TestCVPerf
 #include "helper.h"
+#include <ui/proc/gradient.h>
 #include <cassert>
 #include <boost/test/included/unit_test.hpp>
 #include <opencv2/highgui.hpp>
@@ -23,7 +24,7 @@ struct TestCVPerfConfig
     }
 };
 
-BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -55,7 +56,7 @@ BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0)
     BOOST_TEST_MESSAGE("CV in range spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -83,7 +84,7 @@ BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0)
     UnitTestHelper::WriteImage(borderImg, std::string("mista_pyr_border.png"));
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_1)
+BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_1, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -124,15 +125,27 @@ BOOST_AUTO_TEST_CASE(test_CV_Sobel_Performance_0)
     int id = 0;
     for (const cv::Mat &pyr : pyrs)
     {
-        cv::Mat dx, dy;
+        cv::Mat dx, dy, sdx, sdy, xDst, yDst;;
         tbb::tick_count t1 = tbb::tick_count::now();
-        cv::spatialGradient(pyr, dx, dy);
+        SpamGradient::Sobel(pyr, sdx, sdy, cv::Rect(0, 0, pyr.cols, pyr.rows));
         tbb::tick_count t2 = tbb::tick_count::now();
+
+        cv::spatialGradient(pyr, dx, dy);
+        cv::absdiff(dx, sdx, xDst);
+        cv::absdiff(dy, sdy, yDst);
+        xDst.convertTo(xDst, CV_8UC1);
+        yDst.convertTo(yDst, CV_8UC1);
+
+        //cv::Mat mag, magGray;
+        //cv::magnitude(dx, dy, mag);
+        //cv::convertScaleAbs(mag, magGray, 255);
+        std::string fileName = std::string("mista_pyr_") + std::to_string(id) + ".png";
+        UnitTestHelper::WriteImage(yDst, fileName);
         BOOST_TEST_MESSAGE("CV spatial gradient level "<<id++<<" spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_GaussianBlur_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_GaussianBlur_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -162,7 +175,7 @@ BOOST_AUTO_TEST_CASE(test_CV_medianBlur_Performance_0)
     UnitTestHelper::WriteImage(dst, "mista_medianBlur.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_ERODE_RECT_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_ERODE_RECT_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -181,7 +194,7 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_ERODE_RECT_Performance_0)
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_erode_rect.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_DILATE_RECT_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_DILATE_RECT_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -200,7 +213,7 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_DILATE_RECT_Performance_0)
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_dilate_rect.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_OPEN_RECT_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_OPEN_RECT_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -219,7 +232,7 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_OPEN_RECT_Performance_0)
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_open_rect.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_CLOSE_RECT_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_CLOSE_RECT_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -238,7 +251,7 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_CLOSE_RECT_Performance_0)
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_close_rect.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_ERODE_ELLIPSE_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_ERODE_ELLIPSE_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -257,7 +270,7 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_ERODE_ELLIPSE_Performance_0)
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_erode_ellipse.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_DILATE_ELLIPSE_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_DILATE_ELLIPSE_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -276,7 +289,7 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_DILATE_ELLIPSE_Performance_0)
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_dilate_ellipse.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_OPEN_ELLIPSE_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_OPEN_ELLIPSE_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -295,7 +308,7 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_OPEN_ELLIPSE_Performance_0)
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_open_ellipse.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_CLOSE_ELLIPSE_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_CLOSE_ELLIPSE_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");

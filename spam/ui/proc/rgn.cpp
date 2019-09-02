@@ -10,7 +10,7 @@
 #include <tbb/scalable_allocator.h>
 #include <stack>
 #pragma warning( push )
-#pragma warning( disable : 4819 4003 4267)
+#pragma warning( disable : 4819 4003 4267 4244 )
 #include <2geom/path-sink.h>
 #include <2geom/path-intersection.h>
 #pragma warning( pop )
