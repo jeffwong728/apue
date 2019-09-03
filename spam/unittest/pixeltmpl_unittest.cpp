@@ -35,16 +35,16 @@ BOOST_GLOBAL_FIXTURE(TestPixelTmplConfig);
 
 BOOST_AUTO_TEST_CASE(test_PixelTmpl_CandidateRun_Empty)
 {
-    PixelTemplate::CandidateList cl;
-    PixelTemplate::CandidateGroup cg(cl);
+    BaseTemplate::CandidateList cl;
+    BaseTemplate::CandidateGroup cg(cl);
     BOOST_CHECK_EQUAL(cg.size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(test_PixelTmpl_CandidateRun_Single)
 {
-    PixelTemplate::CandidateList cl;
+    BaseTemplate::CandidateList cl;
     cl.emplace_back(1, 1, 239.f);
-    PixelTemplate::CandidateGroup cg(cl);
+    BaseTemplate::CandidateGroup cg(cl);
     BOOST_CHECK_EQUAL(cg.size(), 1);
     BOOST_CHECK_EQUAL(cg.front().row, 1);
     BOOST_CHECK_EQUAL(cg.front().colb, 1);
@@ -54,10 +54,10 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_CandidateRun_Single)
 
 BOOST_AUTO_TEST_CASE(test_PixelTmpl_CandidateRun_MultipleCandidates)
 {
-    PixelTemplate::CandidateList cl;
+    BaseTemplate::CandidateList cl;
     cl.emplace_back(1, 1, 200.f);
     cl.emplace_back(1, 2, 239.f);
-    PixelTemplate::CandidateGroup cg(cl);
+    BaseTemplate::CandidateGroup cg(cl);
     BOOST_CHECK_EQUAL(cg.size(), 1);
     BOOST_CHECK_EQUAL(cg.front().row, 1);
     BOOST_CHECK_EQUAL(cg.front().colb, 1);
@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_CandidateRun_MultipleCandidates)
 
 BOOST_AUTO_TEST_CASE(test_PixelTmpl_CandidateRun_MultipleRuns)
 {
-    PixelTemplate::CandidateList cl;
+    BaseTemplate::CandidateList cl;
     cl.emplace_back(1, 1, 250.f);
     cl.emplace_back(1, 2, 230.f);
     cl.emplace_back(1, 5, 200.f);
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_CandidateRun_MultipleRuns)
     cl.emplace_back(2, 4, 251.f);
     cl.emplace_back(2, 5, 252.f);
     cl.emplace_back(3, 7, 211.f);
-    PixelTemplate::CandidateGroup cg(cl);
+    BaseTemplate::CandidateGroup cg(cl);
 
     BOOST_CHECK_EQUAL(cg.size(), 4);
     BOOST_CHECK_EQUAL(cg[0].row, 1);
@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Small, *boost::unit_test::enable_if<f
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
     tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 5, 4, cv::TM_CCOEFF_NORMED };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, 0, 5, 4}, cv::TM_CCOEFF_NORMED };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_Create_Big, *boost::unit_test::enable_if<fal
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 5, cv::TM_SQDIFF };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -60, 120, 5}, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -261,7 +261,7 @@ BOOST_AUTO_TEST_CASE(test_NCCTmpl_Create_Big, *boost::unit_test::enable_if<false
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 10, 5, cv::TM_CCOEFF_NORMED };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, 0, 10, 5}, cv::TM_CCOEFF_NORMED };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -303,7 +303,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Small, *boost::unit_test::enable_if<fals
     const Geom::Rect rect1(Geom::Point(185, 198), Geom::Point(399, 286));
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 5, cv::TM_SQDIFF };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -180, 359, 5}, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -356,7 +356,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_SAD_Big, *boost::unit_test::enable_if<false>
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 6, 5, cv::TM_SQDIFF };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, 0, 6, 5}, cv::TM_SQDIFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Big, *boost::unit_test::enable_if<false>
     const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -60, 120, 5, cv::TM_CCOEFF_NORMED };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -60, 120, 5}, cv::TM_CCOEFF_NORMED };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -428,7 +428,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<fals
     const Geom::Rect rect1(Geom::Point(185, 198), Geom::Point(399, 286));
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -180, 359, 5, cv::TM_CCOEFF_NORMED };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -180, 359, 5}, cv::TM_CCOEFF_NORMED };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -483,7 +483,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Gaskets, *boost::unit_test::enable_if<fa
     const Geom::Rect rect1(Geom::Point(163, 197), Geom::Point(340, 340));
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 360, 5, cv::TM_CCOEFF_NORMED };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, 0, 360, 5}, cv::TM_CCOEFF_NORMED };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;
@@ -537,7 +537,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<true
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
     const Geom::PathVector roi(pth);
-    PixelTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, -100, 200, 6, cv::TM_CCOEFF };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -100, 200, 6}, cv::TM_CCOEFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;

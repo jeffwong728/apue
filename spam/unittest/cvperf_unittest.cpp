@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_1, *boost::unit_test::enab
     UnitTestHelper::WriteImage(borderImg, std::string("board-01_pyr_border.png"));
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_Sobel_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_Sobel_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -125,23 +125,77 @@ BOOST_AUTO_TEST_CASE(test_CV_Sobel_Performance_0)
     int id = 0;
     for (const cv::Mat &pyr : pyrs)
     {
-        cv::Mat dx, dy, sdx, sdy, xDst, yDst;;
+        cv::Mat dx, dy, sdx, sdy, xDiff, yDiff, ndx, ndy;
         tbb::tick_count t1 = tbb::tick_count::now();
-        SpamGradient::Sobel(pyr, sdx, sdy, cv::Rect(0, 0, pyr.cols, pyr.rows));
+        SpamGradient::SobelNormalize(pyr, ndx, ndy, cv::Rect(0, 0, pyr.cols, pyr.rows));
         tbb::tick_count t2 = tbb::tick_count::now();
+        BOOST_TEST_MESSAGE("CV spatial gradient level " << id++ << " spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
         cv::spatialGradient(pyr, dx, dy);
-        cv::absdiff(dx, sdx, xDst);
-        cv::absdiff(dy, sdy, yDst);
-        xDst.convertTo(xDst, CV_8UC1);
-        yDst.convertTo(yDst, CV_8UC1);
+        SpamGradient::Sobel(pyr, sdx, sdy, cv::Rect(0, 0, pyr.cols, pyr.rows));
+        cv::Mat reducedDx{ dx, cv::Range(1, pyr.rows-1), cv::Range(1, pyr.cols - 1) };
+        cv::Mat reducedSDx{ sdx, cv::Range(1, pyr.rows - 1), cv::Range(1, pyr.cols - 1) };
+        cv::Mat reducedDy{ dy, cv::Range(1, pyr.rows - 1), cv::Range(1, pyr.cols - 1) };
+        cv::Mat reducedSDy{ sdy, cv::Range(1, pyr.rows - 1), cv::Range(1, pyr.cols - 1) };
+        cv::absdiff(reducedDx, reducedSDx, xDiff);
+        cv::absdiff(reducedDy, reducedSDy, yDiff);
 
-        //cv::Mat mag, magGray;
-        //cv::magnitude(dx, dy, mag);
-        //cv::convertScaleAbs(mag, magGray, 255);
-        std::string fileName = std::string("mista_pyr_") + std::to_string(id) + ".png";
-        UnitTestHelper::WriteImage(yDst, fileName);
-        BOOST_TEST_MESSAGE("CV spatial gradient level "<<id++<<" spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+        double minValX=-1, minValY=-1, maxValX=-1, maxValY=-1;
+        cv::minMaxIdx(xDiff, &minValX, &maxValX);
+        cv::minMaxIdx(yDiff, &minValY, &maxValY);
+        BOOST_CHECK_SMALL(maxValX, 1e-12);
+        BOOST_CHECK_SMALL(maxValY, 1e-12);
+
+        cv::Mat fdx, fdy;
+        reducedSDx.convertTo(fdx, CV_32FC1);
+        reducedSDy.convertTo(fdy, CV_32FC1);
+
+        cv::Mat magSobel;
+        cv::magnitude(fdx, fdy, magSobel);
+        cv::divide(fdx, magSobel, fdx);
+        cv::divide(fdy, magSobel, fdy);
+        cv::patchNaNs(fdx);
+        cv::patchNaNs(fdy);
+
+        cv::Mat reducedNdx{ ndx, cv::Range(1, pyr.rows - 1), cv::Range(1, pyr.cols - 1) };
+        cv::Mat reducedNdy{ ndy, cv::Range(1, pyr.rows - 1), cv::Range(1, pyr.cols - 1) };
+
+        minValX = -1, minValY = -1, maxValX = -1, maxValY = -1;
+        cv::absdiff(fdx, reducedNdx, xDiff);
+        cv::absdiff(fdy, reducedNdy, yDiff);
+        cv::minMaxIdx(xDiff, &minValX, &maxValX);
+        cv::minMaxIdx(yDiff, &minValY, &maxValY);
+        BOOST_CHECK_SMALL(maxValX, 1e-3);
+        BOOST_CHECK_SMALL(maxValY, 1e-3);
+
+        //xDst.convertTo(xDst, CV_8UC1);
+        //yDst.convertTo(yDst, CV_8UC1);
+        //cv::convertScaleAbs(sdx, fdx, 255);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_CV_Edge_Cany)
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    std::vector<cv::Mat> pyrs;
+
+    cv::buildPyramid(grayImg, pyrs, 4, cv::BORDER_REFLECT);
+    BOOST_CHECK_EQUAL(pyrs.size(), 5);
+
+    int id = 0;
+    for (const cv::Mat &pyr : pyrs)
+    {
+        cv::Mat dx, dy, edges;
+        SpamGradient::Sobel(pyr, dx, dy, cv::Rect(0, 0, pyr.cols, pyr.rows));
+
+        dx *= 1.0 / 8;
+        dy *= 1.0 / 8;
+        cv::Canny(dx, dy, edges, 20, 50, true);
+
+        std::string fileName = std::string("mista_pyr_edge_") + std::to_string(id++) + ".png";
+        UnitTestHelper::WriteImage(edges, fileName);
     }
 }
 
@@ -160,7 +214,7 @@ BOOST_AUTO_TEST_CASE(test_CV_GaussianBlur_Performance_0, *boost::unit_test::enab
     UnitTestHelper::WriteImage(dst, "mista_GaussianBlur.png");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_medianBlur_Performance_0)
+BOOST_AUTO_TEST_CASE(test_CV_medianBlur_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
