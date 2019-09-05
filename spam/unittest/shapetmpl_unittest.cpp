@@ -34,17 +34,16 @@ struct TestShapeTmplConfig
 BOOST_GLOBAL_FIXTURE(TestShapeTmplConfig);
 
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Small, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
-    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
 
     const Geom::PathVector roi;
-    const Geom::Rect rect1(Geom::Point(143, 121), Geom::Point(465, 177));
-    const Geom::Path pth(rect1);
-    Geom::PathVector tmplRgn(pth);
-    tmplRgn.push_back(Geom::Path(Geom::Rect(Geom::Point(140, 311), Geom::Point(463, 368))));
-    ShapeTmplCreateData tmplCreateData{ grayImg , tmplRgn, roi, 0, 5, 4 };
+    const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
+    const Geom::Path pth(rect);
+    const Geom::PathVector tmplRgn(pth);
+    ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -1, 2, 5}, 20, 30 };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     ShapeTemplate tmpl;
@@ -64,14 +63,54 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Small, *boost::unit_test::enable_if<f
             const ShapeTemplData &std = tmplDatas[t];
             const int width = std.maxPoint.x - std.minPoint.x + 1;
             const int height = std.maxPoint.y - std.minPoint.y + 1;
-            cv::Mat tmplMat(height, width, CV_8UC1, cv::Scalar(128, 128, 128));
+            cv::Mat tmplMat(height, width, CV_8UC1, cv::Scalar(0, 0, 0));
             for (const cv::Point &pt : std.edgeLocs)
             {
-                tmplMat.at<uint8_t>(pt - std.minPoint) = static_cast<uint8_t>(std.gNXVals[i++]);
+                tmplMat.at<uint8_t>(pt - std.minPoint) = 0xFF;
             }
 
             std::string fileName = std::string("mista_tmpl_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
             UnitTestHelper::WriteImage(tmplMat, fileName);
         }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Big, *boost::unit_test::enable_if<true>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2300, 2150));
+    const Geom::Path pth(rect);
+    const Geom::PathVector tmplRgn(pth);
+    const Geom::PathVector roi;
+    const ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -18, 36, 6}, 20, 30 };
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    ShapeTemplate tmpl;
+    SpamResult sr = tmpl.CreateTemplate(tmplCreateData);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Create big shape template (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
+
+    cv::Point2f pos;
+    float angle = 0, score = 0;
+
+    t1 = tbb::tick_count::now();
+    sr = tmpl.matchShapeTemplate(grayImg, 0.9f, 20, pos, angle, score);
+    t2 = tbb::tick_count::now();
+    cv::Point2f pt = tmpl.GetCenter();
+    BOOST_TEST_MESSAGE("Match big shape (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+
+    std::string fileName = std::string("big_shape_top_layer_score.png");
+    UnitTestHelper::WriteImage(tmpl.GetTopScoreMat(), fileName);
+
+    if (SpamResult::kSR_SUCCESS == sr)
+    {
+        UnitTestHelper::Color color{ 255, 0, 0, 255 };
+        const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
+        UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+        UnitTestHelper::WriteImage(colorImg, std::string("mista_shape_match.png"));
+        BOOST_TEST_MESSAGE("Shape (mista.png) matched at: (" << pos.x << ", " << pos.y << ", " << angle << "), with score=" << score);
     }
 }

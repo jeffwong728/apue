@@ -60,6 +60,24 @@ struct AngleRange
     TAngle end;
 };
 
+struct OutsideImageBox
+{
+    OutsideImageBox(const int w, const int h) : width(w), height(h) {}
+    bool operator()(const cv::Point &point)
+    {
+        if (point.x < 0 || point.x >= width || point.y < 0 || point.y >= height)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    const int width;
+    const int height;
+};
+
 struct BaseTmplCreateData
 {
     const cv::Mat &srcImg;

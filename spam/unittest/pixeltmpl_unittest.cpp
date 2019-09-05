@@ -537,7 +537,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<true
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
     const Geom::PathVector roi(pth);
-    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -100, 200, 6}, cv::TM_CCOEFF };
+    const PixelTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -3, 6, 6}, cv::TM_CCOEFF };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     PixelTemplate pixelTmpl;

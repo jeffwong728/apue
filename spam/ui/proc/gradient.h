@@ -16,7 +16,7 @@ public:
     static void Simple(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, const cv::Rect &roi);
     static void SimpleNormalize(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, const cv::Rect &roi);
     static void Sobel(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, const cv::Rect &roi);
-    static void SobelNormalize(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, const cv::Rect &roi);
+    static void SobelNormalize(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, const cv::Rect &roi, const int minContrast);
 };
 
 #endif //SPAM_UI_PROC_BASIC_H

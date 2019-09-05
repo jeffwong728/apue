@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(test_CV_Sobel_Performance_0, *boost::unit_test::enable_if<f
     {
         cv::Mat dx, dy, sdx, sdy, xDiff, yDiff, ndx, ndy;
         tbb::tick_count t1 = tbb::tick_count::now();
-        SpamGradient::SobelNormalize(pyr, ndx, ndy, cv::Rect(0, 0, pyr.cols, pyr.rows));
+        SpamGradient::SobelNormalize(pyr, ndx, ndy, cv::Rect(0, 0, pyr.cols, pyr.rows), 30);
         tbb::tick_count t2 = tbb::tick_count::now();
         BOOST_TEST_MESSAGE("CV spatial gradient level " << id++ << " spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
@@ -190,8 +190,8 @@ BOOST_AUTO_TEST_CASE(test_CV_Edge_Cany)
         cv::Mat dx, dy, edges;
         SpamGradient::Sobel(pyr, dx, dy, cv::Rect(0, 0, pyr.cols, pyr.rows));
 
-        dx *= 1.0 / 8;
-        dy *= 1.0 / 8;
+        //dx *= 1.0 / 8;
+        //dy *= 1.0 / 8;
         cv::Canny(dx, dy, edges, 20, 50, true);
 
         std::string fileName = std::string("mista_pyr_edge_") + std::to_string(id++) + ".png";

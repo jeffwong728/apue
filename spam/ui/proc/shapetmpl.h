@@ -43,7 +43,7 @@ public:
     ~ShapeTemplate();
 
 public:
-    SpamResult matchShapeTemplate(const cv::Mat &img, const float minScore, cv::Point2f &pos, float &angle, float &score);
+    SpamResult matchShapeTemplate(const cv::Mat &img, const float minScore, const int minContrast, cv::Point2f &pos, float &angle, float &score);
     SpamResult CreateTemplate(const ShapeTmplCreateData &createData);
     const std::vector<LayerShapeData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;
@@ -55,5 +55,9 @@ private:
 
 private:
     std::vector<LayerShapeData> pyramid_tmpl_datas_;
+    cv::Mat top_layer_dx_;
+    cv::Mat top_layer_dy_;
+    std::vector<const float *> dx_row_ptrs_;
+    std::vector<const float *> dy_row_ptrs_;
 };
 #endif //SPAM_UI_PROC_SHAPE_TEMPLATE_H

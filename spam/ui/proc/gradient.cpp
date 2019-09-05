@@ -71,22 +71,25 @@ struct SimpleSobelGradient
 
 struct SobelNormGradient
 {
-    SobelNormGradient(const cv::Mat *const i, cv::Mat *const x, cv::Mat *const y, const int cBeg, const int cEnd)
-        : img(i), dx(x), dy(y), colBeg(cBeg), colEnd(cEnd) {}
+    SobelNormGradient(const cv::Mat *const i, cv::Mat *const x, cv::Mat *const y, const int cBeg, const int cEnd, const int mc)
+        : img(i), dx(x), dy(y), colBeg(cBeg), colEnd(cEnd), minContrast(mc) {}
 
     static vcl::Vec16s kernel(const vcl::Vec16uc(&pixelVals)[9], const int i0, const int i1, const int j0, const int j1, const int k0, const int k1);
-    static void normalize(const vcl::Vec8i &X, const vcl::Vec8i &Y, float *xNorm, float *yNorm);
-    static void normalizePartial(const vcl::Vec8i &X, const vcl::Vec8i &Y, const int lastCols, float *xNorm, float *yNorm);
+    static void normalize(const vcl::Vec8i &X, const vcl::Vec8i &Y, const vcl::Vec8i &minContrast, float *xNorm, float *yNorm);
+    static void normalizePartial(const vcl::Vec8i &X, const vcl::Vec8i &Y, const vcl::Vec8i &minContrast, const int lastCols, float *xNorm, float *yNorm);
     void operator()(const tbb::blocked_range<int>& br) const;
     const int colBeg;
     const int colEnd;
     cv::Mat *const dx;
     cv::Mat *const dy;
     const cv::Mat *const img;
-    static vcl::Vec8i ones8i;
+    static const vcl::Vec8i ones8i;
+    static const vcl::Vec8i zeros8i;
+    const int minContrast;
 };
 
-vcl::Vec8i SobelNormGradient::ones8i(1, 1, 1, 1, 1, 1, 1, 1);
+const vcl::Vec8i SobelNormGradient::ones8i{ 1 };
+const vcl::Vec8i SobelNormGradient::zeros8i{ 0 };
 
 void SimpleGradient::operator()(const tbb::blocked_range<int>& br) const
 {
@@ -320,6 +323,7 @@ inline void SobelGradient::kernel(const vcl::Vec16uc(&pixelVals)[9],
     vcl::Vec16s X = vcl::extend(pixelVals[i1]) - vcl::extend(pixelVals[i0]);
     X = X + 2 * (vcl::extend(pixelVals[j1]) - vcl::extend(pixelVals[j0]));
     X = X + vcl::extend(pixelVals[k1]) - vcl::extend(pixelVals[k0]);
+    X >>= 3;
     X.store(pD);
 }
 
@@ -333,6 +337,7 @@ inline void SobelGradient::kernelPartial(const vcl::Vec16uc(&pixelVals)[9],
     vcl::Vec16s X = vcl::extend(pixelVals[i1]) - vcl::extend(pixelVals[i0]);
     X = X + 2 * (vcl::extend(pixelVals[j1]) - vcl::extend(pixelVals[j0]));
     X = X + vcl::extend(pixelVals[k1]) - vcl::extend(pixelVals[k0]);
+    X >>= 3;
     X.store_partial(lastCols, pD);
 }
 
@@ -453,9 +458,9 @@ void SimpleSobelGradient::operator()(const tbb::blocked_range<int>& br) const
     const auto imgStep = img->step1();
     const auto dxStep = dx->step1();
     const auto dyStep = dy->step1();
-    const uint8_t *pImgRow[3]{ img->ptr<uint8_t>(rowBeg - 1) + 1, img->ptr<uint8_t>(rowBeg) + 1, img->ptr<uint8_t>(rowBeg + 1) + 1 };
-    int16_t *pDXRow = dx->ptr<int16_t>(rowBeg) + 1;
-    int16_t *pDYRow = dy->ptr<int16_t>(rowBeg) + 1;
+    const uint8_t *pImgRow[3]{ img->ptr<uint8_t>(rowBeg - 1) + colBeg, img->ptr<uint8_t>(rowBeg) + colBeg, img->ptr<uint8_t>(rowBeg + 1) + colBeg };
+    int16_t *pDXRow = dx->ptr<int16_t>(rowBeg) + colBeg;
+    int16_t *pDYRow = dy->ptr<int16_t>(rowBeg) + colBeg;
     vcl::Vec16uc pixelVals[9];
 
     for (int row = rowBeg; row < rowEnd; ++row)
@@ -512,24 +517,32 @@ inline vcl::Vec16s SobelNormGradient::kernel(const vcl::Vec16uc(&pixelVals)[9],
     return X;
 }
 
-inline void SobelNormGradient::normalize(const vcl::Vec8i &X, const vcl::Vec8i &Y, float *xNorm, float *yNorm)
+inline void SobelNormGradient::normalize(const vcl::Vec8i &X, const vcl::Vec8i &Y,
+    const vcl::Vec8i &minContrast, float *xNorm, float *yNorm)
 {
     vcl::Vec8i sqrSum = X * X + Y * Y;
     vcl::Vec8i normSqrSum = vcl::select(sqrSum == 0, ones8i, sqrSum);
+    vcl::Vec8i supress = sqrSum < minContrast;
+    vcl::Vec8i supressX = vcl::select(supress, zeros8i, X);
+    vcl::Vec8i supressY = vcl::select(supress, zeros8i, Y);
     vcl::Vec8f rSqrt = vcl::approx_rsqrt(vcl::to_float(normSqrSum));
-    vcl::Vec8f NX = vcl::to_float(X) * rSqrt;
-    vcl::Vec8f NY = vcl::to_float(Y) * rSqrt;
+    vcl::Vec8f NX = vcl::to_float(supressX) * rSqrt;
+    vcl::Vec8f NY = vcl::to_float(supressY) * rSqrt;
     NX.store(xNorm);
     NY.store(yNorm);
 }
 
-inline void SobelNormGradient::normalizePartial(const vcl::Vec8i &X, const vcl::Vec8i &Y, const int lastCols, float *xNorm, float *yNorm)
+inline void SobelNormGradient::normalizePartial(const vcl::Vec8i &X, const vcl::Vec8i &Y,
+    const vcl::Vec8i &minContrast, const int lastCols, float *xNorm, float *yNorm)
 {
     vcl::Vec8i sqrSum = X * X + Y * Y;
     vcl::Vec8i normSqrSum = vcl::select(sqrSum == 0, ones8i, sqrSum);
+    vcl::Vec8i supress = sqrSum < minContrast;
+    vcl::Vec8i supressX = vcl::select(supress, zeros8i, X);
+    vcl::Vec8i supressY = vcl::select(supress, zeros8i, Y);
     vcl::Vec8f rSqrt = vcl::approx_rsqrt(vcl::to_float(normSqrSum));
-    vcl::Vec8f NX = vcl::to_float(X) * rSqrt;
-    vcl::Vec8f NY = vcl::to_float(Y) * rSqrt;
+    vcl::Vec8f NX = vcl::to_float(supressX) * rSqrt;
+    vcl::Vec8f NY = vcl::to_float(supressY) * rSqrt;
     NX.store_partial(lastCols, xNorm);
     NY.store_partial(lastCols, yNorm);
 }
@@ -548,10 +561,11 @@ void SobelNormGradient::operator()(const tbb::blocked_range<int>& br) const
     const auto imgStep = img->step1();
     const auto dxStep = dx->step1();
     const auto dyStep = dy->step1();
-    const uint8_t *pImgRow[3]{ img->ptr<uint8_t>(rowBeg - 1) + 1, img->ptr<uint8_t>(rowBeg) + 1, img->ptr<uint8_t>(rowBeg + 1) + 1 };
-    float *pDXRow = dx->ptr<float>(rowBeg) + 1;
-    float *pDYRow = dy->ptr<float>(rowBeg) + 1;
+    const uint8_t *pImgRow[3]{ img->ptr<uint8_t>(rowBeg - 1) + colBeg, img->ptr<uint8_t>(rowBeg) + colBeg, img->ptr<uint8_t>(rowBeg + 1) + colBeg };
+    float *pDXRow = dx->ptr<float>(rowBeg) + colBeg;
+    float *pDYRow = dy->ptr<float>(rowBeg) + colBeg;
     vcl::Vec16uc pixelVals[9];
+    vcl::Vec8i vecMinContrast(minContrast*minContrast *64);
 
     for (int row = rowBeg; row < rowEnd; ++row)
     {
@@ -570,8 +584,8 @@ void SobelNormGradient::operator()(const tbb::blocked_range<int>& br) const
             vcl::Vec8i  lowX = vcl::extend(X.get_low()), highX = vcl::extend(X.get_high());
             vcl::Vec8i  lowY = vcl::extend(Y.get_low()), highY = vcl::extend(Y.get_high());
 
-            normalize(lowX, lowY, pDXCol, pDYCol);
-            normalize(highX, highY, pDXCol + halfVectorSize, pDYCol + halfVectorSize);
+            normalize(lowX, lowY, vecMinContrast, pDXCol, pDYCol);
+            normalize(highX, highY, vecMinContrast, pDXCol + halfVectorSize, pDYCol + halfVectorSize);
 
             pImgCol[0] += vectorSize;
             pImgCol[1] += vectorSize;
@@ -595,18 +609,18 @@ void SobelNormGradient::operator()(const tbb::blocked_range<int>& br) const
 
             if (lastCols == halfVectorSize)
             {
-                normalize(lowX, lowY, pDXCol, pDYCol);
+                normalize(lowX, lowY, vecMinContrast, pDXCol, pDYCol);
             }
             else if (lastCols < halfVectorSize)
             {
-                normalizePartial(lowX, lowY, lastCols, pDXCol, pDYCol);
+                normalizePartial(lowX, lowY, vecMinContrast, lastCols, pDXCol, pDYCol);
             }
             else
             {
                 vcl::Vec8i  highX = vcl::extend(X.get_high());
                 vcl::Vec8i  highY = vcl::extend(Y.get_high());
-                normalize(lowX, lowY, pDXCol, pDYCol);
-                normalizePartial(highX, highY, lastCols - halfVectorSize, pDXCol + halfVectorSize, pDYCol + halfVectorSize);
+                normalize(lowX, lowY, vecMinContrast, pDXCol, pDYCol);
+                normalizePartial(highX, highY, vecMinContrast, lastCols - halfVectorSize, pDXCol + halfVectorSize, pDYCol + halfVectorSize);
             }
         }
 
@@ -681,7 +695,7 @@ void SpamGradient::Sobel(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, const cv:
     ssg(tbb::blocked_range<int>(rowBeg, rowEnd));
 }
 
-void SpamGradient::SobelNormalize(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, const cv::Rect &roi)
+void SpamGradient::SobelNormalize(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, const cv::Rect &roi, const int minContrast)
 {
     dx.create(img.rows, img.cols, CV_32FC1);
     dy.create(img.rows, img.cols, CV_32FC1);
@@ -698,6 +712,6 @@ void SpamGradient::SobelNormalize(const cv::Mat &img, cv::Mat &dx, cv::Mat &dy, 
     const int rowEnd = std::min(img.rows - 1, roi.y + roi.height);
     const int colEnd = std::min(img.cols - 1, roi.x + roi.width);
 
-    SobelNormGradient sng(&img, &dx, &dy, colBeg, colEnd);
+    SobelNormGradient sng(&img, &dx, &dy, colBeg, colEnd, minContrast);
     sng(tbb::blocked_range<int>(rowBeg, rowEnd));
 }

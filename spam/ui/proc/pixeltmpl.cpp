@@ -15,24 +15,6 @@
 #include <tbb/tbb.h>
 #include <tbb/scalable_allocator.h>
 
-struct OutsideImageBox
-{
-    OutsideImageBox(const int w, const int h) : width(w), height(h){}
-    bool operator()(const cv::Point &point) 
-    {
-        if (point.x < 0 || point.x >= width || point.y < 0 || point.y >= height)
-        { 
-            return true;
-        } 
-        else 
-        { 
-            return false;
-        }
-    }
-    const int width;
-    const int height;
-};
-
 struct SADTopLayerScaner
 {
     SADTopLayerScaner(const PixelTemplate *const pixTmpl, const SpamRunList *const r, const int s) : tmpl(pixTmpl), roi(r), sad(s) {}
