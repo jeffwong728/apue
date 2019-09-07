@@ -419,7 +419,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Big, *boost::unit_test::enable_if<false>
     UnitTestHelper::WriteImage(pixelTmpl.GetTopScoreMat(), fileName);
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Small, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -528,7 +528,7 @@ BOOST_AUTO_TEST_CASE(test_PixelTmpl_NCC_Gaskets, *boost::unit_test::enable_if<fa
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_PixelTmpl_BFNCC_Big, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");

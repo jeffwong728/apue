@@ -78,6 +78,26 @@ struct OutsideImageBox
     const int height;
 };
 
+struct OutsideRectangle
+{
+    OutsideRectangle(const int l, const int r, const int t, const int b) : left(l), right(r), top(t), bottom(b) {}
+    bool operator()(const cv::Point &point)
+    {
+        if (point.x < left || point.x > right || point.y < top || point.y > bottom)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    const int left;
+    const int right;
+    const int top;
+    const int bottom;
+};
+
 struct BaseTmplCreateData
 {
     const cv::Mat &srcImg;

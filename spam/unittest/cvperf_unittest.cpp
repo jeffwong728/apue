@@ -177,12 +177,12 @@ BOOST_AUTO_TEST_CASE(test_CV_Sobel_Performance_0, *boost::unit_test::enable_if<f
 BOOST_AUTO_TEST_CASE(test_CV_Edge_Cany)
 {
     cv::Mat grayImg, colorImg;
-    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\pendulum\\pendulum_07.png");
 
     std::vector<cv::Mat> pyrs;
 
-    cv::buildPyramid(grayImg, pyrs, 4, cv::BORDER_REFLECT);
-    BOOST_CHECK_EQUAL(pyrs.size(), 5);
+    cv::buildPyramid(grayImg, pyrs, 3, cv::BORDER_REFLECT);
+    BOOST_CHECK_EQUAL(pyrs.size(), 4);
 
     int id = 0;
     for (const cv::Mat &pyr : pyrs)
@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(test_CV_Edge_Cany)
 
         //dx *= 1.0 / 8;
         //dy *= 1.0 / 8;
-        cv::Canny(dx, dy, edges, 20, 50, true);
+        cv::Canny(dx, dy, edges, 10, 15, true);
 
         std::string fileName = std::string("mista_pyr_edge_") + std::to_string(id++) + ".png";
         UnitTestHelper::WriteImage(edges, fileName);

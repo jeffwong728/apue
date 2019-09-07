@@ -47,6 +47,7 @@ public:
     SpamResult CreateTemplate(const ShapeTmplCreateData &createData);
     const std::vector<LayerShapeData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;
+    void DumpTemplate(std::ostream &oss);
 
 private:
     void destroyData();

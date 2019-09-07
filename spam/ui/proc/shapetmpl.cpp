@@ -1,6 +1,7 @@
 #include "shapetmpl.h"
 #include "gradient.h"
 #include "basic.h"
+#include <iomanip>
 #include <limits>
 #include <stack>
 #include <vectorclass/vectorclass.h>
@@ -34,6 +35,47 @@ struct ShapeTopLayerScaner
 };
 
 template<bool TouchBorder>
+struct ShapeCandidateScaner
+{
+    ShapeCandidateScaner(ShapeTemplate *const shapeTmpl, const float s, const int l, const int mc)
+        : tmpl(shapeTmpl)
+        , score(s)
+        , layer(l)
+        , minContrast(mc)
+        , ones8i(1)
+        , zeros8i(0)
+    {}
+
+    void operator()(const tbb::blocked_range<int>& r) const;
+
+    vcl::Vec8i kernel(const vcl::Vec8i(&pixelVals)[9], const int i0, const int i1, const int j0, const int j1, const int k0, const int k1) const
+    {
+        return (pixelVals[i1] - pixelVals[i0]) + 2 * (pixelVals[j1] - pixelVals[j0]) + (pixelVals[k1] - pixelVals[k0]);
+    }
+
+    void normalize(const vcl::Vec8i &X, const vcl::Vec8i &Y, const vcl::Vec8i &minContrast, float *xNorm, float *yNorm) const
+    {
+        vcl::Vec8i sqrSum = X * X + Y * Y;
+        vcl::Vec8i normSqrSum = vcl::select(sqrSum == 0, ones8i, sqrSum);
+        vcl::Vec8i supress = sqrSum < minContrast;
+        vcl::Vec8i supressX = vcl::select(supress, zeros8i, X);
+        vcl::Vec8i supressY = vcl::select(supress, zeros8i, Y);
+        vcl::Vec8f rSqrt = vcl::approx_rsqrt(vcl::to_float(normSqrSum));
+        vcl::Vec8f NX = vcl::to_float(supressX) * rSqrt;
+        vcl::Vec8f NY = vcl::to_float(supressY) * rSqrt;
+        NX.store(xNorm);
+        NY.store(yNorm);
+    }
+
+    const float score;
+    const int layer;
+    const int minContrast;
+    ShapeTemplate *const tmpl;
+    const vcl::Vec8i ones8i;
+    const vcl::Vec8i zeros8i;
+};
+
+template<bool TouchBorder>
 inline float ShapeTopLayerScaner<TouchBorder>::dotProduct(const float *xVec0, const float *yVec0,
     const float *xVec1, const float *yVec1)
 {
@@ -59,8 +101,6 @@ void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
     const int runEnd = br.end();
     const std::vector<ShapeTemplData> &tmplDatas = layerTempls.tmplDatas;
     const int numLayerTempls = static_cast<int>(tmplDatas.size());
-
-    std::array<float, simdSize> partDXVals, partDYVals;
     std::map<int, BaseTemplate::Candidate, std::less<int>, tbb::scalable_allocator<std::pair<const int, BaseTemplate::Candidate>>> aCandidates;
 
     for (int t = 0; t < numLayerTempls; ++t)
@@ -83,7 +123,8 @@ void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
                 const float *tmplDy = ntd.gNYVals.data();
                 const cv::Point *pPt = ntd.edgeLocs.data();
                 float sumDot = 0.f;
-                cv::Point anchorPt{ col, row };
+                const cv::Point anchorPt{ col, row };
+                std::array<float, simdSize> partDXVals, partDYVals;
 
                 if (oib(anchorPt + ntd.minPoint) || oib(anchorPt + ntd.maxPoint))
                 {
@@ -110,18 +151,21 @@ void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
 
                 if (e < regularNumEdges) { continue; }
 
-                std::memset(partDXVals.data(), 0, partDXVals.size() * sizeof(partDXVals[0]));
-                std::memset(partDYVals.data(), 0, partDYVals.size() * sizeof(partDYVals[0]));
-                for (int k = 0; e < numEdges; ++e, ++k)
+                if (e < numEdges)
                 {
-                    const int x = pPt->x + col, y = pPt->y + row;
-                    partDXVals[k] = tmpl->dx_row_ptrs_[y][x];
-                    partDYVals[k] = tmpl->dy_row_ptrs_[y][x];
+                    std::memset(partDXVals.data(), 0, partDXVals.size() * sizeof(partDXVals[0]));
+                    std::memset(partDYVals.data(), 0, partDYVals.size() * sizeof(partDYVals[0]));
+                    for (int k = 0; e < numEdges; ++e, ++k)
+                    {
+                        const int x = pPt->x + col, y = pPt->y + row;
+                        partDXVals[k] = tmpl->dx_row_ptrs_[y][x];
+                        partDYVals[k] = tmpl->dy_row_ptrs_[y][x];
 
-                    pPt += 1;
+                        pPt += 1;
+                    }
+
+                    sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
                 }
-
-                sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
 
                 float score = sumDot / numEdges;
                 if (score >= layerMinScore)
@@ -161,8 +205,6 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
     const int runEnd = br.end();
     const std::vector<ShapeTemplData> &tmplDatas = layerTempls.tmplDatas;
     const int numLayerTempls = static_cast<int>(tmplDatas.size());
-
-    std::array<float, simdSize> partDXVals, partDYVals;
     std::map<int, BaseTemplate::Candidate, std::less<int>, tbb::scalable_allocator<std::pair<const int, BaseTemplate::Candidate>>> aCandidates;
 
     for (int t = 0; t < numLayerTempls; ++t)
@@ -185,7 +227,8 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
                 const float *tmplDy = ntd.gNYVals.data();
                 const cv::Point *pPt = ntd.edgeLocs.data();
                 float sumDot = 0.f;
-                cv::Point anchorPt{ col, row };
+                const cv::Point anchorPt{ col, row };
+                std::array<float, simdSize> partDXVals, partDYVals;
 
                 if (oib(anchorPt + ntd.minPoint) || oib(anchorPt + ntd.maxPoint))
                 {
@@ -218,21 +261,24 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
 
                     if (e < regularNumEdges) { continue; }
 
-                    std::memset(partDXVals.data(), 0, partDXVals.size() * sizeof(partDXVals[0]));
-                    std::memset(partDYVals.data(), 0, partDYVals.size() * sizeof(partDYVals[0]));
-                    for (int k = 0; e < numEdges; ++e, ++k)
+                    if (e < numEdges)
                     {
-                        const cv::Point tPt{ pPt->x + col, pPt->y + row };
-                        if (!oib(tPt))
+                        std::memset(partDXVals.data(), 0, partDXVals.size() * sizeof(partDXVals[0]));
+                        std::memset(partDYVals.data(), 0, partDYVals.size() * sizeof(partDYVals[0]));
+                        for (int k = 0; e < numEdges; ++e, ++k)
                         {
-                            partDXVals[k] = tmpl->dx_row_ptrs_[tPt.y][tPt.x];
-                            partDYVals[k] = tmpl->dy_row_ptrs_[tPt.y][tPt.x];
+                            const cv::Point tPt{ pPt->x + col, pPt->y + row };
+                            if (!oib(tPt))
+                            {
+                                partDXVals[k] = tmpl->dx_row_ptrs_[tPt.y][tPt.x];
+                                partDYVals[k] = tmpl->dy_row_ptrs_[tPt.y][tPt.x];
+                            }
+
+                            pPt += 1;
                         }
 
-                        pPt += 1;
+                        sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
                     }
-
-                    sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
                 }
                 else
                 {
@@ -256,18 +302,21 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
 
                     if (e < regularNumEdges) { continue; }
 
-                    std::memset(partDXVals.data(), 0, partDXVals.size() * sizeof(partDXVals[0]));
-                    std::memset(partDYVals.data(), 0, partDYVals.size() * sizeof(partDYVals[0]));
-                    for (int k = 0; e < numEdges; ++e, ++k)
+                    if (e < numEdges)
                     {
-                        const int x = pPt->x + col, y = pPt->y + row;
-                        partDXVals[k] = tmpl->dx_row_ptrs_[y][x];
-                        partDYVals[k] = tmpl->dy_row_ptrs_[y][x];
+                        std::memset(partDXVals.data(), 0, partDXVals.size() * sizeof(partDXVals[0]));
+                        std::memset(partDYVals.data(), 0, partDYVals.size() * sizeof(partDYVals[0]));
+                        for (int k = 0; e < numEdges; ++e, ++k)
+                        {
+                            const int x = pPt->x + col, y = pPt->y + row;
+                            partDXVals[k] = tmpl->dx_row_ptrs_[y][x];
+                            partDYVals[k] = tmpl->dy_row_ptrs_[y][x];
 
-                        pPt += 1;
+                            pPt += 1;
+                        }
+
+                        sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
                     }
-
-                    sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
                 }
 
                 float score = sumDot / numEdges;
@@ -292,6 +341,133 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
     for (const auto &cItem : aCandidates)
     {
         candidates.push_back(cItem.second);
+    }
+}
+
+template<>
+void ShapeCandidateScaner<false>::operator()(const tbb::blocked_range<int>& r) const
+{
+    constexpr int simdSize = 8;
+    const LayerShapeData &ltd = tmpl->pyramid_tmpl_datas_[layer];
+    const cv::Mat &layerMat = tmpl->pyrs_[layer];
+    OutsideRectangle orb(1, layerMat.cols-2, 1, layerMat.rows-2);
+    const float layerMinScore = std::max(0.5f, score - 0.1f * layer);
+    const auto &tmplDatas = ltd.tmplDatas;
+    const auto &upperTmplDatas = tmpl->pyramid_tmpl_datas_[layer + 1].tmplDatas;
+    vcl::Vec8i vecMinContrast(minContrast*minContrast * 64);
+
+    for (int c = r.begin(); c != r.end(); ++c)
+    {
+        BaseTemplate::Candidate &candidate = tmpl->final_candidates_[c];
+        const int row = candidate.row;
+        const int col = candidate.col;
+        const cv::Point anchorPt{ col, row };
+        double maxScore = -1;
+        int bestTmplIndex = 0;
+        const std::vector<int> &tmplIndices = upperTmplDatas[candidate.mindex].mindices;
+
+        for (const int tmplIndex : tmplIndices)
+        {
+            const ShapeTemplData &ntd = tmplDatas[tmplIndex];
+            const int numEdges = static_cast<int>(ntd.edgeLocs.size());
+            const int regularNumEdges = numEdges & (-simdSize);
+            const float stopScore = numEdges * layerMinScore - numEdges;
+
+            if (orb(anchorPt + ntd.minPoint) || orb(anchorPt + ntd.maxPoint)) {
+                continue;
+            }
+
+            int e = 0, j = 0;
+            const float *tmplDx = ntd.gNXVals.data();
+            const float *tmplDy = ntd.gNYVals.data();
+            const cv::Point *pEdgePt = ntd.edgeLocs.data();
+            float sumDot = 0.f;
+
+            vcl::Vec8i pixelVals[9];
+            int32_t partVals[9][simdSize];
+            std::array<float, simdSize> partDXVals, partDYVals;
+
+            for (; e < regularNumEdges; e += simdSize)
+            {
+                for (int i = 0; i < simdSize; ++i)
+                {
+                    const int x = pEdgePt->x + col, y = pEdgePt->y + row;
+                    partVals[0][i] = tmpl->row_ptrs_[y - 1][x - 1];
+                    partVals[1][i] = tmpl->row_ptrs_[y - 1][x];
+                    partVals[2][i] = tmpl->row_ptrs_[y - 1][x + 1];
+                    partVals[3][i] = tmpl->row_ptrs_[y][x - 1];
+                    partVals[5][i] = tmpl->row_ptrs_[y][x + 1];
+                    partVals[6][i] = tmpl->row_ptrs_[y + 1][x - 1];
+                    partVals[7][i] = tmpl->row_ptrs_[y + 1][x];
+                    partVals[8][i] = tmpl->row_ptrs_[y + 1][x + 1];
+
+                    pEdgePt += 1;
+                }
+
+                pixelVals[0].load(partVals[0]); pixelVals[1].load(partVals[1]); pixelVals[2].load(partVals[2]);
+                pixelVals[3].load(partVals[3]); pixelVals[5].load(partVals[5]);
+                pixelVals[6].load(partVals[6]); pixelVals[7].load(partVals[7]); pixelVals[8].load(partVals[8]);
+
+                vcl::Vec8i X = kernel(pixelVals, 0, 2, 3, 5, 6, 8);
+                vcl::Vec8i Y = kernel(pixelVals, 0, 6, 1, 7, 2, 8);
+                normalize(X, Y, vecMinContrast, partDXVals.data(), partDYVals.data());
+
+                j += simdSize;
+                sumDot += ShapeTopLayerScaner<false>::dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
+                if (sumDot < (stopScore + j)) { break; }
+
+                tmplDx += simdSize;
+                tmplDy += simdSize;
+            }
+
+            if (e < regularNumEdges) { continue; }
+
+            if (e < numEdges)
+            {
+                std::memset(partVals, 0, 9 * simdSize * sizeof(partDXVals[0]));
+                for (int k = 0; e < numEdges; ++e, ++k)
+                {
+                    const int x = pEdgePt->x + col, y = pEdgePt->y + row;
+                    partVals[0][0] = tmpl->row_ptrs_[y - 1][x - 1];
+                    partVals[1][0] = tmpl->row_ptrs_[y - 1][x];
+                    partVals[2][0] = tmpl->row_ptrs_[y - 1][x + 1];
+                    partVals[3][0] = tmpl->row_ptrs_[y][x - 1];
+                    partVals[5][0] = tmpl->row_ptrs_[y][x + 1];
+                    partVals[6][0] = tmpl->row_ptrs_[y + 1][x - 1];
+                    partVals[7][0] = tmpl->row_ptrs_[y + 1][x];
+                    partVals[8][0] = tmpl->row_ptrs_[y + 1][x + 1];
+
+                    pEdgePt += 1;
+                }
+
+                pixelVals[0].load(partVals[0]); pixelVals[1].load(partVals[1]); pixelVals[2].load(partVals[2]);
+                pixelVals[3].load(partVals[3]); pixelVals[5].load(partVals[5]);
+                pixelVals[6].load(partVals[6]); pixelVals[7].load(partVals[7]); pixelVals[8].load(partVals[8]);
+
+                vcl::Vec8i X = kernel(pixelVals, 0, 2, 3, 5, 6, 8);
+                vcl::Vec8i Y = kernel(pixelVals, 0, 6, 1, 7, 2, 8);
+                normalize(X, Y, vecMinContrast, partDXVals.data(), partDYVals.data());
+                sumDot += ShapeTopLayerScaner<false>::dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
+            }
+
+            float score = sumDot / numEdges;
+            if (score > maxScore)
+            {
+                maxScore = score;
+                bestTmplIndex = tmplIndex;
+            }
+        }
+
+        if (maxScore > layerMinScore)
+        {
+            candidate.mindex = bestTmplIndex;
+            candidate.score = static_cast<float>(maxScore);
+        }
+        else
+        {
+            candidate.mindex = -1;
+            candidate.score = 0.f;
+        }
     }
 }
 
@@ -339,23 +515,118 @@ SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float min
     {
         top_layer_full_domain_.SetRegion(cv::Rect(0, 0, nTopCols, nTopRows));
         const int numRuns = static_cast<int>(top_layer_full_domain_.GetData().size());
-        ShapeTopLayerScaner<true> bfNCCScaner(this, top_layer_full_domain_.GetData().data(), minScore);
-        //tbb::parallel_reduce(tbb::blocked_range<int>(0, numRuns), bfNCCScaner);
+        ShapeTopLayerScaner<false> bfNCCScaner(this, top_layer_full_domain_.GetData().data(), minScore);
         bfNCCScaner(tbb::blocked_range<int>(0, numRuns));
         candidates_.swap(bfNCCScaner.candidates);
     }
     else
     {
         const int numRuns = static_cast<int>(top_layer_search_roi_.GetData().size());
-        ShapeTopLayerScaner<true> bfNCCScaner(this, top_layer_search_roi_.GetData().data(), minScore);
-        //tbb::parallel_reduce(tbb::blocked_range<int>(0, numRuns), bfNCCScaner);
+        ShapeTopLayerScaner<false> bfNCCScaner(this, top_layer_search_roi_.GetData().data(), minScore);
         bfNCCScaner(tbb::blocked_range<int>(0, numRuns));
         candidates_.swap(bfNCCScaner.candidates);
     }
 
     supressNoneMaximum();
 
-    return SpamResult::kSR_TM_INSTANCE_NOT_FOUND;
+    final_candidates_.resize(0);
+    const int numTopLayerCandidates = static_cast<int>(candidates_.size());
+    for (int cc = 0; cc < numTopLayerCandidates; ++cc)
+    {
+        const BaseTemplate::Candidate &candidate = candidates_[cc];
+        for (int row = -2; row < 3; ++row)
+        {
+            for (int col = -2; col < 3; ++col)
+            {
+                final_candidates_.emplace_back(candidate.row * 2 + row, candidate.col * 2 + col, candidate.mindex, cc);
+            }
+        }
+    }
+
+    const int layerIndex = static_cast<int>(pyramid_tmpl_datas_.size() - 2);
+    for (int layer = layerIndex; layer >= 0; --layer)
+    {
+        const cv::Mat &layerMat = pyrs_[layer];
+        const int nLayerRows = layerMat.rows;
+
+        row_ptrs_.resize(0);
+        row_ptrs_.resize(nLayerRows);
+        for (int row = 0; row < nLayerRows; ++row)
+        {
+            row_ptrs_[row] = layerMat.ptr<uint8_t>(row);
+        }
+
+        ShapeCandidateScaner<false> scs(this, minScore, layer, minContrast);
+        tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), scs);
+
+        for (BaseTemplate::Candidate &candidate : candidates_)
+        {
+            candidate.score = 0.f;
+        }
+
+        for (const BaseTemplate::Candidate &candidate : final_candidates_)
+        {
+            if (candidate.mindex >= 0)
+            {
+                if (candidate.score > candidates_[candidate.label].score)
+                {
+                    candidates_[candidate.label] = candidate;
+                }
+            }
+        }
+
+        final_candidates_.resize(0);
+        for (const BaseTemplate::Candidate &candidate : candidates_)
+        {
+            if (candidate.score > 0.f)
+            {
+                final_candidates_.push_back(candidate);
+            }
+        }
+
+        if (layer > 0)
+        {
+            candidates_.swap(final_candidates_);
+
+            final_candidates_.resize(0);
+            const int numLayerCandidates = static_cast<int>(candidates_.size());
+            for (int cc = 0; cc < numLayerCandidates; ++cc)
+            {
+                const BaseTemplate::Candidate &candidate = candidates_[cc];
+                for (int row = -2; row < 3; ++row)
+                {
+                    for (int col = -2; col < 3; ++col)
+                    {
+                        final_candidates_.emplace_back(candidate.row * 2 + row, candidate.col * 2 + col, candidate.mindex, cc);
+                    }
+                }
+            }
+        }
+    }
+
+    BaseTemplate::Candidate bestCandidate(0, 0, std::numeric_limits<float>::lowest());
+    for (const BaseTemplate::Candidate &candidate : final_candidates_)
+    {
+        if (candidate.score > bestCandidate.score)
+        {
+            bestCandidate = candidate;
+        }
+    }
+
+    if (bestCandidate.score > minScore)
+    {
+        pos.x = static_cast<float>(bestCandidate.col);
+        pos.y = static_cast<float>(bestCandidate.row);
+        const auto &tmplDatas = pyramid_tmpl_datas_[0].tmplDatas;
+        angle = tmplDatas[bestCandidate.mindex].angle;
+        score = bestCandidate.score;
+
+        return SpamResult::kSR_SUCCESS;
+    }
+    else
+    {
+        return SpamResult::kSR_TM_INSTANCE_NOT_FOUND;
+    }
 }
 
 SpamResult ShapeTemplate::CreateTemplate(const ShapeTmplCreateData &createData)
@@ -391,6 +662,30 @@ cv::Mat ShapeTemplate::GetTopScoreMat() const
         scoreMat.at<uint8_t>(cv::Point(candidate.col, candidate.row)) = cv::saturate_cast<uint8_t>(candidate.score * 255);
     }
     return scoreMat;
+}
+
+void ShapeTemplate::DumpTemplate(std::ostream &oss)
+{
+    for (std::size_t l=0; l<pyramid_tmpl_datas_.size(); ++l)
+    {
+        const LayerShapeData &lsd = pyramid_tmpl_datas_[l];
+        for (std::size_t t = 0; t < lsd.tmplDatas.size(); ++t)
+        {
+            const ShapeTemplData &shtd = lsd.tmplDatas[t];
+            for (std::size_t e = 0; e < shtd.edgeLocs.size(); ++e)
+            {
+                oss << "[" << std::setw(3) << l;
+                oss << "," << std::setw(3) << t;
+                oss << "," << std::setw(5) << e;
+                oss << "," << std::setw(11) << std::fixed << std::setprecision(6) << shtd.angle;
+                oss << "," << std::setw(5) << shtd.edgeLocs[e].x;
+                oss << "," << std::setw(5) << shtd.edgeLocs[e].y;
+                oss << "," << std::setw(10) << std::fixed << std::setprecision(6) << shtd.gNXVals[e];
+                oss << "," << std::setw(10) << std::fixed << std::setprecision(6) << shtd.gNYVals[e];
+                oss << "]" << std::endl;
+            }
+        }
+    }
 }
 
 void ShapeTemplate::destroyData()
