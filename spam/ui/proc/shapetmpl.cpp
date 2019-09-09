@@ -664,7 +664,7 @@ cv::Mat ShapeTemplate::GetTopScoreMat() const
     return scoreMat;
 }
 
-void ShapeTemplate::DumpTemplate(std::ostream &oss)
+void ShapeTemplate::DumpTemplate(std::ostream &oss) const
 {
     for (std::size_t l=0; l<pyramid_tmpl_datas_.size(); ++l)
     {
@@ -683,6 +683,41 @@ void ShapeTemplate::DumpTemplate(std::ostream &oss)
                 oss << "," << std::setw(10) << std::fixed << std::setprecision(6) << shtd.gNXVals[e];
                 oss << "," << std::setw(10) << std::fixed << std::setprecision(6) << shtd.gNYVals[e];
                 oss << "]" << std::endl;
+            }
+        }
+    }
+}
+
+void ShapeTemplate::DrawTemplate(cv::Mat &img, const cv::Point2f &pos, const float angle) const
+{
+    if (!pyramid_tmpl_datas_.empty())
+    {
+        const LayerShapeData &lsd = pyramid_tmpl_datas_.front();
+        if (!lsd.tmplDatas.empty())
+        {
+            const ShapeTemplData &shtd = lsd.tmplDatas.front();
+            cv::Mat rotMat = cv::getRotationMatrix2D(cv::Point2f(0.f, 0.f), angle- shtd.angle, 1.0);
+            rotMat.at<double>(0, 2) += pos.x;
+            rotMat.at<double>(1, 2) += pos.y;
+
+            std::vector<cv::Point2d> tmplEdgePoints;
+            tmplEdgePoints.reserve(shtd.edgeLocs.size());
+            for (const cv::Point &pt : shtd.edgeLocs)
+            {
+                tmplEdgePoints.emplace_back(pt.x, pt.y);
+            }
+
+            std::vector<cv::Point2d> transEdgePoints;
+            cv::transform(tmplEdgePoints, transEdgePoints, rotMat);
+
+            OutsideImageBox oib(img.cols, img.rows);
+            for (const cv::Point2d &ept : transEdgePoints)
+            {
+                const cv::Point pt = ept;
+                if (!oib(pt))
+                {
+                    img.at<int>(pt) = 0xFFFF0000;
+                }
             }
         }
     }

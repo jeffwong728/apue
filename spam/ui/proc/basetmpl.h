@@ -6,6 +6,7 @@
 #include <vector>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/core/affine.hpp>
 #include <boost/optional.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>

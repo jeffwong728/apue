@@ -27,9 +27,9 @@ struct ShapeTmplCreateData
 struct LayerShapeData
 {
     LayerShapeData(const float as, const float ss) : angleStep(as), scaleStep(ss) {}
+    std::vector<ShapeTemplData> tmplDatas;
     float angleStep;
     float scaleStep;
-    std::vector<ShapeTemplData> tmplDatas;
 };
 
 class ShapeTemplate : public BaseTemplate
@@ -47,7 +47,8 @@ public:
     SpamResult CreateTemplate(const ShapeTmplCreateData &createData);
     const std::vector<LayerShapeData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;
-    void DumpTemplate(std::ostream &oss);
+    void DumpTemplate(std::ostream &oss) const;
+    void DrawTemplate(cv::Mat &img, const cv::Point2f &pos, const float angle) const;
 
 private:
     void destroyData();

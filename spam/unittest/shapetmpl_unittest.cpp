@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<fal
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Big, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -110,6 +110,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Big, *boost::unit_test::enable_if<false>())
         UnitTestHelper::Color color{ 255, 0, 0, 255 };
         const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
         UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+        tmpl.DrawTemplate(colorImg, pos, angle);
         UnitTestHelper::WriteImage(colorImg, std::string("mista_shape_match.png"));
         BOOST_TEST_MESSAGE("Shape (mista.png) matched at: (" << pos.x << ", " << pos.y << ", " << angle << "), with score=" << score);
     }
@@ -163,22 +164,23 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Board, *boost::unit_test::enable_if<fals
                 cv::Point2f pt = tmpl.GetCenter();
                 const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
                 UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+                tmpl.DrawTemplate(colorImg, pos, angle);
                 UnitTestHelper::WriteImage(colorImg, std::string("match_") + x.path().filename().string());
             }
         }
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Cap, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Cap, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\cap_illumination\\cap_illumination_01.png");
 
     const Geom::PathVector roi;
-    const Geom::Rect rect1(Geom::Point(400, 250), Geom::Point(850, 500));
+    const Geom::Rect rect1(Geom::Point(370, 495), Geom::Point(875, 675));
     const Geom::Path pth(rect1);
     Geom::PathVector tmplRgn(pth);
-    const ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -180, 359, 5}, 15, 30 };
+    const ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -180, 359, 5}, 20, 30 };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     ShapeTemplate tmpl;
@@ -217,13 +219,14 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Cap, *boost::unit_test::enable_if<false>
                 cv::Point2f pt = tmpl.GetCenter();
                 const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
                 UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+                tmpl.DrawTemplate(colorImg, pos, angle);
                 UnitTestHelper::WriteImage(colorImg, std::string("match_") + x.path().filename().string());
             }
         }
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Pendulum, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Pendulum, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\pendulum\\pendulum_07.png");
@@ -271,6 +274,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Pendulum, *boost::unit_test::enable_if<t
                 cv::Point2f pt = tmpl.GetCenter();
                 const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
                 UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+                tmpl.DrawTemplate(colorImg, pos, angle);
                 UnitTestHelper::WriteImage(colorImg, std::string("match_") + x.path().filename().string());
             }
         }
