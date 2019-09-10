@@ -43,7 +43,7 @@ public:
     ~ShapeTemplate();
 
 public:
-    SpamResult matchShapeTemplate(const cv::Mat &img, const float minScore, const int minContrast, cv::Point2f &pos, float &angle, float &score);
+    SpamResult matchShapeTemplate(const cv::Mat &img, const float minScore, const int minContrast, const float greediness, cv::Point2f &pos, float &angle, float &score);
     SpamResult CreateTemplate(const ShapeTmplCreateData &createData);
     const std::vector<LayerShapeData> &GetTmplDatas() const { return pyramid_tmpl_datas_; }
     cv::Mat GetTopScoreMat() const;

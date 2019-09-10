@@ -21,14 +21,21 @@ template<bool TouchBorder>
 struct ShapeTopLayerScaner
 {
     using GradientList = std::vector<float, tbb::scalable_allocator<float>>;
-    ShapeTopLayerScaner(const ShapeTemplate *const shapeTmpl, const SpamRun *const r, const float s) : tmpl(shapeTmpl), roi(r), score(s) {}
-    ShapeTopLayerScaner(ShapeTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), roi(s.roi), score(s.score) { }
+    ShapeTopLayerScaner(const ShapeTemplate *const shapeTmpl, const SpamRun *const r, const float s, const float g)
+        : tmpl(shapeTmpl)
+        , roi(r)
+        , score(s)
+        , greediness(g)
+    {}
+
+    ShapeTopLayerScaner(ShapeTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), roi(s.roi), score(s.score), greediness(s.greediness) { }
 
     void operator()(const tbb::blocked_range<int>& br);
     void join(ShapeTopLayerScaner& rhs) { candidates.insert(candidates.end(), rhs.candidates.cbegin(), rhs.candidates.cend()); }
     static float dotProduct(const float *xVec0, const float *yVec0, const float *xVec1, const float *yVec1);
 
     const float score;
+    const float greediness;
     const ShapeTemplate *const tmpl;
     const SpamRun *const roi;
     BaseTemplate::CandidateList candidates;
@@ -37,9 +44,10 @@ struct ShapeTopLayerScaner
 template<bool TouchBorder>
 struct ShapeCandidateScaner
 {
-    ShapeCandidateScaner(ShapeTemplate *const shapeTmpl, const float s, const int l, const int mc)
+    ShapeCandidateScaner(ShapeTemplate *const shapeTmpl, const float s, const float g, const int l, const int mc)
         : tmpl(shapeTmpl)
         , score(s)
+        , greediness(g)
         , layer(l)
         , minContrast(mc)
         , ones8i(1)
@@ -68,6 +76,7 @@ struct ShapeCandidateScaner
     }
 
     const float score;
+    const float greediness;
     const int layer;
     const int minContrast;
     ShapeTemplate *const tmpl;
@@ -97,6 +106,7 @@ void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
     const LayerShapeData &layerTempls = tmpl->pyramid_tmpl_datas_.back();
     OutsideImageBox oib(layerMat.cols, layerMat.rows);
     const float layerMinScore = std::max(0.5f, score - 0.1f * (tmpl->pyramid_level_ - 1));
+    const float f = (1.f - greediness * layerMinScore) / (1.f - greediness);
     const int runStart = br.begin();
     const int runEnd = br.end();
     const std::vector<ShapeTemplData> &tmplDatas = layerTempls.tmplDatas;
@@ -108,7 +118,7 @@ void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
         const ShapeTemplData &ntd = tmplDatas[t];
         const int numEdges = static_cast<int>(ntd.edgeLocs.size());
         const int regularNumEdges = numEdges & (-simdSize);
-        const float tmplScore = numEdges * layerMinScore - numEdges;
+        const float stopScore = numEdges * layerMinScore - numEdges;
 
         for (int run = runStart; run < runEnd; ++run)
         {
@@ -143,7 +153,9 @@ void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
 
                     j += simdSize;
                     sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
-                    if (sumDot < (tmplScore + j)) { break; }
+                    float safeScore = stopScore + j * f;
+                    float greedyScore = layerMinScore * j;
+                    if (sumDot < std::min(safeScore, greedyScore)) { break; }
 
                     tmplDx += simdSize;
                     tmplDy += simdSize;
@@ -201,6 +213,7 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
     const LayerShapeData &layerTempls = tmpl->pyramid_tmpl_datas_.back();
     OutsideImageBox oib(layerMat.cols, layerMat.rows);
     const float layerMinScore = std::max(0.5f, score - 0.1f * (tmpl->pyramid_level_ - 1));
+    const float f = (1.f - greediness * layerMinScore) / (1.f - greediness);
     const int runStart = br.begin();
     const int runEnd = br.end();
     const std::vector<ShapeTemplData> &tmplDatas = layerTempls.tmplDatas;
@@ -212,7 +225,7 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
         const ShapeTemplData &ntd = tmplDatas[t];
         const int numEdges = static_cast<int>(ntd.edgeLocs.size());
         const int regularNumEdges = numEdges & (-simdSize);
-        const float tmplScore = numEdges * layerMinScore - numEdges;
+        const float stopScore = numEdges * layerMinScore - numEdges;
 
         for (int run = runStart; run < runEnd; ++run)
         {
@@ -253,7 +266,9 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
 
                         j += simdSize;
                         sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
-                        if (sumDot < (tmplScore + j)) { break; }
+                        float safeScore = stopScore + j * f;
+                        float greedyScore = layerMinScore * j;
+                        if (sumDot < std::min(safeScore, greedyScore)) { break; }
 
                         tmplDx += simdSize;
                         tmplDy += simdSize;
@@ -294,7 +309,9 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
 
                         j += simdSize;
                         sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
-                        if (sumDot < (tmplScore + j)) { break; }
+                        float safeScore = stopScore + j * f;
+                        float greedyScore = layerMinScore * j;
+                        if (sumDot < std::min(safeScore, greedyScore)) { break; }
 
                         tmplDx += simdSize;
                         tmplDy += simdSize;
@@ -352,6 +369,7 @@ void ShapeCandidateScaner<false>::operator()(const tbb::blocked_range<int>& r) c
     const cv::Mat &layerMat = tmpl->pyrs_[layer];
     OutsideRectangle orb(1, layerMat.cols-2, 1, layerMat.rows-2);
     const float layerMinScore = std::max(0.5f, score - 0.1f * layer);
+    const float f = (1.f - greediness * layerMinScore) / (1.f - greediness);
     const auto &tmplDatas = ltd.tmplDatas;
     const auto &upperTmplDatas = tmpl->pyramid_tmpl_datas_[layer + 1].tmplDatas;
     vcl::Vec8i vecMinContrast(minContrast*minContrast * 64);
@@ -414,7 +432,9 @@ void ShapeCandidateScaner<false>::operator()(const tbb::blocked_range<int>& r) c
 
                 j += simdSize;
                 sumDot += ShapeTopLayerScaner<false>::dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
-                if (sumDot < (stopScore + j)) { break; }
+                float safeScore = stopScore + j * f;
+                float greedyScore = layerMinScore * j;
+                if (sumDot < std::min(safeScore, greedyScore)) { break; }
 
                 tmplDx += simdSize;
                 tmplDy += simdSize;
@@ -479,7 +499,7 @@ ShapeTemplate::~ShapeTemplate()
 { 
 }
 
-SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float minScore, const int minContrast, cv::Point2f &pos, float &angle, float &score)
+SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float minScore, const int minContrast, const float greediness, cv::Point2f &pos, float &angle, float &score)
 {
     clearCacheMatchData();
 
@@ -515,14 +535,14 @@ SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float min
     {
         top_layer_full_domain_.SetRegion(cv::Rect(0, 0, nTopCols, nTopRows));
         const int numRuns = static_cast<int>(top_layer_full_domain_.GetData().size());
-        ShapeTopLayerScaner<false> bfNCCScaner(this, top_layer_full_domain_.GetData().data(), minScore);
+        ShapeTopLayerScaner<false> bfNCCScaner(this, top_layer_full_domain_.GetData().data(), minScore, greediness);
         bfNCCScaner(tbb::blocked_range<int>(0, numRuns));
         candidates_.swap(bfNCCScaner.candidates);
     }
     else
     {
         const int numRuns = static_cast<int>(top_layer_search_roi_.GetData().size());
-        ShapeTopLayerScaner<false> bfNCCScaner(this, top_layer_search_roi_.GetData().data(), minScore);
+        ShapeTopLayerScaner<false> bfNCCScaner(this, top_layer_search_roi_.GetData().data(), minScore, greediness);
         bfNCCScaner(tbb::blocked_range<int>(0, numRuns));
         candidates_.swap(bfNCCScaner.candidates);
     }
@@ -556,7 +576,7 @@ SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float min
             row_ptrs_[row] = layerMat.ptr<uint8_t>(row);
         }
 
-        ShapeCandidateScaner<false> scs(this, minScore, layer, minContrast);
+        ShapeCandidateScaner<false> scs(this, minScore, greediness, layer, minContrast);
         tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), scs);
 
         for (BaseTemplate::Candidate &candidate : candidates_)
