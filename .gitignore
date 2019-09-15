@@ -10,3 +10,5 @@ config
 /spam/unittest/rdata
 /spam/unittest/idata
 /spam/vectorclass
+/spam/ensmallen
+/spam/armadillo

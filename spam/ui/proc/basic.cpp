@@ -623,3 +623,235 @@ void BasicImgProc::Transform(const cv::Mat &grayImage, cv::Mat &dst, const cv::M
         }
     }
 }
+
+void filter2D_Conv(cv::InputArray src, cv::OutputArray dst, int ddepth,
+    cv::InputArray kernel, cv::Point anchor = cv::Point(-1, -1),
+    double delta = 0, int borderType = cv::BORDER_DEFAULT)
+{
+    cv::Mat newKernel;
+    const int FLIP_H_Z = -1;
+    cv::flip(kernel, newKernel, FLIP_H_Z);
+    cv::Point newAnchor = anchor;
+    if (anchor.x > 0 && anchor.y >= 0)
+        newAnchor = cv::Point(newKernel.cols - anchor.x - 1, newKernel.rows - anchor.y - 1);
+    cv::filter2D(src, dst, ddepth, newKernel, newAnchor, delta, borderType);
+}
+
+float GuassianValue2D(float ssq, float x, float y)
+{
+    return std::exp(-(x*x + y * y) / (2.0f *ssq)) / (2.0f * CV_PI * ssq);
+}
+
+template<typename _tp>
+void meshgrid(float xStart, float xInterval, float xEnd, float yStart, float yInterval, float yEnd, cv::Mat &matX, cv::Mat &matY)
+{
+    std::vector<_tp> vectorX, vectorY;
+    _tp xValue = xStart;
+    while (xValue <= xEnd) {
+        vectorX.push_back(xValue);
+        xValue += xInterval;
+    }
+
+    _tp yValue = yStart;
+    while (yValue <= yEnd) {
+        vectorY.push_back(yValue);
+        yValue += yInterval;
+    }
+    cv::Mat matCol(vectorX);
+    matCol = matCol.reshape(1, 1);
+
+    cv::Mat matRow(vectorY);
+    matRow = matRow.reshape(1, vectorY.size());
+    matX = cv::repeat(matCol, vectorY.size(), 1);
+    matY = cv::repeat(matRow, 1, vectorX.size());
+}
+
+int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &ptResult)
+{
+    cv::Mat matGuassian;
+    int width = 2;
+    float ssq = 1.;
+    matGuassian.create(width * 2 + 1, width * 2 + 1, CV_32FC1);
+    cv::Mat matI, matT;
+    mat.convertTo(matI, CV_32FC1);
+    matTmpl.convertTo(matT, CV_32FC1);
+
+    cv::Mat matX, matY;
+    meshgrid<float>(-width, 1, width, -width, 1, width, matX, matY);
+    for (int row = 0; row < matX.rows; ++row)
+        for (int col = 0; col < matX.cols; ++col)
+        {
+            matGuassian.at<float>(row, col) = GuassianValue2D(ssq, matX.at<float>(row, col), matY.at<float>(row, col));
+        }
+    matGuassian = matGuassian.mul(-matX);
+    cv::Mat matTmp(matGuassian, cv::Range::all(), cv::Range(0, 2));
+    float fSum = cv::sum(matTmp)[0];
+    cv::Mat matGuassianKernalX, matGuassianKernalY;
+    matGuassianKernalX = matGuassian / fSum;        //XSG question, the kernel is reversed?
+    cv::transpose(matGuassianKernalX, matGuassianKernalY);
+
+    /**************** Using LM Iteration ****************/
+    int N = 0, v = 2;
+    cv::Mat matD;
+    matD.create(2, 1, CV_32FC1);
+    matD.at<float>(0, 0) = ptResult.x;
+    matD.at<float>(1, 0) = ptResult.y;
+
+    cv::Mat matDr = matD.clone();
+
+    cv::Mat matInputNew;
+
+    auto interp2 = [matI, matT](cv::Mat &matOutput, const cv::Mat &matD) {
+        cv::Mat map_x, map_y;
+        map_x.create(matT.size(), CV_32FC1);
+        map_y.create(matT.size(), CV_32FC1);
+        cv::Point2f ptStart(matD.at<float>(0, 0), matD.at<float>(1, 0));
+        for (int row = 0; row < matT.rows; ++row)
+            for (int col = 0; col < matT.cols; ++col)
+            {
+                map_x.at<float>(row, col) = ptStart.x + col;
+                map_y.at<float>(row, col) = ptStart.y + row;
+            }
+        cv::remap(matI, matOutput, map_x, map_y, cv::INTER_LINEAR);
+    };
+
+    interp2(matInputNew, matD);
+
+    cv::Mat matR = matT - matInputNew;
+    cv::Mat matRn = matR.clone();
+    float fRSum = cv::sum(matR.mul(matR))[0];
+    float fRSumN = fRSum;
+
+    cv::Mat matDerivativeX, matDerivativeY;
+    filter2D_Conv(matInputNew, matDerivativeX, CV_32F, matGuassianKernalX, cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
+    filter2D_Conv(matInputNew, matDerivativeY, CV_32F, matGuassianKernalY, cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
+
+    cv::Mat matRt = matR.reshape(1, 1);
+    cv::Mat matRtTranspose;
+    cv::transpose(matRt, matRtTranspose);
+    matDerivativeX = matDerivativeX.reshape(1, 1);
+    matDerivativeY = matDerivativeY.reshape(1, 1);
+
+    const float* p = matDerivativeX.ptr<float>(0);
+    std::vector<float> vecDerivativeX(p, p + matDerivativeX.cols);
+
+    cv::Mat matJacobianT, matJacobian;
+    matJacobianT.push_back(matDerivativeX);
+    matJacobianT.push_back(matDerivativeY);
+    cv::transpose(matJacobianT, matJacobian);
+
+    cv::Mat matE = cv::Mat::eye(2, 2, CV_32FC1);
+
+    cv::Mat A = matJacobianT * matJacobian;
+    cv::Mat g = -matJacobianT * matRtTranspose;
+
+    double min, max;
+    cv::minMaxLoc(A, &min, &max);
+    float mu = 1.f * max;
+    float err1 = 1e-4, err2 = 1e-4;
+    auto Nmax = 100;
+    while (cv::norm(matDr) > err2 && N < Nmax) {
+        ++N;
+        cv::solve(A + mu * matE, -g, matDr);     // equal to matlab matDr = (A+mu*E)\(-g);
+
+        cv::Mat matDn = matD + matDr;
+        if (cv::norm(matDr) < err2) {
+            interp2(matInputNew, matDn);
+            matRn = matT - matInputNew;
+            fRSumN = cv::sum(matR.mul(matR))[0];
+            matD = matDn;
+            break;
+        }
+        else {
+            if (matDn.at<float>(0, 0) > matI.cols - matT.cols ||
+                matDn.at<float>(0, 0) < 0 ||
+                matDn.at<float>(1, 0) > matI.rows - matT.rows ||
+                matDn.at<float>(1, 0) < 0) {
+                mu *= v;
+                v *= 2;
+            }
+            else {
+                interp2(matInputNew, matDn);
+                matRn = matT - matInputNew;
+                fRSumN = cv::sum(matRn.mul(matRn))[0];
+
+                cv::Mat matDrTranspose;
+                cv::transpose(matDr, matDrTranspose);
+                cv::Mat matL = (matDrTranspose * (mu * matDr - g));   // L(0) - L(hlm) = 0.5 * h' ( uh - g)
+                auto L = matL.at<float>(0, 0);
+                auto F = fRSum - fRSumN;
+                float rho = F / L;
+
+                if (rho > 0) {
+                    matD = matDn.clone();
+                    matR = matRn.clone();
+                    fRSum = fRSumN;
+
+                    filter2D_Conv(matInputNew, matDerivativeX, CV_32F, matGuassianKernalX, cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
+                    filter2D_Conv(matInputNew, matDerivativeY, CV_32F, matGuassianKernalY, cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
+                    matRt = matR.reshape(1, 1);
+                    cv::transpose(matRt, matRtTranspose);
+
+                    matDerivativeX = matDerivativeX.reshape(1, 1);
+                    matDerivativeY = matDerivativeY.reshape(1, 1);
+
+                    matJacobianT.release();
+                    matJacobianT.push_back(matDerivativeX);
+                    matJacobianT.push_back(matDerivativeY);
+                    cv::transpose(matJacobianT, matJacobian);
+
+                    A = matJacobianT * matJacobian;
+                    g = -matJacobianT * matRtTranspose;
+
+                    mu *= std::max(1.f / 3.f, 1 - pow(2 * rho - 1, 3));
+                }
+                else {
+                    mu *= v; v *= 2;
+                }
+            }
+        }
+    }
+
+    ptResult.x = matD.at<float>(0, 0);
+    ptResult.y = matD.at<float>(1, 0);
+    return 0;
+}
+
+int matchTemplate(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &ptResult)
+{
+    cv::Mat img_display, matResult;
+    const int match_method = cv::TM_SQDIFF;
+
+    mat.copyTo(img_display);
+
+    /// Create the result matrix
+    int result_cols = mat.cols - matTmpl.cols + 1;
+    int result_rows = mat.rows - matTmpl.rows + 1;
+
+    matResult.create(result_rows, result_cols, CV_32FC1);
+
+    /// Do the Matching and Normalize
+    cv::matchTemplate(mat, matTmpl, matResult, match_method);
+    cv::normalize(matResult, matResult, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
+
+    /// Localizing the best match with minMaxLoc
+    double minVal; double maxVal;
+    cv::Point minLoc, maxLoc, matchLoc;
+
+    cv::minMaxLoc(matResult, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat());
+
+    /// For SQDIFF and SQDIFF_NORMED, the best matches are lower values. For all the other methods, the higher the better
+    if (match_method == cv::TM_SQDIFF || match_method == cv::TM_SQDIFF_NORMED)
+        matchLoc = minLoc;
+    else
+        matchLoc = maxLoc;
+
+    ptResult.x = (float)matchLoc.x;
+    ptResult.y = (float)matchLoc.y;
+    _refineWithLMIteration(mat, matTmpl, ptResult);
+
+    ptResult.x += (float)(matTmpl.cols / 2 + 0.5);
+    ptResult.y += (float)(matTmpl.rows / 2 + 0.5);
+
+    return 0;
+}

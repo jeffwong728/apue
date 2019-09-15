@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<fal
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<true>())
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Board, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Board, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Board, *boost::unit_test::enable_if<true
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Cap, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Cap, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\cap_illumination\\cap_illumination_01.png");
@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Cap, *boost::unit_test::enable_if<true>(
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Pendulum, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Pendulum, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\pendulum\\pendulum_07.png");
@@ -261,6 +261,60 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Pendulum, *boost::unit_test::enable_if<t
 
             t1 = tbb::tick_count::now();
             sr = tmpl.matchShapeTemplate(grayImg, 0.8f, 8, 0.5f, pos, angle, score);
+            t2 = tbb::tick_count::now();
+            BOOST_TEST_MESSAGE(std::string("Match shape template (") + x.path().filename().string() + ") " \
+                << (t2 - t1).seconds() * 1000 << "ms (" << pos.x << ", " << pos.y << ", " << angle << "), with score=" << score);
+
+            std::string fileName = std::string("top_layer_") + x.path().filename().string();
+            UnitTestHelper::WriteImage(tmpl.GetTopScoreMat(), fileName);
+
+            if (SpamResult::kSR_SUCCESS == sr)
+            {
+                UnitTestHelper::Color color{ 255, 0, 0, 255 };
+                cv::Point2f pt = tmpl.GetCenter();
+                const Geom::PathVector foundPV(tmplRgn * Geom::Translate(-pt.x, -pt.y) * Geom::Rotate::from_degrees(-angle)*Geom::Translate(pos.x, pos.y));
+                UnitTestHelper::DrawPathToImage(foundPV, color, colorImg);
+                tmpl.DrawTemplate(colorImg, pos, angle);
+                UnitTestHelper::WriteImage(colorImg, std::string("match_") + x.path().filename().string());
+            }
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Gear, *boost::unit_test::enable_if<true>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("gear\\Template.jpg");
+
+    const Geom::PathVector roi;
+    const Geom::Rect rect1(Geom::Point(20, 18), Geom::Point(205, 178));
+    const Geom::Path pth(rect1);
+    Geom::PathVector tmplRgn(pth);
+    const ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -10, 20, 4}, 20, 35 };
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    ShapeTemplate tmpl;
+    SpamResult sr = tmpl.CreateTemplate(tmplCreateData);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Create shape template (Template.jpg): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_REQUIRE_EQUAL(static_cast<long>(sr), static_cast<long>(SpamResult::kSR_SUCCESS));
+
+    boost::filesystem::path utRootDir = std::getenv("SPAM_UNITTEST_ROOT");
+    utRootDir.append("idata");
+    utRootDir.append("gear");
+
+    boost::filesystem::path baseDir = std::getenv("SPAM_UNITTEST_ROOT");
+    baseDir.append("idata");
+    for (boost::filesystem::directory_entry& x : boost::filesystem::directory_iterator(utRootDir))
+    {
+        if (boost::filesystem::is_regular_file(x.path()) && x.path().extension() == ".jpg")
+        {
+            cv::Point2f pos;
+            float angle = 0, score = 0;
+            std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage(boost::filesystem::relative(x.path(), baseDir).string());
+
+            t1 = tbb::tick_count::now();
+            sr = tmpl.matchShapeTemplate(grayImg, 0.5f, 5, 0.9f, pos, angle, score);
             t2 = tbb::tick_count::now();
             BOOST_TEST_MESSAGE(std::string("Match shape template (") + x.path().filename().string() + ") " \
                 << (t2 - t1).seconds() * 1000 << "ms (" << pos.x << ", " << pos.y << ", " << angle << "), with score=" << score);
