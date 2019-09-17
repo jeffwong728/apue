@@ -18,6 +18,27 @@
 BaseTemplate::BaseTemplate()
     : pyramid_level_(4)
 {
+    int i = 0;
+    cv::Mat A(27, 10, CV_64FC1);
+    for (int r = -1; r < 2; ++r)
+    {
+        for (int c = -1; c < 2; ++c)
+        {
+            for (int a = -1; a < 2; ++a)
+            {
+                double *R = A.ptr<double>(i++);
+                R[0] = 1;
+                R[1] = r; R[2] = c; R[3] = a;
+                R[4] = r * r; R[5] = c * c; R[6] = a * a;
+                R[7] = r * c; R[8] = c * a; R[9] = r * a;
+            }
+        }
+    }
+
+    cv::Mat TA, IA;
+    cv::transpose(A, TA);
+    cv::invert(TA * A, IA);
+    score_fitting_mask_ = IA * TA;
 }
 
 BaseTemplate::~BaseTemplate()
@@ -264,5 +285,47 @@ void BaseTemplate::processToplayerSearchROI(const Geom::PathVector &roi, const i
         double s = std::pow(0.5, pyramidLevel - 1);
         top_layer_search_roi_g_ = roi * Geom::Scale(s, s);
         top_layer_search_roi_.SetRegion(top_layer_search_roi_g_, std::vector<uint8_t>());
+    }
+}
+
+float BaseTemplate::maxScoreInterpolate(const cv::Mat &scores, cv::Point2f &pos, float &angle) const
+{
+    pos.x = 0.f;
+    pos.y = 0.f;
+    angle = 0.f;
+
+    cv::Mat A(3, 3, CV_64FC1);
+    cv::Mat b(3, 1, CV_64FC1);
+    cv::Mat C = score_fitting_mask_ * scores;
+    A.ptr<double>(0)[0] = 2 * C.ptr<double>(4)[0];
+    A.ptr<double>(0)[1] = C.ptr<double>(7)[0];
+    A.ptr<double>(0)[2] = C.ptr<double>(9)[0];
+    A.ptr<double>(1)[0] = C.ptr<double>(7)[0];
+    A.ptr<double>(1)[1] = 2 * C.ptr<double>(5)[0];
+    A.ptr<double>(1)[2] = C.ptr<double>(8)[0];
+    A.ptr<double>(2)[0] = C.ptr<double>(9)[0];
+    A.ptr<double>(2)[1] = C.ptr<double>(8)[0];
+    A.ptr<double>(2)[2] = 2 * C.ptr<double>(6)[0];
+    b.ptr<double>(0)[0] = -C.ptr<double>(1)[0];
+    b.ptr<double>(1)[0] = -C.ptr<double>(2)[0];
+    b.ptr<double>(2)[0] = -C.ptr<double>(3)[0];
+
+    cv::Mat x;
+    if (cv::solve(A, b, x))
+    {
+        const double r = x.ptr<double>(0)[0];
+        const double c = x.ptr<double>(1)[0];
+        const double a = x.ptr<double>(2)[0];
+        pos.x = static_cast<float>(c);
+        pos.y = static_cast<float>(r);
+        angle = static_cast<float>(a);
+
+        return static_cast<float>(C.ptr<double>(0)[0] + C.ptr<double>(1)[0] * r + C.ptr<double>(2)[0] * c + C.ptr<double>(3)[0] * a +
+            C.ptr<double>(4)[0] * r * r + C.ptr<double>(5)[0] * c * c + C.ptr<double>(6)[0] * a * a +
+            C.ptr<double>(7)[0] * r * c + C.ptr<double>(8)[0] * c * a + C.ptr<double>(9)[0] * r * a);
+    }
+    else
+    {
+        return 0.f;
     }
 }

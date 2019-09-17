@@ -169,6 +169,7 @@ protected:
     void clearCacheMatchData();
     void supressNoneMaximum();
     void processToplayerSearchROI(const Geom::PathVector &roi, const int pyramidLevel);
+    float maxScoreInterpolate(const cv::Mat &scores, cv::Point2f &pos, float &angle) const;
 
 protected:
     int pyramid_level_;
@@ -184,5 +185,8 @@ protected:
     CandidateList      final_candidates_;
     CandidateGroup     candidate_runs_;
     CandidateGroupList candidate_groups_;
+
+private:
+    cv::Mat score_fitting_mask_;
 };
 #endif //SPAM_UI_PROC_BASE_TEMPLATE_H

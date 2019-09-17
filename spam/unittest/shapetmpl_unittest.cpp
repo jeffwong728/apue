@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<false>()
     const Geom::Path pth(rect);
     const Geom::PathVector tmplRgn(pth);
     const Geom::PathVector roi;
-    const ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -180, 360, 6}, 20, 30 };
+    const ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -18, 36, 6}, 20, 30 };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     ShapeTemplate tmpl;
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<false>()
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Board, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Board, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Board, *boost::unit_test::enable_if<fals
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Cap, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Cap, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\cap_illumination\\cap_illumination_01.png");
@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Cap, *boost::unit_test::enable_if<false>
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_NCC_Pendulum, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Pendulum, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\pendulum\\pendulum_07.png");

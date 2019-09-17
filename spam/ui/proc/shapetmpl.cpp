@@ -21,20 +21,56 @@ template<bool TouchBorder>
 struct ShapeTopLayerScaner
 {
     using GradientList = std::vector<float, tbb::scalable_allocator<float>>;
+    using CandidateDict = std::map<int, BaseTemplate::Candidate, std::less<int>, tbb::scalable_allocator<std::pair<const int, BaseTemplate::Candidate>>>;
     ShapeTopLayerScaner(const ShapeTemplate *const shapeTmpl, const SpamRun *const r, const float s, const float g)
         : tmpl(shapeTmpl)
         , roi(r)
-        , score(s)
+        , min_score(s)
         , greediness(g)
     {}
 
-    ShapeTopLayerScaner(ShapeTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), roi(s.roi), score(s.score), greediness(s.greediness) { }
+    ShapeTopLayerScaner(ShapeTopLayerScaner& s, tbb::split) : tmpl(s.tmpl), roi(s.roi), min_score(s.min_score), greediness(s.greediness) { }
 
     void operator()(const tbb::blocked_range<int>& br);
     void join(ShapeTopLayerScaner& rhs) { candidates.insert(candidates.end(), rhs.candidates.cbegin(), rhs.candidates.cend()); }
-    static float dotProduct(const float *xVec0, const float *yVec0, const float *xVec1, const float *yVec1);
+    void copyCandidates(const CandidateDict &aCandidates)
+    {
+        candidates.reserve(aCandidates.size());
+        for (const auto &cItem : aCandidates)
+        {
+            candidates.push_back(cItem.second);
+        }
+    }
 
-    const float score;
+    static float dotProduct(const float *xVec0, const float *yVec0, const float *xVec1, const float *yVec1)
+    {
+        vcl::Vec8f xvec0, yvec0, xvec1, yvec1;
+        xvec0.load(xVec0);
+        yvec0.load(yVec0);
+        xvec1.load(xVec1);
+        yvec1.load(yVec1);
+        vcl::Vec8f dot = xvec0 * xvec1 + yvec0 * yvec1;
+        return vcl::horizontal_add(dot);
+    }
+
+    static void tryRecordCandidate(const float score, const float layerMinScore, const int row, const int col, const int t, const int nLayerCols, CandidateDict &aCandidates)
+    {
+        if (score >= layerMinScore)
+        {
+            BaseTemplate::Candidate candidate{ row, col, t, static_cast<float>(score) };
+            auto insIt = aCandidates.emplace(row*nLayerCols + col, candidate);
+            if (!insIt.second)
+            {
+                if (candidate.score > insIt.first->second.score)
+                {
+                    insIt.first->second.score = candidate.score;
+                    insIt.first->second.mindex = t;
+                }
+            }
+        }
+    }
+
+    const float min_score;
     const float greediness;
     const ShapeTemplate *const tmpl;
     const SpamRun *const roi;
@@ -55,6 +91,7 @@ struct ShapeCandidateScaner
     {}
 
     void operator()(const tbb::blocked_range<int>& r) const;
+    float getScore(const int row, const int col, const int ang) const;
 
     vcl::Vec8i kernel(const vcl::Vec8i(&pixelVals)[9], const int i0, const int i1, const int j0, const int j1, const int k0, const int k1) const
     {
@@ -75,6 +112,35 @@ struct ShapeCandidateScaner
         NY.store(yNorm);
     }
 
+    void fillSobelNeigborhood(const cv::Point *&pEdgePt, const int row, const int col, const int i, int32_t(&partVals)[9][8]) const
+    {
+        const int x = pEdgePt->x + col, y = pEdgePt->y + row;
+        partVals[0][i] = tmpl->row_ptrs_[y - 1][x - 1];
+        partVals[1][i] = tmpl->row_ptrs_[y - 1][x];
+        partVals[2][i] = tmpl->row_ptrs_[y - 1][x + 1];
+        partVals[3][i] = tmpl->row_ptrs_[y][x - 1];
+        partVals[5][i] = tmpl->row_ptrs_[y][x + 1];
+        partVals[6][i] = tmpl->row_ptrs_[y + 1][x - 1];
+        partVals[7][i] = tmpl->row_ptrs_[y + 1][x];
+        partVals[8][i] = tmpl->row_ptrs_[y + 1][x + 1];
+        pEdgePt += 1;
+    }
+
+    float getPartScore(const int32_t (&partVals)[9][8], const vcl::Vec8i &vecMinContrast, const float *tmplDx, const float *tmplDy) const
+    {
+        vcl::Vec8i pixelVals[9];
+        pixelVals[0].load(partVals[0]); pixelVals[1].load(partVals[1]); pixelVals[2].load(partVals[2]);
+        pixelVals[3].load(partVals[3]); pixelVals[5].load(partVals[5]);
+        pixelVals[6].load(partVals[6]); pixelVals[7].load(partVals[7]); pixelVals[8].load(partVals[8]);
+
+        std::array<float, 8> partDXVals, partDYVals;
+        vcl::Vec8i X = kernel(pixelVals, 0, 2, 3, 5, 6, 8);
+        vcl::Vec8i Y = kernel(pixelVals, 0, 6, 1, 7, 2, 8);
+        normalize(X, Y, vecMinContrast, partDXVals.data(), partDYVals.data());
+
+        return ShapeTopLayerScaner<false>::dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
+    }
+
     const float score;
     const float greediness;
     const int layer;
@@ -84,19 +150,6 @@ struct ShapeCandidateScaner
     const vcl::Vec8i zeros8i;
 };
 
-template<bool TouchBorder>
-inline float ShapeTopLayerScaner<TouchBorder>::dotProduct(const float *xVec0, const float *yVec0,
-    const float *xVec1, const float *yVec1)
-{
-    vcl::Vec8f xvec0, yvec0, xvec1, yvec1;
-    xvec0.load(xVec0);
-    yvec0.load(yVec0);
-    xvec1.load(xVec1);
-    yvec1.load(yVec1);
-    vcl::Vec8f dot = xvec0 * xvec1 + yvec0 * yvec1;
-    return vcl::horizontal_add(dot);
-}
-
 template<>
 void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
 {
@@ -105,13 +158,13 @@ void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
     const int nLayerCols = layerMat.cols;
     const LayerShapeData &layerTempls = tmpl->pyramid_tmpl_datas_.back();
     OutsideImageBox oib(layerMat.cols, layerMat.rows);
-    const float layerMinScore = std::max(0.5f, score - 0.1f * (tmpl->pyramid_level_ - 1));
+    const float layerMinScore = std::max(0.5f, min_score - 0.1f * (tmpl->pyramid_level_ - 1));
     const float f = (1.f - greediness * layerMinScore) / (1.f - greediness);
     const int runStart = br.begin();
     const int runEnd = br.end();
     const std::vector<ShapeTemplData> &tmplDatas = layerTempls.tmplDatas;
     const int numLayerTempls = static_cast<int>(tmplDatas.size());
-    std::map<int, BaseTemplate::Candidate, std::less<int>, tbb::scalable_allocator<std::pair<const int, BaseTemplate::Candidate>>> aCandidates;
+    CandidateDict aCandidates;
 
     for (int t = 0; t < numLayerTempls; ++t)
     {
@@ -179,29 +232,12 @@ void ShapeTopLayerScaner<false>::operator()(const tbb::blocked_range<int>& br)
                     sumDot += dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
                 }
 
-                float score = sumDot / numEdges;
-                if (score >= layerMinScore)
-                {
-                    BaseTemplate::Candidate candidate{ row, col, t, static_cast<float>(score) };
-                    auto insIt = aCandidates.emplace(row*nLayerCols + col, candidate);
-                    if (!insIt.second)
-                    {
-                        if (candidate.score > insIt.first->second.score)
-                        {
-                            insIt.first->second.score = candidate.score;
-                            insIt.first->second.mindex = t;
-                        }
-                    }
-                }
+                tryRecordCandidate(sumDot / numEdges, layerMinScore, row, col, t, nLayerCols, aCandidates);
             }
         }
     }
 
-    candidates.reserve(aCandidates.size());
-    for (const auto &cItem : aCandidates)
-    {
-        candidates.push_back(cItem.second);
-    }
+    copyCandidates(aCandidates);
 }
 
 template<>
@@ -212,13 +248,13 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
     const int nLayerCols = layerMat.cols;
     const LayerShapeData &layerTempls = tmpl->pyramid_tmpl_datas_.back();
     OutsideImageBox oib(layerMat.cols, layerMat.rows);
-    const float layerMinScore = std::max(0.5f, score - 0.1f * (tmpl->pyramid_level_ - 1));
+    const float layerMinScore = std::max(0.5f, min_score - 0.1f * (tmpl->pyramid_level_ - 1));
     const float f = (1.f - greediness * layerMinScore) / (1.f - greediness);
     const int runStart = br.begin();
     const int runEnd = br.end();
     const std::vector<ShapeTemplData> &tmplDatas = layerTempls.tmplDatas;
     const int numLayerTempls = static_cast<int>(tmplDatas.size());
-    std::map<int, BaseTemplate::Candidate, std::less<int>, tbb::scalable_allocator<std::pair<const int, BaseTemplate::Candidate>>> aCandidates;
+    CandidateDict aCandidates;
 
     for (int t = 0; t < numLayerTempls; ++t)
     {
@@ -336,29 +372,12 @@ void ShapeTopLayerScaner<true>::operator()(const tbb::blocked_range<int>& br)
                     }
                 }
 
-                float score = sumDot / numEdges;
-                if (score >= layerMinScore)
-                {
-                    BaseTemplate::Candidate candidate{ row, col, t, static_cast<float>(score) };
-                    auto insIt = aCandidates.emplace(row*nLayerCols + col, candidate);
-                    if (!insIt.second)
-                    {
-                        if (candidate.score > insIt.first->second.score)
-                        {
-                            insIt.first->second.score = candidate.score;
-                            insIt.first->second.mindex = t;
-                        }
-                    }
-                }
+                tryRecordCandidate(sumDot / numEdges, layerMinScore, row, col, t, nLayerCols, aCandidates);
             }
         }
     }
 
-    candidates.reserve(aCandidates.size());
-    for (const auto &cItem : aCandidates)
-    {
-        candidates.push_back(cItem.second);
-    }
+    copyCandidates(aCandidates);
 }
 
 template<>
@@ -400,38 +419,18 @@ void ShapeCandidateScaner<false>::operator()(const tbb::blocked_range<int>& r) c
             const float *tmplDy = ntd.gNYVals.data();
             const cv::Point *pEdgePt = ntd.edgeLocs.data();
             float sumDot = 0.f;
-
-            vcl::Vec8i pixelVals[9];
             int32_t partVals[9][simdSize];
-            std::array<float, simdSize> partDXVals, partDYVals;
 
             for (; e < regularNumEdges; e += simdSize)
             {
                 for (int i = 0; i < simdSize; ++i)
                 {
-                    const int x = pEdgePt->x + col, y = pEdgePt->y + row;
-                    partVals[0][i] = tmpl->row_ptrs_[y - 1][x - 1];
-                    partVals[1][i] = tmpl->row_ptrs_[y - 1][x];
-                    partVals[2][i] = tmpl->row_ptrs_[y - 1][x + 1];
-                    partVals[3][i] = tmpl->row_ptrs_[y][x - 1];
-                    partVals[5][i] = tmpl->row_ptrs_[y][x + 1];
-                    partVals[6][i] = tmpl->row_ptrs_[y + 1][x - 1];
-                    partVals[7][i] = tmpl->row_ptrs_[y + 1][x];
-                    partVals[8][i] = tmpl->row_ptrs_[y + 1][x + 1];
-
-                    pEdgePt += 1;
+                    fillSobelNeigborhood(pEdgePt, row, col, i, partVals);
                 }
 
-                pixelVals[0].load(partVals[0]); pixelVals[1].load(partVals[1]); pixelVals[2].load(partVals[2]);
-                pixelVals[3].load(partVals[3]); pixelVals[5].load(partVals[5]);
-                pixelVals[6].load(partVals[6]); pixelVals[7].load(partVals[7]); pixelVals[8].load(partVals[8]);
-
-                vcl::Vec8i X = kernel(pixelVals, 0, 2, 3, 5, 6, 8);
-                vcl::Vec8i Y = kernel(pixelVals, 0, 6, 1, 7, 2, 8);
-                normalize(X, Y, vecMinContrast, partDXVals.data(), partDYVals.data());
+                sumDot += getPartScore(partVals, vecMinContrast, tmplDx, tmplDy);
 
                 j += simdSize;
-                sumDot += ShapeTopLayerScaner<false>::dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
                 float safeScore = stopScore + j * f;
                 float greedyScore = layerMinScore * j;
                 if (sumDot < std::min(safeScore, greedyScore)) { break; }
@@ -444,30 +443,12 @@ void ShapeCandidateScaner<false>::operator()(const tbb::blocked_range<int>& r) c
 
             if (e < numEdges)
             {
-                std::memset(partVals, 0, 9 * simdSize * sizeof(partDXVals[0]));
-                for (int k = 0; e < numEdges; ++e, ++k)
+                std::memset(partVals, 0, 9 * simdSize * sizeof(partVals[0][0]));
+                for (int k=0; e < numEdges; ++e, ++k)
                 {
-                    const int x = pEdgePt->x + col, y = pEdgePt->y + row;
-                    partVals[0][0] = tmpl->row_ptrs_[y - 1][x - 1];
-                    partVals[1][0] = tmpl->row_ptrs_[y - 1][x];
-                    partVals[2][0] = tmpl->row_ptrs_[y - 1][x + 1];
-                    partVals[3][0] = tmpl->row_ptrs_[y][x - 1];
-                    partVals[5][0] = tmpl->row_ptrs_[y][x + 1];
-                    partVals[6][0] = tmpl->row_ptrs_[y + 1][x - 1];
-                    partVals[7][0] = tmpl->row_ptrs_[y + 1][x];
-                    partVals[8][0] = tmpl->row_ptrs_[y + 1][x + 1];
-
-                    pEdgePt += 1;
+                    fillSobelNeigborhood(pEdgePt, row, col, k, partVals);
                 }
-
-                pixelVals[0].load(partVals[0]); pixelVals[1].load(partVals[1]); pixelVals[2].load(partVals[2]);
-                pixelVals[3].load(partVals[3]); pixelVals[5].load(partVals[5]);
-                pixelVals[6].load(partVals[6]); pixelVals[7].load(partVals[7]); pixelVals[8].load(partVals[8]);
-
-                vcl::Vec8i X = kernel(pixelVals, 0, 2, 3, 5, 6, 8);
-                vcl::Vec8i Y = kernel(pixelVals, 0, 6, 1, 7, 2, 8);
-                normalize(X, Y, vecMinContrast, partDXVals.data(), partDYVals.data());
-                sumDot += ShapeTopLayerScaner<false>::dotProduct(tmplDx, tmplDy, partDXVals.data(), partDYVals.data());
+                sumDot += getPartScore(partVals, vecMinContrast, tmplDx, tmplDy);
             }
 
             float score = sumDot / numEdges;
@@ -491,12 +472,70 @@ void ShapeCandidateScaner<false>::operator()(const tbb::blocked_range<int>& r) c
     }
 }
 
+template<>
+float ShapeCandidateScaner<false>::getScore(const int row, const int col, const int ang) const
+{
+    constexpr int simdSize = 8;
+    const LayerShapeData &ltd = tmpl->pyramid_tmpl_datas_[layer];
+    const cv::Mat &layerMat = tmpl->pyrs_[layer];
+    OutsideRectangle orb(1, layerMat.cols - 2, 1, layerMat.rows - 2);
+    const auto &tmplDatas = ltd.tmplDatas;
+    vcl::Vec8i vecMinContrast(minContrast*minContrast * 64);
+
+    if (ang<0 || ang>=tmplDatas.size())
+    {
+        return -1.f;
+    }
+
+    const ShapeTemplData &ntd = tmplDatas[ang];
+    const int numEdges = static_cast<int>(ntd.edgeLocs.size());
+    const int regularNumEdges = numEdges & (-simdSize);
+
+    const cv::Point anchorPt{ col, row };
+    if (orb(anchorPt + ntd.minPoint) || orb(anchorPt + ntd.maxPoint))
+    {
+        return -1.f;
+    }
+
+    int32_t partVals[9][simdSize];
+    const float *tmplDx = ntd.gNXVals.data();
+    const float *tmplDy = ntd.gNYVals.data();
+
+    int e = 0;
+    float sumDot = 0.f;
+    const cv::Point *pEdgePt = ntd.edgeLocs.data();
+    for (; e < regularNumEdges; e += simdSize)
+    {
+        for (int i = 0; i < simdSize; ++i)
+        {
+            fillSobelNeigborhood(pEdgePt, row, col, i, partVals);
+        }
+
+        sumDot += getPartScore(partVals, vecMinContrast, tmplDx, tmplDy);
+        tmplDx += simdSize;
+        tmplDy += simdSize;
+    }
+
+    if (e < numEdges)
+    {
+        std::memset(partVals, 0, 9 * simdSize * sizeof(partVals[0][0]));
+        for (int k=0; e < numEdges; ++e, ++k)
+        {
+            fillSobelNeigborhood(pEdgePt, row, col, k, partVals);
+        }
+        sumDot += getPartScore(partVals, vecMinContrast, tmplDx, tmplDy);
+    }
+
+    float score = sumDot / numEdges;
+    return score;
+}
+
 ShapeTemplate::ShapeTemplate()
 {
 }
 
 ShapeTemplate::~ShapeTemplate()
-{ 
+{
 }
 
 SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float minScore, const int minContrast, const float greediness, cv::Point2f &pos, float &angle, float &score)
@@ -635,11 +674,25 @@ SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float min
 
     if (bestCandidate.score > minScore)
     {
+        cv::Point2f subPos{ 0.f, 0.f };
+        float       subAng{ 0.f };
+        const auto &tmplDatas = pyramid_tmpl_datas_[0].tmplDatas;
         pos.x = static_cast<float>(bestCandidate.col);
         pos.y = static_cast<float>(bestCandidate.row);
-        const auto &tmplDatas = pyramid_tmpl_datas_[0].tmplDatas;
         angle = tmplDatas[bestCandidate.mindex].angle;
         score = bestCandidate.score;
+
+        if (score < 0.99f)
+        {
+            float subScore = estimateSubPixelPose(bestCandidate, minScore, minContrast, greediness, subPos, subAng);
+            if (subScore > score)
+            {
+                pos.x = static_cast<float>(bestCandidate.col) + subPos.x;
+                pos.y = static_cast<float>(bestCandidate.row) + subPos.y;
+                angle = tmplDatas[bestCandidate.mindex].angle + subAng * pyramid_tmpl_datas_[0].angleStep;
+                score = std::min(subScore, 1.f);
+            }
+        }
 
         return SpamResult::kSR_SUCCESS;
     }
@@ -736,7 +789,7 @@ void ShapeTemplate::DrawTemplate(cv::Mat &img, const cv::Point2f &pos, const flo
                 const cv::Point pt = ept;
                 if (!oib(pt))
                 {
-                    img.at<int>(pt) = 0xFFFF0000;
+                    img.at<cv::Vec4b>(pt) = cv::Vec4b(0x00, 0x00, 0xFF, 0xFF);
                 }
             }
         }
@@ -906,4 +959,37 @@ void ShapeTemplate::linkTemplatesBetweenLayers()
             }
         }
     }
+}
+
+float ShapeTemplate::estimateSubPixelPose(const Candidate &bestCandidate,
+    const float minScore,
+    const int minContrast,
+    const float greediness,
+    cv::Point2f &pos,
+    float &angle)
+{
+    int i = 0;
+    cv::Mat scores(27, 1, CV_64FC1);
+    ShapeCandidateScaner<false> scs(this, minScore, greediness, 0, minContrast);
+
+    for (int r = -1; r < 2; ++r)
+    {
+        for (int c = -1; c < 2; ++c)
+        {
+            for (int a = -1; a < 2; ++a)
+            {
+                const int row = r + bestCandidate.row;
+                const int col = c + bestCandidate.col;
+                const int ang = a + bestCandidate.mindex;
+                const float s = scs.getScore(row, col, ang);
+                if (s<0.f)
+                {
+                    return s;
+                }
+                scores.ptr<double>(i++)[0] = s;
+            }
+        }
+    }
+
+    return maxScoreInterpolate(scores, pos, angle);
 }

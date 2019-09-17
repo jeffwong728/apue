@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE(test_CV_Sobel_Performance_0, *boost::unit_test::enable_if<f
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_Edge_Cany)
+BOOST_AUTO_TEST_CASE(test_CV_Edge_Cany, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\pendulum\\pendulum_07.png");
@@ -379,4 +379,32 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_CLOSE_ELLIPSE_Performance_0, *boost::u
     BOOST_TEST_MESSAGE("CV morphologyex close ellipse spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_close_ellipse.png");
+}
+
+BOOST_AUTO_TEST_CASE(test_Solve)
+{
+    int i = 0;
+    cv::Mat A(27, 10, CV_64FC1);
+    for (int r = -1; r < 2; ++r)
+    {
+        for (int c = -1; c < 2; ++c)
+        {
+            for (int a = -1; a < 2; ++a)
+            {
+                double *R = A.ptr<double>(i++);
+                R[0] = 1;
+                R[1] = r; R[2] = c; R[3] = a;
+                R[4] = r * c; R[5] = r * a; R[6] = c * a;
+                R[7] = r * r; R[8] = c * c; R[9] = a * a;
+            }
+        }
+    }
+
+    cv::Mat TA, IA;
+    cv::transpose(A, TA);
+    cv::invert(TA * A, IA);
+    cv::Mat B = IA * TA;
+    BOOST_CHECK_EQUAL(B.rows, 10);
+    BOOST_CHECK_EQUAL(B.cols, 27);
+    BOOST_TEST_MESSAGE("B: " << B);
 }

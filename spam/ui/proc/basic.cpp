@@ -639,7 +639,7 @@ void filter2D_Conv(cv::InputArray src, cv::OutputArray dst, int ddepth,
 
 float GuassianValue2D(float ssq, float x, float y)
 {
-    return std::exp(-(x*x + y * y) / (2.0f *ssq)) / (2.0f * CV_PI * ssq);
+    return std::exp(-(x*x + y * y) / (2.0f *ssq)) / (2.0f * static_cast<float>(CV_PI) * ssq);
 }
 
 template<typename _tp>
@@ -661,9 +661,9 @@ void meshgrid(float xStart, float xInterval, float xEnd, float yStart, float yIn
     matCol = matCol.reshape(1, 1);
 
     cv::Mat matRow(vectorY);
-    matRow = matRow.reshape(1, vectorY.size());
-    matX = cv::repeat(matCol, vectorY.size(), 1);
-    matY = cv::repeat(matRow, 1, vectorX.size());
+    matRow = matRow.reshape(1, static_cast<int>(vectorY.size()));
+    matX = cv::repeat(matCol, static_cast<int>(vectorY.size()), 1);
+    matY = cv::repeat(matRow, 1, static_cast<int>(vectorX.size()));
 }
 
 int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &ptResult)
@@ -677,7 +677,8 @@ int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &pt
     matTmpl.convertTo(matT, CV_32FC1);
 
     cv::Mat matX, matY;
-    meshgrid<float>(-width, 1, width, -width, 1, width, matX, matY);
+    const float fWidth = static_cast<float>(width);
+    meshgrid<float>(-fWidth, 1.f, fWidth, -fWidth, 1.f, fWidth, matX, matY);
     for (int row = 0; row < matX.rows; ++row)
         for (int col = 0; col < matX.cols; ++col)
         {
@@ -685,7 +686,7 @@ int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &pt
         }
     matGuassian = matGuassian.mul(-matX);
     cv::Mat matTmp(matGuassian, cv::Range::all(), cv::Range(0, 2));
-    float fSum = cv::sum(matTmp)[0];
+    double fSum = cv::sum(matTmp)[0];
     cv::Mat matGuassianKernalX, matGuassianKernalY;
     matGuassianKernalX = matGuassian / fSum;        //XSG question, the kernel is reversed?
     cv::transpose(matGuassianKernalX, matGuassianKernalY);
@@ -719,8 +720,8 @@ int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &pt
 
     cv::Mat matR = matT - matInputNew;
     cv::Mat matRn = matR.clone();
-    float fRSum = cv::sum(matR.mul(matR))[0];
-    float fRSumN = fRSum;
+    double fRSum = cv::sum(matR.mul(matR))[0];
+    double fRSumN = fRSum;
 
     cv::Mat matDerivativeX, matDerivativeY;
     filter2D_Conv(matInputNew, matDerivativeX, CV_32F, matGuassianKernalX, cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
@@ -747,8 +748,8 @@ int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &pt
 
     double min, max;
     cv::minMaxLoc(A, &min, &max);
-    float mu = 1.f * max;
-    float err1 = 1e-4, err2 = 1e-4;
+    double mu = 1. * max;
+    double err1 = 1e-4, err2 = 1e-4;
     auto Nmax = 100;
     while (cv::norm(matDr) > err2 && N < Nmax) {
         ++N;
@@ -778,9 +779,9 @@ int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &pt
                 cv::Mat matDrTranspose;
                 cv::transpose(matDr, matDrTranspose);
                 cv::Mat matL = (matDrTranspose * (mu * matDr - g));   // L(0) - L(hlm) = 0.5 * h' ( uh - g)
-                auto L = matL.at<float>(0, 0);
-                auto F = fRSum - fRSumN;
-                float rho = F / L;
+                double L = matL.at<float>(0, 0);
+                double F = fRSum - fRSumN;
+                double rho = F / L;
 
                 if (rho > 0) {
                     matD = matDn.clone();
@@ -803,7 +804,7 @@ int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &pt
                     A = matJacobianT * matJacobian;
                     g = -matJacobianT * matRtTranspose;
 
-                    mu *= std::max(1.f / 3.f, 1 - pow(2 * rho - 1, 3));
+                    mu *= std::max(1. / 3., 1 - pow(2 * rho - 1, 3));
                 }
                 else {
                     mu *= v; v *= 2;
