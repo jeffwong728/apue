@@ -55,6 +55,7 @@ private:
     SpamResult createShapeTemplate(const ShapeTmplCreateData &createData);
     void linkTemplatesBetweenLayers();
     float estimateSubPixelPose(const Candidate &bestCandidate, const float minScore, const int minContrast, const float greediness, cv::Point2f &pos, float &angle);
+    void groupEdgePoints(ShapeTemplData &shptd) const;
 
 private:
     std::vector<LayerShapeData> pyramid_tmpl_datas_;

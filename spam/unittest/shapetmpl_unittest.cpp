@@ -34,7 +34,7 @@ struct TestShapeTmplConfig
 BOOST_GLOBAL_FIXTURE(TestShapeTmplConfig);
 
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<fal
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -314,7 +314,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Gear, *boost::unit_test::enable_if<true>())
             std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage(boost::filesystem::relative(x.path(), baseDir).string());
 
             t1 = tbb::tick_count::now();
-            sr = tmpl.matchShapeTemplate(grayImg, 0.5f, 5, 0.9f, pos, angle, score);
+            sr = tmpl.matchShapeTemplate(grayImg, 0.5f, 5, 0.5f, pos, angle, score);
             t2 = tbb::tick_count::now();
             BOOST_TEST_MESSAGE(std::string("Match shape template (") + x.path().filename().string() + ") " \
                 << (t2 - t1).seconds() * 1000 << "ms (" << pos.x << ", " << pos.y << ", " << angle << "), with score=" << score);
