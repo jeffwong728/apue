@@ -33,6 +33,8 @@ public:
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz);
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz, std::vector<uint8_t> &buf);
     static void Transform(const cv::Mat &grayImage, cv::Mat &dst, const cv::Mat &transMat, const cv::Rect &mask);
+    static void TrackCurves(const std::vector<cv::Point> &points, const cv::Point &minPoint, const cv::Point &maxPoint, std::vector<std::vector<int>> &curves);
+    static void SplitCurvesToSegments(std::vector<std::vector<int>> &curves);
 
 public:
     static int16_t getGrayScaleSubpix(const cv::Mat& grayImage, const cv::Point2f &pt);

@@ -60,6 +60,14 @@ struct SIMDThreshold
     const uchar upper;
 };
 
+struct CVPointLesser
+{
+    bool operator()(const cv::Point &a, const cv::Point &b) const
+    {
+        return (a.x < b.x) || (a.x == b.x && a.y < b.y);
+    }
+};
+
 template <typename Pred>
 class GeneralThresholdPI
 {
@@ -622,6 +630,173 @@ void BasicImgProc::Transform(const cv::Mat &grayImage, cv::Mat &dst, const cv::M
             pMaskSrcPt += 1;
         }
     }
+}
+
+void BasicImgProc::TrackCurves(const std::vector<cv::Point> &points,
+    const cv::Point &minPoint,
+    const cv::Point &maxPoint,
+    std::vector<std::vector<int>> &curves)
+{
+    curves.clear();
+    const int width = maxPoint.x - minPoint.x + 1;
+    const int height = maxPoint.y - minPoint.y + 1;
+    cv::Mat tmplMat = cv::Mat::zeros(height, width, CV_8UC1);
+
+    int i = 0;
+    std::map<cv::Point, int, CVPointLesser> pointIndicesDict;
+    for (const cv::Point &pt : points)
+    {
+        const cv::Point tPt = pt - minPoint;
+        tmplMat.at<uint8_t>(tPt) = 0xFF;
+        pointIndicesDict[tPt] = i++ ;
+    }
+
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(tmplMat, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+
+    tmplMat = cv::Scalar();
+    for (const std::vector<cv::Point> &contour : contours)
+    {
+        std::vector<int> curve;
+        for (const cv::Point &pt : contour)
+        {
+            uint8_t &visted = tmplMat.at<uint8_t>(pt);
+            if (visted)
+            {
+                if (curve.size() > 3)
+                {
+                    curves.push_back(std::move(curve));
+                }
+                else
+                {
+                    curve.resize(0);
+                }
+            }
+            else
+            {
+                visted = 0xFF;
+                curve.push_back(pointIndicesDict[pt]);
+            }
+        }
+
+        if (!curve.empty())
+        {
+            curves.push_back(std::move(curve));
+        }
+    }
+
+    const auto &isEndNear = [](const cv::Point &pt1, const cv::Point &pt2) { return std::abs(pt1.x-pt2.x) < 3 && std::abs(pt1.y - pt2.y) < 3; };
+    for (;;)
+    {
+        const int numCurves = static_cast<int>(curves.size());
+        int i = 0, j = 0, k=-1;
+        for (; i < numCurves-1; ++i)
+        {
+            for (j = i+1; j < numCurves; ++j)
+            {
+                if (isEndNear(points[curves[i].back()], points[curves[j].front()]))
+                {
+                    k = 0; break;
+                }
+                else if (isEndNear(points[curves[i].back()], points[curves[j].back()]))
+                {
+                    k = 1; break;
+                }
+                else if (isEndNear(points[curves[i].front()], points[curves[j].front()]))
+                {
+                    k = 2; break;
+                }
+                else if (isEndNear(points[curves[i].front()], points[curves[j].back()]))
+                {
+                    k = 3; break;
+                }
+                else
+                {
+                    k = -1;
+                }
+            }
+
+            if (j < numCurves)
+            {
+                break;
+            }
+        }
+
+        if (i < numCurves-1)
+        {
+            if (k >= 0)
+            {
+                curves[j].swap(curves[curves.size() - 1]);
+                curves[i].swap(curves[curves.size() - 2]);
+            }
+
+            switch (k)
+            {
+            case 1:
+                std::reverse(curves.back().begin(), curves.back().end());
+                break;
+
+            case 2:
+                std::reverse(curves[curves.size() - 2].begin(), curves[curves.size() - 2].end());
+                break;
+
+            case 3:
+                std::reverse(curves[curves.size() - 2].begin(), curves[curves.size() - 2].end());
+                std::reverse(curves.back().begin(), curves.back().end());
+                break;
+
+            default: break;
+            }
+
+            if (k >= 0)
+            {
+                curves[curves.size() - 2].insert(curves[curves.size() - 2].end(), curves.back().cbegin(), curves.back().cend());
+                curves.pop_back();
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
+}
+
+void BasicImgProc::SplitCurvesToSegments(std::vector<std::vector<int>> &curves)
+{
+    std::vector<std::vector<int>> segments;
+    constexpr int simdSize = 8;
+    for (const std::vector<int> &curve : curves)
+    {
+        const int numEdges = static_cast<int>(curve.size());
+        const int regularNumEdges = numEdges & (-simdSize);
+        for (int e = 0; e < regularNumEdges; e += simdSize)
+        {
+            segments.emplace_back();
+            segments.back().reserve(simdSize);
+            for (int i = 0; i < simdSize; ++i)
+            {
+                segments.back().push_back(curve[e+i]);
+            }
+        }
+
+        const int iregularNumEdges = numEdges - regularNumEdges;
+        if (iregularNumEdges > 3)
+        {
+            segments.emplace_back();
+            segments.back().reserve(simdSize);
+            for (int e = regularNumEdges; e < numEdges; ++e)
+            {
+                segments.back().push_back(curve[e]);
+            }
+
+            for (int e = regularNumEdges; e < regularNumEdges+ simdSize - iregularNumEdges; ++e)
+            {
+                segments.back().push_back(curve[e]);
+            }
+        }
+    }
+
+    curves.swap(segments);
 }
 
 void filter2D_Conv(cv::InputArray src, cv::OutputArray dst, int ddepth,

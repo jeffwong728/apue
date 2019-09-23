@@ -34,16 +34,34 @@ struct TestShapeTmplConfig
 BOOST_GLOBAL_FIXTURE(TestShapeTmplConfig);
 
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Mista, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
-    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("gear\\Template.jpg");
 
     const Geom::PathVector roi;
-    const Geom::Rect rect(Geom::Point(2000, 1850), Geom::Point(2200, 2050));
-    const Geom::Path pth(rect);
-    const Geom::PathVector tmplRgn(pth);
-    ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -1, 2, 5}, 20, 30 };
+    const Geom::Rect rect1(Geom::Point(20, 18), Geom::Point(205, 178));
+    const Geom::Path pth(rect1);
+    Geom::PathVector tmplRgn(pth);
+    const ShapeTmplCreateData tmplCreateData{ {grayImg , tmplRgn, roi, -10, 20, 4}, 20, 35 };
+    cv::Vec4b colorTab[] =
+    {
+        cv::Vec4b(255, 0,   0,   255),
+        cv::Vec4b(0,   255, 0,   255),
+        cv::Vec4b(0,   0,   255, 255),
+        cv::Vec4b(255, 100, 100, 255),
+        cv::Vec4b(100, 255, 100, 255),
+        cv::Vec4b(100, 100, 255, 255),
+        cv::Vec4b(0,   255, 255, 255),
+        cv::Vec4b(255, 0,   255, 255),
+        cv::Vec4b(255, 255, 0,   255),
+        cv::Vec4b(255, 128, 128, 255),
+        cv::Vec4b(128, 255, 128, 255),
+        cv::Vec4b(128, 128, 255, 255),
+        cv::Vec4b(0,   128, 128, 255),
+        cv::Vec4b(128, 0,   128, 255),
+        cv::Vec4b(128, 128, 0,   255)
+    };
 
     tbb::tick_count t1 = tbb::tick_count::now();
     ShapeTemplate tmpl;
@@ -63,10 +81,33 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<tru
             const ShapeTemplData &std = tmplDatas[t];
             const int width = std.maxPoint.x - std.minPoint.x + 1;
             const int height = std.maxPoint.y - std.minPoint.y + 1;
-            cv::Mat tmplMat(height, width, CV_8UC1, cv::Scalar(0, 0, 0));
+            cv::Mat tmplMat(height, width, CV_8UC4, cv::Scalar(0, 0, 0, 0));
+
+            std::vector<cv::Point2f> allEdgePoints;
             for (const cv::Point &pt : std.edgeLocs)
             {
-                tmplMat.at<uint8_t>(pt - std.minPoint) = 0xFF;
+                allEdgePoints.push_back(pt);
+                //tmplMat.at<cv::Vec4b>(pt - std.minPoint) = cv::Vec4b(0, 0, 255, 255);
+            }
+
+            cv::Mat labels;
+            std::vector<cv::Point2f> centers;
+            cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0);
+            cv::kmeans(allEdgePoints, static_cast<int>(allEdgePoints.size())/8, labels, criteria, 3, cv::KMEANS_PP_CENTERS, centers);
+
+            std::vector<std::vector<int>> curves;
+            BasicImgProc::TrackCurves(std.edgeLocs, std.minPoint, std.maxPoint, curves);
+            BasicImgProc::SplitCurvesToSegments(curves);
+
+            const int curveCount = static_cast<int>(curves.size());
+            for (int i = 0; i < curveCount; i++)
+            {
+                int colorIdx = i%(sizeof(colorTab)/sizeof(colorTab[0]));
+                for (const int idx : curves[i])
+                {
+                    const cv::Point ipt = std.edgeLocs[idx] - std.minPoint;
+                    tmplMat.at<cv::Vec4b>(ipt) = colorTab[colorIdx];
+                }
             }
 
             std::string fileName = std::string("mista_tmpl_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
@@ -75,7 +116,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Big, *boost::unit_test::enable_if<tru
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -116,7 +157,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<true>())
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Board, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Board, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -171,7 +212,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Board, *boost::unit_test::enable_if<true>())
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Cap, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Cap, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\cap_illumination\\cap_illumination_01.png");
@@ -226,7 +267,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Cap, *boost::unit_test::enable_if<true>())
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Pendulum, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Pendulum, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\pendulum\\pendulum_07.png");
@@ -281,7 +322,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Pendulum, *boost::unit_test::enable_if<true>
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Gear, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Gear, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("gear\\Template.jpg");

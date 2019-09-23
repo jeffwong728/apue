@@ -406,5 +406,4 @@ BOOST_AUTO_TEST_CASE(test_Solve)
     cv::Mat B = IA * TA;
     BOOST_CHECK_EQUAL(B.rows, 10);
     BOOST_CHECK_EQUAL(B.cols, 27);
-    BOOST_TEST_MESSAGE("B: " << B);
 }
