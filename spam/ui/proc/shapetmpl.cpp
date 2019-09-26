@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <limits>
 #include <stack>
+#include <numeric>
 #include <vectorclass/vectorclass.h>
 #include <boost/container/static_vector.hpp>
 #pragma warning( push )
@@ -1074,7 +1075,8 @@ SpamResult ShapeTemplate::createShapeTemplate(const ShapeTmplCreateData &createD
     }
 
     cv::Mat tmplImg;
-    cv::buildPyramid(createData.baseData.srcImg, pyrs_, createData.baseData.pyramidLevel - 1, cv::BORDER_REFLECT);
+    cv::GaussianBlur(createData.baseData.srcImg, tmplImg, cv::Size(3, 3), cv::BORDER_REFLECT);
+    cv::buildPyramid(tmplImg, pyrs_, createData.baseData.pyramidLevel - 1, cv::BORDER_REFLECT);
     SpamRgn maskRgn(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 5))));
     PointSet maskPoints(maskRgn);
 
@@ -1160,26 +1162,33 @@ SpamResult ShapeTemplate::createShapeTemplate(const ShapeTmplCreateData &createD
                 return SpamResult::kSR_TM_TEMPL_INSIGNIFICANT;
             }
 
-            constexpr int simdSize = 8;
-            GradientSequence gRegNXVals(((static_cast<int>(ptd.gNXVals.size()) + simdSize - 1) & (-simdSize)), 0.f);
-            float *pRegXVals = gRegNXVals.data();
-            for (float dx : ptd.gNXVals)
-            {
-                *pRegXVals = dx; pRegXVals += 1;
-            }
-            ptd.gNXVals.swap(gRegNXVals);
-
-            GradientSequence gRegNYVals(((static_cast<int>(ptd.gNYVals.size()) + simdSize - 1) & (-simdSize)), 0.f);
-            float *pRegYVals = gRegNYVals.data();
-            for (float dy : ptd.gNYVals)
-            {
-                *pRegYVals = dy; pRegYVals += 1;
-            }
-            ptd.gNYVals.swap(gRegNYVals);
-
             const auto minMaxPoints = edgeLocs.MinMax();
             ptd.minPoint = minMaxPoints.first;
             ptd.maxPoint = minMaxPoints.second;
+
+            if (l == createData.baseData.pyramidLevel-1)
+            {
+                constexpr int simdSize = 8;
+                GradientSequence gRegNXVals(((static_cast<int>(ptd.gNXVals.size()) + simdSize - 1) & (-simdSize)), 0.f);
+                float *pRegXVals = gRegNXVals.data();
+                for (float dx : ptd.gNXVals)
+                {
+                    *pRegXVals = dx; pRegXVals += 1;
+                }
+                ptd.gNXVals.swap(gRegNXVals);
+
+                GradientSequence gRegNYVals(((static_cast<int>(ptd.gNYVals.size()) + simdSize - 1) & (-simdSize)), 0.f);
+                float *pRegYVals = gRegNYVals.data();
+                for (float dy : ptd.gNYVals)
+                {
+                    *pRegYVals = dy; pRegYVals += 1;
+                }
+                ptd.gNYVals.swap(gRegNYVals);
+            }
+            else
+            {
+                groupEdgePoints(ptd);
+            }
 
             AngleRange<double> angleRange{ deg , deg + angleStep };
             if (angleRange.between(0))
@@ -1250,5 +1259,63 @@ float ShapeTemplate::estimateSubPixelPose(const Candidate &bestCandidate,
 
 void ShapeTemplate::groupEdgePoints(ShapeTemplData &shptd) const
 {
+    std::vector<bool> closed;
+    std::vector<std::vector<int>> curves;
+    BasicImgProc::TrackCurves(shptd.edgeLocs, shptd.minPoint, shptd.maxPoint, curves, closed);
+    BasicImgProc::SplitCurvesToSegments(closed, curves);
 
+    GradientSequence gNXVals;
+    GradientSequence gNYVals;
+    PointSet         edgeLocs;
+    ClusterSequence  clusters;
+
+    for (const std::vector<int> &curve : curves)
+    {
+        clusters.emplace_back();
+        clusters.back().direction.x = 0.f;
+        clusters.back().direction.y = 0.f;
+
+        for (const int eIdx : curve)
+        {
+            gNXVals.push_back(shptd.gNXVals[eIdx]);
+            gNYVals.push_back(shptd.gNYVals[eIdx]);
+            edgeLocs.push_back(shptd.edgeLocs[eIdx]);
+
+            clusters.back().direction.x += shptd.gNXVals[eIdx];
+            clusters.back().direction.y += shptd.gNYVals[eIdx];
+            clusters.back().center += cv::Point2f(shptd.edgeLocs[eIdx]);
+        }
+
+        clusters.back().center /= 8.f;
+        clusters.back().direction /= 8.f;
+        const auto l2 = cv::norm(clusters.back().direction);
+        if (l2 > 0.55f)
+        {
+            clusters.back().direction /= l2;
+            clusters.back().label = 1;
+        }
+        else
+        {
+            clusters.back().label = 0;
+        }
+    }
+
+    std::vector<int> idxs(clusters.size());
+    std::iota(idxs.begin(), idxs.end(), 0);
+    std::sort(idxs.begin(), idxs.end(), [&clusters](const int l, const int r) { return (clusters[l].center.y < clusters[r].center.y) || (clusters[l].center.y == clusters[r].center.y && clusters[l].center.x < clusters[r].center.x); });
+
+    shptd.gNXVals.resize(0);
+    shptd.gNYVals.resize(0);
+    shptd.edgeLocs.resize(0);
+    shptd.gNXVals.reserve(clusters.size() * 8);
+    shptd.gNYVals.reserve(clusters.size() * 8);
+    shptd.edgeLocs.reserve(clusters.size() * 8);
+
+    for (const int idx : idxs)
+    {
+        shptd.gNXVals.insert(shptd.gNXVals.end(), gNXVals.cbegin() + idx * 8, gNXVals.cbegin() + idx * 8 + 8);
+        shptd.gNYVals.insert(shptd.gNYVals.end(), gNYVals.cbegin() + idx * 8, gNYVals.cbegin() + idx * 8 + 8);
+        shptd.edgeLocs.insert(shptd.edgeLocs.end(), edgeLocs.cbegin() + idx * 8, edgeLocs.cbegin() + idx * 8 + 8);
+        shptd.clusters.push_back(clusters[idx]);
+    }
 }

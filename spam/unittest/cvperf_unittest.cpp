@@ -3,6 +3,7 @@
 #include <ui/proc/gradient.h>
 #include <cassert>
 #include <boost/test/included/unit_test.hpp>
+#include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #ifdef free
 #undef free
@@ -379,6 +380,38 @@ BOOST_AUTO_TEST_CASE(test_CV_morphologyEx_CLOSE_ELLIPSE_Performance_0, *boost::u
     BOOST_TEST_MESSAGE("CV morphologyex close ellipse spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
     UnitTestHelper::WriteImage(dst, "mista_morphologyex_close_ellipse.png");
+}
+
+BOOST_AUTO_TEST_CASE(test_CV_ORB, *boost::unit_test::enable_if<false>())
+{
+    cv::Mat grayImgTemp, colorImgTemp;
+    std::tie(grayImgTemp, colorImgTemp) = UnitTestHelper::GetGrayScaleImage("box.png");
+
+    cv::Mat grayImgTarget, colorImgTarget;
+    std::tie(grayImgTarget, colorImgTarget) = UnitTestHelper::GetGrayScaleImage("box_in_scene.png");
+
+    cv::Ptr<cv::ORB> detector = cv::ORB::create();
+    cv::Ptr<cv::flann::IndexParams> indexParams = cv::makePtr<cv::flann::LshIndexParams>(6, 12, 1); // instantiate LSH index parameters
+    cv::Ptr<cv::flann::SearchParams> searchParams = cv::makePtr<cv::flann::SearchParams>(50);       // instantiate flann search parameters
+    cv::Ptr<cv::FlannBasedMatcher> matcher = cv::makePtr<cv::FlannBasedMatcher>(indexParams, searchParams);
+
+    cv::Mat descriptors1, descriptors2;
+    std::vector<cv::KeyPoint> keyPoints1, keyPoints2;
+    detector->detectAndCompute(grayImgTemp, cv::Mat(), keyPoints1, descriptors1);
+    detector->detectAndCompute(grayImgTarget, cv::Mat(), keyPoints2, descriptors2);
+
+    std::vector<cv::DMatch> goodMatches;
+    std::vector<std::vector<cv::DMatch>> matches;;
+    matcher->knnMatch(descriptors1, descriptors2, matches, 2);
+
+    constexpr double  RATIO = 0.75;
+    for (unsigned int i = 0; i < matches.size(); ++i) 
+    {
+        if (matches[i][0].distance < matches[i][1].distance * RATIO)
+        {
+            goodMatches.push_back(matches[i][0]);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_Solve)

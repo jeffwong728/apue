@@ -64,7 +64,7 @@ struct CVPointLesser
 {
     bool operator()(const cv::Point &a, const cv::Point &b) const
     {
-        return (a.x < b.x) || (a.x == b.x && a.y < b.y);
+        return (a.y < b.y) || (a.y == b.y && a.x < b.x);
     }
 };
 
@@ -635,7 +635,8 @@ void BasicImgProc::Transform(const cv::Mat &grayImage, cv::Mat &dst, const cv::M
 void BasicImgProc::TrackCurves(const std::vector<cv::Point> &points,
     const cv::Point &minPoint,
     const cv::Point &maxPoint,
-    std::vector<std::vector<int>> &curves)
+    std::vector<std::vector<int>> &curves,
+    std::vector<bool> &closed)
 {
     curves.clear();
     const int width = maxPoint.x - minPoint.x + 1;
@@ -652,7 +653,7 @@ void BasicImgProc::TrackCurves(const std::vector<cv::Point> &points,
     }
 
     std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(tmplMat, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+    cv::findContours(tmplMat, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
     tmplMat = cv::Scalar();
     for (const std::vector<cv::Point> &contour : contours)
@@ -759,14 +760,36 @@ void BasicImgProc::TrackCurves(const std::vector<cv::Point> &points,
             break;
         }
     }
+
+    closed.resize(0);
+    for (const std::vector<int> &curve : curves)
+    {
+        if (curve.size()>1)
+        {
+            if (isEndNear(points[curve.front()], points[curve.back()]))
+            {
+                closed.push_back(true);
+            }
+            else
+            {
+                closed.push_back(false);
+            }
+        }
+        else
+        {
+            closed.push_back(false);
+        }
+    }
 }
 
-void BasicImgProc::SplitCurvesToSegments(std::vector<std::vector<int>> &curves)
+void BasicImgProc::SplitCurvesToSegments(const std::vector<bool> &closed, std::vector<std::vector<int>> &curves)
 {
     std::vector<std::vector<int>> segments;
     constexpr int simdSize = 8;
-    for (const std::vector<int> &curve : curves)
+    const int numCurves = static_cast<int>(curves.size());
+    for (int i=0; i<numCurves; ++i)
     {
+        const std::vector<int> &curve = curves[i];
         const int numEdges = static_cast<int>(curve.size());
         const int regularNumEdges = numEdges & (-simdSize);
         for (int e = 0; e < regularNumEdges; e += simdSize)
@@ -779,19 +802,31 @@ void BasicImgProc::SplitCurvesToSegments(std::vector<std::vector<int>> &curves)
             }
         }
 
-        const int iregularNumEdges = numEdges - regularNumEdges;
-        if (iregularNumEdges > 3)
+        if (closed[i])
         {
             segments.emplace_back();
             segments.back().reserve(simdSize);
-            for (int e = regularNumEdges; e < numEdges; ++e)
+            for (int e = regularNumEdges; e < regularNumEdges + simdSize; ++e)
             {
-                segments.back().push_back(curve[e]);
+                segments.back().push_back(curve[e%numEdges]);
             }
-
-            for (int e = regularNumEdges; e < regularNumEdges+ simdSize - iregularNumEdges; ++e)
+        }
+        else
+        {
+            const int iregularNumEdges = numEdges - regularNumEdges;
+            if (iregularNumEdges > 3)
             {
-                segments.back().push_back(curve[e]);
+                segments.emplace_back();
+                segments.back().reserve(simdSize);
+                for (int e = regularNumEdges; e < numEdges; ++e)
+                {
+                    segments.back().push_back(curve[e]);
+                }
+
+                for (int e = regularNumEdges; e < regularNumEdges + simdSize - iregularNumEdges; ++e)
+                {
+                    segments.back().push_back(curve[e]);
+                }
             }
         }
     }

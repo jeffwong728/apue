@@ -3,13 +3,24 @@
 #include "rgn.h"
 #include "basetmpl.h"
 
+struct ShapeClusterData
+{
+    ShapeClusterData() : label(0) {}
+    int label;
+    cv::Point2f center;
+    cv::Point2f direction;
+};
+
 using GradientSequence = std::vector<float>;
+using ClusterSequence = std::vector<ShapeClusterData>;
+
 struct ShapeTemplData
 {
     ShapeTemplData(const float a, const float s) : angle(a), scale(s) {}
     GradientSequence gNXVals;
     GradientSequence gNYVals;
     PointSet         edgeLocs;
+    ClusterSequence  clusters;
     std::vector<int> mindices;
     cv::Point        minPoint;
     cv::Point        maxPoint;
