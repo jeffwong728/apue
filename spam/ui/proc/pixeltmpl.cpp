@@ -882,49 +882,7 @@ SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float minSc
 
         tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), BFNCCCandidateScaner<true>(this, minScore, layer));
 
-        for (BaseTemplate::Candidate &candidate : candidates_)
-        {
-            candidate.score = 0.f;
-        }
-
-        for (const BaseTemplate::Candidate &candidate : final_candidates_)
-        {
-            if (candidate.mindex >= 0)
-            {
-                if (candidate.score > candidates_[candidate.label].score)
-                {
-                    candidates_[candidate.label] = candidate;
-                }
-            }
-        }
-
-        final_candidates_.resize(0);
-        for (const BaseTemplate::Candidate &candidate : candidates_)
-        {
-            if (candidate.score > 0.f)
-            {
-                final_candidates_.push_back(candidate);
-            }
-        }
-
-        if (layer > 0)
-        {
-            candidates_.swap(final_candidates_);
-
-            final_candidates_.resize(0);
-            const int numLayerCandidates = static_cast<int>(candidates_.size());
-            for (int cc = 0; cc < numLayerCandidates; ++cc)
-            {
-                const BaseTemplate::Candidate &candidate = candidates_[cc];
-                for (int row = -2; row < 3; ++row)
-                {
-                    for (int col = -2; col < 3; ++col)
-                    {
-                        final_candidates_.emplace_back(candidate.row * 2 + row, candidate.col * 2 + col, candidate.mindex, cc);
-                    }
-                }
-            }
-        }
+        moveCandidatesToLowerLayer(layer);
     }
 
     BaseTemplate::Candidate bestCandidate(0, 0, std::numeric_limits<float>::lowest());

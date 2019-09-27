@@ -127,6 +127,19 @@ struct ShapeCandidateScaner
         pEdgePt += 1;
     }
 
+    void fillSobelNeigborhood(const cv::Point (&edgePts)[8], const int row, const int col, const int i, int32_t(&partVals)[9][8]) const
+    {
+        const int x = edgePts[i].x + col, y = edgePts[i].y + row;
+        partVals[0][i] = tmpl->row_ptrs_[y - 1][x - 1];
+        partVals[1][i] = tmpl->row_ptrs_[y - 1][x];
+        partVals[2][i] = tmpl->row_ptrs_[y - 1][x + 1];
+        partVals[3][i] = tmpl->row_ptrs_[y][x - 1];
+        partVals[5][i] = tmpl->row_ptrs_[y][x + 1];
+        partVals[6][i] = tmpl->row_ptrs_[y + 1][x - 1];
+        partVals[7][i] = tmpl->row_ptrs_[y + 1][x];
+        partVals[8][i] = tmpl->row_ptrs_[y + 1][x + 1];
+    }
+
     void fillSobelNeigborhood(const cv::Point *&pEdgePt, const cv::Point &ep, const int i, int32_t(&partVals)[9][8]) const
     {
         partVals[0][i] = tmpl->row_ptrs_[ep.y - 1][ep.x - 1];
@@ -153,6 +166,18 @@ struct ShapeCandidateScaner
         pEdgePt += 1;
     }
 
+    static void deformClusterEdgePoints(const cv::Point *pEdgePt, const cv::Point &deform, cv::Point (&edgePts)[8])
+    {
+        edgePts[0] = pEdgePt[0] + deform;
+        edgePts[1] = pEdgePt[1] + deform;
+        edgePts[2] = pEdgePt[2] + deform;
+        edgePts[3] = pEdgePt[3] + deform;
+        edgePts[4] = pEdgePt[4] + deform;
+        edgePts[5] = pEdgePt[5] + deform;
+        edgePts[6] = pEdgePt[6] + deform;
+        edgePts[7] = pEdgePt[7] + deform;
+    }
+
     float getPartScore(const int32_t (&partVals)[9][8], const vcl::Vec8i &vecMinContrast, const float *tmplDx, const float *tmplDy) const
     {
         vcl::Vec8i pixelVals[9];
@@ -175,6 +200,16 @@ struct ShapeCandidateScaner
     ShapeTemplate *const tmpl;
     const vcl::Vec8i ones8i;
     const vcl::Vec8i zeros8i;
+};
+
+template<bool TouchBorder>
+struct DeformCandidateScaner : public ShapeCandidateScaner<TouchBorder>
+{
+    DeformCandidateScaner(ShapeTemplate *const shapeTmpl, const float s, const float g, const int l, const int mc)
+        : ShapeCandidateScaner<TouchBorder>(shapeTmpl, s, g, l, mc)
+    {}
+
+    void operator()(const tbb::blocked_range<int>& r) const;
 };
 
 template<>
@@ -785,6 +820,135 @@ float ShapeCandidateScaner<true>::getScore(const int row, const int col, const i
     return score;
 }
 
+template<>
+void DeformCandidateScaner<false>::operator()(const tbb::blocked_range<int>& r) const
+{
+    constexpr int simdSize = 8;
+    constexpr int maxDeform = 1;
+    constexpr int safeDeform = maxDeform + 1;
+    const LayerShapeData &ltd = tmpl->pyramid_tmpl_datas_[layer];
+    const cv::Mat &layerMat = tmpl->pyrs_[layer];
+    OutsideRectangle orb(1 + safeDeform, layerMat.cols - 2 - safeDeform, 1 + safeDeform, layerMat.rows - 2 - safeDeform);
+    const float layerMinScore = std::max(0.5f, minScore - 0.1f * layer);
+    const float f = (1.f - greediness * layerMinScore) / (1.f - greediness);
+    const auto &tmplDatas = ltd.tmplDatas;
+    const auto &upperTmplDatas = tmpl->pyramid_tmpl_datas_[layer + 1].tmplDatas;
+    vcl::Vec8i vecMinContrast(minContrast*minContrast * 64);
+    ScalablePointList maxDeforms, curDeforms;
+
+    for (int c = r.begin(); c != r.end(); ++c)
+    {
+        BaseTemplate::Candidate &candidate = tmpl->final_candidates_[c];
+        const int row = candidate.row;
+        const int col = candidate.col;
+        const cv::Point anchorPt{ col, row };
+        float maxScore = -1.f;
+        int bestTmplIndex = 0;
+        const std::vector<int> &tmplIndices = upperTmplDatas[candidate.mindex].mindices;
+
+        for (const int tmplIndex : tmplIndices)
+        {
+            const ShapeTemplData &ntd = tmplDatas[tmplIndex];
+            const int numEdges = static_cast<int>(ntd.edgeLocs.size());
+            const int regularNumEdges = numEdges & (-simdSize);
+            const float stopScore = numEdges * layerMinScore - numEdges;
+            curDeforms.resize(ntd.clusters.size());
+
+            if (orb(anchorPt + ntd.minPoint) || orb(anchorPt + ntd.maxPoint)) {
+                continue;
+            }
+
+            int e = 0, j = 0;
+            const float *tmplDx = ntd.gNXVals.data();
+            const float *tmplDy = ntd.gNYVals.data();
+            const cv::Point *pEdgePt = ntd.edgeLocs.data();
+            float sumDot = 0.f;
+            int32_t partVals[9][simdSize];
+            cv::Point clusterEdgePts[8];
+
+            for (int cluster = 0; e < regularNumEdges; e += simdSize, ++cluster)
+            {
+                curDeforms[cluster].x = 0;
+                curDeforms[cluster].y = 0;
+                float maxClusterScore = std::numeric_limits<float>::lowest();
+                if (ntd.clusters[cluster].label)
+                {
+                    for (int v = -maxDeform; v < maxDeform + 1; ++v)
+                    {
+                        const cv::Point deform = ntd.clusters[cluster].direction * v;
+                        deformClusterEdgePoints(pEdgePt, deform, clusterEdgePts);
+                        for (int i = 0; i < simdSize; ++i)
+                        {
+                            fillSobelNeigborhood(clusterEdgePts, row, col, i, partVals);
+                        }
+                        const float clusterScore = getPartScore(partVals, vecMinContrast, tmplDx, tmplDy);
+                        if (clusterScore > maxClusterScore )
+                        {
+                            maxClusterScore = clusterScore;
+                            curDeforms[cluster].x = v;
+                        }
+                    }
+                }
+                else
+                {
+                    for (int y = -maxDeform; y < maxDeform + 1; ++y)
+                    {
+                        for (int x = -maxDeform; x < maxDeform + 1; ++x)
+                        {
+                            const cv::Point *pClusterEdgePt = pEdgePt;
+                            for (int i = 0; i < simdSize; ++i)
+                            {
+                                fillSobelNeigborhood(pClusterEdgePt, row+y, col+x, i, partVals);
+                            }
+                            const float clusterScore = getPartScore(partVals, vecMinContrast, tmplDx, tmplDy);
+                            if (clusterScore > maxClusterScore)
+                            {
+                                maxClusterScore = clusterScore;
+                                curDeforms[cluster].x = x;
+                                curDeforms[cluster].y = y;
+                            }
+                        }
+                    }
+                }
+
+                sumDot += maxClusterScore;
+
+                j += simdSize;
+                float safeScore = stopScore + j * f;
+                float greedyScore = layerMinScore * j;
+                if (sumDot < std::min(safeScore, greedyScore)) { break; }
+
+                tmplDx += simdSize;
+                tmplDy += simdSize;
+                pEdgePt += simdSize;
+            }
+
+            if (e < regularNumEdges) { continue; }
+
+            float score = sumDot / numEdges;
+            if (score > maxScore)
+            {
+                maxScore = score;
+                bestTmplIndex = tmplIndex;
+                maxDeforms.swap(curDeforms);
+            }
+        }
+
+        if (maxScore > layerMinScore)
+        {
+            candidate.mindex = bestTmplIndex;
+            candidate.score = maxScore;
+            candidate.deforms.swap(maxDeforms);
+        }
+        else
+        {
+            candidate.mindex = -1;
+            candidate.score = 0.f;
+            candidate.deforms.resize(0);
+        }
+    }
+}
+
 ShapeTemplate::ShapeTemplate()
 {
 }
@@ -793,7 +957,13 @@ ShapeTemplate::~ShapeTemplate()
 {
 }
 
-SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float minScore, const int minContrast, const float greediness, cv::Point2f &pos, float &angle, float &score)
+SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img,
+    const float minScore,
+    const int minContrast,
+    const float greediness,
+    cv::Point2f &pos,
+    float &angle,
+    float &score)
 {
     clearCacheMatchData();
 
@@ -829,14 +999,14 @@ SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float min
     {
         top_layer_full_domain_.SetRegion(cv::Rect(0, 0, nTopCols, nTopRows));
         const int numRuns = static_cast<int>(top_layer_full_domain_.GetData().size());
-        ShapeTopLayerScaner<true> bfNCCScaner(this, top_layer_full_domain_.GetData().data(), minScore, greediness);
+        ShapeTopLayerScaner<false> bfNCCScaner(this, top_layer_full_domain_.GetData().data(), minScore, greediness);
         bfNCCScaner(tbb::blocked_range<int>(0, numRuns));
         candidates_.swap(bfNCCScaner.candidates);
     }
     else
     {
         const int numRuns = static_cast<int>(top_layer_search_roi_.GetData().size());
-        ShapeTopLayerScaner<true> bfNCCScaner(this, top_layer_search_roi_.GetData().data(), minScore, greediness);
+        ShapeTopLayerScaner<false> bfNCCScaner(this, top_layer_search_roi_.GetData().data(), minScore, greediness);
         bfNCCScaner(tbb::blocked_range<int>(0, numRuns));
         candidates_.swap(bfNCCScaner.candidates);
     }
@@ -870,52 +1040,18 @@ SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float min
             row_ptrs_[row] = layerMat.ptr<uint8_t>(row);
         }
 
-        ShapeCandidateScaner<true> scs(this, minScore, greediness, layer, minContrast);
-        tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), scs);
-
-        for (BaseTemplate::Candidate &candidate : candidates_)
+        if (layer < 2)
         {
-            candidate.score = 0.f;
+            DeformCandidateScaner<false> dcs(this, minScore, greediness, layer, minContrast);
+            tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), dcs);
+        }
+        else
+        {
+            ShapeCandidateScaner<false> scs(this, minScore, greediness, layer, minContrast);
+            tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(final_candidates_.size())), scs);
         }
 
-        for (const BaseTemplate::Candidate &candidate : final_candidates_)
-        {
-            if (candidate.mindex >= 0)
-            {
-                if (candidate.score > candidates_[candidate.label].score)
-                {
-                    candidates_[candidate.label] = candidate;
-                }
-            }
-        }
-
-        final_candidates_.resize(0);
-        for (const BaseTemplate::Candidate &candidate : candidates_)
-        {
-            if (candidate.score > 0.f)
-            {
-                final_candidates_.push_back(candidate);
-            }
-        }
-
-        if (layer > 0)
-        {
-            candidates_.swap(final_candidates_);
-
-            final_candidates_.resize(0);
-            const int numLayerCandidates = static_cast<int>(candidates_.size());
-            for (int cc = 0; cc < numLayerCandidates; ++cc)
-            {
-                const BaseTemplate::Candidate &candidate = candidates_[cc];
-                for (int row = -2; row < 3; ++row)
-                {
-                    for (int col = -2; col < 3; ++col)
-                    {
-                        final_candidates_.emplace_back(candidate.row * 2 + row, candidate.col * 2 + col, candidate.mindex, cc);
-                    }
-                }
-            }
-        }
+        moveCandidatesToLowerLayer(layer);
     }
 
     BaseTemplate::Candidate bestCandidate(0, 0, std::numeric_limits<float>::lowest());
@@ -940,7 +1076,7 @@ SpamResult ShapeTemplate::matchShapeTemplate(const cv::Mat &img, const float min
         if (score < 0.99f)
         {
             float subScore = estimateSubPixelPose(bestCandidate, minScore, minContrast, greediness, subPos, subAng);
-            if (subScore > score)
+            if (subScore > score && std::abs(subPos.x) < 0.618f && std::abs(subPos.y) < 0.618f && std::abs(subAng) < 0.618f)
             {
                 pos.x = static_cast<float>(bestCandidate.col) + subPos.x;
                 pos.y = static_cast<float>(bestCandidate.row) + subPos.y;
@@ -1075,7 +1211,7 @@ SpamResult ShapeTemplate::createShapeTemplate(const ShapeTmplCreateData &createD
     }
 
     cv::Mat tmplImg;
-    cv::GaussianBlur(createData.baseData.srcImg, tmplImg, cv::Size(3, 3), cv::BORDER_REFLECT);
+    cv::medianBlur(createData.baseData.srcImg, tmplImg, 5);
     cv::buildPyramid(tmplImg, pyrs_, createData.baseData.pyramidLevel - 1, cv::BORDER_REFLECT);
     SpamRgn maskRgn(Geom::PathVector(Geom::Path(Geom::Circle(Geom::Point(0, 0), 5))));
     PointSet maskPoints(maskRgn);

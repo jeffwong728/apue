@@ -19,6 +19,8 @@
 #include <2geom/pathvector.h>
 #pragma warning( pop )
 
+using ScalablePointList = std::vector<cv::Point, tbb::scalable_allocator<cv::Point>>;
+
 template<typename TAngle>
 struct AngleRange
 {
@@ -120,11 +122,17 @@ public:
         Candidate(const int r, const int c, const float s) : row(r), col(c), score(s), mindex(-1), label(0) {}
         Candidate(const int r, const int c, const int m, const float s) : row(r), col(c), mindex(m), score(s), label(0) {}
         Candidate(const int r, const int c, const int m, const int l) : row(r), col(c), mindex(m), score(0.f), label(l) {}
+        Candidate(const Candidate &other) = default;
+        Candidate(Candidate &&other) = default;
+        Candidate &operator=(const Candidate &other) = default;
+        Candidate &operator=(Candidate &&other) = default;
+
         int row;
         int col;
         int mindex;
         int label;
         float score;
+        ScalablePointList deforms;
     };
 
     class CandidateGroup;
@@ -170,6 +178,7 @@ protected:
     void supressNoneMaximum();
     void processToplayerSearchROI(const Geom::PathVector &roi, const int pyramidLevel);
     float maxScoreInterpolate(const cv::Mat &scores, cv::Point2f &pos, float &angle) const;
+    void moveCandidatesToLowerLayer(const int layer);
 
 protected:
     int pyramid_level_;

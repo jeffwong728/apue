@@ -48,6 +48,7 @@ class ShapeTemplate : public BaseTemplate
 public:
     template<bool TouchBorder> friend struct ShapeTopLayerScaner;
     template<bool TouchBorder> friend struct ShapeCandidateScaner;
+    template<bool TouchBorder> friend struct DeformCandidateScaner;
 
 public:
     ShapeTemplate();
