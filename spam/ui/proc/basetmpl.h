@@ -179,6 +179,9 @@ protected:
     void processToplayerSearchROI(const Geom::PathVector &roi, const int pyramidLevel);
     float maxScoreInterpolate(const cv::Mat &scores, cv::Point2f &pos, float &angle) const;
     void moveCandidatesToLowerLayer(const int layer);
+    void startMoveCandidatesToLowerLayer();
+    std::tuple<const int, const SpamRun *> getSearchRegion(const int nTopRows, const int nTopCols);
+    static void initMatchResult(cv::Point2f &pos, float &angle, float &score) { pos.x = 0.f; pos.y = 0.f; angle = 0.f; score = 0.f; }
 
 protected:
     int pyramid_level_;

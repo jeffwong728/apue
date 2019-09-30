@@ -805,12 +805,8 @@ SpamResult PixelTemplate::matchPixelTemplate(const cv::Mat &img, const int sad, 
 
 SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float minScore, cv::Point2f &pos, float &angle, float &score)
 {
+    initMatchResult(pos, angle, score);
     clearCacheMatchData();
-
-    pos.x = 0.f;
-    pos.y = 0.f;
-    angle = 0.f;
-    score = 0.f;
 
     if (pyramid_tmpl_datas_.empty() ||
         pyramid_level_ != static_cast<int>(pyramid_tmpl_datas_.size()))
@@ -852,20 +848,7 @@ SpamResult PixelTemplate::matchNCCTemplate(const cv::Mat &img, const float minSc
     }
 
     supressNoneMaximum();
-
-    final_candidates_.resize(0);
-    const int numTopLayerCandidates = static_cast<int>(candidates_.size());
-    for (int cc = 0; cc < numTopLayerCandidates; ++cc)
-    {
-        const BaseTemplate::Candidate &candidate = candidates_[cc];
-        for (int row = -2; row < 3; ++row)
-        {
-            for (int col = -2; col < 3; ++col)
-            {
-                final_candidates_.emplace_back(candidate.row * 2 + row, candidate.col * 2 + col, candidate.mindex, cc);
-            }
-        }
-    }
+    startMoveCandidatesToLowerLayer();
 
     const int layerIndex = static_cast<int>(pyramid_tmpl_datas_.size() - 2);
     for (int layer = layerIndex; layer >= 0; --layer)

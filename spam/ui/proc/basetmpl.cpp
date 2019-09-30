@@ -376,3 +376,39 @@ void BaseTemplate::moveCandidatesToLowerLayer(const int layer)
         }
     }
 }
+
+void BaseTemplate::startMoveCandidatesToLowerLayer()
+{
+    final_candidates_.resize(0);
+    const int numTopLayerCandidates = static_cast<int>(candidates_.size());
+    for (int cc = 0; cc < numTopLayerCandidates; ++cc)
+    {
+        const BaseTemplate::Candidate &candidate = candidates_[cc];
+        for (int row = -2; row < 3; ++row)
+        {
+            for (int col = -2; col < 3; ++col)
+            {
+                final_candidates_.emplace_back(candidate.row * 2 + row, candidate.col * 2 + col, candidate.mindex, cc);
+            }
+        }
+    }
+}
+
+std::tuple<const int, const SpamRun *> BaseTemplate::getSearchRegion(const int nTopRows, const int nTopCols)
+{
+    int numSearchRuns = 0;
+    const SpamRun *searchRuns = nullptr;
+    if (top_layer_search_roi_.GetData().empty())
+    {
+        top_layer_full_domain_.SetRegion(cv::Rect(0, 0, nTopCols, nTopRows));
+        numSearchRuns = static_cast<int>(top_layer_full_domain_.GetData().size());
+        searchRuns = top_layer_full_domain_.GetData().data();
+    }
+    else
+    {
+        numSearchRuns = static_cast<int>(top_layer_search_roi_.GetData().size());
+        searchRuns = top_layer_search_roi_.GetData().data();
+    }
+
+    return { numSearchRuns , searchRuns };
+}
