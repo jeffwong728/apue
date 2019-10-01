@@ -1,0 +1,43 @@
+pre {
+    background: #f5f5f5;
+    white-space: pre-wrap;
+    padding-top: 1em;
+    padding-bottom: 1em;
+}
+
+table caption {
+    margin-bottom: 0px;
+    padding: 9px 10px;
+    color: white;
+    background: #53565a;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+table th {
+    font-weight: bold;
+    background-color: #77dcff;
+    background-image: -o-linear-gradient(top,#3ba0e9 0%,#197ec7 100%);
+    background-image: -moz-linear-gradient(top,#3ba0e9 0%,#197ec7 100%);
+    background-image: -ms-linear-gradient(top,#3ba0e9 0%,#197ec7 100%);
+    background-image: -webkit-gradient(linear,left top,left bottom,color-stop(0,#3ba0e9),color-stop(1,#197ec7));
+    background-image: linear-gradient(top,#3ba0e9 0%,#197ec7 100%);
+    color: #fff;
+}
+
+table tr {
+    background-color: #f2f2f2;
+}
+
+
+.Note {
+    border: solid 1px black;
+    background-color: #e2e7eb;
+    margin: 5px auto;
+    max-width: 95%;
+    padding-bottom: 15px;
+    padding-left: 10px;
+    padding-right: 5px;
+}
+
