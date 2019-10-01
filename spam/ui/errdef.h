@@ -1,7 +1,7 @@
 #ifndef SPAM_UI_ERROR_DEFINE_H
 #define SPAM_UI_ERROR_DEFINE_H
 
-enum class SpamResult : int64_t
+enum class SpamResult
 {
     kSR_SUCCESS = 0,
     kSR_OK = kSR_SUCCESS,
@@ -19,7 +19,7 @@ enum class SpamResult : int64_t
     kSR_TM_ANGLE_RANGE_INVALID = 12,
     kSR_TM_CORRUPTED_TEMPL_DATA = 13,
     kSR_TM_INSTANCE_NOT_FOUND = 14,
-    kSR_ERROR = 0xFFFFFFFF,
+    kSR_ERROR = -1,
     kSR_FAILURE = kSR_ERROR
 };
 
