@@ -190,36 +190,22 @@ Mat Region::getByteListFromBits(const Mat &bits) {
     int nbytes = (bits.cols * bits.rows + 8 - 1) / 8;
 
     Mat candidateByteList(1, nbytes, CV_8UC4, Scalar::all(0));
-    unsigned char currentBit = 0;
-    int currentByte = 0;
-
-    // the 4 rotations
-    uchar* rot0 = candidateByteList.ptr();
-    uchar* rot1 = candidateByteList.ptr() + 1*nbytes;
-    uchar* rot2 = candidateByteList.ptr() + 2*nbytes;
-    uchar* rot3 = candidateByteList.ptr() + 3*nbytes;
-
-    for(int row = 0; row < bits.rows; row++) {
-        for(int col = 0; col < bits.cols; col++) {
-            // circular shift
-            rot0[currentByte] <<= 1;
-            rot1[currentByte] <<= 1;
-            rot2[currentByte] <<= 1;
-            rot3[currentByte] <<= 1;
-            // set bit
-            rot0[currentByte] |= bits.at<uchar>(row, col);
-            rot1[currentByte] |= bits.at<uchar>(col, bits.cols - 1 - row);
-            rot2[currentByte] |= bits.at<uchar>(bits.rows - 1 - row, bits.cols - 1 - col);
-            rot3[currentByte] |= bits.at<uchar>(bits.rows - 1 - col, row);
-            currentBit++;
-            if(currentBit == 8) {
-                // next byte
-                currentBit = 0;
-                currentByte++;
-            }
-        }
-    }
     return candidateByteList;
+}
+
+Ptr<Region> Region::createRectangle(const Size &rectSize)
+{
+    return makePtr<Region>();
+}
+
+int Region::connect(const Ptr<Region> &srcRegion, std::vector<Ptr<Region>> &regions)
+{
+    regions.resize(0);
+    regions.push_back(makePtr<Region>());
+    regions.push_back(makePtr<Region>());
+    regions.push_back(makePtr<Region>());
+
+    return 3;
 }
 
 }

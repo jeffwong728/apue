@@ -23,6 +23,9 @@ class CV_EXPORTS_W Region {
     int getDistanceToId(InputArray bits, int id, bool allRotations = true) const;
     CV_WRAP void drawMarker(int id, int sidePixels, OutputArray _img, int borderBits = 1) const;
     CV_WRAP static Mat getByteListFromBits(const Mat &bits);
+
+    CV_WRAP static Ptr<Region> createRectangle(const Size &rectSize);
+    CV_WRAP int connect(const Ptr<Region> &srcRegion, CV_OUT std::vector<Ptr<Region>> &regions);
 };
 
 }

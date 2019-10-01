@@ -1,0 +1,4 @@
+export PATH="/e/skia/depot_tools:/c/Python27:${PATH}"
+bin/gn gen out/Static --args='is_official_build=true is_debug=false skia_use_libwebp=false skia_use_lua=false skia_use_system_expat=true skia_use_system_libjpeg_turbo=true skia_use_system_libpng=true skia_use_system_zlib=true is_component_build=false win_vc="D:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC" win_sdk_version="10.0.17134.0" extra_cflags=["/MD", "-ID:/apue/install/zlib/include", "-ID:/apue/install/icu/include", "-ID:/apue/install/libpng/include", "-ID:/apue/install/expat/include", "-ID:/apue/install/libjpeg-turbo/include"]' --ide=vs
+#skia_enable_skshaper=false
+#skia_enable_skottie=false
