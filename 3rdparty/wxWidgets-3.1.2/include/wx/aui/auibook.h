@@ -25,6 +25,7 @@
 #include "wx/aui/framemanager.h"
 #include "wx/bookctrl.h"
 #include "wx/containr.h"
+WX_DECLARE_STRING_HASH_MAP(wxString, StringDict);
 
 
 class wxAuiNotebook;
@@ -313,6 +314,14 @@ public:
 
     const wxAuiManager& GetAuiManager() const { return m_mgr; }
 
+    wxString SavePerspective();
+    bool LoadPerspective(const wxString& layout);
+    void SavePerspective(StringDict &layout, wxString &perspective);
+    bool LoadPerspective(const StringDict &layout, const wxString &perspective);
+    void StackAllPages();
+    wxWindow* FindPageByExtensionCtrl(const wxControl *ctrl);
+    wxControl* FindExtensionCtrlByPage(const wxWindow *page);
+
     // Sets the normal font
     void SetNormalFont(const wxFont& font);
 
@@ -464,6 +473,7 @@ wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_AUI, wxEVT_AUINOTEBOOK_TAB_RIGHT_DOWN, wxAu
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_AUI, wxEVT_AUINOTEBOOK_TAB_RIGHT_UP, wxAuiNotebookEvent);
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_AUI, wxEVT_AUINOTEBOOK_DRAG_DONE, wxAuiNotebookEvent);
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_AUI, wxEVT_AUINOTEBOOK_BG_DCLICK, wxAuiNotebookEvent);
+wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_AUI, wxEVT_AUINOTEBOOK_TAB_EXTENSION, wxAuiNotebookEvent);
 
 typedef void (wxEvtHandler::*wxAuiNotebookEventFunction)(wxAuiNotebookEvent&);
 
@@ -500,6 +510,8 @@ typedef void (wxEvtHandler::*wxAuiNotebookEventFunction)(wxAuiNotebookEvent&);
     wx__DECLARE_EVT1(wxEVT_AUINOTEBOOK_TAB_RIGHT_UP, winid, wxAuiNotebookEventHandler(fn))
 #define EVT_AUINOTEBOOK_BG_DCLICK(winid, fn) \
     wx__DECLARE_EVT1(wxEVT_AUINOTEBOOK_BG_DCLICK, winid, wxAuiNotebookEventHandler(fn))
+#define EVT_AUINOTEBOOK_TAB_EXTENSION(winid, fn) \
+    wx__DECLARE_EVT1(wxEVT_AUINOTEBOOK_TAB_EXTENSION, winid, wxAuiNotebookEventHandler(fn))
 #else
 
 // wxpython/swig event work
@@ -556,6 +568,7 @@ typedef void (wxEvtHandler::*wxAuiNotebookEventFunction)(wxAuiNotebookEvent&);
 #define wxEVT_COMMAND_AUINOTEBOOK_TAB_RIGHT_UP      wxEVT_AUINOTEBOOK_TAB_RIGHT_UP
 #define wxEVT_COMMAND_AUINOTEBOOK_BG_DCLICK         wxEVT_AUINOTEBOOK_BG_DCLICK
 #define wxEVT_COMMAND_AUINOTEBOOK_CANCEL_DRAG       wxEVT_AUINOTEBOOK_CANCEL_DRAG
+#define wxEVT_COMMAND_AUINOTEBOOK_TAB_EXTENSION     wxEVT_AUINOTEBOOK_TAB_EXTENSION
 
 #endif  // wxUSE_AUI
 #endif  // _WX_AUINOTEBOOK_H_

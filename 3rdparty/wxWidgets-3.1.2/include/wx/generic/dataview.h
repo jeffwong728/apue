@@ -283,6 +283,11 @@ public:
     // should not be used in portable code.
     wxColour GetAlternateRowColour() const { return m_alternateRowColour; }
 
+    int GetHighlightLine() const { return m_highlightRow; }
+    void SetHighlightLine(const int hlRow) { m_highlightRow = hlRow; }
+    wxDataViewItem FindItemByRow(unsigned int row) const { return GetItemByRow(row); }
+    int FindRowByItem(const wxDataViewItem & item) const {return GetRowByItem(item); }
+
     // The returned pointer is null if the control has wxDV_NO_HEADER style.
     //
     // This method is only available in the generic versions.
@@ -375,7 +380,7 @@ private:
 
     // user defined color to draw row lines, may be invalid
     wxColour m_alternateRowColour;
-
+    int m_highlightRow{-1};
     // columns indices used for sorting, empty if nothing is sorted
     wxVector<int> m_sortingColumnIdxs;
 
