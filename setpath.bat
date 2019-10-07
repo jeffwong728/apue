@@ -1,0 +1,10 @@
+@set PATH=%PATH%;C:\Program Files\CMake\bin
+@set PATH=%PATH%;D:\apue\install\glib\bin
+@set PATH=%PATH%;D:\apue\install\tbb\bin\intel64\vc14
+@set PATH=%PATH%;D:\apue\install\opencv\x64\vc15\bin
+@set PATH=%PATH%;D:\apue\install\apue\bin
+@set PATH=%PATH%;D:\apue\install\OpenBLAS\bin
+@set PATH=%PATH%;D:\apue\install\libjpeg-turbo64\bin
+@set PATH=%PATH%;D:\apue\install\libjpeg-turbo64\bin
+@set PATH=%PATH%;D:\apue\install\liblzma\bin
+@set PATH=%PATH%;D:\apue\install\zlib\bin

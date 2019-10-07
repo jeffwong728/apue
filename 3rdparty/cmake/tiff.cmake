@@ -10,7 +10,7 @@ set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ZLIB_ROOT "D:/apue/install/zlib" CACHE PATH "")
 set(LibLZMA_ROOT "D:/apue/install/liblzma" CACHE PATH "")
 set(JPEG_ROOT "D:/apue/install/libjpeg-turbo64" CACHE PATH "")
-set(FreeGLUT_ROOT "D:/apue/install/freeglut" CACHE PATH "")
+set(GLUT_ROOT "D:/apue/install/freeglut" CACHE PATH "")
 
 set(jbig OFF CACHE BOOL "" FORCE)
 set(jpeg12 OFF CACHE BOOL "" FORCE)
