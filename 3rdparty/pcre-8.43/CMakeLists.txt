@@ -69,24 +69,21 @@
 # 2016-06-24 PH applied Chris Wilson's revised patch (adds a separate option)
 
 PROJECT(PCRE C CXX)
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    get_filename_component(absInstallPath "../../install/${CMAKE_PROJECT_NAME}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_LIST_DIR}")
-    set(CMAKE_INSTALL_PREFIX "${absInstallPath}" CACHE PATH "Install path prefix" FORCE)
-endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 # Increased minimum to 2.8.0 to support newer add_test features. Set policy
 # CMP0026 to avoid warnings for the use of LOCATION in GET_TARGET_PROPERTY.
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.0)
 #CMAKE_POLICY(SET CMP0026 OLD)
+CMAKE_POLICY(SET CMP0074 NEW)
 
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake) # for FindReadline.cmake
 
 # external packages
-FIND_PACKAGE( BZip2 QUIET )
-FIND_PACKAGE( ZLIB QUIET )
-FIND_PACKAGE( Readline QUIET )
-FIND_PACKAGE( Editline QUIET )
+FIND_PACKAGE( BZip2 )
+FIND_PACKAGE( ZLIB )
+FIND_PACKAGE( Readline )
+FIND_PACKAGE( Editline )
 
 # Configuration checks
 
