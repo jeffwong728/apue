@@ -18,7 +18,7 @@ endif()
 
 if(WIN32)
     include_directories(windows)
-    include_external_msproject(lzma "${CMAKE_CURRENT_LIST_DIR}/windows/vs2017/liblzma.vcxproj")
+    include_external_msproject(lzma "${CMAKE_CURRENT_LIST_DIR}/windows/vs2017/liblzma_dll.vcxproj")
 else()
     include_directories(${CMAKE_CURRENT_BINARY_DIR})
     file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/config.h """
@@ -156,8 +156,10 @@ install(TARGETS lzma
 endif()
 
 if (MSVC)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/x64/liblzma/liblzma.lib RENAME liblzmad.lib DESTINATION lib)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Release/x64/liblzma/liblzma.lib DESTINATION lib)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/x64/liblzma_dll/liblzmad.lib DESTINATION lib)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Release/x64/liblzma_dll/liblzma.lib DESTINATION lib)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/x64/liblzma_dll/liblzmad.dll DESTINATION bin)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Release/x64/liblzma_dll/liblzma.dll DESTINATION bin)
 endif()
 
 if(NOT LIBLZMA_SKIP_HEADERS)
