@@ -90,13 +90,13 @@ endif()
 # at the HINTS location, standard system locations will be still be searched
 # (/usr/lib64 (Redhat), lib/i386-linux-gnu (Debian)).
 
-find_path( GSL_INCLUDE_DIR NAMES gsl/gsl_sf.h HINTS ${GSL_ROOT_DIR}/include ${GSL_INCLUDEDIR})
+find_path( GSL_INCLUDE_DIR NAMES gsl/gsl_sf.h PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES include NO_DEFAULT_PATH)
 
-find_library( GSL_gsl_LIBRARY_RELEASE NAMES gsl HINTS ${GSL_ROOT_DIR}/lib ${GSL_LIBDIR})
-find_library( GSL_gslcblas_LIBRARY_RELEASE NAMES gslcblas cblas HINTS ${GSL_ROOT_DIR}/lib ${GSL_LIBDIR})
+find_library( GSL_gsl_LIBRARY_RELEASE NAMES gsl PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+find_library( GSL_gslcblas_LIBRARY_RELEASE NAMES gslcblas cblas PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
 
-find_library( GSL_gsl_LIBRARY_DEBUG NAMES gsld gsl HINTS ${GSL_ROOT_DIR}/lib ${GSL_LIBDIR})
-find_library( GSL_gslcblas_LIBRARY_DEBUG NAMES gslcblasd cblasd gslcblas cblas HINTS ${GSL_ROOT_DIR}/lib ${GSL_LIBDIR})
+find_library( GSL_gsl_LIBRARY_DEBUG NAMES gsld gsl PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
+find_library( GSL_gslcblas_LIBRARY_DEBUG NAMES gslcblasd cblasd gslcblas cblas PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
 
 select_library_configurations(GSL_gsl)
 select_library_configurations(GSL_gslcblas)

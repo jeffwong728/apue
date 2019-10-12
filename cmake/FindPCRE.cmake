@@ -40,63 +40,45 @@
 #   true if the pcre headers and libraries were found.
 #
 
-set(_PCRE_SEARCHES)
-
 # Search PCRE_ROOT first if it is set.
-if(PCRE_ROOT)
-  set(_PCRE_SEARCH_ROOT PATHS ${PCRE_ROOT} NO_DEFAULT_PATH)
-  list(APPEND _PCRE_SEARCHES _PCRE_SEARCH_ROOT)
-endif()
 
 # Look for the header file.
-foreach(search ${_PCRE_SEARCHES})
-  find_path(PCRE_INCLUDE_DIR NAMES pcre.h ${${search}} PATH_SUFFIXES include)
-endforeach()
+find_path(PCRE_INCLUDE_DIR NAMES pcre.h PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES include NO_DEFAULT_PATH)
 
 include(SelectLibraryConfigurations)
 
 # Look for pcre library.
 if(NOT PCRE_pcre_LIBRARY)
-  foreach(search ${_PCRE_SEARCHES})
-    find_library(PCRE_pcre_LIBRARY_RELEASE NAMES pcre NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-    find_library(PCRE_pcre_LIBRARY_DEBUG NAMES pcred NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-  endforeach()
+  find_library(PCRE_pcre_LIBRARY_RELEASE NAMES pcre NAMES_PER_DIR PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(PCRE_pcre_LIBRARY_DEBUG NAMES pcred NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
   select_library_configurations(PCRE_pcre)
 endif()
 
 # Look for pcre16 library.
 if(NOT PCRE_pcre16_LIBRARY)
-  foreach(search ${_PCRE_SEARCHES})
-    find_library(PCRE_pcre16_LIBRARY_RELEASE NAMES pcre16 NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-    find_library(PCRE_pcre16_LIBRARY_DEBUG NAMES pcre16d NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-  endforeach()
+  find_library(PCRE_pcre16_LIBRARY_RELEASE NAMES pcre16 NAMES_PER_DIR PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(PCRE_pcre16_LIBRARY_DEBUG NAMES pcre16d NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
   select_library_configurations(PCRE_pcre16)
 endif()
 
 # Look for pcre32 library.
 if(NOT PCRE_pcre32_LIBRARY)
-  foreach(search ${_PCRE_SEARCHES})
-    find_library(PCRE_pcre32_LIBRARY_RELEASE NAMES pcre32 NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-    find_library(PCRE_pcre32_LIBRARY_DEBUG NAMES pcre32d NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-  endforeach()
+  find_library(PCRE_pcre32_LIBRARY_RELEASE NAMES pcre32 NAMES_PER_DIR PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(PCRE_pcre32_LIBRARY_DEBUG NAMES pcre32d NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
   select_library_configurations(PCRE_pcre32)
 endif()
 
 # Look for pcrecpp library.
 if(NOT PCRE_pcrecpp_LIBRARY)
-  foreach(search ${_PCRE_SEARCHES})
-    find_library(PCRE_pcrecpp_LIBRARY_RELEASE NAMES pcrecpp NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-    find_library(PCRE_pcrecpp_LIBRARY_DEBUG NAMES pcrecppd NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-  endforeach()
+  find_library(PCRE_pcrecpp_LIBRARY_RELEASE NAMES pcrecpp NAMES_PER_DIR PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(PCRE_pcrecpp_LIBRARY_DEBUG NAMES pcrecppd NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
   select_library_configurations(PCRE_pcrecpp)
 endif()
 
 # Look for pcrecpp library.
 if(NOT PCRE_pcreposix_LIBRARY)
-  foreach(search ${_PCRE_SEARCHES})
-    find_library(PCRE_pcreposix_LIBRARY_RELEASE NAMES pcreposix NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-    find_library(PCRE_pcreposix_LIBRARY_DEBUG NAMES pcreposixd NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-  endforeach()
+  find_library(PCRE_pcreposix_LIBRARY_RELEASE NAMES pcreposix NAMES_PER_DIR PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(PCRE_pcreposix_LIBRARY_DEBUG NAMES pcreposixd NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
   select_library_configurations(PCRE_pcreposix)
 endif()
 
@@ -147,7 +129,6 @@ macro(export_pcre_component comp_name)
   if(NOT TARGET PCRE::${comp_name})
       add_library(PCRE::${comp_name} UNKNOWN IMPORTED)
       set_target_properties(PCRE::${comp_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${PCRE_INCLUDE_DIRS}")
-      set_target_properties(PCRE::${comp_name} PROPERTIES INTERFACE_COMPILE_DEFINITIONS PCRE_STATIC)
 
       if(PCRE_${comp_name}_LIBRARY_RELEASE)
         set_property(TARGET PCRE::${comp_name} APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)

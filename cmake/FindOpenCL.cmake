@@ -66,13 +66,13 @@ function(_FIND_OPENCL_VERSION)
   CMAKE_POP_CHECK_STATE()
 endfunction()
 
-find_path(OpenCL_INCLUDE_DIR NAMES CL/cl.h OpenCL/cl.h PATH_SUFFIXES include DOC "OpenCL include directory")
+find_path(OpenCL_INCLUDE_DIR NAMES CL/cl.h OpenCL/cl.h PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES include DOC "OpenCL include directory" NO_DEFAULT_PATH)
 _FIND_OPENCL_VERSION()
 
-find_library(OpenCL_LIBRARY_RELEASE NAMES OpenCL DOC "OpenCL library release (potentially the C library)")
-find_library(OpenCL_LIBRARY_DEBUG NAMES OpenCLd DOC "OpenCL library debug (potentially the C library)")
-find_program(OpenCL_RUNTIME_LIBRARY_RELEASE "OpenCL.dll" PATH_SUFFIXES bin DOC "OpenCL library release (potentially the C library)")
-find_program(OpenCL_RUNTIME_LIBRARY_DEBUG "OpenCLd.dll" PATH_SUFFIXES bin DOC "OpenCL library debug (potentially the C library)")
+find_library(OpenCL_LIBRARY_RELEASE NAMES OpenCL PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib DOC "OpenCL library release (potentially the C library)" NO_DEFAULT_PATH)
+find_library(OpenCL_LIBRARY_DEBUG NAMES OpenCL OpenCLd NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib DOC "OpenCL library debug (potentially the C library)" NO_DEFAULT_PATH)
+find_program(OpenCL_RUNTIME_LIBRARY_RELEASE "OpenCL.dll" NAMES_PER_DIR PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES bin DOC "OpenCL library release (potentially the C library)" NO_DEFAULT_PATH)
+find_program(OpenCL_RUNTIME_LIBRARY_DEBUG "OpenCL.dll" "OpenCLd.dll" NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES bin DOC "OpenCL library debug (potentially the C library)" NO_DEFAULT_PATH)
 
 include(SelectLibraryConfigurations)
 select_library_configurations(OpenCL)

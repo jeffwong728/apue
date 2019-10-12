@@ -3,4 +3,7 @@ set(CMAKE_SKIP_RPATH OFF CACHE BOOL "" FORCE)
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "" FORCE)
 
 set(TARGET "x86_64" CACHE STRING "target platform" FORCE)
-set(LIBRARY "STATIC" CACHE STRING "build static library" FORCE)
+set(LIBRARY "SHARED" CACHE STRING "build shared library" FORCE)
+set(SIMD_TEST OFF CACHE BOOL "Disable test" FORCE)
+
+set(CMAKE_INSTALL_PREFIX "D:/apue/install/simd" CACHE PATH "" FORCE)

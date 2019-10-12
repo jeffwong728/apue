@@ -31,36 +31,22 @@
 #   true if the JPEG headers and libraries were found.
 #
 
-set(_JPEG_SEARCHES)
-
-# Search JPEG_ROOT first if it is set.
-if(JPEG_ROOT)
-  set(_JPEG_SEARCH_ROOT PATHS ${JPEG_ROOT} NO_DEFAULT_PATH)
-  list(APPEND _JPEG_SEARCHES _JPEG_SEARCH_ROOT)
-endif()
-
 # Look for the header file.
-foreach(search ${_JPEG_SEARCHES})
-  find_path(JPEG_INCLUDE_DIR NAMES jpeglib.h ${${search}} PATH_SUFFIXES include)
-endforeach()
+find_path(JPEG_INCLUDE_DIR NAMES jpeglib.h PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES PATH_SUFFIXES include NO_DEFAULT_PATH)
 
 include(SelectLibraryConfigurations)
 
 # Look for jpeg library.
 if(NOT JPEG_jpeg_LIBRARY)
-  foreach(search ${_JPEG_SEARCHES})
-    find_library(JPEG_jpeg_LIBRARY_RELEASE NAMES jpeg-static NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-    find_library(JPEG_jpeg_LIBRARY_DEBUG NAMES jpeg-staticd NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-  endforeach()
+  find_library(JPEG_jpeg_LIBRARY_RELEASE NAMES jpeg NAMES_PER_DIR PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(JPEG_jpeg_LIBRARY_DEBUG NAMES jpegd NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
   select_library_configurations(JPEG_jpeg)
 endif()
 
 # Look for turbo library.
 if(NOT JPEG_turbo_LIBRARY)
-  foreach(search ${_JPEG_SEARCHES})
-    find_library(JPEG_turbo_LIBRARY_RELEASE NAMES turbojpeg-static NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-    find_library(JPEG_turbo_LIBRARY_DEBUG NAMES turbojpeg-staticd NAMES_PER_DIR ${${search}} PATH_SUFFIXES lib)
-  endforeach()
+  find_library(JPEG_turbo_LIBRARY_RELEASE NAMES turbojpeg NAMES_PER_DIR PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(JPEG_turbo_LIBRARY_DEBUG NAMES turbojpegd NAMES_PER_DIR PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
   select_library_configurations(JPEG_turbo)
 endif()
 
