@@ -12,8 +12,6 @@
 #ifndef SEEN_SP_SVG_LENGTH_H
 #define SEEN_SP_SVG_LENGTH_H
 
-#include <string>
-
 /**
  *  SVG length type
  */

@@ -9,15 +9,15 @@
  *
  */
 
-#include "livarot/BitLigne.h"
-#include "livarot/float-line.h"
-#include "livarot/int-line.h"
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <glib.h>
+#include <cmath>
+#include <cstring>
 #include <string>
+#include <cstdlib>
+#include <cstdio>
+#include "livarot/int-line.h"
+#include "livarot/float-line.h"
+#include "livarot/BitLigne.h"
 
 IntLigne::IntLigne()
 {
@@ -128,7 +128,7 @@ void IntLigne::Flatten()
             i++;
         }
         midV = RemainingValAt(cur);
-        while ( i < nbBord && bords[i].pos == cur && bords[i].start ) {
+        while ( i < nbBord && bords[i].pos == cur && bords[i].start == true ) {
             rightV += bords[i].val;
             Enqueue(bords[i].other);
             i++;

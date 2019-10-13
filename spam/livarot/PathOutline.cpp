@@ -158,8 +158,7 @@ void Path::Outline(Path *dest, double width, JoinType join, ButtType butt, doubl
                                              join, butt, miter, false, false, endPos, endButt);
                     Geom::Point endNor=endButt.ccw();
                     if (butt == butt_round) {
-                        dest->ArcTo (endPos+width*endButt, width, width, 0.0, false, true);
-                        dest->ArcTo (endPos+width*endNor, width, width, 0.0, false, true);
+                        dest->ArcTo (endPos+width*endNor,  1.0001 * width, 1.0001 * width, 0.0, true, true);
                     }  else if (butt == butt_square) {
                         dest->LineTo (endPos-width*endNor+width*endButt);
                         dest->LineTo (endPos+width*endNor+width*endButt);
@@ -176,8 +175,7 @@ void Path::Outline(Path *dest, double width, JoinType join, ButtType butt, doubl
 
                     endNor=endButt.ccw();
                     if (butt == butt_round) {
-                        dest->ArcTo (endPos+width*endButt, width, width, 0.0, false, true);
-                        dest->ArcTo (endPos+width*endNor, width, width, 0.0, false, true);
+                        dest->ArcTo (endPos+width*endNor, 1.0001 * width, 1.0001 * width, 0.0, true, true);
                     } else if (butt == butt_square) {
                         dest->LineTo (endPos-width*endNor+width*endButt);
                         dest->LineTo (endPos+width*endNor+width*endButt);
@@ -426,7 +424,7 @@ void Path::SubContractOutline(int off, int num_pd,
 		}
 		else if (nType == descr_close)
 		{
-			if (! doFirst)
+			if (doFirst == false)
 			{
 				if (Geom::LInfty (curX - firstP) < 0.0001)
 				{
@@ -812,7 +810,7 @@ void Path::SubContractOutline(int off, int num_pd,
 	}
 	if (closeIfNeeded)
 	{
-		if (! doFirst)
+		if (doFirst == false)
 		{
 		}
 	}
@@ -855,7 +853,7 @@ Path::IsNulCurve (std::vector<PathDescr*> const &cmd, int curD, Geom::Point cons
     {
 		PathDescrArcTo* nData = dynamic_cast<PathDescrArcTo*>(cmd[curD]);
 		if ( Geom::LInfty(nData->p - curX) < 0.00001) {
-			if ((! nData->large)
+			if ((nData->large == false)
 				|| (fabs (nData->rx) < 0.00001
 					|| fabs (nData->ry) < 0.00001)) {
 				return true;
@@ -1006,7 +1004,7 @@ void Path::TangentOnArcAt(double at, const Geom::Point &iS, PathDescrArcTo const
 
 	if (wise)
 	{
-		if (large)
+		if (large == true)
 		{
 			drx = -drx;
 			dry = -dry;
@@ -1023,7 +1021,7 @@ void Path::TangentOnArcAt(double at, const Geom::Point &iS, PathDescrArcTo const
 	}
 	else
 	{
-		if (! large)
+		if (large == false)
 		{
 			drx = -drx;
 			dry = -dry;

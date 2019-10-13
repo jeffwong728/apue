@@ -6,9 +6,9 @@
  *
  */
 
+#include <glib.h>
 #include "Path.h"
 #include "livarot/path-description.h"
-#include <glib.h>
 
 /*
  * manipulation of the path data: path description and polyline
@@ -380,18 +380,24 @@ void Path::InsertBezierTo(Geom::Point const &iPt, int iNb, int at)
 
 
 /*
- * points of the polyline
+ * points de la polyligne
  */
 void
 Path::SetBackData (bool nVal)
 {
-	if (! back) {
-		if (nVal) {
+	if (back == false) {
+		if (nVal == true && back == false) {
 			back = true;
+			ResetPoints();
+		} else if (nVal == false && back == true) {
+			back = false;
 			ResetPoints();
 		}
 	} else {
-		if (! nVal) {
+		if (nVal == true && back == false) {
+			back = true;
+			ResetPoints();
+		} else if (nVal == false && back == true) {
 			back = false;
 			ResetPoints();
 		}
@@ -411,7 +417,7 @@ int Path::AddPoint(Geom::Point const &iPt, bool mvto)
         return AddPoint (iPt, -1, 0.0, mvto);
     }
   
-    if ( !mvto && !pts.empty() && pts.back().p == iPt ) {
+    if ( !mvto && pts.empty() == false && pts.back().p == iPt ) {
         return -1;
     }
     
@@ -435,11 +441,11 @@ int Path::ReplacePoint(Geom::Point const &iPt)
 
 int Path::AddPoint(Geom::Point const &iPt, int ip, double it, bool mvto)
 {
-    if (! back) {
+    if (back == false) {
         return AddPoint (iPt, mvto);
     }
     
-    if ( !mvto && !pts.empty() && pts.back().p == iPt ) {
+    if ( !mvto && pts.empty() == false && pts.back().p == iPt ) {
         return -1;
     }
     

@@ -15,32 +15,30 @@
 # include "config.h"
 #endif
 
-#include <cstdio> // sprintf
 #include <cstdlib>
+#include <cstdio> // sprintf
 #include <cstring>
-#include <errno.h>
-#include <glib.h> // g_assert
-#include <math.h>
 #include <string>
+#include <cassert>
+#include <math.h>
+#include <glib.h> // g_assert
+#include <errno.h>
 
 #include <map>
 
 #include "colorspace.h"
-#include "preferences.h"
 #include "strneq.h"
+#include "preferences.h"
 #include "svg-color.h"
 #include "svg-icc-color.h"
 
 #include "color.h"
 #if defined(HAVE_LIBLCMS1) || defined(HAVE_LIBLCMS2)
-
-#include "object/color-profile.h"
-
+#include "color-profile.h"
 #include "document.h"
 #include "inkscape.h"
 #include "profile-manager.h"
 #endif // defined(HAVE_LIBLCMS1) || defined(HAVE_LIBLCMS2)
-
 #include "cms-system.h"
 
 using std::sprintf;
@@ -401,7 +399,7 @@ guint32 sp_svg_read_color(gchar const *str, gchar const **end_ptr, guint32 dfl)
      * this check wrapper. */
     gchar const *end = str;
     guint32 const ret = internal_sp_svg_read_color(str, &end, dfl);
-    g_assert(((ret == dfl) && (end == str))
+    assert(((ret == dfl) && (end == str))
            || (((ret & 0xff) == 0)
                && (str < end)));
     if (str < end) {
@@ -410,7 +408,7 @@ guint32 sp_svg_read_color(gchar const *str, gchar const **end_ptr, guint32 dfl)
         buf[end - str] = '\0';
         gchar const *buf_end = buf;
         guint32 const check = internal_sp_svg_read_color(buf, &buf_end, 1);
-        g_assert(check == ret
+        assert(check == ret
                && buf_end - buf == end - str);
         g_free(buf);
 
@@ -428,7 +426,7 @@ guint32 sp_svg_read_color(gchar const *str, gchar const **end_ptr, guint32 dfl)
  */
 static void rgb24_to_css(char *const buf, unsigned const rgb24)
 {
-    g_assert(rgb24 < (1u << 24));
+    assert(rgb24 < (1u << 24));
 
     /* SVG 1.1 Full allows additional colour names not supported by SVG Tiny, but we don't bother
      * with them: it's good for these colours to be copyable to non-SVG CSS stylesheets and for
@@ -491,7 +489,9 @@ void sp_svg_write_color(gchar *buf, unsigned const buflen, guint32 const rgba32)
 
     Inkscape::Preferences *prefs = Inkscape::Preferences::get();
     unsigned const rgb24 = rgba32 >> 8;
-    if (prefs->getBool("/options/svgoutput/usenamedcolors")) {
+    if ( prefs->getBool("/options/svgoutput/usenamedcolors") &&
+        !prefs->getBool("/options/svgoutput/disable_optimizations" ))
+    {
         rgb24_to_css(buf, rgb24);
     } else {
         g_snprintf(buf, buflen, "#%06x", rgb24);

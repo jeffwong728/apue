@@ -6,12 +6,12 @@
  *
  */
 
-#include "Shape.h"
-#include "livarot/sweep-event-queue.h"
-#include "livarot/sweep-tree-list.h"
 #include <cstdio>
 #include <cstdlib>
 #include <glib.h>
+#include "Shape.h"
+#include "livarot/sweep-event-queue.h"
+#include "livarot/sweep-tree-list.h"
 
 /*
  * Shape instances handling.
@@ -1688,8 +1688,8 @@ Shape::CmpToVert (Geom::Point ax, Geom::Point bx,bool as,bool bs)
   if (si > 0.000001) tstSi = 1;
   if (si < -0.000001) tstSi = -1;
   if ( tstSi == 0 ) {
-    if ( as && !bs ) return -1;
-    if ( !as && bs ) return 1;
+    if ( as == true && bs == false ) return -1;
+    if ( as == false && bs == true ) return 1;
   }
   return tstSi;
 }

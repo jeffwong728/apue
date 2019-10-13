@@ -17,7 +17,6 @@
 #include <2geom/point.h>
 
 #include "livarot/LivarotDefs.h"
-#include "object/object-set.h"
 
 class Path;
 class FloatLigne;

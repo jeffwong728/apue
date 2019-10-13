@@ -14,9 +14,10 @@
  */
 
 #include "svg/path-string.h"
-#include "preferences.h"
 #include "svg/stringstream.h"
 #include "svg/svg.h"
+#include "preferences.h"
+#include <algorithm>
 
 // 1<=numericprecision<=16, doubles are only accurate upto (slightly less than) 16 digits (and less than one digit doesn't make sense)
 // Please note that these constants are used to allocate sufficient space to hold serialized numbers
@@ -28,7 +29,7 @@ int Inkscape::SVG::PathString::minimumexponent;
 Inkscape::SVG::PATHSTRING_FORMAT Inkscape::SVG::PathString::format;
 
 Inkscape::SVG::PathString::PathString() :
-    force_repeat_commands(Inkscape::Preferences::get()->getBool("/options/svgoutput/forcerepeatcommands"))
+    force_repeat_commands(!Inkscape::Preferences::get()->getBool("/options/svgoutput/disable_optimizations" ) && Inkscape::Preferences::get()->getBool("/options/svgoutput/forcerepeatcommands"))
 {
     Inkscape::Preferences *prefs = Inkscape::Preferences::get();
     format = (PATHSTRING_FORMAT)prefs->getIntLimited("/options/svgoutput/pathstring_format", 1, 0, PATHSTRING_FORMAT_SIZE - 1 );

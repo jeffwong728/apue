@@ -12,12 +12,14 @@
 
 #include <cmath>
 #include <cstring>
+#include <string>
 #include <glib.h>
 #include <iostream>
-#include <string>
 
-#include "stringstream.h"
+#include <2geom/math-utils.h>
+
 #include "svg.h"
+#include "stringstream.h"
 #include "util/units.h"
 
 static unsigned sp_svg_length_read_lff(gchar const *str, SVGLength::Unit *unit, float *val, float *computed, char **next);
@@ -75,7 +77,7 @@ static unsigned int sp_svg_number_write_ui(gchar *buf, unsigned int val)
     return i;
 }
 
-// TODO unsafe code ignoring bufLen
+// TODO unsafe code ingnoring bufLen
 // rewrite using std::string?
 static unsigned int sp_svg_number_write_i(gchar *buf, int bufLen, int val)
 {
@@ -93,7 +95,7 @@ static unsigned int sp_svg_number_write_i(gchar *buf, int bufLen, int val)
     return p;
 }
 
-// TODO unsafe code ignoring bufLen
+// TODO unsafe code ingnoring bufLen
 // rewrite using std::string?
 static unsigned sp_svg_number_write_d(gchar *buf, int bufLen, double val, unsigned int tprec, unsigned int fprec)
 {
@@ -188,6 +190,10 @@ bool SVGLength::read(gchar const *str)
     float v;
     float c;
     if (!sp_svg_length_read_lff(str, &u, &v, &c, NULL)) {
+        return false;
+    }
+
+    if (!IS_FINITE(v)) {
         return false;
     }
 
