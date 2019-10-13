@@ -17,4 +17,4 @@
 @set PATH=D:\apue\install\OpenCL\bin;%PATH%
 @set PATH=D:\apue\install\sigc++\bin;%PATH%
 @set PATH=D:\apue\install\libpng\bin;%PATH%
-@set VCPKG_DIR=D:/Vcpkg/installed/x64-windows
+@set VCPKG_DIR=%VCPKG_ROOT_DIR%/installed/x64-windows
