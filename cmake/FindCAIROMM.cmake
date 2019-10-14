@@ -1,7 +1,7 @@
-find_path(CAIROMM_INCLUDE_DIR NAMES "cairomm/cairomm.h" DOC "cairomm include directory")
+find_path(CAIROMM_INCLUDE_DIR NAMES "cairomm/cairomm.h" PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES include NO_DEFAULT_PATH)
 
-find_library(CAIROMM_LIBRARY_RELEASE NAMES cairomm-1.0 DOC "cairomm library release (potentially the C library)")
-find_library(CAIROMM_LIBRARY_DEBUG NAMES cairomm-1.0d DOC "cairomm library debug (potentially the C library)")
+find_library(CAIROMM_LIBRARY_RELEASE NAMES cairomm-1.0 PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+find_library(CAIROMM_LIBRARY_DEBUG NAMES cairomm-1.0d cairomm-1.0 PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
 
 include(SelectLibraryConfigurations)
 select_library_configurations(CAIROMM)

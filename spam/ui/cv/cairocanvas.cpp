@@ -320,7 +320,7 @@ void CairoCanvas::EraseDrawables(const SPDrawableNodeVector &des)
             }
 
             auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Surface::Format::RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
+            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
             auto cr = Cairo::Context::create(imgSurf);
 
             cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
@@ -366,7 +366,7 @@ void CairoCanvas::HighlightDrawable(const SPDrawableNode &de)
                 }
 
                 auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-                auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Surface::Format::RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
+                auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
                 auto cr = Cairo::Context::create(imgSurf);
 
                 cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
@@ -415,7 +415,7 @@ void CairoCanvas::DrawPathVector(const Geom::PathVector &pth, const Geom::OptRec
             }
 
             auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Surface::Format::RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
+            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
             auto cr = Cairo::Context::create(imgSurf);
 
             cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
@@ -1277,7 +1277,7 @@ void CairoCanvas::Draw(wxDC &dc, const Geom::OptRect &rect)
             }
 
             auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Surface::Format::RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
+            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
             auto cr = Cairo::Context::create(imgSurf);
 
             cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
@@ -1298,7 +1298,7 @@ void CairoCanvas::Draw(wxDC &dc, const Geom::Path &pth)
     if (wxhdc)
     {
         ::memcpy(scrMat_.data, disMat_.data, scrMat_.step1()*scrMat_.rows);
-        auto imgSurf = Cairo::ImageSurface::create(scrMat_.data, Cairo::Surface::Format::RGB24, scrMat_.cols, scrMat_.rows, scrMat_.step1());
+        auto imgSurf = Cairo::ImageSurface::create(scrMat_.data, Cairo::Format::FORMAT_RGB24, scrMat_.cols, scrMat_.rows, scrMat_.step1());
         auto cr = Cairo::Context::create(imgSurf);
 
         cr->scale(GetMatScale(), GetMatScale());
@@ -1338,7 +1338,7 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::Path &pth)
     if (wxhdc)
     {
         ::memcpy(scrMat_.data, disMat_.data, scrMat_.step1()*scrMat_.rows);
-        auto imgSurf = Cairo::ImageSurface::create(scrMat_.data, Cairo::Surface::Format::RGB24, scrMat_.cols, scrMat_.rows, scrMat_.step1());
+        auto imgSurf = Cairo::ImageSurface::create(scrMat_.data, Cairo::Format::FORMAT_RGB24, scrMat_.cols, scrMat_.rows, scrMat_.step1());
         auto cr = Cairo::Context::create(imgSurf);
 
         cr->scale(GetMatScale(), GetMatScale());
@@ -1354,7 +1354,7 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::Path &pth)
         Geom::Path path = pth*aff;
         cairoPathSink.feed(path);
         cr->set_line_width(ux);
-        cr->set_line_cap(Cairo::Context::LineCap::SQUARE);
+        cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
         cr->set_source_rgba(1.0, 0.0, 1.0, 1.0);
         cr->stroke();
         cr->restore();
@@ -1398,7 +1398,7 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::Op
     }
 
     auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-    auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Surface::Format::RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
+    auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
     auto cr = Cairo::Context::create(imgSurf);
 
     cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
@@ -1417,7 +1417,7 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::Op
         Geom::CairoPathSink cairoPathSink(cr->cobj());
         cairoPathSink.feed(pth);
         cr->set_line_width(ux);
-        cr->set_line_cap(Cairo::Context::LineCap::SQUARE);
+        cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
         cr->set_source_rgba(1.0, 0.0, 1.0, 1.0);
         cr->stroke();
         cr->restore();

@@ -97,7 +97,7 @@ bool SpamApp::OnInit()
     uniqueApp_.reset(new wxSingleInstanceChecker());
     uniqueApp_->Create(GetAppName(), wxGetHomeDir());
 
-    PyImport_AppendInittab("spam", &initspam);
+    PyImport_AppendInittab("spam", &PyInit_spam);
     Py_Initialize();
 
     try
@@ -105,8 +105,8 @@ bool SpamApp::OnInit()
         boost::python::object mainModule = boost::python::import("__main__");
         boost::python::object mainNamespace = mainModule.attr("__dict__");
         boost::python::exec("import sys", mainNamespace);
-        boost::python::exec("import cStringIO", mainNamespace);
-        boost::python::exec("spam_output = cStringIO.StringIO()", mainNamespace);
+        boost::python::exec("import io", mainNamespace);
+        boost::python::exec("spam_output = io.StringIO()", mainNamespace);
         boost::python::exec("sys.stdout = spam_output", mainNamespace);
     }
     catch (const boost::python::error_already_set&)

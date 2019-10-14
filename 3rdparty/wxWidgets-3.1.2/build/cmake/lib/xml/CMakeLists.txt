@@ -11,7 +11,6 @@ include(../../source_groups.cmake)
 
 wx_append_sources(XML_FILES XML)
 wx_add_library(xml IS_BASE ${XML_FILES})
-target_compile_definitions(xml PUBLIC XML_STATIC)
 wx_lib_link_libraries(xml PRIVATE ${EXPAT_LIBRARIES})
 wx_lib_include_directories(xml PRIVATE ${EXPAT_INCLUDE_DIRS})
 

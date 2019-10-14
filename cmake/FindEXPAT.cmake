@@ -28,17 +28,13 @@
 #   true if the Expat headers and libraries were found.
 #
 
-find_package(PkgConfig QUIET)
-
-pkg_check_modules(PC_EXPAT QUIET expat)
-
 # Look for the header file.
 find_path(EXPAT_INCLUDE_DIR NAMES expat.h PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES include DOC "Expat include directory" NO_DEFAULT_PATH)
 
 # Look for the library.
 if(NOT EXPAT_LIBRARY)
     find_library(EXPAT_LIBRARY_RELEASE NAMES expat libexpat PATHS $ENV{VCPKG_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
-    find_library(EXPAT_LIBRARY_DEBUG NAMES expatd libexpatd PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
+    find_library(EXPAT_LIBRARY_DEBUG NAMES expat expatd libexpat libexpatd PATHS $ENV{VCPKG_DIR}/debug PATH_SUFFIXES lib NO_DEFAULT_PATH)
     include(SelectLibraryConfigurations)
     select_library_configurations(EXPAT)
 endif()

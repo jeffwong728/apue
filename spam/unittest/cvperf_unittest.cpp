@@ -5,9 +5,6 @@
 #include <boost/test/included/unit_test.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
-#ifdef free
-#undef free
-#endif
 #include <tbb/tbb.h>
 
 struct TestCVPerfConfig

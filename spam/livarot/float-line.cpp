@@ -754,7 +754,7 @@ void FloatLigne::Split(FloatLigne *a, float tresh, FloatLigne *over)
 void FloatLigne::Max(FloatLigne *a, float tresh, bool addIt)
 {
     Reset();
-    if ( a->runs.empty() <= 0 ) {
+    if ( a->runs.empty()) {
         return;
     }
 

@@ -22,6 +22,6 @@ target_include_directories(stub PRIVATE ${Boost_INCLUDE_DIR})
 target_include_directories(stub PRIVATE ${CMAKE_BINARY_DIR}/include)
 
 set(libs)
-list(APPEND libs GLIB::glib)
+list(APPEND libs unofficial::glib::glib)
 list(APPEND libs GLIBMM::glibmm)
 target_link_libraries(stub PRIVATE ${libs})

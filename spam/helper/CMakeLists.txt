@@ -20,8 +20,9 @@ add_library(helper STATIC "${helper_SRC}")
 set_target_properties (helper PROPERTIES FOLDER spam)
 
 set(libs)
-list(APPEND libs hdf5::hdf5_cpp-static)
-list(APPEND libs GLIB::glib)
+list(APPEND libs hdf5::hdf5_cpp-shared)
+list(APPEND libs unofficial::glib::glib)
+list(APPEND libs LIB2GEOM::2geom)
 
 if(MSVC)
   target_compile_definitions(helper PRIVATE _CRT_SECURE_NO_WARNINGS)

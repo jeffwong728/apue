@@ -10,9 +10,9 @@
 #ifdef realloc
 #undef realloc
 #endif
-#include <SkString.h>
-#include <SkParsePath.h>
-#include <SkPathOps.h>
+//#include <SkString.h>
+//#include <SkParsePath.h>
+//#include <SkPathOps.h>
 
 GeomCmd::GeomCmd(ProjTreeModel *model, SPStationNode &station)
     : SpamCmd()
@@ -322,22 +322,22 @@ void BoolCmd::BoolOp(const int op)
 
                 std::string strpv = Geom::write_svg_path(pv);
                 std::string strupv = Geom::write_svg_path(upv);
-                SkPath skpv, skupv;
-                if (SkParsePath::FromSVGString(strpv.c_str(), &skpv) && SkParsePath::FromSVGString(strupv.c_str(), &skupv))
-                {
-                    SkPath skResPath;
-                    if (Op(skpv, skupv, (op == UnionOp) ? kUnion_SkPathOp : kIntersect_SkPathOp, &skResPath))
-                    {
-                        SkString skStr;
-                        SkParsePath::ToSVGString(skResPath, &skStr);
-                        upv = Geom::parse_svg_path(skStr.c_str());
-                    }
-                    else
-                    {
-                        upv = sp_pathvector_boolop(pv, upv, (op == UnionOp) ? bool_op_union : bool_op_inters, fill_nonZero, fill_nonZero);
-                    }
-                }
-                else
+                //SkPath skpv, skupv;
+                //if (SkParsePath::FromSVGString(strpv.c_str(), &skpv) && SkParsePath::FromSVGString(strupv.c_str(), &skupv))
+                //{
+                //    SkPath skResPath;
+                //    if (Op(skpv, skupv, (op == UnionOp) ? kUnion_SkPathOp : kIntersect_SkPathOp, &skResPath))
+                //    {
+                //        SkString skStr;
+                //        SkParsePath::ToSVGString(skResPath, &skStr);
+                //        upv = Geom::parse_svg_path(skStr.c_str());
+                //    }
+                //    else
+                //    {
+                //        upv = sp_pathvector_boolop(pv, upv, (op == UnionOp) ? bool_op_union : bool_op_inters, fill_nonZero, fill_nonZero);
+                //    }
+                //}
+                //else
                 {
                     upv = sp_pathvector_boolop(pv, upv, (op == UnionOp) ? bool_op_union : bool_op_inters, fill_nonZero, fill_nonZero);
                 }

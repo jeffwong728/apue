@@ -5,7 +5,6 @@ endif()
 
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-add_subdirectory(2geom)
 add_subdirectory(cv_hdf)
 add_subdirectory(helper)
 add_subdirectory(svg)
@@ -17,7 +16,7 @@ add_subdirectory(unittest)
 
 add_executable(spam WIN32 init.cpp msvc_recommended_pragmas.h)
 set_target_properties (spam PROPERTIES FOLDER spam)
-target_link_libraries(spam PRIVATE ui_core 2geom helper svg util livarot stub cv_hdf)
+target_link_libraries(spam PRIVATE ui_core helper svg util livarot stub cv_hdf unofficial::glib::gobject EXPAT::EXPAT EXIF::EXIF)
 
 if(MSVC)
   target_compile_definitions(spam PRIVATE _CRTDBG_MAP_ALLOC)

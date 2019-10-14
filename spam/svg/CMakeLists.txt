@@ -48,6 +48,7 @@ target_include_directories(svg PRIVATE ${Boost_INCLUDE_DIR})
 target_include_directories(svg PRIVATE ${CMAKE_BINARY_DIR}/include ${CMAKE_SOURCE_DIR}/spam/stub)
 
 set(libs)
-list(APPEND libs GLIB::glib)
+list(APPEND libs unofficial::glib::glib)
 list(APPEND libs GLIBMM::glibmm)
+list(APPEND libs LIB2GEOM::2geom)
 target_link_libraries(svg PRIVATE ${libs})

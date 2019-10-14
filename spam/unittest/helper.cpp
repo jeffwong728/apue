@@ -88,7 +88,7 @@ std::tuple<cv::Mat, cv::Mat> UnitTestHelper::GetGrayScaleImage(const std::experi
 void UnitTestHelper::DrawPathToImage(const Geom::PathVector &pth, const Color& color, cv::Mat &img)
 {
     auto data = img.ptr(0, 0);
-    auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Surface::Format::RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
+    auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
     auto cr = Cairo::Context::create(imgSurf);
 
     Geom::CairoPathSink cairoPathSink(cr->cobj());

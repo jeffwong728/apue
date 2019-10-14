@@ -1,5 +1,5 @@
 call setpath.bat
-cd build
+cd msvs
 cd apue
 cd spam
 start Release\spam.exe
