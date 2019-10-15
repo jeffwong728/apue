@@ -14,7 +14,7 @@ namespace mvlab {
 using namespace std;
 
 
-Ptr<Board> Board::create(InputArrayOfArrays objPoints, const Ptr<Region> &dictionary, InputArray ids)
+Ptr<Board> Board::create(InputArrayOfArrays objPoints, const Ptr<Region> &, InputArray ids)
 {
 
     CV_Assert(objPoints.total() == ids.total());
@@ -36,9 +36,6 @@ Ptr<Board> Board::create(InputArrayOfArrays objPoints, const Ptr<Region> &dictio
     }
 
     Ptr<Board> res = makePtr<Board>();
-    ids.copyTo(res->ids);
-    res->objPoints = obj_points_vector;
-    res->dictionary = cv::makePtr<Region>(dictionary);
     return res;
 }
 

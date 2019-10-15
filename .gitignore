@@ -12,3 +12,4 @@ config
 /spam/vectorclass
 /spam/ensmallen
 /spam/armadillo
+/apex/modules/text

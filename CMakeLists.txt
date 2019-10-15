@@ -33,7 +33,7 @@ find_package(Boost REQUIRED locale system thread python37 chrono filesystem unit
 find_package(Python3 REQUIRED Development)
 find_package(wxWidgets REQUIRED COMPONENTS base core adv aui html media xrc gl qa richtext stc ribbon propgrid webview)
 find_package(WXSVG REQUIRED)
-find_package(OpenCV REQUIRED core imgproc imgcodecs)
+find_package(OpenCV REQUIRED core imgproc imgcodecs mvlab)
 find_package(ASMLIB REQUIRED)
 find_package(SIMD REQUIRED)
 find_package(OpenBLAS REQUIRED)
