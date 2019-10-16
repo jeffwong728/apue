@@ -1,3 +1,5 @@
+@set "SPAM_ROOT_DIR=%~dp0"
+
 @set PATH=C:\Program Files\CMake\bin;%PATH%
 @set PATH=D:\apue\install\opencv\x64\vc15\bin;%PATH%
 @set PATH=D:\apue\install\apue\bin;%PATH%

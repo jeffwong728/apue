@@ -1,4 +1,4 @@
-call setenv.bat
+call ..\setEnv.bat
 cd ..
 cd msvs
 mkdir 3rdtest

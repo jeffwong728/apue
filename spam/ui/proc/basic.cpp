@@ -9,19 +9,7 @@
 #include <2geom/path-intersection.h>
 #include <2geom/cairo-path-sink.h>
 #pragma warning( pop )
-#ifdef IN
-#undef IN
-#endif
-#ifdef OUT
-#undef OUT
-#endif
-#ifdef WINDING
-#undef WINDING
-#endif
 #include <cairomm/cairomm.h>
-#ifdef free
-#undef free
-#endif
 #include <tbb/tbb.h>
 #include <tbb/parallel_invoke.h>
 

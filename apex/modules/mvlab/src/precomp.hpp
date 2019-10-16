@@ -39,8 +39,8 @@
  //
  //M*/
 
-#ifndef __OPENCV_CCALIB_PRECOMP__
-#define __OPENCV_CCALIB_PRECOMP__
+#ifndef __OPENCV_MVLAB_PRECOMP__
+#define __OPENCV_MVLAB_PRECOMP__
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>

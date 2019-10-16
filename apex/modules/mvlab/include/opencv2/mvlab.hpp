@@ -1,5 +1,5 @@
-#ifndef __OPENCV_ARUCO_HPP__
-#define __OPENCV_ARUCO_HPP__
+#ifndef __OPENCV_MVLAB_HPP__
+#define __OPENCV_MVLAB_HPP__
 
 #include <opencv2/core.hpp>
 #include <vector>
@@ -15,15 +15,10 @@ enum CornerRefineMethod{
     CORNER_REFINE_APRILTAG
 };
 
-class CV_EXPORTS_W Board {
+CV_EXPORTS_W int SetGlobalOption(const String& optName, const String& optVal);
+CV_EXPORTS_W int GetGlobalOption(const String& optName, CV_OUT String& optVal);
 
-    public:
-    CV_WRAP static Ptr<Board> create(InputArrayOfArrays objPoints, const Ptr<Region> &dictionary, InputArray ids);
-    CV_PROP std::vector< std::vector< Point3f > > objPoints;
-    CV_PROP Ptr<Region> dictionary;
-    CV_PROP std::vector< int > ids;
-};
 }
 }
 
-#endif
+#endif //__OPENCV_MVLAB_HPP__

@@ -1,4 +1,4 @@
-call setpath.bat
+call setEnv.bat
 cd msvs
 mkdir apue
 cd apue

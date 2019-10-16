@@ -1,4 +1,4 @@
-call setpath.bat
+call setEnv.bat
 cd build
 cd apue
 cd spam

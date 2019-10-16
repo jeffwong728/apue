@@ -6,6 +6,7 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
 #include <tbb/scalable_allocator.h>
+#include <2geom/2geom.h>
 
 namespace cv {
 namespace mvlab {
@@ -30,11 +31,20 @@ class RegionImpl : public Region
 public:
     RegionImpl() {}
     RegionImpl(const Rect &rect);
+    RegionImpl(const RotatedRect &rotatedRect);
+    RegionImpl(const Point2f &center, const float radius);
+    RegionImpl(const Point2f &center, const Size2f &size);
+    RegionImpl(const Point2f &center, const Size2f &size, const float angle);
 
 public:
     double Area() const CV_OVERRIDE;
     Point2d Centroid() const CV_OVERRIDE;
     void Connect(std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
+
+private:
+    void ClearCacheData();
+    void FromMask(const cv::Mat &mask);
+    void FromPathVector(const Geom::PathVector &pv);
 
 private:
     RunList data_;
