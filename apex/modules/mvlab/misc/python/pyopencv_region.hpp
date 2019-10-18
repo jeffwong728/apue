@@ -1,4 +1,5 @@
 #ifdef HAVE_OPENCV_MVLAB
+typedef std::vector<Ptr<cv::mvlab::Region>> vector_Ptr_Region;
 
 template<> struct pyopencvVecConverter<Ptr<cv::mvlab::Region>>
 {
@@ -13,5 +14,19 @@ template<> struct pyopencvVecConverter<Ptr<cv::mvlab::Region>>
     }
 };
 
-typedef std::vector<Ptr<cv::mvlab::Region>> vector_Ptr_Region;
+template<>
+bool pyopencv_to(PyObject* obj, Rect2f& r, const char* name)
+{
+    CV_UNUSED(name);
+    if(!obj || obj == Py_None)
+        return true;
+    return PyArg_ParseTuple(obj, "ffff", &r.x, &r.y, &r.width, &r.height) > 0;
+}
+
+template<>
+PyObject* pyopencv_from(const Rect2f& r)
+{
+    return Py_BuildValue("(ffff)", r.x, r.y, r.width, r.height);
+}
+
 #endif

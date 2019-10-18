@@ -4,7 +4,12 @@
 namespace cv {
 namespace mvlab {
 
-Ptr<Region> Region::CreateRectangle(const Rect &rect)
+Ptr<Region> Region::CreateEmpty()
+{
+    return makePtr<RegionImpl>();
+}
+
+Ptr<Region> Region::CreateRectangle(const Rect2f &rect)
 {
     return makePtr<RegionImpl>(rect);
 }

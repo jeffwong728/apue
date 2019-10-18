@@ -1,8 +1,5 @@
 #include "precomp.hpp"
 #include "utility.hpp"
-#include <2geom/path-sink.h>
-#include <2geom/cairo-path-sink.h>
-#include <cairomm/cairomm.h>
 
 namespace cv {
 namespace mvlab {

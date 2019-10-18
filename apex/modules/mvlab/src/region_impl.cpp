@@ -1,23 +1,23 @@
 #include "precomp.hpp"
 #include "region_impl.hpp"
 #include "utility.hpp"
-#include <2geom/circle.h>
-#include <2geom/ellipse.h>
-#include <2geom/path-sink.h>
+#include <opencv2/mvlab.hpp>
 
 namespace cv {
 namespace mvlab {
 
-RegionImpl::RegionImpl(const Rect &rect)
+RegionImpl::RegionImpl(const Rect2f &rect)
     : Region()
 {
-    if (rect.width > 0 && rect.height > 0)
+    if (rect.width > 0.f && rect.height > 0.f)
     {
-        data_.reserve(rect.height);
-        for (int y = 0; y < rect.height; ++y)
+        data_.reserve(cvCeil(rect.height));
+        for (float y = 0.f; y < rect.height; ++y)
         {
-            data_.emplace_back(y, rect.x, rect.x + rect.width);
+            data_.emplace_back(cvRound(y), cvRound(rect.x), cvRound(rect.x + rect.width));
         }
+
+        contour_outers_.emplace(1, makePtr<ContourImpl>(rect));
     }
 }
 
@@ -36,6 +36,7 @@ RegionImpl::RegionImpl(const RotatedRect &rotatedRect)
     pb.closePath();
 
     FromPathVector(pv);
+    contour_outers_.emplace(1, makePtr<ContourImpl>(pv.front(), true));
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const float radius)
@@ -43,6 +44,7 @@ RegionImpl::RegionImpl(const Point2f &center, const float radius)
 {
     Geom::PathVector pv(Geom::Path(Geom::Circle(center.x, center.y, radius)));
     FromPathVector(pv);
+    contour_outers_.emplace(1, makePtr<ContourImpl>(pv.front(), true));
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const Size2f &size)
@@ -50,6 +52,7 @@ RegionImpl::RegionImpl(const Point2f &center, const Size2f &size)
 {
     Geom::PathVector pv(Geom::Path(Geom::Ellipse(center.x, center.y, size.width, size.height, 0.0)));
     FromPathVector(pv);
+    contour_outers_.emplace(1, makePtr<ContourImpl>(pv.front(), true));
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const Size2f &size, const float angle)
@@ -57,6 +60,76 @@ RegionImpl::RegionImpl(const Point2f &center, const Size2f &size, const float an
 {
     Geom::PathVector pv(Geom::Path(Geom::Ellipse(center.x, center.y, size.width, size.height, angle)));
     FromPathVector(pv);
+    contour_outers_.emplace(1, makePtr<ContourImpl>(pv.front(), true));
+}
+
+int RegionImpl::Draw(Mat &img,
+    const Scalar& fillColor,
+    const Scalar& borderColor,
+    const float borderThickness,
+    const int borderStyle) const
+{
+    if (img.empty())
+    {
+        const Rect bbox = RegionImpl::BoundingBox();
+        if (bbox.width > 0 && bbox.height > 0)
+        {
+            img = Mat::ones(bbox.br().y + 1, bbox.br().x + 1, CV_8UC4) * 255;
+        }
+        else
+        {
+            return MLR_REGION_EMPTY;
+        }
+    }
+
+    if (img.empty())
+    {
+        return MLR_IMAGE_EMPTY;
+    }
+
+    int dph = img.depth();
+    int cnl = img.channels();
+    if (CV_8U == dph && 4 == cnl)
+    {
+        auto imgSurf = Cairo::ImageSurface::create(img.data, Cairo::Format::FORMAT_RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
+        auto cr = Cairo::Context::create(imgSurf);
+
+        for (const auto &contour : *contour_outers_)
+        {
+            Ptr<ContourImpl> spContour = contour.dynamicCast<ContourImpl>();
+            if (spContour)
+            {
+                Geom::CairoPathSink cairoPathSink(cr->cobj());
+                cairoPathSink.feed(spContour->GetPath());
+                cr->set_source_rgba(fillColor[0] / 255.0, fillColor[1] / 255.0, fillColor[2] / 255.0, fillColor[3] / 255.0);
+                cr->fill_preserve();
+                cr->set_line_width(borderThickness);
+                cr->set_source_rgba(borderColor[0] / 255.0, borderColor[1] / 255.0, borderColor[2] / 255.0, borderColor[3] / 255.0);
+                cr->stroke();
+            }
+        }
+    }
+
+    return MLR_SUCCESS;
+}
+
+int RegionImpl::Draw(InputOutputArray img,
+    const Scalar& fillColor,
+    const Scalar& borderColor,
+    const float borderThickness,
+    const int borderStyle) const
+{
+    Mat imgMat = img.getMat();
+    if (imgMat.empty())
+    {
+        int rest = RegionImpl::Draw(imgMat, fillColor, borderColor, borderThickness, borderStyle);
+        img.assign(imgMat);
+        return rest;
+    }
+    else
+    {
+        return RegionImpl::Draw(imgMat, fillColor, borderColor, borderThickness, borderStyle);
+    }
 }
 
 double RegionImpl::Area() const
@@ -99,6 +172,43 @@ cv::Point2d RegionImpl::Centroid() const
     return *centroid_;
 }
 
+Rect RegionImpl::BoundingBox() const
+{
+    if (bbox_ == boost::none)
+    {
+        cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+        cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
+
+        for (const RunLength &r : data_)
+        {
+            if (r.row < minPoint.y) {
+                minPoint.y = r.row;
+            }
+
+            if (r.row > maxPoint.y) {
+                maxPoint.y = r.row;
+            }
+
+            if (r.colb < minPoint.x) {
+                minPoint.x = r.colb;
+            }
+
+            if (r.cole > maxPoint.x) {
+                maxPoint.x = r.cole;
+            }
+        }
+
+        if (data_.empty()) {
+            bbox_ = cv::Rect();
+        }
+        else {
+            bbox_ = cv::Rect(minPoint, maxPoint);
+        }
+    }
+
+    return *bbox_;
+}
+
 void RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const
 {
     regions.resize(0);
@@ -109,7 +219,9 @@ void RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const
 
 void RegionImpl::ClearCacheData()
 {
-    area_ = boost::none;
+    area_     = boost::none;
+    centroid_ = boost::none;
+    bbox_     = boost::none;
 }
 
 void RegionImpl::FromMask(const cv::Mat &mask)

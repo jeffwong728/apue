@@ -1,7 +1,7 @@
 call setEnv.bat
 cd msvs
 cd opencv
-@set "VS150COMNTOOLS=D:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\"
+@set "VS150COMNTOOLS=%VS2017INSTALLDIR%\Common7\Tools\"
 @call "%VS150COMNTOOLS%VsDevCmd.bat"
 
 if exist "%TEMP%\cv_build.log" (
