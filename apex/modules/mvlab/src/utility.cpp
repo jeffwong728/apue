@@ -4,6 +4,18 @@
 namespace cv {
 namespace mvlab {
 
+std::vector<double> Util::GetDashesPattern(const int bls, const double lineWidth)
+{
+    switch (bls)
+    {
+    case BOUNDARY_LINE_DASH: return { 3 * lineWidth, 3 * lineWidth };
+    case BOUNDARY_LINE_DOT: return { 1 * lineWidth, 1 * lineWidth };
+    case BOUNDARY_LINE_DASHDOT: return { 3 * lineWidth, 1 * lineWidth, 1 * lineWidth, 1 * lineWidth };
+    case BOUNDARY_LINE_DASHDOTDOT: return { 3 * lineWidth, 1 * lineWidth, 1 * lineWidth, 1 * lineWidth, 1 * lineWidth, 1 * lineWidth };
+    default: return {};
+    }
+}
+
 cv::Mat Util::PathToMask(const Geom::PathVector &pv, const cv::Size &sz)
 {
     int step = Cairo::ImageSurface::format_stride_for_width(Cairo::Format::FORMAT_A8, sz.width);
@@ -15,6 +27,7 @@ cv::Mat Util::PathToMask(const Geom::PathVector &pv, const cv::Size &sz)
 
     Geom::CairoPathSink cairoPathSink(cr->cobj());
     cairoPathSink.feed(pv);
+    cr->set_line_width(0.);
     cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
     cr->fill();
 

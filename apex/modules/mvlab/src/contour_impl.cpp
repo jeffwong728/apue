@@ -59,7 +59,7 @@ ContourImpl::ContourImpl(const Geom::Path &path, const bool closed)
 {
 }
 
-int ContourImpl::Draw(Mat &img, const Scalar& color, float thickness, int style) const
+int ContourImpl::Draw(Mat &img, const Scalar& color, const float thickness, const int style) const
 {
     if (img.empty())
     {
@@ -83,19 +83,31 @@ int ContourImpl::Draw(Mat &img, const Scalar& color, float thickness, int style)
     int cnl = img.channels();
     if (CV_8U == dph && 4 == cnl)
     {
-        auto imgSurf = Cairo::ImageSurface::create(img.data, Cairo::Format::FORMAT_RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
-        auto cr = Cairo::Context::create(imgSurf);
-        Geom::CairoPathSink cairoPathSink(cr->cobj());
-        cairoPathSink.feed(path_);
-        cr->set_line_width(thickness);
-        cr->set_source_rgba(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, color[3] / 255.0);
-        cr->stroke();
+        DrawVerified(img, color, thickness, style);
+    }
+    else if (CV_8U == dph && 3 == cnl)
+    {
+        Mat colorImg;
+        cvtColor(img, colorImg, cv::COLOR_BGR2BGRA);
+        DrawVerified(colorImg, color, thickness, style);
+        cvtColor(colorImg, img, cv::COLOR_BGRA2BGR);
+    }
+    else if (CV_8U == dph && 1 == cnl)
+    {
+        Mat colorImg;
+        cvtColor(img, colorImg, cv::COLOR_GRAY2BGRA);
+        DrawVerified(colorImg, color, thickness, style);
+        cvtColor(colorImg, img, cv::COLOR_BGRA2GRAY);
+    }
+    else
+    {
+        return MLR_IMAGE_FORMAT_ERROR;
     }
 
     return MLR_SUCCESS;
 }
 
-int ContourImpl::Draw(InputOutputArray img, const Scalar& color, float thickness, int style) const
+int ContourImpl::Draw(InputOutputArray img, const Scalar& color, const float thickness, const int style) const
 {
     Mat imgMat = img.getMat();
     if (imgMat.empty())
@@ -106,7 +118,18 @@ int ContourImpl::Draw(InputOutputArray img, const Scalar& color, float thickness
     }
     else
     {
-        return ContourImpl::Draw(imgMat, color, thickness, style);
+        int dph = img.depth();
+        int cnl = img.channels();
+        if (CV_8U == dph && (1 == cnl || 3 == cnl || 4 == cnl))
+        {
+            int rest = ContourImpl::Draw(imgMat, color, thickness, style);
+            img.assign(imgMat);
+            return rest;
+        }
+        else
+        {
+            return MLR_IMAGE_FORMAT_ERROR;
+        }
     }
 }
 
@@ -193,6 +216,24 @@ void ContourImpl::ClearCacheData()
     bbox_     = boost::none;
     start_    = boost::none;
     points_   = boost::none;
+}
+
+void ContourImpl::DrawVerified(Mat &img, const Scalar& color, const float thickness, const int style) const
+{
+    auto imgSurf = Cairo::ImageSurface::create(img.data, Cairo::Format::FORMAT_RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
+    auto cr = Cairo::Context::create(imgSurf);
+
+    std::vector<double> dashes = Util::GetDashesPattern(style, thickness);
+    if (!dashes.empty())
+    {
+        cr->set_dash(dashes, 0.);
+    }
+
+    Geom::CairoPathSink cairoPathSink(cr->cobj());
+    cairoPathSink.feed(path_);
+    cr->set_line_width(thickness);
+    cr->set_source_rgba(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, color[3] / 255.0);
+    cr->stroke();
 }
 
 }

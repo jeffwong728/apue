@@ -74,7 +74,7 @@ int RegionImpl::Draw(Mat &img,
         const Rect bbox = RegionImpl::BoundingBox();
         if (bbox.width > 0 && bbox.height > 0)
         {
-            img = Mat::ones(bbox.br().y + 1, bbox.br().x + 1, CV_8UC4) * 255;
+            img = Mat::zeros(bbox.br().y + 1, bbox.br().x + 1, CV_8UC4);
         }
         else
         {
@@ -91,23 +91,25 @@ int RegionImpl::Draw(Mat &img,
     int cnl = img.channels();
     if (CV_8U == dph && 4 == cnl)
     {
-        auto imgSurf = Cairo::ImageSurface::create(img.data, Cairo::Format::FORMAT_RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
-        auto cr = Cairo::Context::create(imgSurf);
-
-        for (const auto &contour : *contour_outers_)
-        {
-            Ptr<ContourImpl> spContour = contour.dynamicCast<ContourImpl>();
-            if (spContour)
-            {
-                Geom::CairoPathSink cairoPathSink(cr->cobj());
-                cairoPathSink.feed(spContour->GetPath());
-                cr->set_source_rgba(fillColor[0] / 255.0, fillColor[1] / 255.0, fillColor[2] / 255.0, fillColor[3] / 255.0);
-                cr->fill_preserve();
-                cr->set_line_width(borderThickness);
-                cr->set_source_rgba(borderColor[0] / 255.0, borderColor[1] / 255.0, borderColor[2] / 255.0, borderColor[3] / 255.0);
-                cr->stroke();
-            }
-        }
+        DrawVerified(img, fillColor, borderColor, borderThickness, borderStyle);
+    }
+    else if (CV_8U == dph && 3 == cnl)
+    {
+        Mat colorImg;
+        cvtColor(img, colorImg, cv::COLOR_BGR2BGRA);
+        DrawVerified(colorImg, fillColor, borderColor, borderThickness, borderStyle);
+        cvtColor(colorImg, img, cv::COLOR_BGRA2BGR);
+    }
+    else if (CV_8U == dph && 1 == cnl)
+    {
+        Mat colorImg;
+        cvtColor(img, colorImg, cv::COLOR_GRAY2BGRA);
+        DrawVerified(colorImg, fillColor, borderColor, borderThickness, borderStyle);
+        cvtColor(colorImg, img, cv::COLOR_BGRA2GRAY);
+    }
+    else
+    {
+        return MLR_IMAGE_FORMAT_ERROR;
     }
 
     return MLR_SUCCESS;
@@ -128,7 +130,18 @@ int RegionImpl::Draw(InputOutputArray img,
     }
     else
     {
-        return RegionImpl::Draw(imgMat, fillColor, borderColor, borderThickness, borderStyle);
+        int dph = img.depth();
+        int cnl = img.channels();
+        if (CV_8U == dph && (1 == cnl || 3 == cnl || 4 == cnl))
+        {
+            int rest = RegionImpl::Draw(imgMat, fillColor, borderColor, borderThickness, borderStyle);
+            img.assign(imgMat);
+            return rest;
+        }
+        else
+        {
+            return MLR_IMAGE_FORMAT_ERROR;
+        }
     }
 }
 
@@ -286,6 +299,34 @@ void RegionImpl::FromPathVector(const Geom::PathVector &pv)
             run.colb += rect.x;
             run.cole += rect.x;
             run.row += rect.y;
+        }
+    }
+}
+
+void RegionImpl::DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const
+{
+    auto imgSurf = Cairo::ImageSurface::create(img.data, Cairo::Format::FORMAT_RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
+    auto cr = Cairo::Context::create(imgSurf);
+
+    std::vector<double> dashes = Util::GetDashesPattern(borderStyle, borderThickness);
+    if (!dashes.empty())
+    {
+        cr->set_dash(dashes, 0.);
+    }
+    cr->translate(0.5, 0.5);
+
+    for (const auto &contour : *contour_outers_)
+    {
+        Ptr<ContourImpl> spContour = contour.dynamicCast<ContourImpl>();
+        if (spContour)
+        {
+            Geom::CairoPathSink cairoPathSink(cr->cobj());
+            cairoPathSink.feed(spContour->GetPath());
+            cr->set_source_rgba(fillColor[0] / 255.0, fillColor[1] / 255.0, fillColor[2] / 255.0, fillColor[3] / 255.0);
+            cr->fill_preserve();
+            cr->set_line_width(borderThickness);
+            cr->set_source_rgba(borderColor[0] / 255.0, borderColor[1] / 255.0, borderColor[2] / 255.0, borderColor[3] / 255.0);
+            cr->stroke();
         }
     }
 }

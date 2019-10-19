@@ -9,6 +9,17 @@ namespace mvlab {
 
 static std::map<cv::String, cv::String> g_GlobalOptions;
 
+int Initialize(const String& fileName)
+{
+    int inset = vcl::instrset_detect();
+    if (inset < 8)
+    {
+        return MLR_CPU_UNSUPPORTED;
+    }
+
+    return MLR_SUCCESS;
+}
+
 int SetGlobalOption(const String& optName, const String& optVal)
 {
     g_GlobalOptions[optName] = optVal;

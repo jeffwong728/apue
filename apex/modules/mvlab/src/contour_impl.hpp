@@ -23,8 +23,8 @@ public:
     ContourImpl(const Geom::Path &path, const bool closed);
 
 public:
-    int Draw(Mat &img, const Scalar& color, float thickness, int style) const CV_OVERRIDE;
-    int Draw(InputOutputArray img, const Scalar& color, float thickness, int style) const CV_OVERRIDE;
+    int Draw(Mat &img, const Scalar& color, const float thickness, const int style) const CV_OVERRIDE;
+    int Draw(InputOutputArray img, const Scalar& color, float thickness, const int style) const CV_OVERRIDE;
 
 public:
     double Length() const CV_OVERRIDE;
@@ -37,6 +37,7 @@ public:
 
 private:
     void ClearCacheData();
+    void DrawVerified(Mat &img, const Scalar& color, const float thickness, const int style) const;
 
 private:
     bool is_closed_;

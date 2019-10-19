@@ -51,6 +51,7 @@ private:
     void ClearCacheData();
     void FromMask(const cv::Mat &mask);
     void FromPathVector(const Geom::PathVector &pv);
+    void DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const;
 
 private:
     RunList data_;
