@@ -174,7 +174,7 @@ list(APPEND libs LIB2GEOM::2geom sigc-3.0 GSL::gsl double-conversion::double-con
 target_link_libraries(ui_core PUBLIC ${libs})
 
 if(MSVC) 
-  target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _CRTDBG_MAP_ALLOC NOMINMAX VCL_NAMESPACE=vcl)
+  target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS NOMINMAX VCL_NAMESPACE=vcl)
   target_compile_definitions(ui_core PRIVATE BOOST_PYTHON_NO_LIB BOOST_PYTHON_STATIC_LIB BOOST_PYTHON_STATIC_MODULE PY_MAJOR_VERSION=3 PY_MINOR_VERSION=7)
   target_compile_definitions(ui_core PRIVATE BOOST_UUID_FORCE_AUTO_LINK)
 endif()
