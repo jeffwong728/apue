@@ -7,9 +7,6 @@
 #include <2geom/path-intersection.h>
 #include <ui/proc/rgn.h>
 #include <ui/proc/basic.h>
-#ifdef free
-#undef free
-#endif
 #include <tbb/tbb.h>
 
 namespace

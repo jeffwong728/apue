@@ -6,15 +6,274 @@
 namespace cv {
 namespace mvlab {
 
+struct RDEntry
+{
+    RDEntry(const int x, const int y, const int code, const int qi)
+        : X(x), Y(y), CODE(code), LINK(0), W_LINK(0), QI(qi), FLAG(0) {}
+    int X;
+    int Y;
+    int CODE;
+    int LINK;
+    int W_LINK;
+    int QI;
+    int FLAG;
+};
+
+const int qis_g[11]{ 0, 2, 1, 1, 1, 0, 1, 1, 1, 2, 0 };
+const int count_g[11]{ 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1 };
+const int downLink_g[11][11]{ {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0}, {0}, {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1} };
+const int upLink_g[11][11]{ {0}, {0}, {0}, {0}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1} };
+
+using RDList = std::vector<RDEntry, tbb::scalable_allocator<RDEntry>>;
+using RDListList = std::vector<RDList, tbb::scalable_allocator<RDList>>;
+
+class RunLengthRDEncoder
+{
+public:
+    RunLengthRDEncoder(const RunList &rgn, const RowRangeList &rranges) : rgn_runs_(rgn), row_ranges_(rranges) {}
+    RunLengthRDEncoder(RunLengthRDEncoder& x, tbb::split) : rgn_runs_(x.rgn_runs_), row_ranges_(x.row_ranges_) {}
+
+public:
+    void operator()(const tbb::blocked_range<int>& br);
+    void join(const RunLengthRDEncoder& y);
+
+private:
+    const RunList &rgn_runs_;
+    const RowRangeList &row_ranges_;
+    RDList rd_list_;
+    int P3{ 0 };
+    int P4{ 1 };
+    int P5{ 0 };
+};
+
+void RunLengthRDEncoder::operator()(const tbb::blocked_range<int>& br)
+{
+    rd_list_.emplace_back(0, 0, 0, 0);
+    std::vector<int> P_BUFFER;
+    std::vector<int> C_BUFFER;
+    constexpr int Infinity = std::numeric_limits<int>::max();
+    const int numRuns = static_cast<int>(row_ranges_.size());
+    const int lBeg = rgn_runs_[row_ranges_[br.begin()].begRun].row;
+    const int lEnd = (br.end() < numRuns) ? rgn_runs_[row_ranges_[br.end()].begRun].row : rgn_runs_[row_ranges_[br.end() - 1].begRun].row + 1;
+
+    if (br.begin() > 0)
+    {
+        const RowRange &rr = row_ranges_[br.begin() - 1];
+        if (rgn_runs_[rr.begRun].row == (lBeg - 1))
+        {
+            for (int rIdx = rr.begRun; rIdx < rr.endRun; ++rIdx)
+            {
+                P_BUFFER.push_back(rgn_runs_[rIdx].colb);
+                P_BUFFER.push_back(rgn_runs_[rIdx].cole);
+            }
+        }
+    }
+
+    P_BUFFER.push_back(Infinity);
+
+    int rIdx = br.begin();
+    for (int l = lBeg; l <= lEnd; ++l)
+    {
+        if (rIdx < numRuns)
+        {
+            const RowRange &rr = row_ranges_[rIdx];
+            if (l == rgn_runs_[rr.begRun].row)
+            {
+                for (int runIdx = rr.begRun; runIdx < rr.endRun; ++runIdx)
+                {
+                    C_BUFFER.push_back(rgn_runs_[runIdx].colb);
+                    C_BUFFER.push_back(rgn_runs_[runIdx].cole);
+                }
+                rIdx += 1;
+            }
+        }
+
+        C_BUFFER.push_back(Infinity);
+
+        int P1 = 0;
+        int P2 = 0;
+        int State = 0;
+        int X1 = P_BUFFER[P1];
+        int X2 = C_BUFFER[P2];
+        int X = X2;
+
+        bool stay = true;
+        while (stay)
+        {
+            int RD_CODE = 0;
+            switch (State)
+            {
+            case 0:
+                if (X1 > X2) {
+                    State = 2; X = X2; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 1; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else if (X1 < Infinity) {
+                    State = 3; RD_CODE = 2; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else {
+                    stay = false;
+                }
+                break;
+
+            case 1:
+                if (X1 > X2) {
+                    State = 3; X = X2; RD_CODE = 4; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 0; X = X1; RD_CODE = 5; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 4; X = X1; RD_CODE = 4; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            case 2:
+                if (X1 > X2) {
+                    State = 0; RD_CODE = 1; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 3; RD_CODE = 3; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 5; RD_CODE = 3; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            case 3:
+                if (X1 > X2) {
+                    State = 5; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 4; X = X1; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 0; RD_CODE = 6; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            case 4:
+                if (X1 > X2) {
+                    State = 0; RD_CODE = 8; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 3; RD_CODE = 10; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 5; RD_CODE = 10; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            case 5:
+                if (X1 > X2) {
+                    State = 3; X = X2; RD_CODE = 9; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 0; X = X1; RD_CODE = 7; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 4; X = X1; RD_CODE = 9; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            default:
+                break;
+            }
+
+            if (RD_CODE)
+            {
+                P3 += 1;
+                const int QI = qis_g[RD_CODE];
+                rd_list_.emplace_back(X, l, RD_CODE, QI);
+
+                if (QI)
+                {
+                    rd_list_[P5].W_LINK = P3;
+                    P5 = P3;
+                }
+                else
+                {
+                    rd_list_[P5].W_LINK = P3 + 1;
+                }
+
+                if (5 == RD_CODE)
+                {
+                    if (downLink_g[RD_CODE][rd_list_[P4].CODE])
+                    {
+                        rd_list_[P4].LINK = P3;
+                        rd_list_[P4].QI -= 1;
+                        if (1 > rd_list_[P4].QI)
+                        {
+                            P4 = rd_list_[P4].W_LINK;
+                        }
+                    }
+
+                    if (upLink_g[RD_CODE][rd_list_[P4].CODE])
+                    {
+                        rd_list_[P3].LINK = P4;
+                        rd_list_[P4].QI -= 1;
+                        if (1 > rd_list_[P4].QI)
+                        {
+                            P4 = rd_list_[P4].W_LINK;
+                        }
+                    }
+                }
+                else
+                {
+                    if (upLink_g[RD_CODE][rd_list_[P4].CODE])
+                    {
+                        rd_list_[P3].LINK = P4;
+                        rd_list_[P4].QI -= 1;
+                        if (1 > rd_list_[P4].QI)
+                        {
+                            P4 = rd_list_[P4].W_LINK;
+                        }
+                    }
+
+                    if (downLink_g[RD_CODE][rd_list_[P4].CODE])
+                    {
+                        rd_list_[P4].LINK = P3;
+                        rd_list_[P4].QI -= 1;
+                        if (1 > rd_list_[P4].QI)
+                        {
+                            P4 = rd_list_[P4].W_LINK;
+                        }
+                    }
+                }
+            }
+        }
+
+        P_BUFFER.swap(C_BUFFER);
+        C_BUFFER.resize(0);
+    }
+}
+
+void RunLengthRDEncoder::join(const RunLengthRDEncoder& y)
+{
+}
+
+RegionImpl::RegionImpl(const cv::Mat &mask)
+    : Region()
+    , rgn_mask_(mask)
+{
+}
+
 RegionImpl::RegionImpl(const Rect2f &rect)
     : Region()
 {
     if (rect.width > 0.f && rect.height > 0.f)
     {
-        data_.reserve(cvCeil(rect.height));
+        rgn_runs_.reserve(cvCeil(rect.height));
+        row_ranges_.reserve(rgn_runs_.size());
+
+        int runIdx = 0;
         for (float y = 0.f; y < rect.height; ++y)
         {
-            data_.emplace_back(cvRound(y), cvRound(rect.x), cvRound(rect.x + rect.width));
+            rgn_runs_.emplace_back(cvRound(y), cvRound(rect.x), cvRound(rect.x + rect.width));
+            row_ranges_.emplace_back(runIdx, runIdx+1);
+            runIdx += 1;
         }
 
         contour_outers_.emplace(1, makePtr<ContourImpl>(rect));
@@ -153,7 +412,7 @@ double RegionImpl::Area() const
         double x = 0;
         double y = 0;
 
-        for (const RunLength &rl : data_)
+        for (const RunLength &rl : rgn_runs_)
         {
             const auto n = rl.cole - rl.colb;
             a += n;
@@ -192,7 +451,7 @@ Rect RegionImpl::BoundingBox() const
         cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
         cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
 
-        for (const RunLength &r : data_)
+        for (const RunLength &r : rgn_runs_)
         {
             if (r.row < minPoint.y) {
                 minPoint.y = r.row;
@@ -211,7 +470,7 @@ Rect RegionImpl::BoundingBox() const
             }
         }
 
-        if (data_.empty()) {
+        if (rgn_runs_.empty()) {
             bbox_ = cv::Rect();
         }
         else {
@@ -243,15 +502,14 @@ void RegionImpl::FromMask(const cv::Mat &mask)
     int cnl = mask.channels();
     if (CV_8U == dph && 1 == cnl)
     {
-        constexpr int top = 0;
-        const int bot = mask.rows;
-        constexpr int left = 0;
-        const int right = mask.cols;
-        for (int r = top; r < bot; ++r)
+        for (int r = 0; r < mask.rows; ++r)
         {
             int cb = -1;
             const uchar* pRow = mask.data + r * mask.step1();
-            for (int c = left; c < right; ++c)
+            const int thisRowBegRun = static_cast<int>(rgn_runs_.size());
+            int thisRowEndRun = thisRowBegRun;
+
+            for (int c = 0; c < mask.cols; ++c)
             {
                 if (pRow[c])
                 {
@@ -264,7 +522,8 @@ void RegionImpl::FromMask(const cv::Mat &mask)
                 {
                     if (cb > -1)
                     {
-                        data_.emplace_back(r, cb, c);
+                        rgn_runs_.emplace_back(r, cb, c);
+                        thisRowEndRun += 1;
                         cb = -1;
                     }
                 }
@@ -272,7 +531,13 @@ void RegionImpl::FromMask(const cv::Mat &mask)
 
             if (cb > -1)
             {
-                data_.emplace_back(r, cb, right);
+                rgn_runs_.emplace_back(r, cb, mask.cols);
+                thisRowEndRun += 1;
+            }
+
+            if (thisRowBegRun != thisRowEndRun)
+            {
+                row_ranges_.emplace_back(thisRowBegRun, thisRowEndRun);
             }
         }
     }
@@ -294,7 +559,7 @@ void RegionImpl::FromPathVector(const Geom::PathVector &pv)
         cv::Mat mask = Util::PathToMask(pv*Geom::Translate(-rect.x, -rect.y), rect.size(), buf);
         FromMask(mask);
 
-        for (RunLength &run : data_)
+        for (RunLength &run : rgn_runs_)
         {
             run.colb += rect.x;
             run.cole += rect.x;
@@ -329,6 +594,28 @@ void RegionImpl::DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& b
             cr->stroke();
         }
     }
+}
+
+void RegionImpl::TraceContour()
+{
+    if (rgn_runs_.empty())
+    {
+        TraceContourMask();
+    }
+    else
+    {
+        TraceContourRunlength();
+    }
+}
+
+void RegionImpl::TraceContourRunlength()
+{
+
+}
+
+void RegionImpl::TraceContourMask()
+{
+
 }
 
 }

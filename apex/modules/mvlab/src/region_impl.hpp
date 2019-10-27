@@ -25,12 +25,22 @@ struct RunLength
     int label;
 };
 
-using RunList = std::vector<RunLength>;
+struct RowRange
+{
+    RowRange() : begRun(0), endRun(0) {}
+    RowRange(const int b, const int e) : begRun(b), endRun(e) {}
+    int begRun;
+    int endRun;
+};
+
+using RunList      = std::vector<RunLength>;
+using RowRangeList = std::vector<RowRange>;
 
 class RegionImpl : public Region
 {
 public:
     RegionImpl() {}
+    RegionImpl(const cv::Mat &mask);
     RegionImpl(const Rect2f &rect);
     RegionImpl(const RotatedRect &rotatedRect);
     RegionImpl(const Point2f &center, const float radius);
@@ -52,9 +62,14 @@ private:
     void FromMask(const cv::Mat &mask);
     void FromPathVector(const Geom::PathVector &pv);
     void DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const;
+    void TraceContour();
+    void TraceContourRunlength();
+    void TraceContourMask();
 
 private:
-    RunList data_;
+    RunList rgn_runs_;
+    cv::Mat rgn_mask_;
+    RowRangeList row_ranges_;
     mutable boost::optional<double> area_;
     mutable boost::optional<cv::Point2d> centroid_;
     mutable boost::optional<cv::Rect>    bbox_;

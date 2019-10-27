@@ -409,8 +409,6 @@ TEST(NCCFormulaTest, RandomValue)
     double ncc = (sequenceDot(tmpl, part) - (tmplSum*partSum) / 100.0) / (tmplVal1*partVal1);
     EXPECT_LT(ncc, 1.0);
     EXPECT_GT(ncc, -1.0);
-
-    cv::mvlab::Region rgn;
 }
 
 }

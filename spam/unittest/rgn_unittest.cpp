@@ -5,9 +5,6 @@
 #include <ui/proc/rgn.h>
 #include <ui/proc/basic.h>
 #include <opencv2/highgui.hpp>
-#ifdef free
-#undef free
-#endif
 #include <tbb/tbb.h>
 #include <tbb/task_scheduler_init.h>
 
@@ -339,7 +336,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_2)
     BOOST_REQUIRE_EQUAL(rgns->size(), 2);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_3)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_3, *boost::unit_test::enable_if<vtune_build>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -389,7 +386,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_3)
     BOOST_REQUIRE_EQUAL(rgns->size(), numExtContours);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_4)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_4, *boost::unit_test::enable_if<vtune_build>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("digits.png");
@@ -436,7 +433,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_4)
     BOOST_REQUIRE_EQUAL(rgns->size(), numExtContours);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_0)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_0, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
 
@@ -446,7 +443,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_0)
     BOOST_CHECK_EQUAL(re_list.size(), 1);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_1)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_1, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(0, 0, 1);
@@ -463,7 +460,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_1)
     BOOST_CHECK_EQUAL(re_list[0].QI, 0);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_2)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_2, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(0, 1, 2);
@@ -476,7 +473,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_2)
     BOOST_CHECK_EQUAL(re_list[2].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_3)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_3, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(0, 5, 10);
@@ -489,7 +486,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_3)
     BOOST_CHECK_EQUAL(re_list[2].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_4)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_4, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 5, 10);
@@ -502,7 +499,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_4)
     BOOST_CHECK_EQUAL(re_list[2].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_5)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_5, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 3);
@@ -521,7 +518,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_5)
     BOOST_CHECK_EQUAL(re_list[6].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_6)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_6, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 3);
@@ -552,7 +549,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_6)
     BOOST_CHECK_EQUAL(re_list[14].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_7)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_7, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 5);
@@ -574,7 +571,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_7)
     BOOST_CHECK_EQUAL(re_list[8].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_8)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_8, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(2, 2, 8);
@@ -608,7 +605,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_8)
     BOOST_CHECK_EQUAL(re_list[16].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_9)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_9, *boost::unit_test::enable_if<true>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 8);
@@ -630,7 +627,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_9)
     BOOST_CHECK_EQUAL(re_list[8].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_0)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_0, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(0, 1, 2);
@@ -654,7 +651,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_0)
     BOOST_CHECK_EQUAL(outer[3].y, 0);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_1)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_1, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 1, 5);
@@ -681,7 +678,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_1)
     BOOST_CHECK_EQUAL(outer[3].y, 1);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_2)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_2, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 3);
@@ -744,7 +741,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_2)
     BOOST_CHECK_EQUAL(outer[19].y, 1);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_3)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_3, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 1, 6);
@@ -783,7 +780,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_3)
     BOOST_CHECK_EQUAL(holes[0][3].y, 2);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_4)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_4, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 1, 7);
@@ -841,7 +838,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_4)
     BOOST_CHECK_EQUAL(holes[1][5].y, 2);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_5)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_5, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(2, 2, 6);
@@ -882,7 +879,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_5)
     BOOST_REQUIRE_EQUAL(holes[3].size(), 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_6)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_6, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     rgn.AddRun(0, 0, 3);
@@ -906,7 +903,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_6)
     BOOST_REQUIRE_EQUAL(holes[0].size(), 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_7)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_7, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     cv::Mat img = cv::Mat::zeros(200, 200, CV_8UC1);
@@ -923,7 +920,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_7)
     BOOST_REQUIRE_EQUAL(holes.size(), 8);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_8)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_8, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     cv::Mat img = cv::Mat::zeros(200, 200, CV_8UC1);
@@ -942,7 +939,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_8)
     BOOST_REQUIRE_EQUAL(holes.size(), 0);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_9)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_9, *boost::unit_test::enable_if<vtune_build>())
 {
     SpamRgn rgn;
     cv::Mat img = cv::Mat::zeros(200, 200, CV_8UC1);
@@ -960,7 +957,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_9)
     BOOST_REQUIRE_EQUAL(holes.size(), 0);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_10)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_10, *boost::unit_test::enable_if<vtune_build>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("scrach.png");
@@ -1050,7 +1047,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_PERFORMANCE_0, *boost::unit_test::ena
     BOOST_CHECK_EQUAL(rgns->size(), 941);
 }
 
-BOOST_AUTO_TEST_CASE(test_AlignImageWidth)
+BOOST_AUTO_TEST_CASE(test_AlignImageWidth, *boost::unit_test::enable_if<vtune_build>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");

@@ -3,9 +3,6 @@
 #include <limits>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
-#ifdef free
-#undef free
-#endif
 #include <tbb/tbb.h>
 #include <tbb/scalable_allocator.h>
 #include <stack>
@@ -22,6 +19,265 @@ namespace
     static const uint32_t g_rgnColors[g_numRgnColors] = { 0xFFFF0000, 0xFF00FF00, 0xFF0000FF,
         0xFF800000, 0xFFFFFF00, 0xFF808000, 0xFF008000, 0xFF00FFFF, 0xFF008080, 0xFF000080, 0xFFFF00FF, 0xFF800080 };
 };
+
+struct RDEntry
+{
+    RDEntry(const int x, const int y, const int code, const int qi)
+        : X(x), Y(y), CODE(code), LINK(0), W_LINK(0), QI(qi), FLAG(0) {}
+    int X;
+    int Y;
+    int CODE;
+    int LINK;
+    int W_LINK;
+    int QI;
+    int FLAG;
+};
+
+const int qis_g[11]{ 0, 2, 1, 1, 1, 0, 1, 1, 1, 2, 0 };
+const int count_g[11]{ 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1 };
+const int downLink_g[11][11]{ {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0}, {0}, {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1} };
+const int upLink_g[11][11]{ {0}, {0}, {0}, {0}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1} };
+
+using RDList = std::vector<RDEntry, tbb::scalable_allocator<RDEntry>>;
+using RDListList = std::vector<RDList, tbb::scalable_allocator<RDList>>;
+
+class RunLengthRDEncoder
+{
+public:
+    RunLengthRDEncoder(const SpamRunList &rgn, const RowRangeList &rranges) : rgn_runs_(rgn), row_ranges_(rranges) {}
+    RunLengthRDEncoder(RunLengthRDEncoder& x, tbb::split) : rgn_runs_(x.rgn_runs_), row_ranges_(x.row_ranges_) {}
+
+public:
+    void operator()(const tbb::blocked_range<int>& br);
+    void join(const RunLengthRDEncoder& y);
+    void link();
+
+public:
+    const SpamRunList &rgn_runs_;
+    const RowRangeList &row_ranges_;
+    RDList rd_list_;
+};
+
+void RunLengthRDEncoder::operator()(const tbb::blocked_range<int>& br)
+{
+    std::vector<int, tbb::scalable_allocator<int>> P_BUFFER;
+    std::vector<int, tbb::scalable_allocator<int>> C_BUFFER;
+    constexpr int Infinity = std::numeric_limits<int>::max();
+    const int numRuns = static_cast<int>(row_ranges_.size());
+    const int lBeg = rgn_runs_[row_ranges_[br.begin()].beg].row;
+    const int lEnd = (br.end() < numRuns) ? rgn_runs_[row_ranges_[br.end()].beg].row - 1 : rgn_runs_[row_ranges_[br.end() - 1].beg].row + 1;
+
+    if (br.begin() > 0)
+    {
+        const RowRange &rr = row_ranges_[br.begin() - 1];
+        if (rgn_runs_[rr.beg].row == (lBeg - 1))
+        {
+            for (int rIdx = rr.beg; rIdx < rr.end; ++rIdx)
+            {
+                P_BUFFER.push_back(rgn_runs_[rIdx].colb);
+                P_BUFFER.push_back(rgn_runs_[rIdx].cole);
+            }
+        }
+    }
+
+    P_BUFFER.push_back(Infinity);
+
+    int rIdx = br.begin();
+    for (int l = lBeg; l <= lEnd; ++l)
+    {
+        if (rIdx < numRuns)
+        {
+            const RowRange &rr = row_ranges_[rIdx];
+            if (l == rgn_runs_[rr.beg].row)
+            {
+                for (int runIdx = rr.beg; runIdx < rr.end; ++runIdx)
+                {
+                    C_BUFFER.push_back(rgn_runs_[runIdx].colb);
+                    C_BUFFER.push_back(rgn_runs_[runIdx].cole);
+                }
+                rIdx += 1;
+            }
+        }
+
+        C_BUFFER.push_back(Infinity);
+
+        int P1 = 0;
+        int P2 = 0;
+        int State = 0;
+        int X1 = P_BUFFER[P1];
+        int X2 = C_BUFFER[P2];
+        int X = X2;
+
+        bool stay = true;
+        while (stay)
+        {
+            int RD_CODE = 0;
+            switch (State)
+            {
+            case 0:
+                if (X1 > X2) {
+                    State = 2; X = X2; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 1; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else if (X1 < Infinity) {
+                    State = 3; RD_CODE = 2; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else {
+                    stay = false;
+                }
+                break;
+
+            case 1:
+                if (X1 > X2) {
+                    State = 3; X = X2; RD_CODE = 4; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 0; X = X1; RD_CODE = 5; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 4; X = X1; RD_CODE = 4; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            case 2:
+                if (X1 > X2) {
+                    State = 0; RD_CODE = 1; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 3; RD_CODE = 3; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 5; RD_CODE = 3; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            case 3:
+                if (X1 > X2) {
+                    State = 5; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 4; X = X1; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 0; RD_CODE = 6; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            case 4:
+                if (X1 > X2) {
+                    State = 0; RD_CODE = 8; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 3; RD_CODE = 10; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 5; RD_CODE = 10; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            case 5:
+                if (X1 > X2) {
+                    State = 3; X = X2; RD_CODE = 9; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                else if (X1 < X2) {
+                    State = 0; X = X1; RD_CODE = 7; P1 += 1; X1 = P_BUFFER[P1];
+                }
+                else {
+                    State = 4; X = X1; RD_CODE = 9; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
+                }
+                break;
+
+            default:
+                break;
+            }
+
+            if (RD_CODE)
+            {
+                rd_list_.emplace_back(X, l, RD_CODE, qis_g[RD_CODE]);
+            }
+        }
+
+        P_BUFFER.swap(C_BUFFER);
+        C_BUFFER.resize(0);
+    }
+}
+
+void RunLengthRDEncoder::join(const RunLengthRDEncoder& y)
+{
+    rd_list_.insert(rd_list_.end(), y.rd_list_.cbegin(), y.rd_list_.cend());
+}
+
+void RunLengthRDEncoder::link()
+{
+    int P3{ -1 };
+    int P4{ 0 };
+    int P5{ 0 };
+
+    for (const RDEntry &rdEntry : rd_list_)
+    {
+        P3 += 1;
+
+        const int RD_CODE = rdEntry.CODE;
+        const int QI = rdEntry.QI;
+
+        if (QI)
+        {
+            rd_list_[P5].W_LINK = P3;
+            P5 = P3;
+        }
+        else
+        {
+            rd_list_[P5].W_LINK = P3 + 1;
+        }
+
+        if (5 == RD_CODE)
+        {
+            if (downLink_g[RD_CODE][rd_list_[P4].CODE])
+            {
+                rd_list_[P4].LINK = P3;
+                rd_list_[P4].QI -= 1;
+                if (1 > rd_list_[P4].QI)
+                {
+                    P4 = rd_list_[P4].W_LINK;
+                }
+            }
+
+            if (upLink_g[RD_CODE][rd_list_[P4].CODE])
+            {
+                rd_list_[P3].LINK = P4;
+                rd_list_[P4].QI -= 1;
+                if (1 > rd_list_[P4].QI)
+                {
+                    P4 = rd_list_[P4].W_LINK;
+                }
+            }
+        }
+        else
+        {
+            if (upLink_g[RD_CODE][rd_list_[P4].CODE])
+            {
+                rd_list_[P3].LINK = P4;
+                rd_list_[P4].QI -= 1;
+                if (1 > rd_list_[P4].QI)
+                {
+                    P4 = rd_list_[P4].W_LINK;
+                }
+            }
+
+            if (downLink_g[RD_CODE][rd_list_[P4].CODE])
+            {
+                rd_list_[P4].LINK = P3;
+                rd_list_[P4].QI -= 1;
+                if (1 > rd_list_[P4].QI)
+                {
+                    P4 = rd_list_[P4].W_LINK;
+                }
+            }
+        }
+    }
+}
 
 class AdjacencyBuilderTBB
 {
@@ -661,6 +917,30 @@ const RegionContourCollection &SpamRgn::GetContours() const
     return *contours_;
 }
 
+void SpamRgn::GetRowRanges(RowRangeList &rRanges) const
+{
+    if (!data_.empty())
+    {
+        rRanges.reserve(data_.size());
+
+        int begIdx = 0;
+        int16_t currentRow = data_.front().row;
+
+        const int numRuns = static_cast<int>(data_.size());
+        for (int run = 0; run < numRuns; ++run)
+        {
+            if (data_[run].row != currentRow)
+            {
+                rRanges.emplace_back(currentRow, begIdx, run);
+                begIdx = run;
+                currentRow = data_[run].row;
+            }
+        }
+
+        rRanges.emplace_back(currentRow, begIdx, numRuns);
+    }
+}
+
 const RowRangeList &SpamRgn::GetRowRanges() const
 {
     if (rowRanges_== boost::none)
@@ -825,213 +1105,34 @@ bool PointSet::IsInsideImage(const cv::Size &imgSize) const
 RD_LIST RunTypeDirectionEncoder::encode() const
 {
     RD_LIST rd_list;
-    rd_list.reserve(rgn_.data_.size() * 2 + 1);
     rd_list.emplace_back(0, 0, 0, 0);
-    rd_list.front().FLAG = 1;
-
+    rd_list.front().W_LINK = 1;
     if (rgn_.data_.empty())
     {
         return rd_list;
     }
 
-    std::vector<int16_t> P_BUFFER;
-    std::vector<int16_t> C_BUFFER;
-    constexpr int16_t Infinity = std::numeric_limits<int16_t>::max();
-    P_BUFFER.push_back(Infinity);
+    RowRangeList rowRanges;
+    rgn_.GetRowRanges(rowRanges);
 
-    bool extended = false;
-    SpamRunList runData;
-    const SpamRunList *pRunData = nullptr;
-    if (rgn_.data_.capacity() >= rgn_.data_.size()+2)
+    RunLengthRDEncoder rlEncoder(rgn_.GetData(), rowRanges);
+    rlEncoder.rd_list_.reserve(rgn_.GetData().size()*2);
+    rlEncoder(tbb::blocked_range<int>(0, static_cast<int>(rowRanges.size())));
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    rlEncoder.link();
+    tbb::tick_count t2 = tbb::tick_count::now();
+    std::cout << "......." << (t2 - t1).seconds() * 1000 << "ms" << std::endl;
+
+    rd_list.reserve(rlEncoder.rd_list_.size()+1);
+    for (const RDEntry &rdEntry : rlEncoder.rd_list_)
     {
-        extended = true;
-        const int16_t lastRow = rgn_.data_.back().row;
-        rgn_.data_.emplace_back(lastRow + 1, Infinity, Infinity);
-        rgn_.data_.emplace_back(lastRow + 2, Infinity, Infinity);
-        pRunData = &rgn_.data_;
-    }
-    else
-    {
-        runData.resize(rgn_.data_.size() + 2);
-        ::memcpy(&runData[0], &rgn_.data_[0], sizeof(runData[0])*rgn_.data_.size());
+        RD_LIST_ENTRY entry(rdEntry.X, rdEntry.Y, rdEntry.CODE, 0);
+        entry.LINK = rdEntry.LINK + 1;
+        entry.W_LINK = rdEntry.W_LINK + 1;
+        entry.FLAG = rdEntry.FLAG;
 
-        const int16_t lastRow = rgn_.data_.back().row;
-        runData[rgn_.data_.size()]   = SpamRun(lastRow + 1, Infinity, Infinity);
-        runData[rgn_.data_.size()+1] = SpamRun(lastRow + 2, Infinity, Infinity);
-        pRunData = &runData;
-    }
-
-    int P3 = 0;
-    int P4 = 1;
-    int P5 = 0;
-
-    int16_t l = (*pRunData)[0].row;
-    const int numRuns = static_cast<int>(pRunData->size());
-    for (int n=0; n<numRuns; ++n)
-    {
-        const SpamRun &r = (*pRunData)[n];
-        if (r.row == l)
-        {
-            C_BUFFER.push_back(r.colb);
-            C_BUFFER.push_back(r.cole);
-        }
-        else
-        {
-            C_BUFFER.push_back(Infinity);
-
-            int P1 = 0;
-            int P2 = 0;
-            int State = 0;
-            int16_t X1 = P_BUFFER[P1];
-            int16_t X2 = C_BUFFER[P2];
-            int16_t X  = X2;
-
-            bool stay = true;
-            while (stay)
-            {
-                int RD_CODE = 0;
-                switch (State)
-                {
-                case 0:
-                    if (X1>X2) {
-                        State = 2; X = X2; P2 += 1; X2 = C_BUFFER[P2];
-                    } else if (X1<X2) {
-                        State = 1; P1 += 1; X1 = P_BUFFER[P1];
-                    } else if (X1 < Infinity) {
-                        State = 3; RD_CODE = 2; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
-                    } else {
-                        stay = false;
-                    }
-                    break;
-
-                case 1:
-                    if (X1 > X2) {
-                        State = 3; X = X2; RD_CODE = 4; P2 += 1; X2 = C_BUFFER[P2];
-                    } else if (X1 < X2) {
-                        State = 0; X = X1; RD_CODE = 5; P1 += 1; X1 = P_BUFFER[P1];
-                    } else {
-                        State = 4; X = X1; RD_CODE = 4; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
-                    }
-                    break;
-
-                case 2:
-                    if (X1 > X2) {
-                        State = 0; RD_CODE = 1; P2 += 1; X2 = C_BUFFER[P2];
-                    } else if (X1 < X2) {
-                        State = 3; RD_CODE = 3; P1 += 1; X1 = P_BUFFER[P1];
-                    } else {
-                        State = 5; RD_CODE = 3; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
-                    }
-                    break;
-
-                case 3:
-                    if (X1 > X2) {
-                        State = 5; P2 += 1; X2 = C_BUFFER[P2];
-                    } else if (X1 < X2) {
-                        State = 4; X = X1; P1 += 1; X1 = P_BUFFER[P1];
-                    } else {
-                        State = 0; RD_CODE = 6; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
-                    }
-                    break;
-
-                case 4:
-                    if (X1 > X2) {
-                        State = 0; RD_CODE = 8; P2 += 1; X2 = C_BUFFER[P2];
-                    } else if (X1 < X2) {
-                        State = 3; RD_CODE = 10; P1 += 1; X1 = P_BUFFER[P1];
-                    } else {
-                        State = 5; RD_CODE = 10; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
-                    }
-                    break;
-
-                case 5:
-                    if (X1 > X2) {
-                        State = 3; X = X2; RD_CODE = 9; P2 += 1; X2 = C_BUFFER[P2];
-                    } else if (X1 < X2) {
-                        State = 0; X = X1; RD_CODE = 7; P1 += 1; X1 = P_BUFFER[P1];
-                    } else {
-                        State = 4; X = X1; RD_CODE = 9; P1 += 1; X1 = P_BUFFER[P1]; P2 += 1; X2 = C_BUFFER[P2];
-                    }
-                    break;
-
-                default:
-                    break;
-                }
-
-                if (RD_CODE)
-                {
-                    P3 += 1;
-                    const int QI = qis_[RD_CODE];
-                    rd_list.emplace_back(X, l, RD_CODE, QI);
-
-                    if (QI)
-                    {
-                        rd_list[P5].W_LINK = P3;
-                        P5 = P3;
-                    }
-                    else
-                    {
-                        rd_list[P5].W_LINK = P3 + 1;
-                    }
-
-                    if (5 == RD_CODE)
-                    {
-                        if (downLink_[RD_CODE][rd_list[P4].CODE])
-                        {
-                            rd_list[P4].LINK = P3;
-                            rd_list[P4].QI -= 1;
-                            if (1 > rd_list[P4].QI)
-                            {
-                                P4 = rd_list[P4].W_LINK;
-                            }
-                        }
-
-                        if (upLink_[RD_CODE][rd_list[P4].CODE])
-                        {
-                            rd_list[P3].LINK = P4;
-                            rd_list[P4].QI -= 1;
-                            if (1 > rd_list[P4].QI)
-                            {
-                                P4 = rd_list[P4].W_LINK;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (upLink_[RD_CODE][rd_list[P4].CODE])
-                        {
-                            rd_list[P3].LINK = P4;
-                            rd_list[P4].QI -= 1;
-                            if (1 > rd_list[P4].QI)
-                            {
-                                P4 = rd_list[P4].W_LINK;
-                            }
-                        }
-
-                        if (downLink_[RD_CODE][rd_list[P4].CODE])
-                        {
-                            rd_list[P4].LINK = P3;
-                            rd_list[P4].QI -= 1;
-                            if (1 > rd_list[P4].QI)
-                            {
-                                P4 = rd_list[P4].W_LINK;
-                            }
-                        }
-                    }
-                }
-            }
-
-            P_BUFFER.swap(C_BUFFER);
-            C_BUFFER.resize(0);
-            n -= 1;
-            l += 1;
-        }
-    }
-
-    if (extended)
-    {
-        rgn_.data_.pop_back();
-        rgn_.data_.pop_back();
+        rd_list.push_back(entry);
     }
 
     return rd_list;

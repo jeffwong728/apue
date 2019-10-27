@@ -22,7 +22,7 @@ struct TestCVPerfConfig
     }
 };
 
-BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0, *boost::unit_test::enable_
     std::vector<std::vector<cv::Point>> contours;
 
     t1 = tbb::tick_count::now();
-    cv::findContours(binImg, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
+    cv::findContours(binImg, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
     t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("CV find contours spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0, *boost::unit_test::enable_
     BOOST_TEST_MESSAGE("CV in range spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");

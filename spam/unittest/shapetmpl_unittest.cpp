@@ -9,9 +9,6 @@
 #include <ui/proc/rgn.h>
 #include <ui/proc/basic.h>
 #include <ui/proc/shapetmpl.h>
-#ifdef free
-#undef free
-#endif
 #include <tbb/tbb.h>
 #include <tbb/task_scheduler_init.h>
 
@@ -116,7 +113,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Create_Mista, *boost::unit_test::enable_if<f
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -158,7 +155,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Mista, *boost::unit_test::enable_if<false>()
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Board, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Board, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\board\\board-01.png");
@@ -214,7 +211,7 @@ BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Board, *boost::unit_test::enable_if<false>()
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Cap, *boost::unit_test::enable_if<false>())
+BOOST_AUTO_TEST_CASE(test_ShapeTmpl_Cap, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("images\\cap_illumination\\cap_illumination_01.png");

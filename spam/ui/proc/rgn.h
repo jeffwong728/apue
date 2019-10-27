@@ -118,6 +118,7 @@ public:
     const Geom::PathVector &GetPath() const;
     const RegionContourCollection &GetContours() const;
     const RowRangeList &GetRowRanges() const;
+    void GetRowRanges(RowRangeList &rRanges) const;
     uint32_t GetColor() const { return color_; }
     uint8_t  GetRed() const { return static_cast<uint8_t>(0xFF & color_); }
     uint8_t  GetGreen() const { return static_cast<uint8_t>(0xFF & color_ >> 8); }
