@@ -15,8 +15,6 @@ using SpamRunListList = std::vector<std::unique_ptr<SpamRunListTBB>, tbb::scalab
 
 class BasicImgProc : private boost::noncopyable
 {
-    template <typename Pred> friend SPSpamRgn ThresholdPI_impl(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
-    template <typename Pred> friend SPSpamRgn ThresholdTBBReduce_impl(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
 public:
     BasicImgProc() = delete;
 
@@ -27,6 +25,7 @@ public:
 public:
     static cv::Mat AlignImageWidth(const cv::Mat &img);
     static cv::Mat Binarize(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
+    static int GetNumRunsOfBinaryImage(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
     static SPSpamRgn Threshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
     static SPSpamRgnVector Connect(const cv::Mat &labels, const int numLabels);
     static int GetNumWorkers() { return static_cast<int>(s_runList_pools_.size()); }

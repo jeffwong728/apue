@@ -390,7 +390,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_4, *boost::unit_test::enable_if<vt
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("digits.png");
-    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 151, 255);
     BOOST_CHECK_EQUAL(rgn->GetData().size(), 89084);
 
     cv::Mat labels;
@@ -1005,7 +1005,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_PERFORMANCE_0, *boost::unit_test
     BOOST_CHECK_EQUAL(al.size(), 234794);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_Threshold_PERFORMANCE_0, *boost::unit_test::enable_if<vtune_build>())
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Threshold_Mista, *boost::unit_test::enable_if<vtune_build>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -1017,34 +1017,83 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Threshold_PERFORMANCE_0, *boost::unit_test::en
     BOOST_CHECK_EQUAL(rgn->GetData().size(), 234794);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_PERFORMANCE_0, *boost::unit_test::enable_if<vtune_build>())
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Run_Counter_Square, *boost::unit_test::enable_if<true>())
+{
+    cv::Mat grayImg = cv::Mat::ones(3, 33, CV_8U) * 200;
+
+    int numRuns = BasicImgProc::GetNumRunsOfBinaryImage(grayImg, 150, 255);
+    BOOST_CHECK_EQUAL(numRuns, 3);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Run_Counter_Mista, *boost::unit_test::enable_if<vtune_build>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
 
+    tbb::tick_count t1 = tbb::tick_count::now();
+    int numRuns = BasicImgProc::GetNumRunsOfBinaryImage(grayImg, 150, 255);
+    tbb::tick_count t2 = tbb::tick_count::now();
+
+    BOOST_TEST_MESSAGE("Spam rd runs counter times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(numRuns, 234794);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_Encode_Mista, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    RunTypeDirectionEncoder encoder(*rgn);
+    RD_LIST rdList = encoder.encode();
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam rd encode times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(rdList.size(), 469589);
+    BOOST_CHECK_EQUAL(rdList.size(), rgn->GetData().size()*2+1);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_TRACK_Mista, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    RunTypeDirectionEncoder encoder(*rgn);
+    RD_CONTOUR_LIST outers;
+    RD_CONTOUR_LIST holes;
+    encoder.track(outers, holes);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam track times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(outers.size(), 941);
+    BOOST_CHECK_EQUAL(holes.size(), 17622);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Mista, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    SPSpamRgnVector rgns = rgn->Connect();
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam connect times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(rgns->size(), 941);
+}
+
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Threshold_Mista_Draw, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
     SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
 
     UnitTestHelper::Color color{ rgn->GetRed(), rgn->GetGreen(), rgn->GetBlue(), rgn->GetAlpha() };
     UnitTestHelper::DrawPathToImage(rgn->GetPath(), color, colorImg);
     UnitTestHelper::WriteImage(colorImg, "mista.png");
 
-    RunTypeDirectionEncoder encoder(*rgn);
-    RD_CONTOUR_LIST outers;
-    RD_CONTOUR_LIST holes;
-
-    tbb::tick_count t1 = tbb::tick_count::now();
-    encoder.track(outers, holes);
-    tbb::tick_count t2 = tbb::tick_count::now();
-    BOOST_TEST_MESSAGE("Spam track times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
-    BOOST_CHECK_EQUAL(outers.size(), 941);
-    BOOST_CHECK_EQUAL(holes.size(), 17622);
-
-
-    t1 = tbb::tick_count::now();
-    SPSpamRgnVector rgns = rgn->Connect();
-    t2 = tbb::tick_count::now();
-    BOOST_TEST_MESSAGE("Spam connect times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
-    BOOST_CHECK_EQUAL(rgns->size(), 941);
+    BOOST_CHECK_EQUAL(rgn->GetData().size(), 234794);
 }
 
 BOOST_AUTO_TEST_CASE(test_AlignImageWidth, *boost::unit_test::enable_if<vtune_build>())

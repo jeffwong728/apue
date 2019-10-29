@@ -9,7 +9,7 @@ namespace mvlab {
 
 static std::map<cv::String, cv::String> g_GlobalOptions;
 
-int Initialize(const String& fileName)
+int Initialize(const cv::String& fileName)
 {
     int inset = vcl::instrset_detect();
     if (inset < 8)
@@ -20,13 +20,13 @@ int Initialize(const String& fileName)
     return MLR_SUCCESS;
 }
 
-int SetGlobalOption(const String& optName, const String& optVal)
+int SetGlobalOption(const cv::String& optName, const cv::String& optVal)
 {
     g_GlobalOptions[optName] = optVal;
     return 0;
 }
 
-int GetGlobalOption(const String& optName, String& optVal)
+int GetGlobalOption(const cv::String& optName, cv::String& optVal)
 {
     const auto it = g_GlobalOptions.find(optName);
     if (it != g_GlobalOptions.cend())

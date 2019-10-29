@@ -218,11 +218,9 @@ void RunLengthRDEncoder::link()
     for (const RDEntry &rdEntry : rd_list_)
     {
         P3 += 1;
-
         const int RD_CODE = rdEntry.CODE;
-        const int QI = rdEntry.QI;
 
-        if (QI)
+        if (rdEntry.QI)
         {
             rd_list_[P5].W_LINK = P3;
             P5 = P3;
@@ -1105,10 +1103,10 @@ bool PointSet::IsInsideImage(const cv::Size &imgSize) const
 RD_LIST RunTypeDirectionEncoder::encode() const
 {
     RD_LIST rd_list;
-    rd_list.emplace_back(0, 0, 0, 0);
-    rd_list.front().W_LINK = 1;
     if (rgn_.data_.empty())
     {
+        rd_list.emplace_back(0, 0, 0, 0);
+        rd_list.front().W_LINK = 1;
         return rd_list;
     }
 
@@ -1118,13 +1116,11 @@ RD_LIST RunTypeDirectionEncoder::encode() const
     RunLengthRDEncoder rlEncoder(rgn_.GetData(), rowRanges);
     rlEncoder.rd_list_.reserve(rgn_.GetData().size()*2);
     rlEncoder(tbb::blocked_range<int>(0, static_cast<int>(rowRanges.size())));
-
-    tbb::tick_count t1 = tbb::tick_count::now();
     rlEncoder.link();
-    tbb::tick_count t2 = tbb::tick_count::now();
-    std::cout << "......." << (t2 - t1).seconds() * 1000 << "ms" << std::endl;
 
     rd_list.reserve(rlEncoder.rd_list_.size()+1);
+    rd_list.emplace_back(0, 0, 0, 0);
+    rd_list.front().W_LINK = 1;
     for (const RDEntry &rdEntry : rlEncoder.rd_list_)
     {
         RD_LIST_ENTRY entry(rdEntry.X, rdEntry.Y, rdEntry.CODE, 0);

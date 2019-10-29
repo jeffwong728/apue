@@ -8,14 +8,17 @@
 namespace cv {
 namespace mvlab {
 
-constexpr int MLR_OK = 0;
-constexpr int MLR_SUCCESS = MLR_OK;
-constexpr int MLR_CPU_UNSUPPORTED = 1;
-constexpr int MLR_IMAGE_EMPTY = 10000;
-constexpr int MLR_IMAGE_FORMAT_ERROR = 10001;
-constexpr int MLR_REGION_EMPTY = 20000;
-constexpr int MLR_ERROR = -1;
-constexpr int MLR_FAILURE = MLR_ERROR;
+constexpr int MLR_OK                                            = 0;
+constexpr int MLR_SUCCESS                                       = MLR_OK;
+constexpr int MLR_CPU_UNSUPPORTED                               = 1;
+constexpr int MLR_MEMORY_ERROR                                  = 2;
+constexpr int MLR_PARAMETER_ERROR                               = 5000;
+constexpr int MLR_PARAMETER_ERROR_GUARD                         = 5100;
+constexpr int MLR_IMAGE_EMPTY                                   = 10000;
+constexpr int MLR_IMAGE_FORMAT_ERROR                            = 10001;
+constexpr int MLR_REGION_EMPTY                                  = 20000;
+constexpr int MLR_ERROR                                         = -1;
+constexpr int MLR_FAILURE                                       = MLR_ERROR;
 
 enum BoundaryLineStyle {
     BOUNDARY_LINE_SOLID = 0,
@@ -26,10 +29,10 @@ enum BoundaryLineStyle {
     BOUNDARY_LINE_CUSTOM = 5
 };
 
-CV_EXPORTS_W int Initialize(const String& fileName);
-CV_EXPORTS_W int SetGlobalOption(const String& optName, const String& optVal);
-CV_EXPORTS_W int GetGlobalOption(const String& optName, CV_OUT String& optVal);
-CV_EXPORTS_W int Threshold(InputArray src, const int minGray, const int maxGray, CV_OUT Ptr<Region> &region);
+CV_EXPORTS_W int Initialize(const cv::String& fileName);
+CV_EXPORTS_W int SetGlobalOption(const cv::String& optName, const cv::String& optVal);
+CV_EXPORTS_W int GetGlobalOption(const cv::String& optName, CV_OUT cv::String& optVal);
+CV_EXPORTS_W int Threshold(cv::InputArray src, const int minGray, const int maxGray, CV_OUT cv::Ptr<Region> &region);
 
 }
 }

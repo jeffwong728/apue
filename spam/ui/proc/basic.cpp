@@ -16,37 +16,187 @@
 std::vector<SpamRunListPool> BasicImgProc::s_runList_pools_;
 std::vector<SpamRunList> BasicImgProc::s_rgn_pool_;
 
-struct DarkThreshold
+class RunsPerRowCounter
 {
-    DarkThreshold(const uchar lowerGray, const uchar upperGray) : lower(lowerGray), upper(upperGray) {}
-    bool operator()(const uchar grayVal) const { return grayVal < upper; }
-    const uchar lower;
-    const uchar upper;
+public:
+    RunsPerRowCounter(const cv::Mat *const imgMat, std::vector<int> *const numRunsPerRow, const uint32_t minGray, const uint32_t maxGray)
+        : img_mat_(imgMat)
+        , num_runs_per_row_(numRunsPerRow)
+        , min_gray(minGray)
+        , max_gray(maxGray)
+    {}
+
+    void operator()(const tbb::blocked_range<int>& br) const;
+
+private:
+    const cv::Mat *const img_mat_;
+    std::vector<int> *const num_runs_per_row_;
+    const uint32_t min_gray;
+    const uint32_t max_gray;
 };
 
-struct BrightThreshold
+void RunsPerRowCounter::operator()(const tbb::blocked_range<int>& br) const
 {
-    BrightThreshold(const uchar lowerGray, const uchar upperGray) : lower(lowerGray), upper(upperGray) {}
-    bool operator()(const uchar grayVal) const { return grayVal > lower; }
-    const uchar lower;
-    const uchar upper;
+    constexpr int32_t simdSize = 32;
+    const int32_t width = img_mat_->cols;
+    const auto stride = img_mat_->step1();
+    const int32_t regularWidth = width & (-simdSize);
+    const int32_t binWidth = regularWidth + simdSize;
+    std::vector<int8_t, tbb::scalable_allocator<int8_t>> binVec(binWidth + 1);
+
+    vcl::Vec32uc lowThresh(min_gray);
+    vcl::Vec32uc highThresh(max_gray);
+
+    uchar* pRow = img_mat_->data + br.begin() * stride;
+    int *pNumRuns = num_runs_per_row_->data() + br.begin();
+
+    for (int row = br.begin(); row < br.end(); ++row)
+    {
+        int col = 0;
+        int8_t *pBin = binVec.data() + 1;
+        const uchar* pCol = pRow;
+        for (; col < regularWidth; col += simdSize)
+        {
+            vcl::Vec32uc pixelVals;
+            pixelVals.load(pCol);
+
+            vcl::Vec32c binVals = (pixelVals >= lowThresh) & (pixelVals <= highThresh);
+            binVals.store(pBin);
+
+            pBin += simdSize;
+            pCol += simdSize;
+        }
+
+        if (col < width)
+        {
+            vcl::Vec32uc pixelVals;
+            pixelVals.load_partial(width - col, pCol);
+
+            vcl::Vec32c binVals = (pixelVals >= lowThresh) & (pixelVals <= highThresh);
+            binVals.store_partial(width - col, pBin);
+        }
+
+        pBin = binVec.data();
+        for (int n = 0; n < binWidth; n += simdSize)
+        {
+            vcl::Vec32c preVals, curVals;
+            preVals.load(pBin);
+            curVals.load(pBin + 1);
+            *pNumRuns -= vcl::horizontal_add(preVals ^ curVals);
+
+            pBin += simdSize;
+        }
+
+        *pNumRuns >>= 1;
+        pRow += stride;
+        pNumRuns += 1;
+    }
+}
+
+class Thresholder
+{
+public:
+    Thresholder(const cv::Mat *const imgMat, const std::vector<int> *const numRunsPerRow, SpamRunList *const allRuns, const uint32_t minGray, const uint32_t maxGray)
+        : img_mat_(imgMat)
+        , num_runs_per_row_(numRunsPerRow)
+        , all_runs_(allRuns)
+        , min_gray(minGray)
+        , max_gray(maxGray)
+    {}
+
+    void operator()(const tbb::blocked_range<int>& br) const;
+
+private:
+    const cv::Mat *const img_mat_;
+    const std::vector<int> *const num_runs_per_row_;
+    SpamRunList *const all_runs_;
+    const uint32_t min_gray;
+    const uint32_t max_gray;
 };
 
-struct MundaneThreshold
+void Thresholder::operator()(const tbb::blocked_range<int>& br) const
 {
-    MundaneThreshold(const uchar lowerGray, const uchar upperGray) : lower(lowerGray), upper(upperGray) {}
-    bool operator()(const uchar grayVal) const { return grayVal > lower && grayVal < upper; }
-    const uchar lower;
-    const uchar upper;
-};
+    constexpr int32_t simdSize = 32;
+    const int32_t width = img_mat_->cols;
+    const auto stride = img_mat_->step1();
+    const int32_t regularWidth = width & (-simdSize);
+    const int32_t binWidth = regularWidth + simdSize;
+    std::array<int8_t, simdSize> traVec;
+    std::vector<int8_t, tbb::scalable_allocator<int8_t>> binVec(binWidth + 1);
 
-struct SIMDThreshold
-{
-    SIMDThreshold(const uchar lowerGray, const uchar upperGray) : lower(lowerGray), upper(upperGray) {}
-    bool operator()(const uchar grayVal) const { return grayVal > lower; }
-    const uchar lower;
-    const uchar upper;
-};
+    vcl::Vec32uc lowThresh(min_gray);
+    vcl::Vec32uc highThresh(max_gray);
+
+    uchar* pRow = img_mat_->data + br.begin() * stride;
+    const int *pNumRuns = num_runs_per_row_->data() + br.begin();
+    int preNumRuns = (br.begin()>0) ? pNumRuns[-1] : 0;
+    SpamRun *pRun = all_runs_->data() + preNumRuns;
+
+    for (int row = br.begin(); row < br.end(); ++row)
+    {
+        int col = 0;
+        int8_t *pBin = binVec.data() + 1;
+        const uchar* pCol = pRow;
+        for (; col < regularWidth; col += simdSize)
+        {
+            vcl::Vec32uc pixelVals;
+            pixelVals.load(pCol);
+
+            vcl::Vec32c binVals = (pixelVals >= lowThresh) & (pixelVals <= highThresh);
+            binVals.store(pBin);
+
+            pBin += simdSize;
+            pCol += simdSize;
+        }
+
+        if (col < width)
+        {
+            vcl::Vec32uc pixelVals;
+            pixelVals.load_partial(width - col, pCol);
+
+            vcl::Vec32c binVals = (pixelVals >= lowThresh) & (pixelVals <= highThresh);
+            binVals.store_partial(width - col, pBin);
+        }
+
+        bool b = true;
+        pBin = binVec.data();
+        for (int n = 0; n < binWidth; n += simdSize)
+        {
+            vcl::Vec32c preVals, curVals;
+            preVals.load(pBin);
+            curVals.load(pBin + 1);
+            vcl::Vec32c changeVals = preVals ^ curVals;
+            if (vcl::horizontal_add(changeVals))
+            {
+                changeVals.store(traVec.data());
+                for (int i = 0; i < simdSize; ++i)
+                {
+                    if (traVec[i])
+                    {
+                        if (b)
+                        {
+                            pRun->row = row;
+                            pRun->colb = i + n;
+                            b = false;
+                        }
+                        else
+                        {
+                            pRun->cole = i + n;
+                            pRun += 1;
+                            b = true;
+                        }
+                    }
+                }
+            }
+
+            pBin += simdSize;
+        }
+
+        preNumRuns = *pNumRuns;
+        pRow += stride;
+        pNumRuns += 1;
+    }
+}
 
 struct CVPointLesser
 {
@@ -54,214 +204,6 @@ struct CVPointLesser
     {
         return (a.y < b.y) || (a.y == b.y && a.x < b.x);
     }
-};
-
-template <typename Pred>
-class GeneralThresholdPI
-{
-public:
-    GeneralThresholdPI(const cv::Mat &grayImage, const Pred &pred, const int16_t b, const int16_t e)
-        : grayImage_(grayImage), pred_(pred), beg_(b), end_(e) {  }
-
-public:
-    void operator()() const
-    {
-        constexpr int16_t left = 0;
-        const int16_t right = static_cast<int16_t>(grayImage_.cols);
-        const auto stride = grayImage_.step1();
-        const uchar* pRow = grayImage_.data + beg_ * stride;
-
-        for (auto l = beg_; l != end_; ++l)
-        {
-            int16_t cb = -1;
-            const uchar* pPixel = pRow + left;
-            for (int16_t c = left; c < right; ++c) {
-                if (pred_(*pPixel)) {
-                    if (cb < 0) { cb = c; }
-                } else {
-                    if (cb > -1) {
-                        rgn_.emplace_back(l, cb, c); cb = -1;
-                    }
-                }
-                pPixel += 1;
-            }
-
-            pRow += stride;
-
-            if (cb > -1) {
-
-                rgn_.emplace_back(l, cb, right);
-            }
-        }
-    }
-
-public:
-    mutable SpamRunListTBB rgn_;
-    const cv::Mat &grayImage_;
-    const Pred &pred_;
-    const int16_t beg_;
-    const int16_t end_;
-};
-
-template<>
-struct GeneralThresholdPI<SIMDThreshold>
-{
-public:
-    GeneralThresholdPI(const cv::Mat &grayImage, const SIMDThreshold &pred, const int16_t b, const int16_t e)
-        : grayImage_(grayImage), pred_(pred), beg_(b), end_(e) {  }
-
-public:
-    void operator()() const
-    {
-        const int16_t width = static_cast<int16_t>(grayImage_.cols);
-        constexpr int16_t simdSize = 32;
-
-        bool sOk[simdSize] = {false};
-        vcl::Vec32uc lowThresh(pred_.lower);
-        const auto stride = grayImage_.step1();
-        const uchar* pRow = grayImage_.data + beg_ * stride;
-        const int16_t regularWidth = width & (-simdSize);
-
-        vcl::Vec32uc blockPixels;
-        for (auto l = beg_; l != end_; ++l)
-        {
-            int16_t c, cb = -1;
-            const uchar* pPixel = pRow;
-            for (c = 0; c < regularWidth; c += simdSize)
-            {
-                blockPixels.load(pPixel);
-                pPixel += simdSize;
-                vcl::Vec32cb r = blockPixels > lowThresh;
-                auto numBright = vcl::horizontal_count(r);
-
-                if (cb<0 && !numBright)
-                {
-                    continue;
-                }
-
-                if (cb>0 && simdSize == numBright)
-                {
-                    continue;
-                }
-
-                r.store(sOk);
-                for (int16_t i=0; i< simdSize; ++i)
-                {
-                    if (sOk[i]) {
-                        if (cb < 0) { cb = c+i; }
-                    } else {
-                        if (cb > -1) {
-                            rgn_.emplace_back(l, cb, c+i); cb = -1;
-                        }
-                    }
-                }
-            }
-
-            for (; c < width; ++c)
-            {
-                if (pred_(*pPixel)) {
-                    if (cb < 0) { cb = c; }
-                } else {
-                    if (cb > -1) {
-                        rgn_.emplace_back(l, cb, c); cb = -1;
-                    }
-                }
-                pPixel += 1;
-            }
-
-            pRow += stride;
-
-            if (cb > -1) {
-                rgn_.emplace_back(l, cb, width);
-            }
-        }
-    }
-
-public:
-    mutable SpamRunListTBB rgn_;
-    const cv::Mat &grayImage_;
-    const SIMDThreshold &pred_;
-    const int16_t beg_;
-    const int16_t end_;
-};
-
-template <typename Pred>
-class ThresholdTBBReducer
-{
-public:
-    ThresholdTBBReducer(const cv::Mat &grayImage, const Pred &pred, SpamRun *beg, const int cap)
-        : grayImage_(grayImage), pred_(pred), beg_(beg), capacity_(cap), size_(0) {  }
-
-    ThresholdTBBReducer(ThresholdTBBReducer& x, tbb::split) 
-        : grayImage_(x.grayImage_)
-        , pred_(x.pred_)
-        , beg_(x.beg_ + x.capacity_/2)
-        , capacity_(x.capacity_ - x.capacity_ / 2)
-        , size_(0)
-    {
-        x.capacity_ = x.capacity_ / 2;
-    }
-
-    void join(const ThresholdTBBReducer& y) 
-    { 
-        const int remainSpace = capacity_ - size_;
-        if (remainSpace<y.size_)
-        {
-            ::A_memmove(beg_+ size_, y.beg_, y.size_*sizeof(SpamRun));
-        }
-        else
-        {
-            ::A_memcpy(beg_ + size_, y.beg_, y.size_ * sizeof(SpamRun));
-        }
-
-        capacity_ += y.capacity_;
-        size_ += y.size_;
-    }
-
-    void operator()(const tbb::blocked_range<int16_t> &r)
-    {
-        constexpr int16_t left = 0;
-        const int16_t right = static_cast<int16_t>(grayImage_.cols);
-
-        auto pRuns = beg_ + size_;
-        int numRuns = 0;
-
-        const auto stride = grayImage_.step1();
-        const uchar* pRow = grayImage_.data + r.begin() * stride;
-
-        const auto end = r.end();
-        for (auto l = r.begin(); l != end; ++l)
-        {
-            int16_t cb = -1;
-            const uchar* pPixel = pRow + left;
-            for (int16_t c = left; c < right; ++c) {
-                if (pred_(*pPixel)) {
-                    if (cb < 0) { cb = c; }
-                }
-                else {
-                    if (cb > -1) {
-                        pRuns[numRuns].row = l; pRuns[numRuns].colb = cb; pRuns[numRuns].cole = c; numRuns += 1; cb = -1;
-                    }
-                }
-                pPixel += 1;
-            }
-
-            pRow += stride;
-
-            if (cb > -1) {
-                pRuns[numRuns].row = l; pRuns[numRuns].colb = cb; pRuns[numRuns].cole = right; numRuns += 1;
-            }
-        }
-
-        size_ += numRuns;
-    }
-
-public:
-    const cv::Mat &grayImage_;
-    const Pred &pred_;
-    SpamRun *beg_;
-    int capacity_;
-    int size_;
 };
 
 struct RunLengthLabelEncoder
@@ -347,79 +289,6 @@ public:
     const int16_t end_;
 };
 
-template <typename Pred>
-SPSpamRgn ThresholdPI_impl(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
-{
-    int dph = grayImage.depth();
-    int cnl = grayImage.channels();
-    SPSpamRgn rgn = std::make_shared<SpamRgn>();
-    SpamRunList &runList = rgn->GetData();
-
-    if (CV_8U == dph && 1 == cnl)
-    {
-        Pred pred(lowerGray, upperGray);
-        const int numTasks = std::min(10, static_cast<int>(BasicImgProc::s_runList_pools_.size()));
-        const int rowStep = grayImage.rows / numTasks;
-        boost::container::static_vector<GeneralThresholdPI<Pred>, 10> fObjs;
-        for (int t = 0; t < numTasks - 1; ++t)
-        {
-            fObjs.emplace_back(grayImage, pred, rowStep*t, rowStep*(t + 1));
-        }
-        fObjs.emplace_back(grayImage, pred, rowStep*(numTasks - 1), grayImage.rows);
-
-        switch (numTasks)
-        {
-        case 1: fObjs[0](); break;
-        case 2: tbb::parallel_invoke(fObjs[0], fObjs[1]); break;
-        case 4: tbb::parallel_invoke(fObjs[0], fObjs[1], fObjs[2], fObjs[3]); break;
-        case 6: tbb::parallel_invoke(fObjs[0], fObjs[1], fObjs[2], fObjs[3], fObjs[4], fObjs[5]); break;
-        case 8: tbb::parallel_invoke(fObjs[0], fObjs[1], fObjs[2], fObjs[3], fObjs[4], fObjs[5], fObjs[6], fObjs[7]); break;
-        case 10: tbb::parallel_invoke(fObjs[0], fObjs[1], fObjs[2], fObjs[3], fObjs[4], fObjs[5], fObjs[6], fObjs[7], fObjs[8], fObjs[9]); break;
-        default: break;
-        }
-
-        SpamRunListTBB::size_type numRuns = 0;
-        for (const auto &fObj : fObjs)
-        {
-            numRuns += fObj.rgn_.size();
-        }
-
-        runList.resize(numRuns);
-        auto pDest = runList.data();
-        for (const auto &fObj : fObjs)
-        {
-            ::A_memcpy(pDest, fObj.rgn_.data(), fObj.rgn_.size() * sizeof(fObj.rgn_.front()));
-            pDest += fObj.rgn_.size();
-        }
-    }
-
-    return rgn;
-}
-
-template <typename Pred>
-SPSpamRgn ThresholdTBBReduce_impl(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
-{
-    int dph = grayImage.depth();
-    int cnl = grayImage.channels();
-    SPSpamRgn rgn = std::make_shared<SpamRgn>();
-    SpamRunList &runList = rgn->GetData();
-
-    if (CV_8U == dph && 1 == cnl)
-    {
-        runList.swap(BasicImgProc::s_rgn_pool_.back());
-        BasicImgProc::s_rgn_pool_.pop_back();
-        runList.resize(1024*1024);
-
-        Pred pred(lowerGray, upperGray);
-        ThresholdTBBReducer reducer(grayImage, pred, runList.data(), static_cast<int>(runList.capacity()));
-        const int rowStep = grayImage.rows / static_cast<int>(BasicImgProc::s_runList_pools_.size());
-        tbb::parallel_deterministic_reduce(tbb::blocked_range<int16_t>(0, static_cast<int16_t>(grayImage.rows), rowStep), reducer);
-        runList.resize(reducer.size_);
-    }
-
-    return rgn;
-}
-
 void BasicImgProc::Initialize(const int numWorkerThread)
 {
     constexpr int cBlocks   = 30;
@@ -469,20 +338,45 @@ cv::Mat BasicImgProc::Binarize(const cv::Mat &grayImage, const uchar lowerGray, 
     return binImg;
 }
 
+int BasicImgProc::GetNumRunsOfBinaryImage(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
+{
+    std::vector<int> numRunsPerRow(grayImage.rows);
+    RunsPerRowCounter numRunsCounter(&grayImage, &numRunsPerRow, lowerGray, upperGray);
+    tbb::parallel_for(tbb::blocked_range<int>(0, grayImage.rows), numRunsCounter);
+
+    for (int n = 1; n < grayImage.rows; ++n)
+    {
+        numRunsPerRow[n] += numRunsPerRow[n - 1];
+    }
+
+    return numRunsPerRow.back();
+}
+
 SPSpamRgn BasicImgProc::Threshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray)
 {
-    if (0 == lowerGray)
+    int dph = grayImage.depth();
+    int cnl = grayImage.channels();
+    SPSpamRgn rgn = std::make_shared<SpamRgn>();
+    SpamRunList &runList = rgn->GetData();
+
+    if (CV_8U == dph && 1 == cnl)
     {
-        return ThresholdPI_impl<DarkThreshold>(grayImage, lowerGray, upperGray);
+        std::vector<int> numRunsPerRow(grayImage.rows);
+        RunsPerRowCounter numRunsCounter(&grayImage, &numRunsPerRow, lowerGray, upperGray);
+        tbb::parallel_for(tbb::blocked_range<int>(0, grayImage.rows), numRunsCounter);
+
+        for (int n = 1; n < grayImage.rows; ++n)
+        {
+            numRunsPerRow[n] += numRunsPerRow[n - 1];
+        }
+
+        SpamRunList allRuns(numRunsPerRow.back());
+        Thresholder thresher(&grayImage, &numRunsPerRow, &allRuns, lowerGray, upperGray);
+        tbb::parallel_for(tbb::blocked_range<int>(0, grayImage.rows), thresher);
+        runList.swap(allRuns);
     }
-    else if (255 == upperGray)
-    {
-        return ThresholdPI_impl<SIMDThreshold>(grayImage, lowerGray, upperGray);
-    }
-    else
-    {
-        return ThresholdPI_impl<MundaneThreshold>(grayImage, lowerGray, upperGray);
-    }
+
+    return rgn;
 }
 
 SPSpamRgnVector BasicImgProc::Connect(const cv::Mat &labels, const int numLabels)
