@@ -1,3 +1,5 @@
 call setEnv.bat
-cd /D "D:\Program Files\depends22"
-start depends.exe
+cd msvs
+cd opencv
+cmake --open .
+@rem %comspec% /k

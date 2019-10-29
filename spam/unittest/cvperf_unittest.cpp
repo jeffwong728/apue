@@ -5,6 +5,7 @@
 #include <boost/test/included/unit_test.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/ximgproc.hpp>
 #include <tbb/tbb.h>
 
 struct TestCVPerfConfig
@@ -54,7 +55,7 @@ BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0, *boost::unit_test::enable_
     BOOST_TEST_MESSAGE("CV in range spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 }
 
-BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0, *boost::unit_test::enable_if<true>())
+BOOST_AUTO_TEST_CASE(test_CV_buildPyramid_Performance_0, *boost::unit_test::enable_if<false>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -409,6 +410,40 @@ BOOST_AUTO_TEST_CASE(test_CV_ORB, *boost::unit_test::enable_if<false>())
             goodMatches.push_back(matches[i][0]);
         }
     }
+}
+
+BOOST_AUTO_TEST_CASE(test_CV_ximage_rl_threshold, *boost::unit_test::enable_if<true>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    cv::Mat binImg;
+    tbb::tick_count t1 = tbb::tick_count::now();
+    cv::ximgproc::rl::threshold(grayImg, binImg, 150, cv::THRESH_BINARY);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV ximage rl threshold spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(binImg.rows, 234795);
+}
+
+BOOST_AUTO_TEST_CASE(test_CV_ximage_rl_OPEN_ELLIPSE, *boost::unit_test::enable_if<true>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    cv::Mat binImg;
+    cv::ximgproc::rl::threshold(grayImg, binImg, 150, cv::THRESH_BINARY);
+
+    cv::Mat dst;
+    tbb::tick_count t1 = tbb::tick_count::now();
+    cv::Mat kernel = cv::ximgproc::rl::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(25, 25));
+    cv::ximgproc::rl::morphologyEx(binImg, dst, cv::MORPH_CLOSE, kernel);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("CV ximage rl morphologyex open ELLIPSE spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(binImg.rows, 234795);
+
+    grayImg = 0;
+    cv::ximgproc::rl::paint(grayImg, dst, cv::Scalar(255, 255, 255, 255));
+    UnitTestHelper::WriteImage(grayImg, "mista_rl_morphologyex_open_ellipse.png");
 }
 
 BOOST_AUTO_TEST_CASE(test_Solve)
