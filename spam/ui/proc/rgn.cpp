@@ -20,6 +20,84 @@ namespace
         0xFF800000, 0xFFFFFF00, 0xFF808000, 0xFF008000, 0xFF00FFFF, 0xFF008080, 0xFF000080, 0xFFFF00FF, 0xFF800080 };
 };
 
+//Find the root of the tree of node i
+template<typename LabelT>
+inline static
+LabelT findRoot(const LabelT *P, LabelT i) {
+    LabelT root = i;
+    while (P[root] < root) {
+        root = P[root];
+    }
+    return root;
+}
+
+//Make all nodes in the path of node i point to root
+template<typename LabelT>
+inline static
+void setRoot(LabelT *P, LabelT i, LabelT root) {
+    while (P[i] < i) {
+        LabelT j = P[i];
+        P[i] = root;
+        i = j;
+    }
+    P[i] = root;
+}
+
+//Find the root of the tree of the node i and compress the path in the process
+template<typename LabelT>
+inline static
+LabelT find(LabelT *P, LabelT i) {
+    LabelT root = findRoot(P, i);
+    setRoot(P, i, root);
+    return root;
+}
+
+//unite the two trees containing nodes i and j and return the new root
+template<typename LabelT>
+inline static
+LabelT set_union(LabelT *P, LabelT i, LabelT j) {
+    LabelT root = findRoot(P, i);
+    if (i != j) {
+        LabelT rootj = findRoot(P, j);
+        if (root > rootj) {
+            root = rootj;
+        }
+        setRoot(P, j, root);
+    }
+    setRoot(P, i, root);
+    return root;
+}
+
+//Flatten the Union Find tree and relabel the components
+template<typename LabelT>
+inline static
+LabelT flattenL(LabelT *P, LabelT length) {
+    LabelT k = 1;
+    for (LabelT i = 1; i < length; ++i) {
+        if (P[i] < i) {
+            P[i] = P[P[i]];
+        }
+        else {
+            P[i] = k; k = k + 1;
+        }
+    }
+    return k;
+}
+
+template<typename LabelT>
+inline static
+void flattenL(LabelT *P, const int start, const int nElem, LabelT& k) {
+    for (int i = start; i < start + nElem; ++i) {
+        if (P[i] < i) {//node that point to root
+            P[i] = P[P[i]];
+        }
+        else { //for root node
+            P[i] = k;
+            k = k + 1;
+        }
+    }
+}
+
 struct RDEntry
 {
     RDEntry(const int x, const int y, const int code, const int qi)
@@ -44,7 +122,7 @@ using RDListList = std::vector<RDList, tbb::scalable_allocator<RDList>>;
 class RunLengthRDEncoder
 {
 public:
-    RunLengthRDEncoder(const SpamRunList &rgn, const RowRangeList &rranges) : rgn_runs_(rgn), row_ranges_(rranges) {}
+    RunLengthRDEncoder(const SpamRunList &rgn, const RowRunStartList &rranges) : rgn_runs_(rgn), row_ranges_(rranges) {}
     RunLengthRDEncoder(RunLengthRDEncoder& x, tbb::split) : rgn_runs_(x.rgn_runs_), row_ranges_(x.row_ranges_) {}
 
 public:
@@ -54,7 +132,7 @@ public:
 
 public:
     const SpamRunList &rgn_runs_;
-    const RowRangeList &row_ranges_;
+    const RowRunStartList &row_ranges_;
     RDList rd_list_;
 };
 
@@ -63,16 +141,17 @@ void RunLengthRDEncoder::operator()(const tbb::blocked_range<int>& br)
     std::vector<int, tbb::scalable_allocator<int>> P_BUFFER;
     std::vector<int, tbb::scalable_allocator<int>> C_BUFFER;
     constexpr int Infinity = std::numeric_limits<int>::max();
-    const int numRuns = static_cast<int>(row_ranges_.size());
-    const int lBeg = rgn_runs_[row_ranges_[br.begin()].beg].row;
-    const int lEnd = (br.end() < numRuns) ? rgn_runs_[row_ranges_[br.end()].beg].row - 1 : rgn_runs_[row_ranges_[br.end() - 1].beg].row + 1;
+    const int numRuns = static_cast<int>(row_ranges_.size())-1;
+    const int lBeg = rgn_runs_[row_ranges_[br.begin()]].row;
+    const int lEnd = (br.end() < numRuns) ? rgn_runs_[row_ranges_[br.end()]].row - 1 : rgn_runs_[row_ranges_[br.end() - 1]].row + 1;
 
     if (br.begin() > 0)
     {
-        const RowRange &rr = row_ranges_[br.begin() - 1];
-        if (rgn_runs_[rr.beg].row == (lBeg - 1))
+        const int rBeg = row_ranges_[br.begin() - 1];
+        const int rEnd = row_ranges_[br.begin()];
+        if (rgn_runs_[rBeg].row == (lBeg - 1))
         {
-            for (int rIdx = rr.beg; rIdx < rr.end; ++rIdx)
+            for (int rIdx = rBeg; rIdx < rEnd; ++rIdx)
             {
                 P_BUFFER.push_back(rgn_runs_[rIdx].colb);
                 P_BUFFER.push_back(rgn_runs_[rIdx].cole);
@@ -87,10 +166,11 @@ void RunLengthRDEncoder::operator()(const tbb::blocked_range<int>& br)
     {
         if (rIdx < numRuns)
         {
-            const RowRange &rr = row_ranges_[rIdx];
-            if (l == rgn_runs_[rr.beg].row)
+            const int rBeg = row_ranges_[rIdx];
+            const int rEnd = row_ranges_[rIdx+1];
+            if (l == rgn_runs_[rBeg].row)
             {
-                for (int runIdx = rr.beg; runIdx < rr.end; ++runIdx)
+                for (int runIdx = rBeg; runIdx < rEnd; ++runIdx)
                 {
                     C_BUFFER.push_back(rgn_runs_[runIdx].colb);
                     C_BUFFER.push_back(rgn_runs_[runIdx].cole);
@@ -276,121 +356,6 @@ void RunLengthRDEncoder::link()
         }
     }
 }
-
-class AdjacencyBuilderTBB
-{
-public:
-    AdjacencyBuilderTBB(const SpamRunList &allRuns, const RowRangeList &rowRanges, AdjacencyList &adjacencyList)
-        : allRuns_(allRuns), rowRanges_(rowRanges), adjacencyList_(adjacencyList) {}
-
-public:
-    void operator()(const tbb::blocked_range<int> &r) const
-    {
-        int numRows = r.end() - r.begin();
-        if (1 < numRows)
-        {
-            const int safeBeg = r.begin();
-            const int safeEnd = r.end() - 1;
-            for (auto row = safeBeg; row != safeEnd; ++row)
-            {
-                const RowRange &rowRange = rowRanges_[row];
-                const RowRange &nextRowRange = rowRanges_[row + 1];
-
-                if ((rowRange.row + 1) == nextRowRange.row)
-                {
-                    int nextBegIdx = nextRowRange.beg;
-                    const int nextEndIdx = nextRowRange.end;
-                    for (int runIdx = rowRange.beg; runIdx != rowRange.end; ++runIdx)
-                    {
-                        bool metInter = false;
-                        for (int nextRunIdx = nextBegIdx; nextRunIdx != nextEndIdx; ++nextRunIdx)
-                        {
-                            if (IsRunColumnIntersection(allRuns_[runIdx], allRuns_[nextRunIdx]))
-                            {
-                                metInter = true;
-                                nextBegIdx = nextRunIdx;
-                                adjacencyList_[runIdx].push_back(nextRunIdx);
-                                adjacencyList_[nextRunIdx].push_back(runIdx);
-                            }
-                            else if (metInter)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (numRows)
-        {
-            processFirstRow(r.begin());
-            processLastRow(r.end() - 1);
-        }
-    }
-
-private:
-    void processFirstRow(const int firstRow) const
-    {
-        const RowRange &rowRange = rowRanges_[firstRow];
-        const RowRange &prevRowRange = rowRanges_[firstRow - 1];
-        if ((rowRange.row - 1) == prevRowRange.row)
-        {
-            int prevBegIdx = prevRowRange.beg;
-            const int prevEndIdx = prevRowRange.end;
-            for (int runIdx = rowRange.beg; runIdx != rowRange.end; ++runIdx)
-            {
-                bool metInter = false;
-                for (int prevRunIdx = prevBegIdx; prevRunIdx != prevEndIdx; ++prevRunIdx)
-                {
-                    if (IsRunColumnIntersection(allRuns_[runIdx], allRuns_[prevRunIdx]))
-                    {
-                        metInter = true;
-                        prevBegIdx = prevRunIdx;
-                        adjacencyList_[runIdx].push_back(prevRunIdx);
-                    }
-                    else if (metInter)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    void processLastRow(const int lastRow) const
-    {
-        const RowRange &rowRange = rowRanges_[lastRow];
-        const RowRange &nextRowRange = rowRanges_[lastRow + 1];
-        if ((rowRange.row + 1) == nextRowRange.row)
-        {
-            int nextBegIdx = nextRowRange.beg;
-            const int nextEndIdx = nextRowRange.end;
-            for (int runIdx = rowRange.beg; runIdx != rowRange.end; ++runIdx)
-            {
-                bool metInter = false;
-                for (int nextRunIdx = nextBegIdx; nextRunIdx != nextEndIdx; ++nextRunIdx)
-                {
-                    if (IsRunColumnIntersection(allRuns_[runIdx], allRuns_[nextRunIdx]))
-                    {
-                        metInter = true;
-                        nextBegIdx = nextRunIdx;
-                        adjacencyList_[runIdx].push_back(nextRunIdx);
-                    }
-                    else if (metInter)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-private:
-    const SpamRunList &allRuns_;
-    const RowRangeList &rowRanges_;
-    AdjacencyList &adjacencyList_;
-};
 
 class RegionConnectorPI
 {
@@ -775,49 +740,119 @@ int SpamRgn::NumHoles() const
 
 SPSpamRgnVector SpamRgn::Connect() const
 {
-    const AdjacencyList &al = GetAdjacencyList();
-    std::vector<uint8_t> met(al.size());
-    std::vector<int> runStack;
-    std::vector<std::vector<int>> rgnIdxs;
-    const int numRuns = static_cast<int>(al.size());
-    for (int n=0; n<numRuns; ++n)
+    SPSpamRgnVector rgs = std::make_shared<SpamRgnVector>();
+    if (data_.empty())
     {
-        if (!met[n])
+        return rgs;
+    }
+
+    RowRunStartList rowRanges;
+    int maxCol = GetRowRanges(rowRanges) + 2;
+
+    std::vector<SpamRun *> rowRunPtrs(maxCol);
+    std::vector<uint16_t>  vecP(data_.size() + 1);
+    SpamRun **vRowRunPtrs = rowRunPtrs.data() + 1;
+
+    uint16_t lunique = 1;
+    uint16_t *P = vecP.data();
+    int rowPrev = std::numeric_limits<int>::min();
+
+    SpamRun *pRuns = data_.data();
+    const int *pRowRunStarts = rowRanges.data();
+    const int numRows = static_cast<int>(rowRanges.size() - 1);
+    for (int row = 0; row < numRows; ++row)
+    {
+        SpamRun *pRowRunBeg = pRuns;
+        SpamRun *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
+
+        if ((rowPrev+1) == pRuns->row)
         {
-            rgnIdxs.emplace_back();
-            runStack.push_back(n);
-            while (!runStack.empty())
+            for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
             {
-                const int seedRun = runStack.back();
-                runStack.pop_back();
-                if (!met[seedRun])
+                int col = pRun->colb - 1;
+                while (!vRowRunPtrs[col] && col <= pRun->cole)
                 {
-                    met[seedRun] = 1;
-                    rgnIdxs.back().push_back(seedRun);
-                    for (const int a : al[seedRun])
+                    col += 1;
+                }
+
+                if (col > pRun->cole)
+                {
+                    pRun->label = lunique;
+                    P[lunique] = lunique;
+                    lunique = lunique + 1;
+                }
+                else
+                {
+                    uint16_t lab = vRowRunPtrs[col]->label;
+                    col = vRowRunPtrs[col]->cole + 1;
+
+                    for (; col <= pRun->cole; ++col)
                     {
-                        runStack.push_back(a);
+                        if (vRowRunPtrs[col])
+                        {
+                            lab = set_union(P, lab, vRowRunPtrs[col]->label);
+                            col = vRowRunPtrs[col]->cole;
+                        }
                     }
+
+                    pRun->label = lab;
                 }
             }
         }
+        else
+        {
+            for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                pRun->label = lunique;
+                P[lunique] = lunique;
+                lunique = lunique + 1;
+            }
+        }
+
+        std::memset(rowRunPtrs.data(), 0, maxCol*sizeof(SpamRun *));
+        for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+        {
+            for (int col = pRun->colb; col < pRun->cole; ++col)
+            {
+                vRowRunPtrs[col] = pRun;
+            }
+        }
+
+        rowPrev = pRuns->row;
+        pRuns = pRowRunEnd;
+        pRowRunStarts += 1;
     }
 
-    tbb::parallel_for(size_t(0), rgnIdxs.size(), [&rgnIdxs](size_t i) { std::sort(rgnIdxs[i].begin(), rgnIdxs[i].end()); });
+    uint16_t nLabels = flattenL(P, lunique);
+    rgs->resize(nLabels - 1);
 
-    SPSpamRgnVector rgs = std::make_shared<SpamRgnVector>();
-    rgs->resize(rgnIdxs.size());
-    const int numRgns = static_cast<int>(rgnIdxs.size());
-    for (int r = 0; r < numRgns; ++r)
+    pRuns = data_.data();
+    pRowRunStarts = rowRanges.data();
+
+    std::vector<int> numRunsOfRgn(nLabels);
+    for (int row = 0; row < numRows; ++row)
     {
-        SpamRgn &rgn = (*rgs)[r];
-        const std::vector<int> &rgnIdx = rgnIdxs[r];
-        const int numRgnRuns = static_cast<int>(rgnIdx.size());
-        rgn.data_.resize(numRgnRuns);
-        for (int rr = 0; rr < numRgnRuns; ++rr)
+        SpamRun *pRowRunBeg = pRuns;
+        SpamRun *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
+        for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
         {
-            rgn.data_[rr] = data_[rgnIdx[rr]];
+            pRun->label = P[pRun->label];
+            numRunsOfRgn[pRun->label] += 1;
         }
+
+        pRuns = pRowRunEnd;
+        pRowRunStarts += 1;
+    }
+
+    int rgnIdx = 1;
+    for (SpamRgn &rgn : *rgs)
+    {
+        rgn.GetData().reserve(numRunsOfRgn[rgnIdx++]);
+    }
+
+    for (const auto &run : data_)
+    {
+        (*rgs)[run.label - 1].GetData().emplace_back(run);
     }
 
     return rgs;
@@ -875,22 +910,6 @@ bool SpamRgn::Contain(const int16_t r, const int16_t c) const
     return false;
 }
 
-const AdjacencyList &SpamRgn::GetAdjacencyList() const
-{
-    if (adjacencyList_==boost::none)
-    {
-        adjacencyList_.emplace(data_.size());
-        if (!data_.empty())
-        {
-            const RowRangeList &rowRanges = GetRowRanges();
-            AdjacencyBuilderTBB adjBuilder(data_, rowRanges, *adjacencyList_);
-            tbb::parallel_for(tbb::blocked_range<int>(1, static_cast<int>(rowRanges.size() - 1)), adjBuilder);
-        }
-    }
-
-    return *adjacencyList_;
-}
-
 const Geom::PathVector &SpamRgn::GetPath() const
 {
     if (path_==boost::none)
@@ -915,11 +934,12 @@ const RegionContourCollection &SpamRgn::GetContours() const
     return *contours_;
 }
 
-void SpamRgn::GetRowRanges(RowRangeList &rRanges) const
+int SpamRgn::GetRowRanges(RowRunStartList &rBegs) const
 {
+    int maxCol = std::numeric_limits<int>::min();
     if (!data_.empty())
     {
-        rRanges.reserve(data_.size());
+        rBegs.reserve(data_.size()+1);
 
         int begIdx = 0;
         int16_t currentRow = data_.front().row;
@@ -929,48 +949,21 @@ void SpamRgn::GetRowRanges(RowRangeList &rRanges) const
         {
             if (data_[run].row != currentRow)
             {
-                rRanges.emplace_back(currentRow, begIdx, run);
+                rBegs.emplace_back(begIdx);
                 begIdx = run;
                 currentRow = data_[run].row;
             }
-        }
-
-        rRanges.emplace_back(currentRow, begIdx, numRuns);
-    }
-}
-
-const RowRangeList &SpamRgn::GetRowRanges() const
-{
-    if (rowRanges_== boost::none)
-    {
-        rowRanges_.emplace();
-        if (!data_.empty())
-        {
-            constexpr int Infinity = std::numeric_limits<int>::max();
-            constexpr int NegInfinity = std::numeric_limits<int>::min();
-            rowRanges_->reserve(data_.size() + 2);
-            rowRanges_->emplace_back(NegInfinity, Infinity, Infinity);
-
-            int begIdx = 0;
-            int16_t currentRow = data_.front().row;
-
-            const int numRuns = static_cast<int>(data_.size());
-            for (int run = 0; run < numRuns; ++run)
+            if (data_[run].cole > maxCol)
             {
-                if (data_[run].row != currentRow)
-                {
-                    rowRanges_->emplace_back(currentRow, begIdx, run);
-                    begIdx = run;
-                    currentRow = data_[run].row;
-                }
+                maxCol = data_[run].cole;
             }
-
-            rowRanges_->emplace_back(currentRow, begIdx, numRuns);
-            rowRanges_->emplace_back(Infinity, Infinity, Infinity);
         }
+
+        rBegs.emplace_back(begIdx);
+        rBegs.emplace_back(numRuns);
     }
 
-    return *rowRanges_;
+    return maxCol;
 }
 
 void SpamRgn::ClearCacheData()
@@ -981,7 +974,6 @@ void SpamRgn::ClearCacheData()
     contours_       = boost::none;
     contours_       = boost::none;
     rowRanges_      = boost::none;
-    adjacencyList_  = boost::none;
     centroid_       = boost::none;
     minBox_         = boost::none;
     minCircle_      = boost::none;
@@ -989,26 +981,6 @@ void SpamRgn::ClearCacheData()
 
 SPSpamRgnVector SpamRgn::ConnectMT() const
 {
-    const RowRangeList &rowRanges = GetRowRanges();
-    const int numTasks = std::min(10, static_cast<int>(BasicImgProc::GetNumWorkers()));
-    const int averageRunsPerTask = GetNumRuns() / numTasks;
-    boost::container::static_vector<std::pair<int, int>, 10> taskRuns;
-
-    int cRuns = 0;
-    int lastRun = 0;
-    const int vlaidRowIndexEnd = static_cast<int>(rowRanges.size())-1;
-    for (int rowIndex=1; rowIndex<vlaidRowIndexEnd; ++rowIndex)
-    {
-        const auto &rowRange = rowRanges[rowIndex];
-        cRuns += (rowRange.end - rowRange.beg);
-        if (cRuns > averageRunsPerTask)
-        {
-            taskRuns.emplace_back(lastRun, rowRange.end);
-            lastRun = rowRange.end;
-        }
-    }
-    taskRuns.emplace_back(lastRun, GetNumRuns());
-
     return std::make_shared<SpamRgnVector>();
 }
 
@@ -1110,12 +1082,12 @@ RD_LIST RunTypeDirectionEncoder::encode() const
         return rd_list;
     }
 
-    RowRangeList rowRanges;
+    RowRunStartList rowRanges;
     rgn_.GetRowRanges(rowRanges);
 
     RunLengthRDEncoder rlEncoder(rgn_.GetData(), rowRanges);
     rlEncoder.rd_list_.reserve(rgn_.GetData().size()*2);
-    rlEncoder(tbb::blocked_range<int>(0, static_cast<int>(rowRanges.size())));
+    rlEncoder(tbb::blocked_range<int>(0, static_cast<int>(rowRanges.size()-1)));
     rlEncoder.link();
 
     rd_list.reserve(rlEncoder.rd_list_.size()+1);

@@ -31,15 +31,6 @@ union SpamRun
     };
 };
 
-struct RowRange
-{
-    RowRange() : row(0), beg(0), end(0) {}
-    RowRange(const int r, const int b, const int e) : row(r), beg(b), end(e) {}
-    int row;
-    int beg;
-    int end;
-};
-
 struct RD_LIST_ENTRY
 {
     RD_LIST_ENTRY(const int x, const int y, const int code, const int qi) : X(x), Y(y), CODE(code), LINK(0), W_LINK(0), QI(qi), FLAG(0) {}
@@ -63,7 +54,7 @@ using RD_LIST = std::vector<RD_LIST_ENTRY>;
 using RD_CONTOUR = std::vector<cv::Point, tbb::scalable_allocator<cv::Point>>;
 using RD_CONTOUR_LIST = std::vector<RD_CONTOUR, tbb::scalable_allocator<RD_CONTOUR>>;
 using SpamRunList = std::vector<SpamRun, tbb::scalable_allocator<SpamRun>>;
-using RowRangeList = std::vector<RowRange>;
+using RowRunStartList = std::vector<int>;
 
 struct SpamContour
 {
@@ -114,11 +105,9 @@ public:
     SPSpamRgnVector Connect() const;
     cv::Rect BoundingBox() const;
     bool Contain(const int16_t r, const int16_t c) const;
-    const AdjacencyList &GetAdjacencyList() const;
     const Geom::PathVector &GetPath() const;
     const RegionContourCollection &GetContours() const;
-    const RowRangeList &GetRowRanges() const;
-    void GetRowRanges(RowRangeList &rRanges) const;
+    int GetRowRanges(RowRunStartList &rBegs) const;
     uint32_t GetColor() const { return color_; }
     uint8_t  GetRed() const { return static_cast<uint8_t>(0xFF & color_); }
     uint8_t  GetGreen() const { return static_cast<uint8_t>(0xFF & color_ >> 8); }
@@ -133,7 +122,7 @@ private:
     static bool IsPointInside(const Geom::PathVector &pv, const Geom::Point &pt);
 
 private:
-    SpamRunList data_;
+    mutable SpamRunList data_;
     uint32_t             color_;
     mutable boost::optional<double>                   area_;
     mutable boost::optional<cv::Point2d>              centroid_;
@@ -142,8 +131,7 @@ private:
     mutable boost::optional<Geom::Circle>             minCircle_;
     mutable boost::optional<Geom::PathVector>         path_;
     mutable boost::optional<RegionContourCollection>  contours_;
-    mutable boost::optional<RowRangeList>             rowRanges_;
-    mutable boost::optional<AdjacencyList>            adjacencyList_;
+    mutable boost::optional<RowRunStartList>          rowRanges_;
 };
 
 class PointSet : public std::vector<cv::Point>

@@ -55,288 +55,22 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_Area)
     rgn.clear();
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_Empty)
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_2, *boost::unit_test::enable_if<true>())
 {
     SpamRgn rgn;
-    const RowRangeList &rrl = rgn.GetRowRanges();
-    BOOST_REQUIRE_EQUAL(rrl.size(), 0);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_0)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 1, 5);
-    const RowRangeList &rrl = rgn.GetRowRanges();
-    constexpr int Infinity    = std::numeric_limits<int>::max();
-    constexpr int NegInfinity = std::numeric_limits<int>::min();
-    BOOST_REQUIRE_EQUAL(rrl.size(), 3);
-    BOOST_CHECK_EQUAL(rrl[0].row, NegInfinity);
-    BOOST_CHECK_EQUAL(rrl[0].beg, Infinity);
-    BOOST_CHECK_EQUAL(rrl[0].end, Infinity);
-    BOOST_CHECK_EQUAL(rrl[1].row, 0);
-    BOOST_CHECK_EQUAL(rrl[1].beg, 0);
-    BOOST_CHECK_EQUAL(rrl[1].end, 1);
-    BOOST_CHECK_EQUAL(rrl[2].row, Infinity);
-    BOOST_CHECK_EQUAL(rrl[2].beg, Infinity);
-    BOOST_CHECK_EQUAL(rrl[2].end, Infinity);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_1)
-{
-    SpamRgn rgn;
-    rgn.AddRun(1, 1, 5);
-    rgn.AddRun(1, 7, 9);
-    rgn.AddRun(3, 7, 9);
-    const RowRangeList &rrl = rgn.GetRowRanges();
-    constexpr int Infinity = std::numeric_limits<int>::max();
-    constexpr int NegInfinity = std::numeric_limits<int>::min();
-    BOOST_REQUIRE_EQUAL(rrl.size(), 4);
-    BOOST_CHECK_EQUAL(rrl[0].row, NegInfinity);
-    BOOST_CHECK_EQUAL(rrl[0].beg, Infinity);
-    BOOST_CHECK_EQUAL(rrl[0].end, Infinity);
-    BOOST_CHECK_EQUAL(rrl[1].row, 1);
-    BOOST_CHECK_EQUAL(rrl[1].beg, 0);
-    BOOST_CHECK_EQUAL(rrl[1].end, 2);
-    BOOST_CHECK_EQUAL(rrl[2].row, 3);
-    BOOST_CHECK_EQUAL(rrl[2].beg, 2);
-    BOOST_CHECK_EQUAL(rrl[2].end, 3);
-    BOOST_CHECK_EQUAL(rrl[3].row, Infinity);
-    BOOST_CHECK_EQUAL(rrl[3].beg, Infinity);
-    BOOST_CHECK_EQUAL(rrl[3].end, Infinity);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_Empty)
-{
-    SpamRgn rgn;
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 0);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_1_Row_0)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 5);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 1);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 0);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_1_Row_1)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 5);
-    rgn.AddRun(0, 7, 10);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 2);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 0);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 0);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_1_Row_2)
-{
-    SpamRgn rgn;
-    rgn.AddRun(1, 0, 5);
+    rgn.AddRun(1, 0, 2);
     rgn.AddRun(1, 7, 10);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 2);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 0);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 0);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_1_Row_3)
-{
-    SpamRgn rgn;
-    rgn.AddRun(2, 0, 5);
-    rgn.AddRun(2, 7, 10);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 2);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 0);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 0);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_2_Row_1)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 5);
-    rgn.AddRun(0, 7, 10);
-    rgn.AddRun(1, 0, 5);
-    rgn.AddRun(1, 7, 10);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 4);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[2].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[3].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[0][0], 2);
-    BOOST_REQUIRE_EQUAL(al[1][0], 3);
-    BOOST_REQUIRE_EQUAL(al[2][0], 0);
-    BOOST_REQUIRE_EQUAL(al[3][0], 1);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_2_Row_2)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 5);
-    rgn.AddRun(0, 7, 10);
-    rgn.AddRun(1, 5, 7);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 3);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[2].size(), 2);
-    BOOST_REQUIRE_EQUAL(al[0][0], 2);
-    BOOST_REQUIRE_EQUAL(al[1][0], 2);
-    BOOST_REQUIRE_EQUAL(al[2][0], 0);
-    BOOST_REQUIRE_EQUAL(al[2][1], 1);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_2_Row_3)
-{
-    SpamRgn rgn;
-    rgn.AddRun(1, 0, 5);
-    rgn.AddRun(1, 7, 10);
-    rgn.AddRun(2, 5, 7);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 3);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[2].size(), 2);
-    BOOST_REQUIRE_EQUAL(al[0][0], 2);
-    BOOST_REQUIRE_EQUAL(al[1][0], 2);
-    BOOST_REQUIRE_EQUAL(al[2][0], 0);
-    BOOST_REQUIRE_EQUAL(al[2][1], 1);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_2_Row_4)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 5);
-    rgn.AddRun(0, 7, 10);
-    rgn.AddRun(2, 5, 7);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 3);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 0);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 0);
-    BOOST_REQUIRE_EQUAL(al[2].size(), 0);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_2_Row_5)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 5);
-    rgn.AddRun(0, 7, 10);
-    rgn.AddRun(0, 15, 20);
-    rgn.AddRun(0, 25, 30);
-    rgn.AddRun(0, 35, 40);
-    rgn.AddRun(0, 45, 50);
-    rgn.AddRun(1, 1, 70);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 7);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[2].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[3].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[4].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[5].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[6].size(), 6);
-    BOOST_REQUIRE_EQUAL(al[0][0], 6);
-    BOOST_REQUIRE_EQUAL(al[1][0], 6);
-    BOOST_REQUIRE_EQUAL(al[2][0], 6);
-    BOOST_REQUIRE_EQUAL(al[3][0], 6);
-    BOOST_REQUIRE_EQUAL(al[4][0], 6);
-    BOOST_REQUIRE_EQUAL(al[5][0], 6);
-    BOOST_REQUIRE_EQUAL(al[6][0], 0);
-    BOOST_REQUIRE_EQUAL(al[6][1], 1);
-    BOOST_REQUIRE_EQUAL(al[6][2], 2);
-    BOOST_REQUIRE_EQUAL(al[6][3], 3);
-    BOOST_REQUIRE_EQUAL(al[6][4], 4);
-    BOOST_REQUIRE_EQUAL(al[6][5], 5);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_3_Row_1)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 5);
-    rgn.AddRun(1, 3, 10);
-    rgn.AddRun(2, 5, 7);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 3);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 2);
-    BOOST_REQUIRE_EQUAL(al[2].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[0][0], 1);
-    BOOST_REQUIRE_EQUAL(al[1][0], 0);
-    BOOST_REQUIRE_EQUAL(al[1][1], 2);
-    BOOST_REQUIRE_EQUAL(al[2][0], 1);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_3_Row_2)
-{
-    SpamRgn rgn;
-    rgn.AddRun(1, 0, 5);
-    rgn.AddRun(2, 3, 10);
-    rgn.AddRun(3, 5, 7);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 3);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 2);
-    BOOST_REQUIRE_EQUAL(al[2].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[0][0], 1);
-    BOOST_REQUIRE_EQUAL(al[1][0], 0);
-    BOOST_REQUIRE_EQUAL(al[1][1], 2);
-    BOOST_REQUIRE_EQUAL(al[2][0], 1);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_3_Row_3)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 5);
-    rgn.AddRun(0, 10, 15);
-    rgn.AddRun(0, 20, 25);
-    rgn.AddRun(1, 1, 30);
-    rgn.AddRun(2, 0, 5);
-    rgn.AddRun(2, 10, 15);
-    rgn.AddRun(2, 20, 25);
-    AdjacencyList al = rgn.GetAdjacencyList();
-    BOOST_REQUIRE_EQUAL(al.size(), 7);
-    BOOST_REQUIRE_EQUAL(al[0].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[1].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[2].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[3].size(), 6);
-    BOOST_REQUIRE_EQUAL(al[4].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[5].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[6].size(), 1);
-    BOOST_REQUIRE_EQUAL(al[0][0], 3);
-    BOOST_REQUIRE_EQUAL(al[1][0], 3);
-    BOOST_REQUIRE_EQUAL(al[2][0], 3);
-    BOOST_REQUIRE_EQUAL(al[3][0], 0);
-    BOOST_REQUIRE_EQUAL(al[3][1], 1);
-    BOOST_REQUIRE_EQUAL(al[3][2], 2);
-    BOOST_REQUIRE_EQUAL(al[3][3], 4);
-    BOOST_REQUIRE_EQUAL(al[3][4], 5);
-    BOOST_REQUIRE_EQUAL(al[3][5], 6);
-    BOOST_REQUIRE_EQUAL(al[4][0], 3);
-    BOOST_REQUIRE_EQUAL(al[5][0], 3);
-    BOOST_REQUIRE_EQUAL(al[6][0], 3);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_2)
-{
-    SpamRgn rgn;
-    rgn.AddRun(0, 0, 10);
-    rgn.AddRun(0, 20, 30);
-    rgn.AddRun(1, 0, 5);
-    rgn.AddRun(1, 7, 10);
-    rgn.AddRun(1, 20, 25);
-    rgn.AddRun(1, 27, 30);
-    rgn.AddRun(2, 0, 10);
-    rgn.AddRun(2, 20, 30);
+    rgn.AddRun(2, 2, 7);
+    rgn.AddRun(4, 1, 5);
+    rgn.AddRun(4, 7, 10);
+    rgn.AddRun(4, 12, 18);
+    rgn.AddRun(5, 1, 20);
 
     SPSpamRgnVector rgns = rgn.Connect();
     BOOST_REQUIRE_EQUAL(rgns->size(), 2);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_3, *boost::unit_test::enable_if<vtune_build>())
+BOOST_AUTO_TEST_CASE(test_SpamRgn_Connect_Rgn_3, *boost::unit_test::enable_if<true>())
 {
     cv::Mat grayImg, colorImg;
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
@@ -518,7 +252,7 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_5, *boost::unit_test::enable_if<vtune_
     BOOST_CHECK_EQUAL(re_list[6].CODE, 5);
 }
 
-BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_6, *boost::unit_test::enable_if<vtune_build>())
+BOOST_AUTO_TEST_CASE(test_SpamRgn_RD_LIST_6, *boost::unit_test::enable_if<true>())
 {
     SpamRgn rgn;
     rgn.AddRun(1, 2, 3);
@@ -985,24 +719,12 @@ BOOST_AUTO_TEST_CASE(test_SpamRgn_RowRanges_PERFORMANCE_0, *boost::unit_test::en
     SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
 
     tbb::tick_count t1 = tbb::tick_count::now();
-    const RowRangeList &rrl = rgn->GetRowRanges();
+    RowRunStartList rrl;
+    rgn->GetRowRanges(rrl);
     tbb::tick_count t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("Spam get row ranges times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
-    BOOST_CHECK_EQUAL(rrl.size(), 2502);
-}
-
-BOOST_AUTO_TEST_CASE(test_SpamRgn_AdjacencyList_PERFORMANCE_0, *boost::unit_test::enable_if<vtune_build>())
-{
-    cv::Mat grayImg, colorImg;
-    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
-    SPSpamRgn rgn = BasicImgProc::Threshold(grayImg, 150, 255);
-
-    tbb::tick_count t1 = tbb::tick_count::now();
-    const AdjacencyList &al = rgn->GetAdjacencyList();
-    tbb::tick_count t2 = tbb::tick_count::now();
-    BOOST_TEST_MESSAGE("Spam get adjacency list times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
-    BOOST_CHECK_EQUAL(al.size(), 234794);
+    BOOST_CHECK_EQUAL(rrl.size(), 2501);
 }
 
 BOOST_AUTO_TEST_CASE(test_SpamRgn_Threshold_Mista, *boost::unit_test::enable_if<vtune_build>())

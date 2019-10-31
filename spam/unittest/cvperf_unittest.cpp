@@ -35,6 +35,10 @@ BOOST_AUTO_TEST_CASE(test_CV_threshold_Performance_0, *boost::unit_test::enable_
     tbb::tick_count t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("CV threshold spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
 
+
+    BOOST_CHECK_EQUAL(cv::getNumThreads(), 8);
+    cv::parallel_for_(cv::Range(0, 1000), [](const cv::Range&) {}, 1.0);
+
     t1 = tbb::tick_count::now();
     int numLabels = cv::connectedComponents(binImg, labels, 8, CV_32S, cv::CCL_GRANA);
     t2 = tbb::tick_count::now();
@@ -435,7 +439,7 @@ BOOST_AUTO_TEST_CASE(test_CV_ximage_rl_OPEN_ELLIPSE, *boost::unit_test::enable_i
 
     cv::Mat dst;
     tbb::tick_count t1 = tbb::tick_count::now();
-    cv::Mat kernel = cv::ximgproc::rl::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(25, 25));
+    cv::Mat kernel = cv::ximgproc::rl::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
     cv::ximgproc::rl::morphologyEx(binImg, dst, cv::MORPH_CLOSE, kernel);
     tbb::tick_count t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("CV ximage rl morphologyex open ELLIPSE spend (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
