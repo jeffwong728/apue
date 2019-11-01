@@ -6,25 +6,17 @@
 namespace cv {
 namespace mvlab {
 
-RegionImpl::RegionImpl(const cv::Mat &mask)
-    : Region()
-    , rgn_mask_(mask)
-{
-}
-
 RegionImpl::RegionImpl(const Rect2f &rect)
-    : Region()
+    : RegionImpl()
 {
     if (rect.width > 0.f && rect.height > 0.f)
     {
         rgn_runs_.reserve(cvCeil(rect.height));
-        row_ranges_.reserve(rgn_runs_.size());
 
         int runIdx = 0;
         for (float y = 0.f; y < rect.height; ++y)
         {
             rgn_runs_.emplace_back(cvRound(y), cvRound(rect.x), cvRound(rect.x + rect.width));
-            row_ranges_.emplace_back(runIdx, runIdx+1);
             runIdx += 1;
         }
 
@@ -33,7 +25,7 @@ RegionImpl::RegionImpl(const Rect2f &rect)
 }
 
 RegionImpl::RegionImpl(const RotatedRect &rotatedRect)
-    : Region()
+    : RegionImpl()
 {
     Point2f corners[4];
     rotatedRect.points(corners);
@@ -51,7 +43,7 @@ RegionImpl::RegionImpl(const RotatedRect &rotatedRect)
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const float radius)
-    : Region()
+    : RegionImpl()
 {
     Geom::PathVector pv(Geom::Path(Geom::Circle(center.x, center.y, radius)));
     FromPathVector(pv);
@@ -59,7 +51,7 @@ RegionImpl::RegionImpl(const Point2f &center, const float radius)
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const Size2f &size)
-    : Region()
+    : RegionImpl()
 {
     Geom::PathVector pv(Geom::Path(Geom::Ellipse(center.x, center.y, size.width, size.height, 0.0)));
     FromPathVector(pv);
@@ -67,7 +59,7 @@ RegionImpl::RegionImpl(const Point2f &center, const Size2f &size)
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const Size2f &size, const float angle)
-    : Region()
+    : RegionImpl()
 {
     Geom::PathVector pv(Geom::Path(Geom::Ellipse(center.x, center.y, size.width, size.height, angle)));
     FromPathVector(pv);
@@ -233,7 +225,7 @@ Rect RegionImpl::BoundingBox() const
     return *bbox_;
 }
 
-void RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const
+void RegionImpl::Connect(std::vector<Ptr<Region>> &regions, const int connectivity) const
 {
     regions.resize(0);
     regions.push_back(makePtr<RegionImpl>());
@@ -259,7 +251,6 @@ void RegionImpl::FromMask(const cv::Mat &mask)
             int cb = -1;
             const uchar* pRow = mask.data + r * mask.step1();
             const int thisRowBegRun = static_cast<int>(rgn_runs_.size());
-            int thisRowEndRun = thisRowBegRun;
 
             for (int c = 0; c < mask.cols; ++c)
             {
@@ -275,7 +266,6 @@ void RegionImpl::FromMask(const cv::Mat &mask)
                     if (cb > -1)
                     {
                         rgn_runs_.emplace_back(r, cb, c);
-                        thisRowEndRun += 1;
                         cb = -1;
                     }
                 }
@@ -284,12 +274,6 @@ void RegionImpl::FromMask(const cv::Mat &mask)
             if (cb > -1)
             {
                 rgn_runs_.emplace_back(r, cb, mask.cols);
-                thisRowEndRun += 1;
-            }
-
-            if (thisRowBegRun != thisRowEndRun)
-            {
-                row_ranges_.emplace_back(thisRowBegRun, thisRowEndRun);
             }
         }
     }

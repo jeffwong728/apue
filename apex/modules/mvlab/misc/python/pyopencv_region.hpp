@@ -1,5 +1,6 @@
 #ifdef HAVE_OPENCV_MVLAB
 typedef std::vector<Ptr<cv::mvlab::Region>> vector_Ptr_Region;
+typedef std::vector<cv::Point2d> vector_Point2d;
 
 template<> struct pyopencvVecConverter<Ptr<cv::mvlab::Region>>
 {

@@ -179,7 +179,7 @@ inline void RDEncoder::GenerateRDCodes(const std::vector<int> &P_BUFFER, const s
     }
 }
 
-void RunLengthRDEncoder::Encode(const RunList &rgn_runs, const RowRangeList &rranges)
+void RunLengthRDEncoder::Encode(const RunList &rgn_runs, const RowRunStartList &rranges)
 {
     constexpr int Infinity = std::numeric_limits<int>::max();
     const int numRows = static_cast<int>(rranges.size());
@@ -195,10 +195,11 @@ void RunLengthRDEncoder::Encode(const RunList &rgn_runs, const RowRangeList &rra
     {
         if (rIdx < numRows)
         {
-            const RowRange &rr = rranges[rIdx];
-            if (l == rgn_runs[rr.begRun].row)
+            const int begRun = rranges[rIdx];
+            const int endRun = rranges[rIdx+1];
+            if (l == rgn_runs[begRun].row)
             {
-                for (int runIdx = rr.begRun; runIdx < rr.endRun; ++runIdx)
+                for (int runIdx = begRun; runIdx < endRun; ++runIdx)
                 {
                     C_BUFFER.push_back(rgn_runs[runIdx].colb);
                     C_BUFFER.push_back(rgn_runs[runIdx].cole);

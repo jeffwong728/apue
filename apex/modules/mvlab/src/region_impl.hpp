@@ -33,14 +33,13 @@ struct RowRange
     int endRun;
 };
 
-using RunList      = std::vector<RunLength>;
-using RowRangeList = std::vector<RowRange>;
+using RunList         = std::vector<RunLength>;
+using RowRunStartList = std::vector<int>;
 
 class RegionImpl : public Region
 {
 public:
-    RegionImpl() {}
-    RegionImpl(const cv::Mat &mask);
+    RegionImpl() { }
     RegionImpl(const Rect2f &rect);
     RegionImpl(const RotatedRect &rotatedRect);
     RegionImpl(const Point2f &center, const float radius);
@@ -55,7 +54,7 @@ public:
     double Area() const CV_OVERRIDE;
     Point2d Centroid() const CV_OVERRIDE;
     Rect BoundingBox() const CV_OVERRIDE;
-    void Connect(std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
+    void Connect(std::vector<Ptr<Region>> &regions, const int connectivity) const CV_OVERRIDE;
 
 private:
     void ClearCacheData();
@@ -68,8 +67,7 @@ private:
 
 private:
     RunList rgn_runs_;
-    cv::Mat rgn_mask_;
-    RowRangeList row_ranges_;
+    RowRunStartList row_ranges_;
     mutable boost::optional<double> area_;
     mutable boost::optional<cv::Point2d> centroid_;
     mutable boost::optional<cv::Rect>    bbox_;

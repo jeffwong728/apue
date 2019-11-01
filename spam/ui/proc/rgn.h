@@ -7,6 +7,7 @@
 #include <boost/optional.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
+#include <tbb/tbb.h>
 #include <tbb/scalable_allocator.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267 4244)
@@ -15,20 +16,16 @@
 #include <2geom/pathvector.h>
 #pragma warning( pop )
 
-union SpamRun
+struct SpamRun
 {
-    SpamRun() : pad(0) {}
-    SpamRun(const SpamRun &r) : pad(r.pad) {}
+    SpamRun() : row(0), colb(0), cole(0), label(0) {}
+    SpamRun(const SpamRun &r) : row(r.row), colb(r.colb), cole(r.cole), label(r.label) {}
     SpamRun(const int16_t ll, const int16_t bb, const int16_t ee) : row(ll), colb(bb), cole(ee), label(0) {}
     SpamRun(const int16_t ll, const int16_t bb, const int16_t ee, const uint16_t lab) : row(ll), colb(bb), cole(ee), label(lab) {}
-    int64_t pad;
-    struct
-    {
-        int16_t row;  // line number (row) of run
-        int16_t colb; // column index of beginning(include) of run
-        int16_t cole; // column index of ending(exclude) of run
-        uint16_t label;
-    };
+    int row;  // line number (row) of run
+    int colb; // column index of beginning(include) of run
+    int cole; // column index of ending(exclude) of run
+    int label;
 };
 
 struct RD_LIST_ENTRY
@@ -55,6 +52,7 @@ using RD_CONTOUR = std::vector<cv::Point, tbb::scalable_allocator<cv::Point>>;
 using RD_CONTOUR_LIST = std::vector<RD_CONTOUR, tbb::scalable_allocator<RD_CONTOUR>>;
 using SpamRunList = std::vector<SpamRun, tbb::scalable_allocator<SpamRun>>;
 using RowRunStartList = std::vector<int>;
+using LabelT = int;
 
 struct SpamContour
 {
@@ -102,7 +100,8 @@ public:
     cv::Point2d Centroid() const;
     Geom::Circle MinCircle() const;
     int NumHoles() const;
-    SPSpamRgnVector Connect() const;
+    SPSpamRgnVector Connect();
+    SPSpamRgnVector ConnectMT() const;
     cv::Rect BoundingBox() const;
     bool Contain(const int16_t r, const int16_t c) const;
     const Geom::PathVector &GetPath() const;
@@ -118,10 +117,9 @@ public:
 
 private:
     void ClearCacheData();
-    SPSpamRgnVector ConnectMT() const;
     static bool IsPointInside(const Geom::PathVector &pv, const Geom::Point &pt);
 
-private:
+public:
     mutable SpamRunList data_;
     uint32_t             color_;
     mutable boost::optional<double>                   area_;
@@ -163,6 +161,34 @@ private:
     const int count_[11]{1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1};
     const int downLink_[11][11]{ {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0}, {0}, {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1} };
     const int upLink_[11][11]{ {0}, {0}, {0}, {0}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1} };
+};
+
+class ConnectWuParallel
+{
+    class FirstScan8Connectivity
+    {
+        LabelT *P_;
+        int *chunksSizeAndLabels_;
+        const int maxCol_;
+        const RowRunStartList &rowRunBegs_;
+        SpamRunList &data_;
+
+    public:
+        FirstScan8Connectivity(LabelT *P, int *chunksSizeAndLabels, const int maxCol, const RowRunStartList &rowRunBegs, SpamRunList &data);
+        void operator()(const tbb::blocked_range<int>& br) const;
+    };
+
+public:
+    ConnectWuParallel() : maxCol(-1) {}
+
+public:
+    SPSpamRgnVector operator() (SpamRgn &rgn, int connectivity);
+    void mergeLabels8Connectivity(SpamRgn &rgn, LabelT *P, const int *chunksSizeAndLabels);
+    void mergeLabels4Connectivity(SpamRgn &rgn, LabelT *P, const int *chunksSizeAndLabels);
+
+private:
+    RowRunStartList rowRunBegs;
+    int maxCol;
 };
 
 inline bool IsRunColumnIntersection(const SpamRun &r1, const SpamRun &r2)

@@ -3,8 +3,6 @@
 #include <limits>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
-#include <tbb/tbb.h>
-#include <tbb/scalable_allocator.h>
 #include <stack>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267 4244 )
@@ -738,7 +736,12 @@ int SpamRgn::NumHoles() const
     return static_cast<int>(contours_->holes.size());
 }
 
-SPSpamRgnVector SpamRgn::Connect() const
+SPSpamRgnVector SpamRgn::Connect()
+{
+    return ConnectWuParallel()(*this, 8);
+}
+
+SPSpamRgnVector SpamRgn::ConnectMT() const
 {
     SPSpamRgnVector rgs = std::make_shared<SpamRgnVector>();
     if (data_.empty())
@@ -750,11 +753,11 @@ SPSpamRgnVector SpamRgn::Connect() const
     int maxCol = GetRowRanges(rowRanges) + 2;
 
     std::vector<SpamRun *> rowRunPtrs(maxCol);
-    std::vector<uint16_t>  vecP(data_.size() + 1);
+    std::vector<LabelT>  vecP(data_.size() + 1);
     SpamRun **vRowRunPtrs = rowRunPtrs.data() + 1;
 
-    uint16_t lunique = 1;
-    uint16_t *P = vecP.data();
+    LabelT lunique = 1;
+    LabelT *P = vecP.data();
     int rowPrev = std::numeric_limits<int>::min();
 
     SpamRun *pRuns = data_.data();
@@ -783,7 +786,7 @@ SPSpamRgnVector SpamRgn::Connect() const
                 }
                 else
                 {
-                    uint16_t lab = vRowRunPtrs[col]->label;
+                    LabelT lab = vRowRunPtrs[col]->label;
                     col = vRowRunPtrs[col]->cole + 1;
 
                     for (; col <= pRun->cole; ++col)
@@ -977,11 +980,6 @@ void SpamRgn::ClearCacheData()
     centroid_       = boost::none;
     minBox_         = boost::none;
     minCircle_      = boost::none;
-}
-
-SPSpamRgnVector SpamRgn::ConnectMT() const
-{
-    return std::make_shared<SpamRgnVector>();
 }
 
 bool SpamRgn::IsPointInside(const Geom::PathVector &pv, const Geom::Point &pt)
@@ -1232,4 +1230,195 @@ void RunTypeDirectionEncoder::track(RegionContourCollection &rcc) const
             }
         }
     }
+}
+
+ConnectWuParallel::FirstScan8Connectivity::FirstScan8Connectivity(LabelT *P,
+    int *chunksSizeAndLabels,
+    const int maxCol,
+    const RowRunStartList &rowRunBegs,
+    SpamRunList &data)
+    : P_(P)
+    , chunksSizeAndLabels_(chunksSizeAndLabels)
+    , maxCol_(maxCol)
+    , rowRunBegs_(rowRunBegs)
+    , data_(data) 
+{}
+
+void ConnectWuParallel::FirstScan8Connectivity::operator()(const tbb::blocked_range<int>& br) const
+{
+    const int rowBeg = br.begin();
+    const int rowEnd = br.end();
+    chunksSizeAndLabels_[rowBeg] = br.end();
+
+    LabelT label = rowRunBegs_[rowBeg] + 1;
+    const LabelT firstLabel = label;
+
+    std::vector<SpamRun *, tbb::scalable_allocator<SpamRun *>> rowRunPtrs(maxCol_);
+    SpamRun **vRowRunPtrs = rowRunPtrs.data() + 1;
+    int rowPrev = std::numeric_limits<int>::min();
+    SpamRun *pRuns = data_.data() + rowRunBegs_[rowBeg];
+    const int *pRowRunStarts = rowRunBegs_.data() + rowBeg;
+
+    for (int row= rowBeg; row != rowEnd; ++row)
+    {
+        SpamRun *pRowRunBeg = pRuns;
+        SpamRun *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
+
+        if ((rowPrev + 1) == pRuns->row) {
+            for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                int col = pRun->colb - 1;
+                while (!vRowRunPtrs[col] && col <= pRun->cole) {
+                    col += 1;
+                }
+
+                if (col > pRun->cole) {
+                    pRun->label = label; P_[label] = label; label = label + 1;
+                } else {
+                    LabelT lab = vRowRunPtrs[col]->label;
+                    col = vRowRunPtrs[col]->cole + 1;
+                    for (; col <= pRun->cole; ++col)
+                    {
+                        if (vRowRunPtrs[col]) {
+                            lab = set_union(P_, lab, vRowRunPtrs[col]->label);
+                            col = vRowRunPtrs[col]->cole;
+                        }
+                    }
+                    pRun->label = lab;
+                }
+            }
+        } else {
+            for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                pRun->label = label; P_[label] = label; label = label + 1;
+            }
+        }
+
+        std::memset(rowRunPtrs.data(), 0, maxCol_ * sizeof(SpamRun *));
+        for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+        {
+            for (int col = pRun->colb; col < pRun->cole; ++col)
+            {
+                vRowRunPtrs[col] = pRun;
+            }
+        }
+
+        rowPrev = pRuns->row; pRuns = pRowRunEnd; pRowRunStarts += 1;
+    }
+
+    chunksSizeAndLabels_[rowBeg + 1] = label - firstLabel;
+}
+
+SPSpamRgnVector ConnectWuParallel::operator() (SpamRgn &rgn, int connectivity)
+{
+    SPSpamRgnVector rgs = std::make_shared<SpamRgnVector>();
+    if (rgn.data_.empty())
+    {
+        return rgs;
+    }
+
+    const auto Plength = rgn.data_.size() + 1;
+    std::vector<LabelT>  vecP(Plength);
+    LabelT *P = vecP.data();
+
+    maxCol = rgn.GetRowRanges(rowRunBegs) + 2;
+    std::vector<int> vecChunksSizeAndLabels(rowRunBegs.size());
+    int *chunksSizeAndLabels = vecChunksSizeAndLabels.data();
+    const int numRows = static_cast<int>(rowRunBegs.size() - 1);
+
+    tbb::blocked_range<int> range(0, numRows, std::max(2, std::min(numRows / 2, cv::getNumThreads() * 4)));
+    tbb::parallel_for(range, FirstScan8Connectivity(P, chunksSizeAndLabels, maxCol, rowRunBegs, rgn.data_));
+    mergeLabels8Connectivity(rgn, P, chunksSizeAndLabels);
+
+    LabelT nLabels = 1;
+    for (int i = 0; i < numRows; i = chunksSizeAndLabels[i])
+    {
+        flattenL(P, rowRunBegs[i] + 1, chunksSizeAndLabels[i + 1], nLabels);
+    }
+
+    rgs->resize(nLabels - 1);
+    auto pRuns = rgn.data_.data();
+    auto pRowRunStarts = rowRunBegs.data();
+
+    std::vector<int> numRunsOfRgn(nLabels - 1);
+    for (int row = 0; row < numRows; ++row)
+    {
+        SpamRun *pRowRunBeg = pRuns;
+        SpamRun *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
+        for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+        {
+            pRun->label = P[pRun->label] - 1;
+            numRunsOfRgn[pRun->label] += 1;
+        }
+
+        pRuns = pRowRunEnd;
+        pRowRunStarts += 1;
+    }
+
+    int rgnIdx = 0;
+    for (SpamRgn &rgn : *rgs)
+    {
+        rgn.GetData().reserve(numRunsOfRgn[rgnIdx++]);
+    }
+
+    for (const auto &run : rgn.data_)
+    {
+        (*rgs)[run.label].GetData().emplace_back(run);
+    }
+
+    return rgs;
+}
+
+void ConnectWuParallel::mergeLabels8Connectivity(SpamRgn &rgn, LabelT *P, const int *chunksSizeAndLabels)
+{
+    const int numRows = static_cast<int>(rowRunBegs.size() - 1);
+    std::vector<const SpamRun *> rowRunPtrs(maxCol);
+    const SpamRun **vRowRunPtrs = rowRunPtrs.data() + 1;
+
+    for (int row = chunksSizeAndLabels[0]; row < numRows; row = chunksSizeAndLabels[row])
+    {
+        SpamRun *pRowRunBeg = rgn.data_.data() + rowRunBegs[row];
+        SpamRun *pRowRunEnd = pRowRunBeg + rowRunBegs[row + 1] - rowRunBegs[row];
+        int rowPrev = row == 0 ? std::numeric_limits<int>::min() : rgn.data_[rowRunBegs[row - 1]].row;
+        if ((rowPrev + 1) == pRowRunBeg->row)
+        {
+            std::memset(rowRunPtrs.data(), 0, maxCol * sizeof(const SpamRun *));
+            const SpamRun *pPrevRowRunBeg = rgn.data_.data() + rowRunBegs[row-1];
+            const SpamRun *pPrevRowRunEnd = pPrevRowRunBeg + rowRunBegs[row] - rowRunBegs[row-1];
+
+            for (const SpamRun *pRun = pPrevRowRunBeg; pRun != pPrevRowRunEnd; ++pRun)
+            {
+                for (int col = pRun->colb; col < pRun->cole; ++col)
+                {
+                    vRowRunPtrs[col] = pRun;
+                }
+            }
+
+            for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                int col = pRun->colb - 1;
+                while (!vRowRunPtrs[col] && col <= pRun->cole) {
+                    col += 1;
+                }
+
+                if (col <= pRun->cole) {
+                    LabelT lab = vRowRunPtrs[col]->label;
+                    col = vRowRunPtrs[col]->cole + 1;
+                    for (; col <= pRun->cole; ++col)
+                    {
+                        if (vRowRunPtrs[col]) {
+                            lab = set_union(P, lab, vRowRunPtrs[col]->label);
+                            col = vRowRunPtrs[col]->cole;
+                        }
+                    }
+                    pRun->label = set_union(P, lab, pRun->label);
+                }
+            }
+        }
+    }
+}
+
+void ConnectWuParallel::mergeLabels4Connectivity(SpamRgn &rgn, LabelT *P, const int *chunksSizeAndLabels)
+{
+
 }
