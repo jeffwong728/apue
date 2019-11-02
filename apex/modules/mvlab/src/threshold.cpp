@@ -190,6 +190,12 @@ void Thresholder::operator()(const tbb::blocked_range<int>& br) const
 int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<Region> &region)
 {
     region = cv::makePtr<RegionImpl>();
+    cv::Ptr<RegionImpl> rgnImpl = region.dynamicCast<RegionImpl>();
+    if (!rgnImpl)
+    {
+        return MLR_MEMORY_ERROR;
+    }
+
     cv::Mat imgMat = src.getMat();
     if (imgMat.empty())
     {
@@ -218,12 +224,6 @@ int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<
         return MLR_IMAGE_FORMAT_ERROR;
     }
 
-    cv::Ptr<RegionImpl> rgnImpl = region.dynamicCast<RegionImpl>();
-    if (!rgnImpl)
-    {
-        return MLR_MEMORY_ERROR;
-    }
-
     std::vector<int> numRunsPerRow(imgMat.rows);
     RunsPerRowCounter numRunsCounter(&imgMat, &numRunsPerRow, minGray, maxGray);
     tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), numRunsCounter);
@@ -233,8 +233,8 @@ int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<
         numRunsPerRow[n] += numRunsPerRow[n - 1];
     }
 
-    RunList allRuns(numRunsPerRow.back());
-    Thresholder thresher(&imgMat, &numRunsPerRow, &allRuns, minGray, maxGray);
+    rgnImpl->GetAllRuns().resize(numRunsPerRow.back());
+    Thresholder thresher(&imgMat, &numRunsPerRow, &rgnImpl->GetAllRuns(), minGray, maxGray);
     tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), thresher);
 
     return MLR_SUCCESS;

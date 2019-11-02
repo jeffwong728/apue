@@ -34,5 +34,15 @@ Ptr<Contour> Contour::CreateRotatedEllipse(const Point2f &center, const Size2f &
     return makePtr<ContourImpl>(center, size, -angle);
 }
 
+Ptr<Contour> Contour::CreatePolygon(const std::vector<Point2f> &vertexes)
+{
+    return makePtr<ContourImpl>(vertexes, true);
+}
+
+Ptr<Contour> Contour::CreatePolyline(const std::vector<Point2f> &vertexes)
+{
+    return makePtr<ContourImpl>(vertexes, false);
+}
+
 }
 }

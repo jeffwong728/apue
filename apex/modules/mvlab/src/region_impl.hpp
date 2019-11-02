@@ -4,8 +4,6 @@
 #include "contour_impl.hpp"
 #include <opencv2/mvlab/region.hpp>
 #include <boost/optional.hpp>
-#include <boost/container/small_vector.hpp>
-#include <boost/container/static_vector.hpp>
 #include <tbb/scalable_allocator.h>
 #include <2geom/2geom.h>
 
@@ -25,14 +23,6 @@ struct RunLength
     int label;
 };
 
-struct RowRange
-{
-    RowRange() : begRun(0), endRun(0) {}
-    RowRange(const int b, const int e) : begRun(b), endRun(e) {}
-    int begRun;
-    int endRun;
-};
-
 using RunList         = std::vector<RunLength>;
 using RowRunStartList = std::vector<int>;
 
@@ -45,34 +35,38 @@ public:
     RegionImpl(const Point2f &center, const float radius);
     RegionImpl(const Point2f &center, const Size2f &size);
     RegionImpl(const Point2f &center, const Size2f &size, const float angle);
+    RegionImpl(RunList &&runs);
 
 public:
     int Draw(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const CV_OVERRIDE;
     int Draw(InputOutputArray img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const CV_OVERRIDE;
 
 public:
+    bool Empty() const CV_OVERRIDE;
     double Area() const CV_OVERRIDE;
     Point2d Centroid() const CV_OVERRIDE;
     Rect BoundingBox() const CV_OVERRIDE;
-    void Connect(std::vector<Ptr<Region>> &regions, const int connectivity) const CV_OVERRIDE;
+    void Connect(cv::Ptr<RegionCollection> &regions, const int connectivity) const CV_OVERRIDE;
+
+public:
+    RunList &GetAllRuns() { return rgn_runs_; }
 
 private:
     void ClearCacheData();
     void FromMask(const cv::Mat &mask);
     void FromPathVector(const Geom::PathVector &pv);
     void DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const;
-    void TraceContour();
-    void TraceContourRunlength();
-    void TraceContourMask();
+    void TraceContour() const;
+    void GatherBasicFeatures() const;
 
 private:
     RunList rgn_runs_;
-    RowRunStartList row_ranges_;
+    mutable RowRunStartList row_run_begs_;
     mutable boost::optional<double> area_;
     mutable boost::optional<cv::Point2d> centroid_;
     mutable boost::optional<cv::Rect>    bbox_;
-    mutable boost::optional<std::vector<Ptr<Contour>>> contour_outers_;
-    mutable boost::optional<std::vector<Ptr<Contour>>> contour_holes_;
+    mutable std::vector<Ptr<Contour>> contour_outers_;
+    mutable std::vector<Ptr<Contour>> contour_holes_;
 };
 
 }

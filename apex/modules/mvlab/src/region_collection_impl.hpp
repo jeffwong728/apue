@@ -17,6 +17,7 @@ public:
     int Draw(InputOutputArray img, const Scalar& color, float thickness, const int style) const CV_OVERRIDE;
 
 public:
+    int Count() const CV_OVERRIDE;
     void Area(std::vector<double> &areas) const CV_OVERRIDE;
     void Length(std::vector<double> &lengths) const CV_OVERRIDE;
     void Centroid(std::vector<cv::Point2d> &centroids) const CV_OVERRIDE;
@@ -28,6 +29,7 @@ private:
 
 private:
     RunList all_rgn_runs_;
+    std::vector<int> run_beg_idxs_;
 };
 
 }

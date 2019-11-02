@@ -1,12 +1,12 @@
 #include "precomp.hpp"
 #include "rtd_encoder.hpp"
+#include "contour_impl.hpp"
 
 namespace cv {
 namespace mvlab {
 
 void RDEncoder::Link()
 {
-    const int count_g[11]{ 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1 };
     const int downLink_g[11][11]{ {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0}, {0}, {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1} };
     const int upLink_g[11][11]{ {0}, {0}, {0}, {0}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1}, {0}, {0, 1, 0, 0, 0, 0, 1, 1, 1, 1} };
 
@@ -70,6 +70,48 @@ void RDEncoder::Link()
                 if (1 > rd_list_[P4].QI)
                 {
                     P4 = rd_list_[P4].W_LINK;
+                }
+            }
+        }
+    }
+}
+
+void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes)
+{
+    const int count_g[11]{ 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1 };
+    for (RDEntry &e : rd_list_)
+    {
+        if (!e.FLAG)
+        {
+            e.FLAG = 1;
+            if (1 == e.CODE || 9 == e.CODE)
+            {
+                std::vector<Point2f> contour;
+                contour.emplace_back(e.X, e.Y);
+                int nextLink = e.LINK;
+                while (!rd_list_[nextLink].FLAG)
+                {
+                    rd_list_[nextLink].FLAG = 1;
+                    if (count_g[rd_list_[nextLink].CODE])
+                    {
+                        contour.emplace_back(contour.back().x, rd_list_[nextLink].Y);
+                        contour.emplace_back(rd_list_[nextLink].X, rd_list_[nextLink].Y);
+                    }
+                    nextLink = rd_list_[nextLink].LINK;
+                }
+
+                if (!contour.empty())
+                {
+                    contour.emplace_back(contour.back().x, contour.front().y);
+
+                    if (1 == e.CODE)
+                    {
+                        outers.push_back(cv::makePtr<ContourImpl>(std::move(contour), true));
+                    }
+                    else
+                    {
+                        holes.push_back(cv::makePtr<ContourImpl>(std::move(contour), true));
+                    }
                 }
             }
         }
@@ -174,7 +216,7 @@ inline void RDEncoder::GenerateRDCodes(const std::vector<int> &P_BUFFER, const s
 
         if (RD_CODE)
         {
-            rd_list_.emplace_back(X, l, RD_CODE, qis_g[RD_CODE]);
+            rd_list_.emplace_back(X-0.5f, l-0.5f, RD_CODE, qis_g[RD_CODE]);
         }
     }
 }
@@ -182,7 +224,7 @@ inline void RDEncoder::GenerateRDCodes(const std::vector<int> &P_BUFFER, const s
 void RunLengthRDEncoder::Encode(const RunList &rgn_runs, const RowRunStartList &rranges)
 {
     constexpr int Infinity = std::numeric_limits<int>::max();
-    const int numRows = static_cast<int>(rranges.size());
+    const int numRows = static_cast<int>(rranges.size()) - 1;
     const int lBeg = rgn_runs.front().row;
     const int lEnd = rgn_runs.back().row + 1;
 

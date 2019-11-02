@@ -6,7 +6,13 @@
 #include <jpeglib.h>
 #include <turbojpeg.h>
 #include <tiffio.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <szlib.h>
+#ifdef __cplusplus
+}
+#endif
 #include <Simd/SimdLib.h>
 #include <tbb/tbb.h>
 #include <pstl/algorithm>
@@ -31,6 +37,15 @@
 #include <H5Cpp.h>
 #include <boost/filesystem.hpp>
 #include <boost/locale.hpp>
+#include <boost/optional.hpp>
+#include <opencv2/core.hpp>
+
+namespace boost {
+    namespace optional_config {
+        template <> struct optional_uses_direct_storage_for<cv::Point2d> : boost::true_type {};
+        template <> struct optional_uses_direct_storage_for<cv::Rect2d> : boost::true_type {};
+    }
+}
 
 namespace {
 TEST(BZip2Test, Version)
@@ -117,7 +132,7 @@ TEST(OpenCLTest, Version)
     cl::Platform plat = cl::Platform::getDefault();
     cl::string ver;
     plat.getInfo(CL_PLATFORM_VERSION, &ver);
-    EXPECT_EQ(ver, std::string("OpenCL 2.0 "));
+    EXPECT_EQ(ver, std::string("OpenCL 2.1 "));
 }
 
 TEST(SigCPPTest, Version)
@@ -174,6 +189,28 @@ TEST(BoostLocaleTest, Basic)
     std::vector<std::string> allBackends = boost::locale::localization_backend_manager::global().get_all_backends();
     auto it = std::find(allBackends.cbegin(), allBackends.cend(), std::string("std"));
     EXPECT_NE(it, allBackends.cend());
+}
+
+TEST(BoostOptionalTest, Double)
+{
+    boost::optional<double> optval(10.0);
+    EXPECT_EQ(*optval, 10.0);
+}
+
+TEST(BoostOptionalTest, CVPoint2d)
+{
+    boost::optional<cv::Point2d> optval;
+    optval.emplace(10.0, 10.0);
+    EXPECT_EQ(optval->x, 10.0);
+    EXPECT_EQ(optval->y, 10.0);
+}
+
+TEST(BoostOptionalTest, CVRect2d)
+{
+    boost::optional<cv::Rect2d> optval;
+    optval.emplace(10.0, 10.0, 20.0, 20.0);
+    EXPECT_EQ(optval->x, 10.0);
+    EXPECT_EQ(optval->y, 10.0);
 }
 
 }

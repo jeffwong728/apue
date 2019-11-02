@@ -1,5 +1,7 @@
 #include "precomp.hpp"
 #include "region_impl.hpp"
+#include "region_collection_impl.hpp"
+#include "rtd_encoder.hpp"
 #include "utility.hpp"
 #include <opencv2/mvlab.hpp>
 
@@ -20,7 +22,7 @@ RegionImpl::RegionImpl(const Rect2f &rect)
             runIdx += 1;
         }
 
-        contour_outers_.emplace(1, makePtr<ContourImpl>(rect));
+        contour_outers_.emplace_back(makePtr<ContourImpl>(rect));
     }
 }
 
@@ -39,7 +41,7 @@ RegionImpl::RegionImpl(const RotatedRect &rotatedRect)
     pb.closePath();
 
     FromPathVector(pv);
-    contour_outers_.emplace(1, makePtr<ContourImpl>(pv.front(), true));
+    contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const float radius)
@@ -47,7 +49,7 @@ RegionImpl::RegionImpl(const Point2f &center, const float radius)
 {
     Geom::PathVector pv(Geom::Path(Geom::Circle(center.x, center.y, radius)));
     FromPathVector(pv);
-    contour_outers_.emplace(1, makePtr<ContourImpl>(pv.front(), true));
+    contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const Size2f &size)
@@ -55,7 +57,7 @@ RegionImpl::RegionImpl(const Point2f &center, const Size2f &size)
 {
     Geom::PathVector pv(Geom::Path(Geom::Ellipse(center.x, center.y, size.width, size.height, 0.0)));
     FromPathVector(pv);
-    contour_outers_.emplace(1, makePtr<ContourImpl>(pv.front(), true));
+    contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
 }
 
 RegionImpl::RegionImpl(const Point2f &center, const Size2f &size, const float angle)
@@ -63,7 +65,12 @@ RegionImpl::RegionImpl(const Point2f &center, const Size2f &size, const float an
 {
     Geom::PathVector pv(Geom::Path(Geom::Ellipse(center.x, center.y, size.width, size.height, angle)));
     FromPathVector(pv);
-    contour_outers_.emplace(1, makePtr<ContourImpl>(pv.front(), true));
+    contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
+}
+
+RegionImpl::RegionImpl(RunList &&runs)
+    : rgn_runs_(runs)
+{
 }
 
 int RegionImpl::Draw(Mat &img,
@@ -72,6 +79,13 @@ int RegionImpl::Draw(Mat &img,
     const float borderThickness,
     const int borderStyle) const
 {
+    if (Empty())
+    {
+        return MLR_REGION_EMPTY;
+    }
+
+    TraceContour();
+
     if (img.empty())
     {
         const Rect bbox = RegionImpl::BoundingBox();
@@ -124,6 +138,11 @@ int RegionImpl::Draw(InputOutputArray img,
     const float borderThickness,
     const int borderStyle) const
 {
+    if (Empty())
+    {
+        return MLR_REGION_EMPTY;
+    }
+
     Mat imgMat = img.getMat();
     if (imgMat.empty())
     {
@@ -148,89 +167,32 @@ int RegionImpl::Draw(InputOutputArray img,
     }
 }
 
+bool RegionImpl::Empty() const
+{
+    return rgn_runs_.empty();
+}
+
 double RegionImpl::Area() const
 {
-    if (area_ == boost::none)
-    {
-        double a = 0;
-        double x = 0;
-        double y = 0;
-
-        for (const RunLength &rl : rgn_runs_)
-        {
-            const auto n = rl.cole - rl.colb;
-            a += n;
-            x += (rl.cole - 1 + rl.colb) * n / 2.0;
-            y += rl.row * n;
-        }
-
-        area_ = a;
-        if (a > 0)
-        {
-            centroid_.emplace(x / a, y / a);
-        }
-        else
-        {
-            centroid_.emplace(0, 0);
-        }
-    }
-
+    GatherBasicFeatures();
     return *area_;
 }
 
 cv::Point2d RegionImpl::Centroid() const
 {
-    if (centroid_ == boost::none)
-    {
-        Area();
-    }
-
+    GatherBasicFeatures();
     return *centroid_;
 }
 
 Rect RegionImpl::BoundingBox() const
 {
-    if (bbox_ == boost::none)
-    {
-        cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
-        cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
-
-        for (const RunLength &r : rgn_runs_)
-        {
-            if (r.row < minPoint.y) {
-                minPoint.y = r.row;
-            }
-
-            if (r.row > maxPoint.y) {
-                maxPoint.y = r.row;
-            }
-
-            if (r.colb < minPoint.x) {
-                minPoint.x = r.colb;
-            }
-
-            if (r.cole > maxPoint.x) {
-                maxPoint.x = r.cole;
-            }
-        }
-
-        if (rgn_runs_.empty()) {
-            bbox_ = cv::Rect();
-        }
-        else {
-            bbox_ = cv::Rect(minPoint, maxPoint);
-        }
-    }
-
+    GatherBasicFeatures();
     return *bbox_;
 }
 
-void RegionImpl::Connect(std::vector<Ptr<Region>> &regions, const int connectivity) const
+void RegionImpl::Connect(cv::Ptr<RegionCollection> &regions, const int connectivity) const
 {
-    regions.resize(0);
-    regions.push_back(makePtr<RegionImpl>());
-    regions.push_back(makePtr<RegionImpl>());
-    regions.push_back(makePtr<RegionImpl>());
+    regions = makePtr<RegionCollectionImpl>();
 }
 
 void RegionImpl::ClearCacheData()
@@ -314,44 +276,99 @@ void RegionImpl::DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& b
     {
         cr->set_dash(dashes, 0.);
     }
+
     cr->translate(0.5, 0.5);
 
-    for (const auto &contour : *contour_outers_)
+    for (const auto &contour : contour_outers_)
     {
         Ptr<ContourImpl> spContour = contour.dynamicCast<ContourImpl>();
         if (spContour)
         {
-            Geom::CairoPathSink cairoPathSink(cr->cobj());
-            cairoPathSink.feed(spContour->GetPath());
-            cr->set_source_rgba(fillColor[0] / 255.0, fillColor[1] / 255.0, fillColor[2] / 255.0, fillColor[3] / 255.0);
-            cr->fill_preserve();
-            cr->set_line_width(borderThickness);
-            cr->set_source_rgba(borderColor[0] / 255.0, borderColor[1] / 255.0, borderColor[2] / 255.0, borderColor[3] / 255.0);
-            cr->stroke();
+            spContour->Feed(cr);
         }
     }
-}
 
-void RegionImpl::TraceContour()
-{
-    if (rgn_runs_.empty())
+    for (const auto &contour : contour_holes_)
     {
-        TraceContourMask();
+        Ptr<ContourImpl> spContour = contour.dynamicCast<ContourImpl>();
+        if (spContour)
+        {
+            spContour->Feed(cr);
+        }
     }
-    else
+
+    cr->set_source_rgba(fillColor[0] / 255.0, fillColor[1] / 255.0, fillColor[2] / 255.0, fillColor[3] / 255.0);
+    cr->fill_preserve();
+    cr->set_line_width(borderThickness);
+    cr->set_source_rgba(borderColor[0] / 255.0, borderColor[1] / 255.0, borderColor[2] / 255.0, borderColor[3] / 255.0);
+    cr->stroke();
+}
+
+void RegionImpl::TraceContour() const
+{
+    if (!rgn_runs_.empty() && contour_outers_.empty())
     {
-        TraceContourRunlength();
+        GatherBasicFeatures();
+        RunLengthRDEncoder rdEncoder;
+        rdEncoder.Encode(rgn_runs_, row_run_begs_);
+        rdEncoder.Link();
+        rdEncoder.Track(contour_outers_, contour_holes_);
     }
 }
 
-void RegionImpl::TraceContourRunlength()
+void RegionImpl::GatherBasicFeatures() const
 {
+    if (area_ == boost::none)
+    {
+        if (!rgn_runs_.empty())
+        {
+            row_run_begs_.reserve(rgn_runs_.size() + 1);
+            const int numRuns = static_cast<int>(rgn_runs_.size());
+            int currentRow = rgn_runs_.front().row;
 
-}
+            double a = 0, x = 0, y = 0;
+            cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+            cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
 
-void RegionImpl::TraceContourMask()
-{
+            int begIdx = 0;
+            for (int runIdx = 0; runIdx < numRuns; ++runIdx)
+            {
+                const RunLength &rl = rgn_runs_[runIdx];
+                if (rl.row != currentRow)
+                {
+                    row_run_begs_.emplace_back(begIdx); begIdx = runIdx; currentRow = rl.row;
+                }
 
+                const auto n = rl.cole - rl.colb;
+                a += n;
+                x += (rl.cole - 1 + rl.colb) * n / 2.0;
+                y += rl.row * n;
+
+                if (rl.row < minPoint.y) { minPoint.y = rl.row; }
+                if (rl.row > maxPoint.y) { maxPoint.y = rl.row; }
+                if (rl.colb < minPoint.x) { minPoint.x = rl.colb; }
+                if (rl.cole > maxPoint.x) { maxPoint.x = rl.cole; }
+            }
+
+            row_run_begs_.emplace_back(begIdx);
+            row_run_begs_.emplace_back(numRuns);
+
+            area_ = a;
+            if (a > 0) {
+                centroid_.emplace(x / a, y / a);
+            } else {
+                centroid_.emplace(0, 0);
+            }
+
+            bbox_ = cv::Rect(minPoint, maxPoint);
+        }
+        else
+        {
+            area_.emplace(0);
+            bbox_.emplace(0, 0, 0, 0);
+            centroid_.emplace(0, 0);
+        }
+    }
 }
 
 }

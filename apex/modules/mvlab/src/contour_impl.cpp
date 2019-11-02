@@ -59,6 +59,20 @@ ContourImpl::ContourImpl(const Geom::Path &path, const bool closed)
 {
 }
 
+ContourImpl::ContourImpl(const std::vector<Point2f> &vertexes, const bool closed)
+    : Contour()
+    , is_closed_(closed)
+    , vertexes_(vertexes)
+{
+}
+
+ContourImpl::ContourImpl(std::vector<Point2f> &&vertexes, const bool closed)
+    : Contour()
+    , is_closed_(closed)
+    , vertexes_(vertexes)
+{
+}
+
 int ContourImpl::Draw(Mat &img, const Scalar& color, const float thickness, const int style) const
 {
     if (img.empty())
@@ -207,6 +221,32 @@ Rect ContourImpl::BoundingBox() const
     return *bbox_;
 }
 
+void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
+{
+    if (GetPath().empty())
+    {
+        const auto &vertexes = GetVertexes();
+        const int numVertexes = static_cast<int>(vertexes.size());
+        if (numVertexes > 1)
+        {
+            cr->move_to(vertexes.front().x, vertexes.front().y);
+            for (int i = 1; i < numVertexes; ++i)
+            {
+                cr->line_to(vertexes[i].x, vertexes[i].y);
+            }
+            if (is_closed_)
+            {
+                cr->close_path();
+            }
+        }
+    }
+    else
+    {
+        Geom::CairoPathSink cairoPathSink(cr->cobj());
+        cairoPathSink.feed(GetPath());
+    }
+}
+
 void ContourImpl::ClearCacheData()
 {
     length_   = boost::none;
@@ -215,7 +255,6 @@ void ContourImpl::ClearCacheData()
     centroid_ = boost::none;
     bbox_     = boost::none;
     start_    = boost::none;
-    points_   = boost::none;
 }
 
 void ContourImpl::DrawVerified(Mat &img, const Scalar& color, const float thickness, const int style) const
@@ -229,8 +268,8 @@ void ContourImpl::DrawVerified(Mat &img, const Scalar& color, const float thickn
         cr->set_dash(dashes, 0.);
     }
 
-    Geom::CairoPathSink cairoPathSink(cr->cobj());
-    cairoPathSink.feed(path_);
+    Feed(cr);
+
     cr->set_line_width(thickness);
     cr->set_source_rgba(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, color[3] / 255.0);
     cr->stroke();

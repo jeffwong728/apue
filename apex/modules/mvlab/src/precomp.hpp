@@ -42,16 +42,37 @@
 #ifndef __OPENCV_MVLAB_PRECOMP__
 #define __OPENCV_MVLAB_PRECOMP__
 
+#include <set>
+#include <map>
+#include <vector>
+#include <list>
+#include <unordered_set>
+#include <unordered_map>
+#include <algorithm>
+#include <vectorclass.h>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <tbb/tbb.h>
 #include <tbb/scalable_allocator.h>
+#include <cairomm/cairomm.h>
+#include <boost/optional.hpp>
+#include <boost/container/small_vector.hpp>
+#include <boost/container/static_vector.hpp>
+#pragma warning( push )
+#pragma warning( disable : 4819 4003 4267 )
+#include <2geom/2geom.h>
 #include <2geom/circle.h>
 #include <2geom/ellipse.h>
 #include <2geom/path-sink.h>
+#include <2geom/path-intersection.h>
 #include <2geom/cairo-path-sink.h>
-#include <cairomm/cairomm.h>
-#include <vector>
-#include <vectorclass.h>
+#pragma warning( pop )
+
+template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point> : boost::true_type {};
+template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point2f> : boost::true_type {};
+template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point2d> : boost::true_type {};
+template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect> : boost::true_type {};
+template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2f> : boost::true_type {};
+template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2d> : boost::true_type {};
 
 #endif

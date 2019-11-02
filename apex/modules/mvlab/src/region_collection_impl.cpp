@@ -37,6 +37,15 @@ int RegionCollectionImpl::Draw(InputOutputArray img, const Scalar& color, const 
     }
 }
 
+int RegionCollectionImpl::Count() const
+{
+    if (run_beg_idxs_.empty()) {
+        return 0;
+    } else {
+        return static_cast<int>(run_beg_idxs_.size() - 1);
+    }
+}
+
 void RegionCollectionImpl::Area(std::vector<double> &areas) const
 {
     areas.resize(0);

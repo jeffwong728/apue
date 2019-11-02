@@ -18,6 +18,8 @@ public:
     CV_WRAP static Ptr<Contour> CreateCircle(const Point2f &center, const float radius);
     CV_WRAP static Ptr<Contour> CreateEllipse(const Point2f &center, const Size2f &size);
     CV_WRAP static Ptr<Contour> CreateRotatedEllipse(const Point2f &center, const Size2f &size, const float angle);
+    CV_WRAP static Ptr<Contour> CreatePolygon(const std::vector<Point2f> &vertexes);
+    CV_WRAP static Ptr<Contour> CreatePolyline(const std::vector<Point2f> &vertexes);
 
 public:
     virtual int Draw(Mat &img, const Scalar& color, const float thickness = 1, const int style = 0) const = 0;

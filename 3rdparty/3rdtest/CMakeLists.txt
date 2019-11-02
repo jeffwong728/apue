@@ -13,6 +13,8 @@ add_custom_command(TARGET Test3rdParty POST_BUILD COMMAND ${CMAKE_COMMAND} -E co
 set(Boost_USE_DEBUG_LIBS ON)
 set(Boost_USE_RELEASE_LIBS ON)
 list(APPEND CMAKE_MODULE_PATH "D:/apue/cmake")
+set(OpenCV_DIR "D:/apue/install/OpenCV")
+find_package(OpenCV REQUIRED core imgproc imgcodecs mvlab)
 find_package(ZLIB REQUIRED)
 find_package(BZip2 REQUIRED)
 find_package(GTest CONFIG REQUIRED)
@@ -59,6 +61,7 @@ list(APPEND libs unofficial::glib::gio unofficial::glib::glib unofficial::glib::
 list(APPEND libs GSL::gsl GSL::gslcblas Eigen3::Eigen pybind11::embed pybind11::module)
 list(APPEND libs hdf5::hdf5-shared hdf5::hdf5_hl-shared hdf5::hdf5_cpp-shared)
 list(APPEND libs Boost::filesystem Boost::locale GLIBMM::glibmm GLIBMM::giomm)
+list(APPEND libs opencv_core opencv_imgproc opencv_imgcodecs opencv_mvlab)
 
 target_link_libraries(Test3rdParty PRIVATE ${libs})
 

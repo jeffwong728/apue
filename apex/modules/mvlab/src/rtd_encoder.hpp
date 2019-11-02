@@ -2,15 +2,16 @@
 #define __OPENCV_MVLAB_RTD_ENCODER_HPP__
 
 #include "region_impl.hpp"
+#include <opencv2/mvlab/contour.hpp>
 
 namespace cv {
 namespace mvlab {
 
 struct RDEntry
 {
-    RDEntry(const int x, const int y, const int code, const int qi)
+    RDEntry(const float x, const float y, const int code, const int qi)
         : X(x), Y(y), CODE(code), LINK(0), W_LINK(0), QI(qi), FLAG(0) {}
-    int X, Y;
+    float X, Y;
     int CODE;
     int LINK;
     int W_LINK;
@@ -26,6 +27,7 @@ class RDEncoder
 public:
     RDEncoder() {}
     void Link();
+    void Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes);
 
 protected:
     inline void GenerateRDCodes(const std::vector<int> &P_BUFFER, const std::vector<int> &C_BUFFER, const int l);
