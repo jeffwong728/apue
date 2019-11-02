@@ -68,8 +68,8 @@ RegionImpl::RegionImpl(const Point2f &center, const Size2f &size, const float an
     contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
 }
 
-RegionImpl::RegionImpl(RunList &&runs)
-    : rgn_runs_(runs)
+RegionImpl::RegionImpl(RunList *const runs)
+    : rgn_runs_(std::move(*runs))
 {
 }
 
@@ -195,11 +195,10 @@ void RegionImpl::Connect(cv::Ptr<RegionCollection> &regions, const int connectiv
     regions = makePtr<RegionCollectionImpl>();
 }
 
-void RegionImpl::ClearCacheData()
+const RowRunStartList &RegionImpl::GetRowRunStartList() const
 {
-    area_     = boost::none;
-    centroid_ = boost::none;
-    bbox_     = boost::none;
+    GatherBasicFeatures();
+    return row_run_begs_;
 }
 
 void RegionImpl::FromMask(const cv::Mat &mask)
@@ -239,8 +238,6 @@ void RegionImpl::FromMask(const cv::Mat &mask)
             }
         }
     }
-
-    ClearCacheData();
 }
 
 void RegionImpl::FromPathVector(const Geom::PathVector &pv)

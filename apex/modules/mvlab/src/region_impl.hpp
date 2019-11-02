@@ -35,7 +35,7 @@ public:
     RegionImpl(const Point2f &center, const float radius);
     RegionImpl(const Point2f &center, const Size2f &size);
     RegionImpl(const Point2f &center, const Size2f &size, const float angle);
-    RegionImpl(RunList &&runs);
+    RegionImpl(RunList *const runs);
 
 public:
     int Draw(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const CV_OVERRIDE;
@@ -49,10 +49,10 @@ public:
     void Connect(cv::Ptr<RegionCollection> &regions, const int connectivity) const CV_OVERRIDE;
 
 public:
-    RunList &GetAllRuns() { return rgn_runs_; }
+    const RunList &GetAllRuns() const { return rgn_runs_; }
+    const RowRunStartList &GetRowRunStartList() const;
 
 private:
-    void ClearCacheData();
     void FromMask(const cv::Mat &mask);
     void FromPathVector(const Geom::PathVector &pv);
     void DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const;
@@ -60,13 +60,13 @@ private:
     void GatherBasicFeatures() const;
 
 private:
-    RunList rgn_runs_;
-    mutable RowRunStartList row_run_begs_;
-    mutable boost::optional<double> area_;
-    mutable boost::optional<cv::Point2d> centroid_;
-    mutable boost::optional<cv::Rect>    bbox_;
-    mutable std::vector<Ptr<Contour>> contour_outers_;
-    mutable std::vector<Ptr<Contour>> contour_holes_;
+    RunList                                 rgn_runs_;
+    mutable RowRunStartList                 row_run_begs_;
+    mutable boost::optional<double>         area_;
+    mutable boost::optional<cv::Point2d>    centroid_;
+    mutable boost::optional<cv::Rect>       bbox_;
+    mutable std::vector<Ptr<Contour>>       contour_outers_;
+    mutable std::vector<Ptr<Contour>>       contour_holes_;
 };
 
 }

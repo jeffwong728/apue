@@ -233,9 +233,11 @@ int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<
         numRunsPerRow[n] += numRunsPerRow[n - 1];
     }
 
-    rgnImpl->GetAllRuns().resize(numRunsPerRow.back());
-    Thresholder thresher(&imgMat, &numRunsPerRow, &rgnImpl->GetAllRuns(), minGray, maxGray);
+    RunList allRuns(numRunsPerRow.back());
+    Thresholder thresher(&imgMat, &numRunsPerRow, &allRuns, minGray, maxGray);
     tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), thresher);
+
+    region = cv::makePtr<RegionImpl>(&allRuns);
 
     return MLR_SUCCESS;
 }

@@ -70,8 +70,8 @@ LabelT set_union(LabelT *P, LabelT i, LabelT j) {
 template<typename LabelT>
 inline static
 LabelT flattenL(LabelT *P, LabelT length) {
-    LabelT k = 1;
-    for (LabelT i = 1; i < length; ++i) {
+    LabelT k = 0;
+    for (LabelT i = 0; i < length; ++i) {
         if (P[i] < i) {
             P[i] = P[P[i]];
         }
@@ -753,10 +753,10 @@ SPSpamRgnVector SpamRgn::ConnectMT() const
     int maxCol = GetRowRanges(rowRanges) + 2;
 
     std::vector<SpamRun *> rowRunPtrs(maxCol);
-    std::vector<LabelT>  vecP(data_.size() + 1);
+    std::vector<LabelT>  vecP(data_.size());
     SpamRun **vRowRunPtrs = rowRunPtrs.data() + 1;
 
-    LabelT lunique = 1;
+    LabelT lunique = 0;
     LabelT *P = vecP.data();
     int rowPrev = std::numeric_limits<int>::min();
 
@@ -827,27 +827,17 @@ SPSpamRgnVector SpamRgn::ConnectMT() const
     }
 
     uint16_t nLabels = flattenL(P, lunique);
-    rgs->resize(nLabels - 1);
-
-    pRuns = data_.data();
-    pRowRunStarts = rowRanges.data();
+    rgs->resize(nLabels);
 
     std::vector<int> numRunsOfRgn(nLabels);
-    for (int row = 0; row < numRows; ++row)
+    SpamRun *pRunsEnd = data_.data() + data_.size();
+    for (SpamRun *pRun = data_.data(); pRun != pRunsEnd; ++pRun)
     {
-        SpamRun *pRowRunBeg = pRuns;
-        SpamRun *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
-        for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
-        {
-            pRun->label = P[pRun->label];
-            numRunsOfRgn[pRun->label] += 1;
-        }
-
-        pRuns = pRowRunEnd;
-        pRowRunStarts += 1;
+        pRun->label = P[pRun->label];
+        numRunsOfRgn[pRun->label] += 1;
     }
 
-    int rgnIdx = 1;
+    int rgnIdx = 0;
     for (SpamRgn &rgn : *rgs)
     {
         rgn.GetData().reserve(numRunsOfRgn[rgnIdx++]);
@@ -855,7 +845,7 @@ SPSpamRgnVector SpamRgn::ConnectMT() const
 
     for (const auto &run : data_)
     {
-        (*rgs)[run.label - 1].GetData().emplace_back(run);
+        (*rgs)[run.label].GetData().emplace_back(run);
     }
 
     return rgs;
@@ -1250,7 +1240,7 @@ void ConnectWuParallel::FirstScan8Connectivity::operator()(const tbb::blocked_ra
     const int rowEnd = br.end();
     chunksSizeAndLabels_[rowBeg] = br.end();
 
-    LabelT label = rowRunBegs_[rowBeg] + 1;
+    LabelT label = rowRunBegs_[rowBeg];
     const LabelT firstLabel = label;
 
     std::vector<SpamRun *, tbb::scalable_allocator<SpamRun *>> rowRunPtrs(maxCol_);
@@ -1317,7 +1307,7 @@ SPSpamRgnVector ConnectWuParallel::operator() (SpamRgn &rgn, int connectivity)
         return rgs;
     }
 
-    const auto Plength = rgn.data_.size() + 1;
+    const auto Plength = rgn.data_.size();
     std::vector<LabelT>  vecP(Plength);
     LabelT *P = vecP.data();
 
@@ -1330,29 +1320,20 @@ SPSpamRgnVector ConnectWuParallel::operator() (SpamRgn &rgn, int connectivity)
     tbb::parallel_for(range, FirstScan8Connectivity(P, chunksSizeAndLabels, maxCol, rowRunBegs, rgn.data_));
     mergeLabels8Connectivity(rgn, P, chunksSizeAndLabels);
 
-    LabelT nLabels = 1;
+    LabelT nLabels = 0;
     for (int i = 0; i < numRows; i = chunksSizeAndLabels[i])
     {
-        flattenL(P, rowRunBegs[i] + 1, chunksSizeAndLabels[i + 1], nLabels);
+        flattenL(P, rowRunBegs[i], chunksSizeAndLabels[i + 1], nLabels);
     }
 
-    rgs->resize(nLabels - 1);
-    auto pRuns = rgn.data_.data();
-    auto pRowRunStarts = rowRunBegs.data();
+    rgs->resize(nLabels);
 
-    std::vector<int> numRunsOfRgn(nLabels - 1);
-    for (int row = 0; row < numRows; ++row)
+    std::vector<int> numRunsOfRgn(nLabels);
+    SpamRun *pRunsEnd = rgn.data_.data() + rgn.data_.size();
+    for (SpamRun *pRun = rgn.data_.data(); pRun != pRunsEnd; ++pRun)
     {
-        SpamRun *pRowRunBeg = pRuns;
-        SpamRun *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
-        for (SpamRun *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
-        {
-            pRun->label = P[pRun->label] - 1;
-            numRunsOfRgn[pRun->label] += 1;
-        }
-
-        pRuns = pRowRunEnd;
-        pRowRunStarts += 1;
+        pRun->label = P[pRun->label];
+        numRunsOfRgn[pRun->label] += 1;
     }
 
     int rgnIdx = 0;
