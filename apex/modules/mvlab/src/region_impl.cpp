@@ -3,6 +3,7 @@
 #include "region_collection_impl.hpp"
 #include "rtd_encoder.hpp"
 #include "utility.hpp"
+#include "connection.hpp"
 #include <opencv2/mvlab.hpp>
 
 namespace cv {
@@ -13,12 +14,13 @@ RegionImpl::RegionImpl(const Rect2f &rect)
 {
     if (rect.width > 0.f && rect.height > 0.f)
     {
-        rgn_runs_.reserve(cvCeil(rect.height));
+        RunList &rgnRuns = const_cast<RunList &>(rgn_runs_);
+        rgnRuns.reserve(cvCeil(rect.height));
 
         int runIdx = 0;
         for (float y = 0.f; y < rect.height; ++y)
         {
-            rgn_runs_.emplace_back(cvRound(y), cvRound(rect.x), cvRound(rect.x + rect.width));
+            rgnRuns.emplace_back(cvRound(y), cvRound(rect.x), cvRound(rect.x + rect.width));
             runIdx += 1;
         }
 
@@ -192,7 +194,8 @@ Rect RegionImpl::BoundingBox() const
 
 void RegionImpl::Connect(cv::Ptr<RegionCollection> &regions, const int connectivity) const
 {
-    regions = makePtr<RegionCollectionImpl>();
+    ConnectWuSerial connectWuSerial;
+    regions = connectWuSerial(this, connectivity);
 }
 
 const RowRunStartList &RegionImpl::GetRowRunStartList() const
@@ -207,12 +210,11 @@ void RegionImpl::FromMask(const cv::Mat &mask)
     int cnl = mask.channels();
     if (CV_8U == dph && 1 == cnl)
     {
+        RunList &rgnRuns = const_cast<RunList &>(rgn_runs_);
         for (int r = 0; r < mask.rows; ++r)
         {
             int cb = -1;
             const uchar* pRow = mask.data + r * mask.step1();
-            const int thisRowBegRun = static_cast<int>(rgn_runs_.size());
-
             for (int c = 0; c < mask.cols; ++c)
             {
                 if (pRow[c])
@@ -226,7 +228,7 @@ void RegionImpl::FromMask(const cv::Mat &mask)
                 {
                     if (cb > -1)
                     {
-                        rgn_runs_.emplace_back(r, cb, c);
+                        rgnRuns.emplace_back(r, cb, c);
                         cb = -1;
                     }
                 }
@@ -234,7 +236,7 @@ void RegionImpl::FromMask(const cv::Mat &mask)
 
             if (cb > -1)
             {
-                rgn_runs_.emplace_back(r, cb, mask.cols);
+                rgnRuns.emplace_back(r, cb, mask.cols);
             }
         }
     }
@@ -254,7 +256,7 @@ void RegionImpl::FromPathVector(const Geom::PathVector &pv)
         cv::Mat mask = Util::PathToMask(pv*Geom::Translate(-rect.x, -rect.y), rect.size(), buf);
         FromMask(mask);
 
-        for (RunLength &run : rgn_runs_)
+        for (RunLength &run : const_cast<RunList &>(rgn_runs_))
         {
             run.colb += rect.x;
             run.cole += rect.x;
@@ -319,7 +321,7 @@ void RegionImpl::GatherBasicFeatures() const
     {
         if (!rgn_runs_.empty())
         {
-            row_run_begs_.reserve(rgn_runs_.size() + 1);
+            row_run_begs_.reserve(rgn_runs_.back().row-rgn_runs_.front().row + 2);
             const int numRuns = static_cast<int>(rgn_runs_.size());
             int currentRow = rgn_runs_.front().row;
 

@@ -12,7 +12,7 @@ class ConnectWuSerial
 public:
     ConnectWuSerial() {}
 public:
-    cv::Ptr<RegionCollection> operator()(const cv::Ptr<Region> &rgn, const int connectivity) const;
+    cv::Ptr<RegionCollection> operator()(const Region *rgn, const int connectivity) const;
 };
 
 }

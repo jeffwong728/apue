@@ -827,7 +827,6 @@ SPSpamRgnVector SpamRgn::ConnectMT() const
     }
 
     uint16_t nLabels = flattenL(P, lunique);
-    rgs->resize(nLabels);
 
     std::vector<int> numRunsOfRgn(nLabels);
     SpamRun *pRunsEnd = data_.data() + data_.size();
@@ -838,6 +837,7 @@ SPSpamRgnVector SpamRgn::ConnectMT() const
     }
 
     int rgnIdx = 0;
+    rgs->resize(nLabels);
     for (SpamRgn &rgn : *rgs)
     {
         rgn.GetData().reserve(numRunsOfRgn[rgnIdx++]);

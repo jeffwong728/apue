@@ -60,7 +60,7 @@ private:
     void GatherBasicFeatures() const;
 
 private:
-    RunList                                 rgn_runs_;
+    const RunList                           rgn_runs_;
     mutable RowRunStartList                 row_run_begs_;
     mutable boost::optional<double>         area_;
     mutable boost::optional<cv::Point2d>    centroid_;

@@ -84,9 +84,9 @@ inline static
     }
 }
 
-cv::Ptr<RegionCollection> ConnectWuSerial::operator()(const cv::Ptr<Region> &rgn, const int connectivity) const
+cv::Ptr<RegionCollection> ConnectWuSerial::operator()(const Region *rgn, const int connectivity) const
 {
-    cv::Ptr<RegionImpl> rgnImpl = rgn.dynamicCast<RegionImpl>();
+    const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
     if (!rgnImpl)
     {
         return makePtr<RegionCollectionImpl>();
@@ -170,7 +170,35 @@ cv::Ptr<RegionCollection> ConnectWuSerial::operator()(const cv::Ptr<Region> &rgn
 
     LabelT nLabels = flattenL(P, lunique);
 
-    return makePtr<RegionCollectionImpl>();
+    std::vector<int> numRunsOfRgn(nLabels);
+    RunLength *pRunsEnd = allRuns.data() + allRuns.size();
+    for (RunLength *pRun = allRuns.data(); pRun != pRunsEnd; ++pRun)
+    {
+        pRun->label = P[pRun->label];
+        numRunsOfRgn[pRun->label] += 1;
+    }
+
+    RunList collectionRuns(allRuns.size());
+    rowRunPtrs.resize(nLabels);
+    RunLength **pRunPtr = rowRunPtrs.data();
+    RunLength *pFirstRun = collectionRuns.data();
+    *(pRunPtr++) = pFirstRun;
+
+    int *pNumEnd = numRunsOfRgn.data() + numRunsOfRgn.size();
+    for (int *pNum = numRunsOfRgn.data()+1; pNum != pNumEnd; ++pNum, ++pRunPtr)
+    {
+        *pRunPtr = pFirstRun + pNum[-1];
+        *pNum += pNum[-1];
+    }
+
+    for (const auto &run : allRuns)
+    {
+        auto &pRun = rowRunPtrs[run.label];
+        *pRun = run;
+        pRun += 1;
+    }
+
+    return makePtr<RegionCollectionImpl>(&collectionRuns, &numRunsOfRgn);
 }
 
 }
