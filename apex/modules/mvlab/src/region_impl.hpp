@@ -46,7 +46,9 @@ public:
     double Area() const CV_OVERRIDE;
     Point2d Centroid() const CV_OVERRIDE;
     Rect BoundingBox() const CV_OVERRIDE;
-    void Connect(cv::Ptr<RegionCollection> &regions, const int connectivity) const CV_OVERRIDE;
+    int Count() const CV_OVERRIDE;
+    int CountRow() const CV_OVERRIDE;
+    cv::Ptr<RegionCollection> Connect(const int connectivity) const CV_OVERRIDE;
 
 public:
     const RunList &GetAllRuns() const { return rgn_runs_; }

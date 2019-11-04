@@ -5,7 +5,6 @@
 
 namespace cv {
 namespace mvlab {
-using LabelT = int;
 //Find the root of the tree of node i
 template<typename LabelT>
 inline static
@@ -199,6 +198,210 @@ cv::Ptr<RegionCollection> ConnectWuSerial::operator()(const Region *rgn, const i
     }
 
     return makePtr<RegionCollectionImpl>(&collectionRuns, &numRunsOfRgn);
+}
+
+ConnectWuParallel::FirstScan8Connectivity::FirstScan8Connectivity(LabelT *P,
+    int *chunksSizeAndLabels,
+    const cv::Rect &bbox,
+    const RowRunStartList &rowRunBegs,
+    RunList &data)
+    : P_(P)
+    , chunksSizeAndLabels_(chunksSizeAndLabels)
+    , bbox_(bbox)
+    , rowRunBegs_(rowRunBegs)
+    , data_(data)
+{}
+
+void ConnectWuParallel::FirstScan8Connectivity::operator()(const tbb::blocked_range<int>& br) const
+{
+    const int rowBeg = br.begin();
+    const int rowEnd = br.end();
+    chunksSizeAndLabels_[rowBeg] = br.end();
+
+    LabelT label = rowRunBegs_[rowBeg];
+    const LabelT firstLabel = label;
+    const int maxWidth = bbox_.width + 3;
+
+    std::vector<RunLength *, tbb::scalable_allocator<RunLength *>> rowRunPtrs(maxWidth);
+    RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox_.x;
+    int rowPrev = std::numeric_limits<int>::min();
+    RunLength *pRuns = data_.data() + rowRunBegs_[rowBeg];
+    const int *pRowRunStarts = rowRunBegs_.data() + rowBeg;
+
+    for (int row = rowBeg; row != rowEnd; ++row)
+    {
+        RunLength *pRowRunBeg = pRuns;
+        RunLength *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
+
+        if ((rowPrev + 1) == pRuns->row) {
+            for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                int col = pRun->colb - 1;
+                while (!vRowRunPtrs[col] && col <= pRun->cole) {
+                    col += 1;
+                }
+
+                if (col > pRun->cole) {
+                    pRun->label = label; P_[label] = label; label = label + 1;
+                }
+                else {
+                    LabelT lab = vRowRunPtrs[col]->label;
+                    col = vRowRunPtrs[col]->cole + 1;
+                    for (; col <= pRun->cole; ++col)
+                    {
+                        if (vRowRunPtrs[col]) {
+                            lab = set_union(P_, lab, vRowRunPtrs[col]->label);
+                            col = vRowRunPtrs[col]->cole;
+                        }
+                    }
+                    pRun->label = lab;
+                }
+            }
+        }
+        else {
+            for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                pRun->label = label; P_[label] = label; label = label + 1;
+            }
+        }
+
+        std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(RunLength *));
+        for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+        {
+            for (int col = pRun->colb; col < pRun->cole; ++col)
+            {
+                vRowRunPtrs[col] = pRun;
+            }
+        }
+
+        rowPrev = pRuns->row; pRuns = pRowRunEnd; pRowRunStarts += 1;
+    }
+
+    chunksSizeAndLabels_[rowBeg + 1] = label - firstLabel;
+}
+
+cv::Ptr<RegionCollection> ConnectWuParallel::operator() (const Region *rgn, int connectivity)
+{
+    const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
+    if (!rgnImpl)
+    {
+        return makePtr<RegionCollectionImpl>();
+    }
+
+    RunList &allRuns = const_cast<RunList &>(rgnImpl->GetAllRuns());
+    const RowRunStartList &rowRunBegs = rgnImpl->GetRowRunStartList();
+    const cv::Rect bbox = rgnImpl->BoundingBox();
+    const int maxWidth = bbox.width + 3;
+
+    const auto Plength = allRuns.size();
+    std::vector<LabelT>  vecP(Plength);
+    LabelT *P = vecP.data();
+
+    std::vector<int> vecChunksSizeAndLabels(rowRunBegs.size());
+    int *chunksSizeAndLabels = vecChunksSizeAndLabels.data();
+    const int numRows = static_cast<int>(rowRunBegs.size() - 1);
+
+    const int nThreads = tbb::task_scheduler_init::default_num_threads();
+    tbb::blocked_range<int> range(0, numRows, std::max(2, std::min(numRows / 2, nThreads * 4)));
+    tbb::parallel_for(range, FirstScan8Connectivity(P, chunksSizeAndLabels, bbox, rowRunBegs, allRuns));
+
+    std::vector<RunLength *> rowRunPtrs(maxWidth);
+    mergeLabels8Connectivity(*rgnImpl, rowRunPtrs, P, chunksSizeAndLabels);
+
+    LabelT nLabels = 0;
+    for (int i = 0; i < numRows; i = chunksSizeAndLabels[i])
+    {
+        flattenL(P, rowRunBegs[i], chunksSizeAndLabels[i + 1], nLabels);
+    }
+
+    std::vector<int> numRunsOfRgn(nLabels);
+    RunLength *pRunsEnd = allRuns.data() + allRuns.size();
+    for (RunLength *pRun = allRuns.data(); pRun != pRunsEnd; ++pRun)
+    {
+        pRun->label = P[pRun->label];
+        numRunsOfRgn[pRun->label] += 1;
+    }
+
+    RunList collectionRuns(allRuns.size());
+    rowRunPtrs.resize(nLabels);
+    RunLength **pRunPtr = rowRunPtrs.data();
+    RunLength *pFirstRun = collectionRuns.data();
+    *(pRunPtr++) = pFirstRun;
+
+    int *pNumEnd = numRunsOfRgn.data() + numRunsOfRgn.size();
+    for (int *pNum = numRunsOfRgn.data() + 1; pNum != pNumEnd; ++pNum, ++pRunPtr)
+    {
+        *pRunPtr = pFirstRun + pNum[-1];
+        *pNum += pNum[-1];
+    }
+
+    for (const auto &run : allRuns)
+    {
+        auto &pRun = rowRunPtrs[run.label];
+        *pRun = run;
+        pRun += 1;
+    }
+
+    return makePtr<RegionCollectionImpl>(&collectionRuns, &numRunsOfRgn);
+}
+
+void ConnectWuParallel::mergeLabels8Connectivity(const RegionImpl &rgn,
+    std::vector<RunLength *> &rowRunPtrs,
+    LabelT *P,
+    const int *chunksSizeAndLabels)
+{
+    RunList &allRuns = const_cast<RunList &>(rgn.GetAllRuns());
+    const RowRunStartList &rowRunBegs = rgn.GetRowRunStartList();
+    const int numRows = static_cast<int>(rowRunBegs.size() - 1);
+    const cv::Rect bbox = rgn.BoundingBox();
+    const int maxWidth = bbox.width + 3;
+    RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox.x;
+
+    for (int row = chunksSizeAndLabels[0]; row < numRows; row = chunksSizeAndLabels[row])
+    {
+        RunLength *pRowRunBeg = allRuns.data() + rowRunBegs[row];
+        RunLength *pRowRunEnd = pRowRunBeg + rowRunBegs[row + 1] - rowRunBegs[row];
+        int rowPrev = row == 0 ? std::numeric_limits<int>::min() : allRuns[rowRunBegs[row - 1]].row;
+        if ((rowPrev + 1) == pRowRunBeg->row)
+        {
+            std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(const RunLength *));
+            RunLength *pPrevRowRunBeg = allRuns.data() + rowRunBegs[row - 1];
+            RunLength *pPrevRowRunEnd = pPrevRowRunBeg + rowRunBegs[row] - rowRunBegs[row - 1];
+
+            for (RunLength *pRun = pPrevRowRunBeg; pRun != pPrevRowRunEnd; ++pRun)
+            {
+                for (int col = pRun->colb; col < pRun->cole; ++col)
+                {
+                    vRowRunPtrs[col] = pRun;
+                }
+            }
+
+            for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                int col = pRun->colb - 1;
+                while (!vRowRunPtrs[col] && col <= pRun->cole) {
+                    col += 1;
+                }
+
+                if (col <= pRun->cole) {
+                    LabelT lab = vRowRunPtrs[col]->label;
+                    col = vRowRunPtrs[col]->cole + 1;
+                    for (; col <= pRun->cole; ++col)
+                    {
+                        if (vRowRunPtrs[col]) {
+                            lab = set_union(P, lab, vRowRunPtrs[col]->label);
+                            col = vRowRunPtrs[col]->cole;
+                        }
+                    }
+                    pRun->label = set_union(P, lab, pRun->label);
+                }
+            }
+        }
+    }
+}
+
+void ConnectWuParallel::mergeLabels4Connectivity(const RegionImpl &rgn, LabelT *P, const int *chunksSizeAndLabels)
+{
 }
 
 }

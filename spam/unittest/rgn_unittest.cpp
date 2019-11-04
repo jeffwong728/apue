@@ -5,6 +5,7 @@
 #include <ui/proc/rgn.h>
 #include <ui/proc/basic.h>
 #include <opencv2/highgui.hpp>
+#include <opencv2/mvlab.hpp>
 #include <tbb/tbb.h>
 #include <tbb/task_scheduler_init.h>
 
@@ -829,4 +830,20 @@ BOOST_AUTO_TEST_CASE(test_AlignImageWidth, *boost::unit_test::enable_if<vtune_bu
 
     BOOST_CHECK_EQUAL(alignGrayImg.step1()%64, 0);
     BOOST_TEST_MESSAGE("Align gray image width (mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+}
+
+BOOST_AUTO_TEST_CASE(test_Mvlab_Connect_Mista, *boost::unit_test::enable_if<vtune_build>())
+{
+    cv::Mat grayImg, colorImg;
+    std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage("mista.png");
+
+    cv::Ptr<cv::mvlab::Region> rgn;
+    cv::mvlab::Threshold(grayImg, 150, 255, rgn);
+
+    tbb::tick_count t1 = tbb::tick_count::now();
+    cv::Ptr<cv::mvlab::RegionCollection> rgns;
+    rgn->Connect(rgns, 8);
+    tbb::tick_count t2 = tbb::tick_count::now();
+    BOOST_TEST_MESSAGE("Spam connect times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
+    BOOST_CHECK_EQUAL(rgns->Count(), 941);
 }

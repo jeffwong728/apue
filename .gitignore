@@ -75,3 +75,5 @@ config
 /apex/modules/rgbd
 /apex/modules/saliency
 /apex/modules/sfm
+.vs
+__pycache__

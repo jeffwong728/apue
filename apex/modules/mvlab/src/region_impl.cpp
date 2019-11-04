@@ -192,10 +192,41 @@ Rect RegionImpl::BoundingBox() const
     return *bbox_;
 }
 
-void RegionImpl::Connect(cv::Ptr<RegionCollection> &regions, const int connectivity) const
+int RegionImpl::Count() const
 {
-    ConnectWuSerial connectWuSerial;
-    regions = connectWuSerial(this, connectivity);
+    return static_cast<int>(rgn_runs_.size());
+}
+
+int RegionImpl::CountRow() const
+{
+    if (RegionImpl::Empty())
+    {
+        return 0;
+    }
+    else
+    {
+        const RowRunStartList &rowRanges = RegionImpl::GetRowRunStartList();
+        return static_cast<int>(rowRanges.size() - 1);
+    }
+}
+
+cv::Ptr<RegionCollection> RegionImpl::Connect(const int connectivity) const
+{
+    const int nThreads = tbb::task_scheduler_init::default_num_threads();
+    const RowRunStartList &rowRanges = GetRowRunStartList();
+    const int numRows = static_cast<int>(rowRanges.size() - 1);
+
+    const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
+    if (is_parallel)
+    {
+        ConnectWuParallel connectWuParallel;
+        return connectWuParallel(this, connectivity);
+    }
+    else
+    {
+        ConnectWuSerial connectWuSerial;
+        return connectWuSerial(this, connectivity);
+    }
 }
 
 const RowRunStartList &RegionImpl::GetRowRunStartList() const
