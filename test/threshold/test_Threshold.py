@@ -58,6 +58,18 @@ class TestThreshold(unittest.TestCase):
         logging.info("Threshold 'mista.png' spent {0:f}ms".format((endTime-startTime)*1000))
 
         self.assertEqual(r, 0, "Threshold 'mista.png' error")
+        self.assertEqual(rgn.Count(), 234794)
+
+    def test_Digits_Threshold(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        blue, green, red = cv2.split(image)
+
+        startTime = time.perf_counter()
+        r, rgn = mvlab.Threshold(blue, 150, 255)
+        endTime = time.perf_counter()
+        logging.info("Threshold 'digits.png' spent {0:f}ms".format((endTime-startTime)*1000))
+
+        self.assertEqual(r, 0, "Threshold 'digits.png' error")
 
 if __name__ == '__main__':
     unittest.main()

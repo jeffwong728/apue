@@ -75,4 +75,10 @@ template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2f> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2d> : boost::true_type {};
 
+using ScalableIntSequence           = std::vector<int, tbb::scalable_allocator<int>>;
+using ScalableIntSequenceSequence   = std::vector<ScalableIntSequence, tbb::scalable_allocator<ScalableIntSequence>>;
+using ScalableDoubleSequence        = std::vector<double, tbb::scalable_allocator<double>>;
+using ScalablePoint2dSequence       = std::vector<cv::Point2d, tbb::scalable_allocator<cv::Point2d>>;
+using ScalableRectSequence          = std::vector<cv::Rect, tbb::scalable_allocator<cv::Rect>>;
+
 #endif

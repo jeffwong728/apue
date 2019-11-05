@@ -75,7 +75,7 @@ void RegionCollectionImpl::GatherBasicFeatures() const
         return;
     }
 
-    rgn_row_run_begs_.resize(numRgns);
+    rgn_row_begs_.resize(numRgns);
     rgn_areas_.resize(numRgns);
     rgn_centroids_.resize(numRgns);
     rgn_bboxes_.resize(numRgns);
@@ -83,7 +83,7 @@ void RegionCollectionImpl::GatherBasicFeatures() const
     double *pAreas = rgn_areas_.data();
     cv::Point2d *pCentroids = rgn_centroids_.data();
     cv::Rect *pBBoxes = rgn_bboxes_.data();
-    RowRunStartList *pRowRunStarts = rgn_row_run_begs_.data();
+    RowBeginSequence *pRowRunStarts = rgn_row_begs_.data();
 
     int rgnIdxBeg = 0;
     const int *pRgnIdxEnd = run_beg_idxs_.data() + run_beg_idxs_.size();

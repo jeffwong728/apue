@@ -841,8 +841,7 @@ BOOST_AUTO_TEST_CASE(test_Mvlab_Connect_Mista, *boost::unit_test::enable_if<vtun
     cv::mvlab::Threshold(grayImg, 150, 255, rgn);
 
     tbb::tick_count t1 = tbb::tick_count::now();
-    cv::Ptr<cv::mvlab::RegionCollection> rgns;
-    rgn->Connect(rgns, 8);
+    cv::Ptr<cv::mvlab::RegionCollection> rgns = rgn->Connect(8);
     tbb::tick_count t2 = tbb::tick_count::now();
     BOOST_TEST_MESSAGE("Spam connect times(mista.png): " << (t2 - t1).seconds() * 1000 << "ms");
     BOOST_CHECK_EQUAL(rgns->Count(), 941);

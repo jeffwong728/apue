@@ -14,7 +14,7 @@ RegionImpl::RegionImpl(const Rect2f &rect)
 {
     if (rect.width > 0.f && rect.height > 0.f)
     {
-        RunList &rgnRuns = const_cast<RunList &>(rgn_runs_);
+        RunSequence &rgnRuns = const_cast<RunSequence &>(rgn_runs_);
         rgnRuns.reserve(cvCeil(rect.height));
 
         int runIdx = 0;
@@ -70,7 +70,7 @@ RegionImpl::RegionImpl(const Point2f &center, const Size2f &size, const float an
     contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
 }
 
-RegionImpl::RegionImpl(RunList *const runs)
+RegionImpl::RegionImpl(RunSequence *const runs)
     : rgn_runs_(std::move(*runs))
 {
 }
@@ -205,34 +205,66 @@ int RegionImpl::CountRow() const
     }
     else
     {
-        const RowRunStartList &rowRanges = RegionImpl::GetRowRunStartList();
+        const RowBeginSequence &rowRanges = RegionImpl::GetRowBeginSequence();
         return static_cast<int>(rowRanges.size() - 1);
     }
 }
 
 cv::Ptr<RegionCollection> RegionImpl::Connect(const int connectivity) const
 {
+    if (RegionImpl::Empty())
+    {
+        return makePtr<RegionCollectionImpl>();
+    }
+
     const int nThreads = tbb::task_scheduler_init::default_num_threads();
-    const RowRunStartList &rowRanges = GetRowRunStartList();
+    const RowBeginSequence &rowRanges = GetRowBeginSequence();
     const int numRows = static_cast<int>(rowRanges.size() - 1);
 
     const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
     if (is_parallel)
     {
         ConnectWuParallel connectWuParallel;
-        return connectWuParallel(this, connectivity);
+        return connectWuParallel.Connect(this, connectivity);
     }
     else
     {
         ConnectWuSerial connectWuSerial;
-        return connectWuSerial(this, connectivity);
+        return connectWuSerial.Connect(this, connectivity);
     }
 }
 
-const RowRunStartList &RegionImpl::GetRowRunStartList() const
+int RegionImpl::Connect2(const int connectivity, std::vector<Ptr<Region>> &regions) const
+{
+    regions.clear();
+    if (RegionImpl::Empty())
+    {
+        return MLR_REGION_EMPTY;
+    }
+
+    const int nThreads = tbb::task_scheduler_init::default_num_threads();
+    const RowBeginSequence &rowRanges = GetRowBeginSequence();
+    const int numRows = static_cast<int>(rowRanges.size() - 1);
+
+    const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
+    if (is_parallel)
+    {
+        ConnectWuParallel connectWuParallel;
+        connectWuParallel.Connect(this, connectivity, regions);
+    }
+    else
+    {
+        ConnectWuSerial connectWuSerial;
+        connectWuSerial.Connect(this, connectivity, regions);
+    }
+
+    return MLR_SUCCESS;
+}
+
+const RowBeginSequence &RegionImpl::GetRowBeginSequence() const
 {
     GatherBasicFeatures();
-    return row_run_begs_;
+    return row_begs_;
 }
 
 void RegionImpl::FromMask(const cv::Mat &mask)
@@ -241,7 +273,7 @@ void RegionImpl::FromMask(const cv::Mat &mask)
     int cnl = mask.channels();
     if (CV_8U == dph && 1 == cnl)
     {
-        RunList &rgnRuns = const_cast<RunList &>(rgn_runs_);
+        RunSequence &rgnRuns = const_cast<RunSequence &>(rgn_runs_);
         for (int r = 0; r < mask.rows; ++r)
         {
             int cb = -1;
@@ -287,7 +319,7 @@ void RegionImpl::FromPathVector(const Geom::PathVector &pv)
         cv::Mat mask = Util::PathToMask(pv*Geom::Translate(-rect.x, -rect.y), rect.size(), buf);
         FromMask(mask);
 
-        for (RunLength &run : const_cast<RunList &>(rgn_runs_))
+        for (RunLength &run : const_cast<RunSequence &>(rgn_runs_))
         {
             run.colb += rect.x;
             run.cole += rect.x;
@@ -340,7 +372,7 @@ void RegionImpl::TraceContour() const
     {
         GatherBasicFeatures();
         RunLengthRDEncoder rdEncoder;
-        rdEncoder.Encode(rgn_runs_, row_run_begs_);
+        rdEncoder.Encode(rgn_runs_, row_begs_);
         rdEncoder.Link();
         rdEncoder.Track(contour_outers_, contour_holes_);
     }
@@ -352,7 +384,7 @@ void RegionImpl::GatherBasicFeatures() const
     {
         if (!rgn_runs_.empty())
         {
-            row_run_begs_.reserve(rgn_runs_.back().row-rgn_runs_.front().row + 2);
+            row_begs_.reserve(rgn_runs_.back().row-rgn_runs_.front().row + 2);
             const int numRuns = static_cast<int>(rgn_runs_.size());
             int currentRow = rgn_runs_.front().row;
 
@@ -366,7 +398,7 @@ void RegionImpl::GatherBasicFeatures() const
                 const RunLength &rl = rgn_runs_[runIdx];
                 if (rl.row != currentRow)
                 {
-                    row_run_begs_.emplace_back(begIdx); begIdx = runIdx; currentRow = rl.row;
+                    row_begs_.emplace_back(begIdx); begIdx = runIdx; currentRow = rl.row;
                 }
 
                 const auto n = rl.cole - rl.colb;
@@ -380,8 +412,8 @@ void RegionImpl::GatherBasicFeatures() const
                 if (rl.cole > maxPoint.x) { maxPoint.x = rl.cole; }
             }
 
-            row_run_begs_.emplace_back(begIdx);
-            row_run_begs_.emplace_back(numRuns);
+            row_begs_.emplace_back(begIdx);
+            row_begs_.emplace_back(numRuns);
 
             area_ = a;
             if (a > 0) {

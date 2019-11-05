@@ -221,7 +221,7 @@ inline void RDEncoder::GenerateRDCodes(const std::vector<int> &P_BUFFER, const s
     }
 }
 
-void RunLengthRDEncoder::Encode(const RunList &rgn_runs, const RowRunStartList &rranges)
+void RunLengthRDEncoder::Encode(const RunSequence &rgn_runs, const RowBeginSequence &rranges)
 {
     constexpr int Infinity = std::numeric_limits<int>::max();
     const int numRows = static_cast<int>(rranges.size()) - 1;

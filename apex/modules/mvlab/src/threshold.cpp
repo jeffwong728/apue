@@ -8,7 +8,7 @@ namespace mvlab {
 class RunsPerRowCounter
 {
 public:
-    RunsPerRowCounter(const cv::Mat *const imgMat, std::vector<int> *const numRunsPerRow, const uint32_t minGray, const uint32_t maxGray)
+    RunsPerRowCounter(const cv::Mat *const imgMat, ScalableIntSequence *const numRunsPerRow, const uint32_t minGray, const uint32_t maxGray)
         : img_mat_(imgMat)
         , num_runs_per_row_(numRunsPerRow)
         , min_gray(minGray)
@@ -19,7 +19,7 @@ public:
 
 private:
     const cv::Mat *const img_mat_;
-    std::vector<int> *const num_runs_per_row_;
+    ScalableIntSequence *const num_runs_per_row_;
     const uint32_t min_gray;
     const uint32_t max_gray;
 };
@@ -85,7 +85,7 @@ void RunsPerRowCounter::operator()(const tbb::blocked_range<int>& br) const
 class Thresholder
 {
 public:
-    Thresholder(const cv::Mat *const imgMat, const std::vector<int> *const numRunsPerRow, RunList *const allRuns, const uint32_t minGray, const uint32_t maxGray)
+    Thresholder(const cv::Mat *const imgMat, const ScalableIntSequence *const numRunsPerRow, RunSequence *const allRuns, const uint32_t minGray, const uint32_t maxGray)
         : img_mat_(imgMat)
         , num_runs_per_row_(numRunsPerRow)
         , all_runs_(allRuns)
@@ -97,8 +97,8 @@ public:
 
 private:
     const cv::Mat *const img_mat_;
-    const std::vector<int> *const num_runs_per_row_;
-    RunList *const all_runs_;
+    const ScalableIntSequence *const num_runs_per_row_;
+    RunSequence *const all_runs_;
     const uint32_t min_gray;
     const uint32_t max_gray;
 };
@@ -224,7 +224,7 @@ int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<
         return MLR_IMAGE_FORMAT_ERROR;
     }
 
-    std::vector<int> numRunsPerRow(imgMat.rows);
+    ScalableIntSequence numRunsPerRow(imgMat.rows);
     RunsPerRowCounter numRunsCounter(&imgMat, &numRunsPerRow, minGray, maxGray);
     tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), numRunsCounter);
 
@@ -233,7 +233,7 @@ int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<
         numRunsPerRow[n] += numRunsPerRow[n - 1];
     }
 
-    RunList allRuns(numRunsPerRow.back());
+    RunSequence allRuns(numRunsPerRow.back());
     Thresholder thresher(&imgMat, &numRunsPerRow, &allRuns, minGray, maxGray);
     tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), thresher);
 

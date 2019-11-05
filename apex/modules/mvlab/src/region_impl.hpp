@@ -23,8 +23,12 @@ struct RunLength
     int label;
 };
 
-using RunList         = std::vector<RunLength>;
-using RowRunStartList = std::vector<int>;
+using RunSequence                   = std::vector<RunLength, tbb::scalable_allocator<RunLength>>;
+using RunSequenceSequence           = std::vector<RunSequence, tbb::scalable_allocator<RunSequence>>;
+using RunPtrSequence                = std::vector<RunLength *, tbb::scalable_allocator<RunLength*>>;
+using RunConstPtrSequence           = std::vector<const RunLength *, tbb::scalable_allocator<const RunLength*>>;
+using RowBeginSequence              = ScalableIntSequence;
+using RowBeginSequenceSequence      = ScalableIntSequenceSequence;
 
 class RegionImpl : public Region
 {
@@ -35,7 +39,7 @@ public:
     RegionImpl(const Point2f &center, const float radius);
     RegionImpl(const Point2f &center, const Size2f &size);
     RegionImpl(const Point2f &center, const Size2f &size, const float angle);
-    RegionImpl(RunList *const runs);
+    RegionImpl(RunSequence *const runs);
 
 public:
     int Draw(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const CV_OVERRIDE;
@@ -49,10 +53,11 @@ public:
     int Count() const CV_OVERRIDE;
     int CountRow() const CV_OVERRIDE;
     cv::Ptr<RegionCollection> Connect(const int connectivity) const CV_OVERRIDE;
+    int Connect2(const int connectivity, std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
 
 public:
-    const RunList &GetAllRuns() const { return rgn_runs_; }
-    const RowRunStartList &GetRowRunStartList() const;
+    const RunSequence &GetAllRuns() const { return rgn_runs_; }
+    const RowBeginSequence &GetRowBeginSequence() const;
 
 private:
     void FromMask(const cv::Mat &mask);
@@ -62,13 +67,13 @@ private:
     void GatherBasicFeatures() const;
 
 private:
-    const RunList                           rgn_runs_;
-    mutable RowRunStartList                 row_run_begs_;
-    mutable boost::optional<double>         area_;
-    mutable boost::optional<cv::Point2d>    centroid_;
-    mutable boost::optional<cv::Rect>       bbox_;
-    mutable std::vector<Ptr<Contour>>       contour_outers_;
-    mutable std::vector<Ptr<Contour>>       contour_holes_;
+    const RunSequence                    rgn_runs_;
+    mutable RowBeginSequence             row_begs_;
+    mutable boost::optional<double>      area_;
+    mutable boost::optional<cv::Point2d> centroid_;
+    mutable boost::optional<cv::Rect>    bbox_;
+    mutable std::vector<Ptr<Contour>>    contour_outers_;
+    mutable std::vector<Ptr<Contour>>    contour_holes_;
 };
 
 }

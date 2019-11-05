@@ -42,7 +42,7 @@ public:
     RunLengthRDEncoder() : RDEncoder() {}
 
 public:
-    void Encode(const RunList &rgn_runs, const RowRunStartList &rranges);
+    void Encode(const RunSequence &rgn_runs, const RowBeginSequence &rranges);
 };
 
 }
