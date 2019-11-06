@@ -31,7 +31,7 @@ void RunsPerRowCounter::operator()(const tbb::blocked_range<int>& br) const
     const auto stride = img_mat_->step1();
     const int32_t regularWidth = width & (-simdSize);
     const int32_t binWidth = regularWidth + simdSize;
-    std::vector<int8_t, tbb::scalable_allocator<int8_t>> binVec(binWidth + 1);
+    std::vector<int8_t, MyAlloc<int8_t>> binVec(binWidth + 1);
 
     vcl::Vec32uc lowThresh(min_gray);
     vcl::Vec32uc highThresh(max_gray);
@@ -111,7 +111,7 @@ void Thresholder::operator()(const tbb::blocked_range<int>& br) const
     const int32_t regularWidth = width & (-simdSize);
     const int32_t binWidth = regularWidth + simdSize;
     std::array<int8_t, simdSize> traVec;
-    std::vector<int8_t, tbb::scalable_allocator<int8_t>> binVec(binWidth + 1);
+    std::vector<int8_t, MyAlloc<int8_t>> binVec(binWidth + 1);
 
     vcl::Vec32uc lowThresh(min_gray);
     vcl::Vec32uc highThresh(max_gray);

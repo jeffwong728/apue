@@ -42,6 +42,7 @@
 #ifndef __OPENCV_MVLAB_PRECOMP__
 #define __OPENCV_MVLAB_PRECOMP__
 
+#include "myalloc11.hpp"
 #include <set>
 #include <map>
 #include <vector>
@@ -75,10 +76,10 @@ template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2f> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2d> : boost::true_type {};
 
-using ScalableIntSequence           = std::vector<int, tbb::scalable_allocator<int>>;
-using ScalableIntSequenceSequence   = std::vector<ScalableIntSequence, tbb::scalable_allocator<ScalableIntSequence>>;
-using ScalableDoubleSequence        = std::vector<double, tbb::scalable_allocator<double>>;
-using ScalablePoint2dSequence       = std::vector<cv::Point2d, tbb::scalable_allocator<cv::Point2d>>;
-using ScalableRectSequence          = std::vector<cv::Rect, tbb::scalable_allocator<cv::Rect>>;
+using ScalableIntSequence           = std::vector<int, MyAlloc<int>>;
+using ScalableIntSequenceSequence   = std::vector<ScalableIntSequence, MyAlloc<ScalableIntSequence>>;
+using ScalableDoubleSequence        = std::vector<double, MyAlloc<double>>;
+using ScalablePoint2dSequence       = std::vector<cv::Point2d, MyAlloc<cv::Point2d>>;
+using ScalableRectSequence          = std::vector<cv::Rect, MyAlloc<cv::Rect>>;
 
 #endif

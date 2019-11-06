@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{66d05c3d-6db7-4278-8d98-d48e4ec191c3}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>__init__.py</StartupFile>
+    <StartupFile>genperfplot.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -19,6 +19,7 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="genperfplot.py" />
     <Compile Include="region\test_Area.py" />
     <Compile Include="region\test_Connection.py">
       <SubType>Code</SubType>

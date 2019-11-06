@@ -23,10 +23,10 @@ struct RunLength
     int label;
 };
 
-using RunSequence                   = std::vector<RunLength, tbb::scalable_allocator<RunLength>>;
-using RunSequenceSequence           = std::vector<RunSequence, tbb::scalable_allocator<RunSequence>>;
-using RunPtrSequence                = std::vector<RunLength *, tbb::scalable_allocator<RunLength*>>;
-using RunConstPtrSequence           = std::vector<const RunLength *, tbb::scalable_allocator<const RunLength*>>;
+using RunSequence                   = std::vector<RunLength, MyAlloc<RunLength>>;
+using RunSequenceSequence           = std::vector<RunSequence, MyAlloc<RunSequence>>;
+using RunPtrSequence                = std::vector<RunLength *, MyAlloc<RunLength*>>;
+using RunConstPtrSequence           = std::vector<const RunLength *, MyAlloc<const RunLength*>>;
 using RowBeginSequence              = ScalableIntSequence;
 using RowBeginSequenceSequence      = ScalableIntSequenceSequence;
 

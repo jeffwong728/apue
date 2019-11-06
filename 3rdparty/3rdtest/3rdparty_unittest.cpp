@@ -39,6 +39,7 @@ extern "C" {
 #include <boost/locale.hpp>
 #include <boost/optional.hpp>
 #include <opencv2/core.hpp>
+#include "myalloc11.hpp"
 
 namespace boost {
     namespace optional_config {
@@ -211,6 +212,17 @@ TEST(BoostOptionalTest, CVRect2d)
     optval.emplace(10.0, 10.0, 20.0, 20.0);
     EXPECT_EQ(optval->x, 10.0);
     EXPECT_EQ(optval->y, 10.0);
+}
+
+TEST(MIMallocTest, Basic)
+{
+    std::vector<int, MyAlloc<int>> vec;
+    vec.reserve(100);
+    vec.push_back(1);
+    vec.push_back(2);
+
+    EXPECT_EQ(vec.capacity(), 100);
+    EXPECT_EQ(vec.size(), 2);
 }
 
 }
