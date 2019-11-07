@@ -51,7 +51,8 @@ public:
     Point2d Centroid() const CV_OVERRIDE;
     Rect BoundingBox() const CV_OVERRIDE;
     int Count() const CV_OVERRIDE;
-    int CountRow() const CV_OVERRIDE;
+    int CountRows() const CV_OVERRIDE;
+    int OuterContours(std::vector<cv::Ptr<Contour>> &outerContours) const CV_OVERRIDE;
     cv::Ptr<RegionCollection> Connect(const int connectivity) const CV_OVERRIDE;
     int Connect2(const int connectivity, std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
 

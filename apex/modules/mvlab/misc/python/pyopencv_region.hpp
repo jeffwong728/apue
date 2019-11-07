@@ -1,5 +1,6 @@
 #ifdef HAVE_OPENCV_MVLAB
-typedef std::vector<Ptr<cv::mvlab::Region>> vector_Ptr_Region;
+typedef std::vector<cv::Ptr<cv::mvlab::Region>> vector_Ptr_Region;
+typedef std::vector<cv::Ptr<cv::mvlab::Contour>> vector_Ptr_Contour;
 typedef std::vector<cv::Point2d> vector_Point2d;
 
 template<> struct pyopencvVecConverter<Ptr<cv::mvlab::Region>>
@@ -10,6 +11,19 @@ template<> struct pyopencvVecConverter<Ptr<cv::mvlab::Region>>
     }
 
     static PyObject* from(const std::vector<Ptr<cv::mvlab::Region>>& value)
+    {
+        return pyopencv_from_generic_vec(value);
+    }
+};
+
+template<> struct pyopencvVecConverter<cv::Ptr<cv::mvlab::Contour>>
+{
+    static bool to(PyObject* obj, std::vector<cv::Ptr<cv::mvlab::Contour>>& value, const ArgInfo info)
+    {
+        return pyopencv_to_generic_vec(obj, value, info);
+    }
+
+    static PyObject* from(const std::vector<cv::Ptr<cv::mvlab::Contour>>& value)
     {
         return pyopencv_from_generic_vec(value);
     }

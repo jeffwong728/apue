@@ -11,7 +11,7 @@ class RegionCollectionImpl : public RegionCollection
 {
 public:
     RegionCollectionImpl() {}
-    RegionCollectionImpl(RunSequence *runs, ScalableIntSequence *begIdxs) : all_rgn_runs_(std::move(*runs)), run_beg_idxs_(std::move(*begIdxs)) {}
+    RegionCollectionImpl(RunSequence *runs, ScalableIntSequence *begIdxs) : all_rgn_runs_(std::move(*runs)), rgn_beg_idxs_(std::move(*begIdxs)) {}
 
 public:
     int Draw(Mat &img, const std::vector<cv::Scalar> &colors, const float thickness, const int style) const CV_OVERRIDE;
@@ -30,7 +30,7 @@ private:
 
 private:
     const RunSequence all_rgn_runs_;
-    const ScalableIntSequence run_beg_idxs_;
+    const ScalableIntSequence rgn_beg_idxs_;
 
     mutable RowBeginSequenceSequence                rgn_row_begs_;
     mutable ScalableDoubleSequence                  rgn_areas_;

@@ -86,7 +86,7 @@ void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour
             e.FLAG = 1;
             if (1 == e.CODE || 9 == e.CODE)
             {
-                std::vector<Point2f> contour;
+                ScalablePoint2fSequence contour;
                 contour.emplace_back(e.X, e.Y);
                 int nextLink = e.LINK;
                 while (!rd_list_[nextLink].FLAG)
@@ -106,11 +106,11 @@ void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour
 
                     if (1 == e.CODE)
                     {
-                        outers.push_back(cv::makePtr<ContourImpl>(std::move(contour), true));
+                        outers.push_back(cv::makePtr<ContourImpl>(&contour, true));
                     }
                     else
                     {
-                        holes.push_back(cv::makePtr<ContourImpl>(std::move(contour), true));
+                        holes.push_back(cv::makePtr<ContourImpl>(&contour, true));
                     }
                 }
             }
@@ -118,7 +118,7 @@ void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour
     }
 }
 
-inline void RDEncoder::GenerateRDCodes(const std::vector<int> &P_BUFFER, const std::vector<int> &C_BUFFER, const int l)
+inline void RDEncoder::GenerateRDCodes(const ScalableIntSequence &P_BUFFER, const ScalableIntSequence &C_BUFFER, const int l)
 {
     int P1 = 0;
     int P2 = 0;
@@ -221,15 +221,18 @@ inline void RDEncoder::GenerateRDCodes(const std::vector<int> &P_BUFFER, const s
     }
 }
 
-void RunLengthRDEncoder::Encode(const RunSequence &rgn_runs, const RowBeginSequence &rranges)
+void RunLengthRDSerialEncoder::Encode(const RunSequence::const_pointer pRunBeg,
+    const RunSequence::const_pointer pRunEnd,
+    const RowBeginSequence &rranges)
 {
     constexpr int Infinity = std::numeric_limits<int>::max();
     const int numRows = static_cast<int>(rranges.size()) - 1;
-    const int lBeg = rgn_runs.front().row;
-    const int lEnd = rgn_runs.back().row + 1;
+    const int lBeg = pRunBeg->row;
+    const int lEnd = (pRunEnd-1)->row + 1;
+    rd_list_.reserve(std::distance(pRunBeg, pRunEnd)*2);
 
-    std::vector<int> P_BUFFER;
-    std::vector<int> C_BUFFER;
+    ScalableIntSequence P_BUFFER;
+    ScalableIntSequence C_BUFFER;
     P_BUFFER.push_back(Infinity);
 
     int rIdx = 0;
@@ -237,14 +240,14 @@ void RunLengthRDEncoder::Encode(const RunSequence &rgn_runs, const RowBeginSeque
     {
         if (rIdx < numRows)
         {
-            const int begRun = rranges[rIdx];
-            const int endRun = rranges[rIdx+1];
-            if (l == rgn_runs[begRun].row)
+            const RunSequence::const_pointer pRowRunBeg = pRunBeg + rranges[rIdx];
+            const RunSequence::const_pointer pRowRunEnd = pRunBeg + rranges[rIdx+1];
+            if (l == pRowRunBeg->row)
             {
-                for (int runIdx = begRun; runIdx < endRun; ++runIdx)
+                for (RunSequence::const_pointer pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
                 {
-                    C_BUFFER.push_back(rgn_runs[runIdx].colb);
-                    C_BUFFER.push_back(rgn_runs[runIdx].cole);
+                    C_BUFFER.push_back(pRun->colb);
+                    C_BUFFER.push_back(pRun->cole);
                 }
                 rIdx += 1;
             }
@@ -254,6 +257,57 @@ void RunLengthRDEncoder::Encode(const RunSequence &rgn_runs, const RowBeginSeque
         RDEncoder::GenerateRDCodes(P_BUFFER, C_BUFFER, l);
         P_BUFFER.swap(C_BUFFER);
         C_BUFFER.resize(0);
+    }
+}
+
+class ParallelRDEncoder
+{
+    const RunSequence::const_pointer runBeg_;
+    const RunSequence::const_pointer runEnd_;
+    const RowBeginSequence &rranges_;
+    const ScalableIntSequence::pointer numCodes_;
+
+public:
+    ParallelRDEncoder(const RunSequence::const_pointer runBeg,
+        const RunSequence::const_pointer runEnd,
+        const RowBeginSequence &rranges,
+        const ScalableIntSequence::pointer numCodes)
+        : runBeg_(runBeg)
+        , runEnd_(runEnd)
+        , rranges_(rranges) {}
+
+public:
+    void operator()(const tbb::blocked_range<int>& br) const;
+};
+
+void RunLengthRDParallelEncoder::Encode(const RunSequence::const_pointer pRunBeg,
+    const RunSequence::const_pointer pRunEnd,
+    const RowBeginSequence &rranges)
+{
+    const int numRows = static_cast<int>(rranges.size()) - 1;
+    rd_list_.reserve(std::distance(pRunBeg, pRunEnd) * 2);
+    const int lBeg = pRunBeg->row;
+    const int lEnd = (pRunEnd - 1)->row + 1;
+
+    ScalableIntSequence numCodes(lEnd - lBeg + 2);
+    ScalableIntSequence::pointer pNumCodes = numCodes.data() + 1;
+
+    int rIdx = 0, P_NUMRUNS = 0;
+    for (int l = lBeg; l <= lEnd; ++l, ++pNumCodes)
+    {
+        int C_NUMRUNS = 0;
+        if (rIdx < numRows)
+        {
+            const RunSequence::const_pointer pRowRunBeg = pRunBeg + rranges[rIdx];
+            if (l == pRowRunBeg->row)
+            {
+                C_NUMRUNS = rranges[rIdx + 1] - rranges[rIdx];
+                rIdx += 1;
+            }
+        }
+
+        *pNumCodes = P_NUMRUNS + C_NUMRUNS + *(pNumCodes-1);
+        P_NUMRUNS = C_NUMRUNS;
     }
 }
 

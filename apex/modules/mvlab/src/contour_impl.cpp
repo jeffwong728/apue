@@ -62,14 +62,14 @@ ContourImpl::ContourImpl(const Geom::Path &path, const bool closed)
 ContourImpl::ContourImpl(const std::vector<Point2f> &vertexes, const bool closed)
     : Contour()
     , is_closed_(closed)
-    , vertexes_(vertexes)
+    , vertexes_(vertexes.cbegin(), vertexes.cend())
 {
 }
 
-ContourImpl::ContourImpl(std::vector<Point2f> &&vertexes, const bool closed)
+ContourImpl::ContourImpl(ScalablePoint2fSequence *vertexes, const bool closed)
     : Contour()
     , is_closed_(closed)
-    , vertexes_(vertexes)
+    , vertexes_(std::move(*vertexes))
 {
 }
 
@@ -219,6 +219,12 @@ Rect ContourImpl::BoundingBox() const
     }
 
     return *bbox_;
+}
+
+int ContourImpl::Simplify(const float tolerance, std::vector<Point2f> &vertexes) const
+{
+    vertexes.assign(vertexes_.cbegin(), vertexes_.cend());
+    return MLR_SUCCESS;
 }
 
 void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const

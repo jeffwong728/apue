@@ -29,6 +29,7 @@ public:
     CV_WRAP virtual double Length() const = 0;
     CV_WRAP virtual Point2d Centroid() const = 0;
     CV_WRAP virtual Rect BoundingBox() const = 0;
+    CV_WRAP virtual int Simplify(const float tolerance, CV_OUT std::vector<Point2f> &vertexes) const = 0;
     CV_WRAP virtual int Draw(InputOutputArray img, const Scalar& color, const float thickness = 1, const int style = 0) const = 0;
 };
 

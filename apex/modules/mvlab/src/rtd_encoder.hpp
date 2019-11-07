@@ -19,8 +19,7 @@ struct RDEntry
     int FLAG;
 };
 
-using RDList = std::vector<RDEntry>;
-using RDListList = std::vector<RDList>;
+using RDList = std::vector<RDEntry, MyAlloc<RDEntry>>;
 
 class RDEncoder
 {
@@ -30,19 +29,28 @@ public:
     void Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes);
 
 protected:
-    inline void GenerateRDCodes(const std::vector<int> &P_BUFFER, const std::vector<int> &C_BUFFER, const int l);
+    inline void GenerateRDCodes(const ScalableIntSequence &P_BUFFER, const ScalableIntSequence &C_BUFFER, const int l);
 
 protected:
     RDList rd_list_;
 };
 
-class RunLengthRDEncoder : public RDEncoder
+class RunLengthRDSerialEncoder : public RDEncoder
 {
 public:
-    RunLengthRDEncoder() : RDEncoder() {}
+    RunLengthRDSerialEncoder() : RDEncoder() {}
 
 public:
-    void Encode(const RunSequence &rgn_runs, const RowBeginSequence &rranges);
+    void Encode(const RunSequence::const_pointer pRunBeg, const RunSequence::const_pointer pRunEnd, const RowBeginSequence &rranges);
+};
+
+class RunLengthRDParallelEncoder : public RDEncoder
+{
+public:
+    RunLengthRDParallelEncoder() : RDEncoder() {}
+
+public:
+    void Encode(const RunSequence::const_pointer pRunBeg, const RunSequence::const_pointer pRunEnd, const RowBeginSequence &rranges);
 };
 
 }

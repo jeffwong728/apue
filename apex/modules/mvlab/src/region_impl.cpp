@@ -197,7 +197,7 @@ int RegionImpl::Count() const
     return static_cast<int>(rgn_runs_.size());
 }
 
-int RegionImpl::CountRow() const
+int RegionImpl::CountRows() const
 {
     if (RegionImpl::Empty())
     {
@@ -208,6 +208,13 @@ int RegionImpl::CountRow() const
         const RowBeginSequence &rowRanges = RegionImpl::GetRowBeginSequence();
         return static_cast<int>(rowRanges.size() - 1);
     }
+}
+
+int RegionImpl::OuterContours(std::vector<cv::Ptr<Contour>> &outerContours) const
+{
+    TraceContour();
+    outerContours.assign(contour_outers_.cbegin(), contour_outers_.cend());
+    return MLR_SUCCESS;
 }
 
 cv::Ptr<RegionCollection> RegionImpl::Connect(const int connectivity) const
@@ -371,10 +378,13 @@ void RegionImpl::TraceContour() const
     if (!rgn_runs_.empty() && contour_outers_.empty())
     {
         GatherBasicFeatures();
-        RunLengthRDEncoder rdEncoder;
-        rdEncoder.Encode(rgn_runs_, row_begs_);
+        RunLengthRDSerialEncoder rdEncoder;
+        rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data()+ rgn_runs_.size(), row_begs_);
         rdEncoder.Link();
         rdEncoder.Track(contour_outers_, contour_holes_);
+
+        RunLengthRDParallelEncoder parallelEncoder;
+        parallelEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
     }
 }
 

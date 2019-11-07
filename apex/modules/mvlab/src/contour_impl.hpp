@@ -22,7 +22,7 @@ public:
     ContourImpl(const Point2f &center, const Size2f &size, const float angle);
     ContourImpl(const Geom::Path &path, const bool closed);
     ContourImpl(const std::vector<Point2f> &vertexes, const bool closed);
-    ContourImpl(std::vector<Point2f> &&vertexes, const bool closed);
+    ContourImpl(ScalablePoint2fSequence *vertexes, const bool closed);
 
 public:
     int Draw(Mat &img, const Scalar& color, const float thickness, const int style) const CV_OVERRIDE;
@@ -33,13 +33,14 @@ public:
     double Area() const CV_OVERRIDE;
     Point2d Centroid() const CV_OVERRIDE;
     Rect BoundingBox() const CV_OVERRIDE;
+    int Simplify(const float tolerance, CV_OUT std::vector<Point2f> &vertexes) const CV_OVERRIDE;
 
 public:
     void Feed(Cairo::RefPtr<Cairo::Context> &cr) const;
 
 public:
     const Geom::Path &GetPath() const { return path_; }
-    const std::vector<Point2f> &GetVertexes() const { return vertexes_; }
+    const ScalablePoint2fSequence &GetVertexes() const { return vertexes_; }
 
 private:
     void ClearCacheData();
@@ -48,7 +49,7 @@ private:
 private:
     bool is_closed_;
     Geom::Path path_;
-    std::vector<Point2f> vertexes_;
+    const ScalablePoint2fSequence vertexes_;
     mutable boost::optional<Point2f> start_;
     mutable boost::optional<double> length_;
     mutable boost::optional<double> area_;

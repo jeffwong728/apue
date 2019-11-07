@@ -39,7 +39,14 @@ int RegionCollectionImpl::Draw(InputOutputArray img, const std::vector<cv::Scala
 
 int RegionCollectionImpl::Count() const
 {
-    return static_cast<int>(run_beg_idxs_.size());
+    if (rgn_beg_idxs_.empty())
+    {
+        return 0;
+    }
+    else
+    {
+        return static_cast<int>(rgn_beg_idxs_.size() - 1);
+    }
 }
 
 void RegionCollectionImpl::Area(std::vector<double> &areas) const
@@ -85,19 +92,18 @@ void RegionCollectionImpl::GatherBasicFeatures() const
     cv::Rect *pBBoxes = rgn_bboxes_.data();
     RowBeginSequence *pRowRunStarts = rgn_row_begs_.data();
 
-    int rgnIdxBeg = 0;
-    const int *pRgnIdxEnd = run_beg_idxs_.data() + run_beg_idxs_.size();
+    const int *pRgnIdxEnd = rgn_beg_idxs_.data() + rgn_beg_idxs_.size() - 1;
     const RunLength *rgnRunBeg = all_rgn_runs_.data();
-    for (const int *pRgnIdx = run_beg_idxs_.data(); pRgnIdx != pRgnIdxEnd; ++pRgnIdx)
+    for (const int *pRgnIdx = rgn_beg_idxs_.data(); pRgnIdx != pRgnIdxEnd; ++pRgnIdx)
     {
-        const RunLength *rgnRunEnd = all_rgn_runs_.data() + *pRgnIdx;
+        const RunLength *rgnRunEnd = all_rgn_runs_.data() + pRgnIdx[1];
         pRowRunStarts->reserve(rgnRunEnd[-1].row - rgnRunBeg->row + 2);
 
         double a = 0, x = 0, y = 0;
         cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
         cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
 
-        int begIdx = rgnIdxBeg, runIdx = rgnIdxBeg;
+        int begIdx = 0, runIdx = 0;
         int currentRow = rgnRunBeg->row;
         for (const RunLength *pRun = rgnRunBeg; pRun != rgnRunEnd; ++pRun, ++runIdx)
         {
@@ -124,8 +130,7 @@ void RegionCollectionImpl::GatherBasicFeatures() const
         *pAreas = a;
         if (a > 0) {
             pCentroids->x = x / a; pCentroids->y = y / a;
-        }
-        else { 
+        } else { 
             pCentroids->x = 0; pCentroids->y = 0;
         }
 
@@ -136,7 +141,6 @@ void RegionCollectionImpl::GatherBasicFeatures() const
         pBBoxes += 1;
         pRowRunStarts += 1;
         rgnRunBeg = rgnRunEnd;
-        rgnIdxBeg = *pRgnIdx;
     }
 }
 

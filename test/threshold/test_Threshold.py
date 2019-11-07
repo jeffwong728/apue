@@ -21,7 +21,7 @@ class TestThreshold(unittest.TestCase):
         r, rgn = mvlab.Threshold(image, 150, 255)
         self.assertEqual(r, 0, "Threshold single pixel image error")
         self.assertEqual(rgn.Count(), 1)
-        self.assertEqual(rgn.CountRow(), 1)
+        self.assertEqual(rgn.CountRows(), 1)
         self.assertAlmostEqual(rgn.Area(), 1.0)
         self.assertEqual(rgn.BoundingBox(), (0, 0, 1, 0))
 
@@ -33,7 +33,7 @@ class TestThreshold(unittest.TestCase):
                 r, rgn = mvlab.Threshold(image, 150, 255)
                 self.assertEqual(r, 0, "Threshold single pixel image error")
                 self.assertEqual(rgn.Count(), 1)
-                self.assertEqual(rgn.CountRow(), 1)
+                self.assertEqual(rgn.CountRows(), 1)
                 self.assertAlmostEqual(rgn.Area(), lastCol-startCol)
                 self.assertEqual(rgn.BoundingBox(), (startCol, 0, lastCol-startCol, 0))
 

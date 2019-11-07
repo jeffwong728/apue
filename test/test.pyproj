@@ -19,17 +19,21 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="contour\test_Contour.py" />
+    <Compile Include="contour\__init__.py" />
     <Compile Include="genperfplot.py" />
     <Compile Include="region\test_Area.py" />
     <Compile Include="region\test_Connection.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="region\__init__.py" />
+    <Compile Include="test_Debug.py" />
     <Compile Include="threshold\test_Threshold.py" />
     <Compile Include="threshold\__init__.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="contour\" />
     <Folder Include="threshold\" />
     <Folder Include="region" />
   </ItemGroup>

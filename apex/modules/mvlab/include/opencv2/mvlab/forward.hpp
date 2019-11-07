@@ -6,6 +6,7 @@
 namespace cv {
 namespace mvlab {
 
+class CV_EXPORTS_W Contour;
 class CV_EXPORTS_W Region;
 class CV_EXPORTS_W RegionCollection;
 

@@ -79,6 +79,7 @@ template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::
 using ScalableIntSequence           = std::vector<int, MyAlloc<int>>;
 using ScalableIntSequenceSequence   = std::vector<ScalableIntSequence, MyAlloc<ScalableIntSequence>>;
 using ScalableDoubleSequence        = std::vector<double, MyAlloc<double>>;
+using ScalablePoint2fSequence       = std::vector<cv::Point2f, MyAlloc<cv::Point2f>>;
 using ScalablePoint2dSequence       = std::vector<cv::Point2d, MyAlloc<cv::Point2d>>;
 using ScalableRectSequence          = std::vector<cv::Rect, MyAlloc<cv::Rect>>;
 

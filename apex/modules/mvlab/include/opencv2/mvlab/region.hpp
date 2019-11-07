@@ -29,7 +29,8 @@ public:
     CV_WRAP virtual cv::Point2d Centroid() const = 0;
     CV_WRAP virtual cv::Rect BoundingBox() const = 0;
     CV_WRAP virtual int Count() const = 0;
-    CV_WRAP virtual int CountRow() const = 0;
+    CV_WRAP virtual int CountRows() const = 0;
+    CV_WRAP virtual int OuterContours(CV_OUT std::vector<cv::Ptr<Contour>> &outerContours) const = 0;
     CV_WRAP virtual cv::Ptr<RegionCollection> Connect(const int connectivity) const = 0;
     CV_WRAP virtual int Connect2(const int connectivity, CV_OUT std::vector<Ptr<Region>> &regions) const = 0;
     CV_WRAP virtual int Draw(InputOutputArray img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness = 1, const int borderStyle = 0) const = 0;
