@@ -378,13 +378,25 @@ void RegionImpl::TraceContour() const
     if (!rgn_runs_.empty() && contour_outers_.empty())
     {
         GatherBasicFeatures();
-        RunLengthRDSerialEncoder rdEncoder;
-        rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data()+ rgn_runs_.size(), row_begs_);
-        rdEncoder.Link();
-        rdEncoder.Track(contour_outers_, contour_holes_);
 
-        RunLengthRDParallelEncoder parallelEncoder;
-        parallelEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
+        const int nThreads = tbb::task_scheduler_init::default_num_threads();
+        const int numRows = static_cast<int>(row_begs_.size() - 1);
+        const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
+
+        if (is_parallel)
+        {
+            RunLengthRDParallelEncoder rdEncoder;
+            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
+            rdEncoder.Link();
+            rdEncoder.Track(contour_outers_, contour_holes_);
+        }
+        else
+        {
+            RunLengthRDSerialEncoder rdEncoder;
+            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
+            rdEncoder.Link();
+            rdEncoder.Track(contour_outers_, contour_holes_);
+        }
     }
 }
 

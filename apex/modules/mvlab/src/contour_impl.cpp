@@ -28,7 +28,7 @@ ContourImpl::ContourImpl(const RotatedRect &rotatedRect)
     pb.lineTo(Geom::Point(corners[3].x, corners[3].y));
     pb.closePath();
 
-    path_.swap(pv[0]);
+    const_cast<boost::optional<Geom::Path>&>(path_).emplace(pv[0]);
 }
 
 ContourImpl::ContourImpl(const Point2f &center, const float radius)
@@ -152,9 +152,9 @@ double ContourImpl::Length() const
     if (length_ == boost::none)
     {
         double len = 0.;
-        if (!path_.empty())
+        if (!path_->empty())
         {
-            for (const Geom::Curve &curve : path_)
+            for (const Geom::Curve &curve : *path_)
             {
                 len += curve.length();
             }
@@ -172,9 +172,9 @@ double ContourImpl::Area() const
     {
         double area = 0.0;
         Geom::Point centroid;
-        if (is_closed_ && !path_.empty())
+        if (is_closed_ && !path_->empty())
         {
-            Geom::centroid(Geom::paths_to_pw(Geom::PathVector(path_)), centroid, area);
+            Geom::centroid(Geom::paths_to_pw(Geom::PathVector(*path_)), centroid, area);
         }
 
         area_ = std::abs(area);
@@ -202,9 +202,9 @@ Rect ContourImpl::BoundingBox() const
         cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
 
         cv::Rect rect;
-        if (!path_.empty())
+        if (!path_->empty())
         {
-            Geom::OptRect oRect = path_.boundsFast();
+            Geom::OptRect oRect = path_->boundsFast();
             if (oRect)
             {
                 

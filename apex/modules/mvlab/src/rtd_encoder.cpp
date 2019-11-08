@@ -5,6 +5,17 @@
 namespace cv {
 namespace mvlab {
 
+RDEncoder::RDEncoder()
+    : rd_list_(nullptr)
+    , rd_list_end_(nullptr)
+{
+}
+
+RDEncoder::~RDEncoder()
+{
+    ::mi_free(rd_list_);
+}
+
 void RDEncoder::Link()
 {
     const int downLink_g[11][11]{ {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1}, {0}, {0}, {0}, {0}, {0, 1, 1, 1, 1, 0, 0, 0, 0, 1} };
@@ -14,8 +25,9 @@ void RDEncoder::Link()
     int P4{ 0 };
     int P5{ 0 };
 
-    for (const RDEntry &rdEntry : rd_list_)
+    for (RDEntry *pRDEntry = rd_list_; pRDEntry != rd_list_end_; ++pRDEntry)
     {
+        RDEntry &rdEntry = *pRDEntry;
         P3 += 1;
         const int RD_CODE = rdEntry.CODE;
 
@@ -79,14 +91,16 @@ void RDEncoder::Link()
 void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes)
 {
     const int count_g[11]{ 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1 };
-    for (RDEntry &e : rd_list_)
+    for (RDEntry *pRDEntry = rd_list_; pRDEntry != rd_list_end_; ++pRDEntry)
     {
+        RDEntry &e = *pRDEntry;
         if (!e.FLAG)
         {
             e.FLAG = 1;
             if (1 == e.CODE || 9 == e.CODE)
             {
                 ScalablePoint2fSequence contour;
+                contour.reserve(64);
                 contour.emplace_back(e.X, e.Y);
                 int nextLink = e.LINK;
                 while (!rd_list_[nextLink].FLAG)
@@ -118,7 +132,10 @@ void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour
     }
 }
 
-inline void RDEncoder::GenerateRDCodes(const ScalableIntSequence &P_BUFFER, const ScalableIntSequence &C_BUFFER, const int l)
+inline void RDEncoder::GenerateRDCodes(const ScalableIntSequence &P_BUFFER,
+    const ScalableIntSequence &C_BUFFER,
+    const int l,
+    RDEntry *&pRDList)
 {
     int P1 = 0;
     int P2 = 0;
@@ -127,12 +144,12 @@ inline void RDEncoder::GenerateRDCodes(const ScalableIntSequence &P_BUFFER, cons
     int X2 = C_BUFFER[P2];
     int X = X2;
     constexpr int Infinity = std::numeric_limits<int>::max();
-    const int qis_g[11]{ 0, 2, 1, 1, 1, 0, 1, 1, 1, 2, 0 };
+    const int8_t qis_g[11]{ 0, 2, 1, 1, 1, 0, 1, 1, 1, 2, 0 };
 
     bool stay = true;
     while (stay)
     {
-        int RD_CODE = 0;
+        int8_t RD_CODE = 0;
         switch (State)
         {
         case 0:
@@ -216,7 +233,11 @@ inline void RDEncoder::GenerateRDCodes(const ScalableIntSequence &P_BUFFER, cons
 
         if (RD_CODE)
         {
-            rd_list_.emplace_back(X-0.5f, l-0.5f, RD_CODE, qis_g[RD_CODE]);
+            pRDList->X = X - 0.5f;
+            pRDList->Y = l - 0.5f;
+            pRDList->CODE = RD_CODE;
+            pRDList->QI = qis_g[RD_CODE];
+            pRDList += 1;
         }
     }
 }
@@ -227,15 +248,19 @@ void RunLengthRDSerialEncoder::Encode(const RunSequence::const_pointer pRunBeg,
 {
     constexpr int Infinity = std::numeric_limits<int>::max();
     const int numRows = static_cast<int>(rranges.size()) - 1;
+    rd_list_ = static_cast<RDEntry*>(::mi_malloc(std::distance(pRunBeg, pRunEnd) * 2 * sizeof(RDEntry)));
+    rd_list_end_ = rd_list_ + std::distance(pRunBeg, pRunEnd) * 2;
+    std::memset(rd_list_, 0, std::distance(pRunBeg, pRunEnd) * 2 * sizeof(RDEntry));
+
     const int lBeg = pRunBeg->row;
-    const int lEnd = (pRunEnd-1)->row + 1;
-    rd_list_.reserve(std::distance(pRunBeg, pRunEnd)*2);
+    const int lEnd = (pRunEnd - 1)->row + 1;
 
     ScalableIntSequence P_BUFFER;
     ScalableIntSequence C_BUFFER;
     P_BUFFER.push_back(Infinity);
 
     int rIdx = 0;
+    RDEntry* pRDList = rd_list_;
     for (int l = lBeg; l <= lEnd; ++l)
     {
         if (rIdx < numRows)
@@ -254,7 +279,7 @@ void RunLengthRDSerialEncoder::Encode(const RunSequence::const_pointer pRunBeg,
         }
 
         C_BUFFER.push_back(Infinity);
-        RDEncoder::GenerateRDCodes(P_BUFFER, C_BUFFER, l);
+        RDEncoder::GenerateRDCodes(P_BUFFER, C_BUFFER, l, pRDList);
         P_BUFFER.swap(C_BUFFER);
         C_BUFFER.resize(0);
     }
@@ -265,27 +290,93 @@ class ParallelRDEncoder
     const RunSequence::const_pointer runBeg_;
     const RunSequence::const_pointer runEnd_;
     const RowBeginSequence &rranges_;
-    const ScalableIntSequence::pointer numCodes_;
+    const ScalableIntSequence::const_pointer numCodes_;
+    RDEntry * const rdList_;
 
 public:
     ParallelRDEncoder(const RunSequence::const_pointer runBeg,
         const RunSequence::const_pointer runEnd,
         const RowBeginSequence &rranges,
-        const ScalableIntSequence::pointer numCodes)
+        const ScalableIntSequence::pointer numCodes,
+        RDEntry * const rdList)
         : runBeg_(runBeg)
         , runEnd_(runEnd)
-        , rranges_(rranges) {}
+        , rranges_(rranges)
+        , numCodes_(numCodes)
+        , rdList_(rdList)
+    {}
 
 public:
     void operator()(const tbb::blocked_range<int>& br) const;
 };
+
+void ParallelRDEncoder::operator()(const tbb::blocked_range<int>& br) const
+{
+    constexpr int Infinity = std::numeric_limits<int>::max();
+    const int numRuns = static_cast<int>(rranges_.size()) - 1;
+    const int lBeg = runBeg_[rranges_[br.begin()]].row;
+    const int lEnd = (br.end() < numRuns) ? runBeg_[rranges_[br.end()]].row - 1 : runBeg_[rranges_[br.end() - 1]].row + 1;
+    RDEntry* pRDList = rdList_ + numCodes_[lBeg - runBeg_->row];
+
+    ScalableIntSequence P_BUFFER;
+    ScalableIntSequence C_BUFFER;
+
+    if (br.begin() > 0)
+    {
+        const int rBeg = rranges_[br.begin() - 1];
+        const int rEnd = rranges_[br.begin()];
+        if (runBeg_[rBeg].row == (lBeg - 1))
+        {
+            P_BUFFER.reserve((rEnd- rBeg)*2+1);
+            for (int rIdx = rBeg; rIdx < rEnd; ++rIdx)
+            {
+                P_BUFFER.push_back(runBeg_[rIdx].colb);
+                P_BUFFER.push_back(runBeg_[rIdx].cole);
+            }
+        }
+    }
+
+    P_BUFFER.push_back(Infinity);
+
+    int rIdx = br.begin();
+    for (int l = lBeg; l <= lEnd; ++l)
+    {
+        if (rIdx < numRuns)
+        {
+            const int rBeg = rranges_[rIdx];
+            const int rEnd = rranges_[rIdx + 1];
+            if (l == runBeg_[rBeg].row)
+            {
+                C_BUFFER.reserve((rEnd - rBeg) * 2 + 1);
+                for (int runIdx = rBeg; runIdx < rEnd; ++runIdx)
+                {
+                    C_BUFFER.push_back(runBeg_[runIdx].colb);
+                    C_BUFFER.push_back(runBeg_[runIdx].cole);
+                }
+                rIdx += 1;
+            }
+        }
+
+        C_BUFFER.push_back(Infinity);
+        RDEncoder::GenerateRDCodes(P_BUFFER, C_BUFFER, l, pRDList);
+        P_BUFFER.swap(C_BUFFER);
+        C_BUFFER.resize(0);
+    }
+}
+
+void RunLengthRDParallelEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes)
+{
+    RDEncoder::Track(outers, holes);
+}
 
 void RunLengthRDParallelEncoder::Encode(const RunSequence::const_pointer pRunBeg,
     const RunSequence::const_pointer pRunEnd,
     const RowBeginSequence &rranges)
 {
     const int numRows = static_cast<int>(rranges.size()) - 1;
-    rd_list_.reserve(std::distance(pRunBeg, pRunEnd) * 2);
+    rd_list_ = static_cast<RDEntry*>(::mi_malloc(std::distance(pRunBeg, pRunEnd) * 2 * sizeof(RDEntry)));
+    rd_list_end_ = rd_list_ + std::distance(pRunBeg, pRunEnd) * 2;
+    std::memset(rd_list_, 0, std::distance(pRunBeg, pRunEnd) * 2 * sizeof(RDEntry));
     const int lBeg = pRunBeg->row;
     const int lEnd = (pRunEnd - 1)->row + 1;
 
@@ -309,6 +400,9 @@ void RunLengthRDParallelEncoder::Encode(const RunSequence::const_pointer pRunBeg
         *pNumCodes = P_NUMRUNS + C_NUMRUNS + *(pNumCodes-1);
         P_NUMRUNS = C_NUMRUNS;
     }
+
+    ParallelRDEncoder parallelRDEncoder(pRunBeg, pRunEnd, rranges, numCodes.data(), rd_list_);
+    tbb::parallel_for(tbb::blocked_range<int>(0, numRows), parallelRDEncoder);
 }
 
 }

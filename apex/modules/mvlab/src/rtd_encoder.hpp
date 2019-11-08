@@ -9,30 +9,28 @@ namespace mvlab {
 
 struct RDEntry
 {
-    RDEntry(const float x, const float y, const int code, const int qi)
-        : X(x), Y(y), CODE(code), LINK(0), W_LINK(0), QI(qi), FLAG(0) {}
     float X, Y;
-    int CODE;
     int LINK;
     int W_LINK;
-    int QI;
-    int FLAG;
+    int8_t CODE;
+    int8_t QI;
+    int8_t FLAG;
 };
-
-using RDList = std::vector<RDEntry, MyAlloc<RDEntry>>;
 
 class RDEncoder
 {
 public:
-    RDEncoder() {}
+    RDEncoder();
+    ~RDEncoder();
     void Link();
     void Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes);
 
-protected:
-    inline void GenerateRDCodes(const ScalableIntSequence &P_BUFFER, const ScalableIntSequence &C_BUFFER, const int l);
+public:
+    static inline void GenerateRDCodes(const ScalableIntSequence &P_BUFFER, const ScalableIntSequence &C_BUFFER, const int l, RDEntry *&pRDList);
 
 protected:
-    RDList rd_list_;
+    RDEntry *rd_list_;
+    RDEntry *rd_list_end_;
 };
 
 class RunLengthRDSerialEncoder : public RDEncoder
@@ -50,6 +48,7 @@ public:
     RunLengthRDParallelEncoder() : RDEncoder() {}
 
 public:
+    void Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes);
     void Encode(const RunSequence::const_pointer pRunBeg, const RunSequence::const_pointer pRunEnd, const RowBeginSequence &rranges);
 };
 

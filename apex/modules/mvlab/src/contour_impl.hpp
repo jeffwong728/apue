@@ -39,7 +39,7 @@ public:
     void Feed(Cairo::RefPtr<Cairo::Context> &cr) const;
 
 public:
-    const Geom::Path &GetPath() const { return path_; }
+    const Geom::Path &GetPath() const { return *path_; }
     const ScalablePoint2fSequence &GetVertexes() const { return vertexes_; }
 
 private:
@@ -48,7 +48,7 @@ private:
 
 private:
     bool is_closed_;
-    Geom::Path path_;
+    const boost::optional<Geom::Path> path_;
     const ScalablePoint2fSequence vertexes_;
     mutable boost::optional<Point2f> start_;
     mutable boost::optional<double> length_;
