@@ -30,9 +30,17 @@ public:
     CV_WRAP virtual cv::Rect BoundingBox() const = 0;
     CV_WRAP virtual int Count() const = 0;
     CV_WRAP virtual int CountRows() const = 0;
-    CV_WRAP virtual int OuterContours(CV_OUT std::vector<cv::Ptr<Contour>> &outerContours) const = 0;
-    CV_WRAP virtual cv::Ptr<RegionCollection> Connect(const int connectivity) const = 0;
-    CV_WRAP virtual int Connect2(const int connectivity, CV_OUT std::vector<Ptr<Region>> &regions) const = 0;
+    CV_WRAP virtual int GetContour(CV_OUT cv::Ptr<Contour> &contour) const = 0;
+    CV_WRAP virtual int GetConvex(CV_OUT cv::Ptr<Contour> &convex) const = 0;
+    CV_WRAP virtual int GetPoints(CV_OUT std::vector<cv::Point> &points) const = 0;
+    CV_WRAP virtual int GetPolygon(CV_OUT cv::Ptr<Contour> &polygon, const float tolerance) const = 0;
+    CV_WRAP virtual int GetRuns(CV_OUT std::vector<cv::Point3i> &runs) const = 0;
+    CV_WRAP virtual cv::Ptr<Region> Complement(const cv::Rect &universe) const = 0;
+    CV_WRAP virtual cv::Ptr<Region> Difference(const cv::Ptr<Region> &subRgn) const = 0;
+    CV_WRAP virtual cv::Ptr<Region> Intersection(const cv::Ptr<Region> &otherRgn) const = 0;
+    CV_WRAP virtual cv::Ptr<Region> SymmDifference(const cv::Ptr<Region> &otherRgn) const = 0;
+    CV_WRAP virtual cv::Ptr<Region> Union2(const cv::Ptr<Region> &otherRgn) const = 0;
+    CV_WRAP virtual int Connect(const int connectivity, CV_OUT std::vector<Ptr<Region>> &regions) const = 0;
     CV_WRAP virtual int Draw(InputOutputArray img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness = 1, const int borderStyle = 0) const = 0;
 };
 

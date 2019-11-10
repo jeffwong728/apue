@@ -23,6 +23,7 @@
     <Compile Include="contour\__init__.py" />
     <Compile Include="genperfplot.py" />
     <Compile Include="region\test_Area.py" />
+    <Compile Include="region\test_Complement.py" />
     <Compile Include="region\test_Connection.py">
       <SubType>Code</SubType>
     </Compile>

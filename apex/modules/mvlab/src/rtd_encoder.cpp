@@ -117,17 +117,53 @@ void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour
                 if (!contour.empty())
                 {
                     contour.emplace_back(contour.back().x, contour.front().y);
-
+                    Point2fSequence tcontour(contour.cbegin(), contour.cend());
                     if (1 == e.CODE)
                     {
-                        outers.push_back(cv::makePtr<ContourImpl>(&contour, true));
+                        outers.push_back(cv::makePtr<ContourImpl>(&tcontour, true));
                     }
                     else
                     {
-                        holes.push_back(cv::makePtr<ContourImpl>(&contour, true));
+                        holes.push_back(cv::makePtr<ContourImpl>(&tcontour, true));
                     }
                 }
             }
+        }
+    }
+}
+
+void RDEncoder::Track(Ptr<Contour> &outer)
+{
+    const int count_g[11]{ 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1 };
+    for (RDEntry *pRDEntry = rd_list_; pRDEntry != rd_list_end_; ++pRDEntry)
+    {
+        RDEntry &e = *pRDEntry;
+        if (!e.FLAG && 1 == e.CODE)
+        {
+            e.FLAG = 1;
+
+            ScalablePoint2fSequence contour;
+            contour.reserve(64);
+            contour.emplace_back(e.X, e.Y);
+            int nextLink = e.LINK;
+            while (!rd_list_[nextLink].FLAG)
+            {
+                rd_list_[nextLink].FLAG = 1;
+                if (count_g[rd_list_[nextLink].CODE])
+                {
+                    contour.emplace_back(contour.back().x, rd_list_[nextLink].Y);
+                    contour.emplace_back(rd_list_[nextLink].X, rd_list_[nextLink].Y);
+                }
+                nextLink = rd_list_[nextLink].LINK;
+            }
+
+            if (!contour.empty())
+            {
+                contour.emplace_back(contour.back().x, contour.front().y);
+                Point2fSequence tcontour(contour.cbegin(), contour.cend());
+                outer = cv::makePtr<ContourImpl>(&tcontour, true);
+            }
+            break;
         }
     }
 }
@@ -266,9 +302,9 @@ void RunLengthRDSerialEncoder::Encode(const RunSequence::const_pointer pRunBeg,
         if (rIdx < numRows)
         {
             const RunSequence::const_pointer pRowRunBeg = pRunBeg + rranges[rIdx];
-            const RunSequence::const_pointer pRowRunEnd = pRunBeg + rranges[rIdx+1];
             if (l == pRowRunBeg->row)
             {
+                const RunSequence::const_pointer pRowRunEnd = pRunBeg + rranges[rIdx + 1];
                 for (RunSequence::const_pointer pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
                 {
                     C_BUFFER.push_back(pRun->colb);
@@ -367,6 +403,11 @@ void ParallelRDEncoder::operator()(const tbb::blocked_range<int>& br) const
 void RunLengthRDParallelEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes)
 {
     RDEncoder::Track(outers, holes);
+}
+
+void RunLengthRDParallelEncoder::Track(Ptr<Contour> &outer)
+{
+    RDEncoder::Track(outer);
 }
 
 void RunLengthRDParallelEncoder::Encode(const RunSequence::const_pointer pRunBeg,

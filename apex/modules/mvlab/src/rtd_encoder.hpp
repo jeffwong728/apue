@@ -24,6 +24,7 @@ public:
     ~RDEncoder();
     void Link();
     void Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes);
+    void Track(Ptr<Contour> &outer);
 
 public:
     static inline void GenerateRDCodes(const ScalableIntSequence &P_BUFFER, const ScalableIntSequence &C_BUFFER, const int l, RDEntry *&pRDList);
@@ -49,6 +50,7 @@ public:
 
 public:
     void Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour>> &holes);
+    void Track(Ptr<Contour> &outer);
     void Encode(const RunSequence::const_pointer pRunBeg, const RunSequence::const_pointer pRunEnd, const RowBeginSequence &rranges);
 };
 

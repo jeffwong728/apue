@@ -52,9 +52,19 @@ public:
     Rect BoundingBox() const CV_OVERRIDE;
     int Count() const CV_OVERRIDE;
     int CountRows() const CV_OVERRIDE;
-    int OuterContours(std::vector<cv::Ptr<Contour>> &outerContours) const CV_OVERRIDE;
-    cv::Ptr<RegionCollection> Connect(const int connectivity) const CV_OVERRIDE;
-    int Connect2(const int connectivity, std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
+    int GetContour(cv::Ptr<Contour> &contour) const CV_OVERRIDE;
+    int GetConvex(cv::Ptr<Contour> &convex) const CV_OVERRIDE;
+    int GetPoints(std::vector<cv::Point> &points) const CV_OVERRIDE;
+    int GetPolygon(cv::Ptr<Contour> &polygon, const float tolerance) const CV_OVERRIDE;
+    int GetRuns(std::vector<cv::Point3i> &runs) const CV_OVERRIDE;
+
+    cv::Ptr<Region> Complement(const cv::Rect &universe) const CV_OVERRIDE;
+    cv::Ptr<Region> Difference(const cv::Ptr<Region> &subRgn) const CV_OVERRIDE;
+    cv::Ptr<Region> Intersection(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
+    cv::Ptr<Region> SymmDifference(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
+    cv::Ptr<Region> Union2(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
+
+    int Connect(const int connectivity, std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
 
 public:
     const RunSequence &GetAllRuns() const { return rgn_runs_; }
@@ -64,6 +74,7 @@ private:
     void FromMask(const cv::Mat &mask);
     void FromPathVector(const Geom::PathVector &pv);
     void DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const;
+    void TraceAllContours() const;
     void TraceContour() const;
     void GatherBasicFeatures() const;
 
@@ -75,6 +86,7 @@ private:
     mutable boost::optional<cv::Rect>    bbox_;
     mutable std::vector<Ptr<Contour>>    contour_outers_;
     mutable std::vector<Ptr<Contour>>    contour_holes_;
+    mutable cv::Ptr<Contour> contour_;
 };
 
 }

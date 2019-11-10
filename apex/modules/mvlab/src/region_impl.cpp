@@ -4,6 +4,7 @@
 #include "rtd_encoder.hpp"
 #include "utility.hpp"
 #include "connection.hpp"
+#include "region_bool.hpp"
 #include <opencv2/mvlab.hpp>
 
 namespace cv {
@@ -210,38 +211,124 @@ int RegionImpl::CountRows() const
     }
 }
 
-int RegionImpl::OuterContours(std::vector<cv::Ptr<Contour>> &outerContours) const
+int RegionImpl::GetContour(cv::Ptr<Contour> &contour) const
 {
-    TraceContour();
-    outerContours.assign(contour_outers_.cbegin(), contour_outers_.cend());
+    if (RegionImpl::Empty()) {
+        contour = cv::makePtr<ContourImpl>();
+        return MLR_REGION_EMPTY;
+    } else {
+        if (contour_) {
+            contour = contour_;
+        } else if (!contour_outers_.empty()) {
+            contour = contour_outers_.front();
+        } else {
+            TraceContour();
+            contour = contour_;
+        }
+        return MLR_SUCCESS;
+    }
+}
+
+int RegionImpl::GetConvex(cv::Ptr<Contour> &convex) const
+{
+    cv::Ptr<Contour> contour;
+    RegionImpl::GetContour(contour);
+    if (contour)
+    {
+        cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
+        if (contImpl)
+        {
+            Point2fSequence cvxPoints;
+            cv::convexHull(contImpl->GetVertexes(), cvxPoints);
+            convex = cv::makePtr<ContourImpl>(&cvxPoints, true);
+            return MLR_SUCCESS;
+        }
+    }
+
+    return MLR_FAILURE;
+}
+
+int RegionImpl::GetPoints(std::vector<cv::Point> &points) const
+{
+    const int numPoints = cvCeil(RegionImpl::Area());
+    points.resize(numPoints);
+    cv::Point *pPoints = points.data();
+    for (const RunLength &rl : rgn_runs_)
+    {
+        for (int x=rl.colb; x < rl.cole; ++x)
+        {
+            pPoints->x = x;
+            pPoints->y = rl.row;
+            pPoints += 1;
+        }
+    }
     return MLR_SUCCESS;
 }
 
-cv::Ptr<RegionCollection> RegionImpl::Connect(const int connectivity) const
+int RegionImpl::GetPolygon(cv::Ptr<Contour> &polygon, const float tolerance) const
 {
-    if (RegionImpl::Empty())
+    cv::Ptr<Contour> contour;
+    RegionImpl::GetContour(contour);
+    if (contour)
     {
-        return makePtr<RegionCollectionImpl>();
+        cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
+        if (contImpl)
+        {
+            Point2fSequence approxPoints;
+            cv::approxPolyDP(contImpl->GetVertexes(), approxPoints, tolerance, true);
+            polygon = cv::makePtr<ContourImpl>(&approxPoints, true);
+            return MLR_SUCCESS;
+        }
     }
-
-    const int nThreads = tbb::task_scheduler_init::default_num_threads();
-    const RowBeginSequence &rowRanges = GetRowBeginSequence();
-    const int numRows = static_cast<int>(rowRanges.size() - 1);
-
-    const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
-    if (is_parallel)
-    {
-        ConnectWuParallel connectWuParallel;
-        return connectWuParallel.Connect(this, connectivity);
-    }
-    else
-    {
-        ConnectWuSerial connectWuSerial;
-        return connectWuSerial.Connect(this, connectivity);
-    }
+    return MLR_FAILURE;
 }
 
-int RegionImpl::Connect2(const int connectivity, std::vector<Ptr<Region>> &regions) const
+int RegionImpl::GetRuns(std::vector<cv::Point3i> &runs) const
+{
+    runs.resize(rgn_runs_.size());
+    cv::Point3i *pRuns = runs.data();
+    for (const RunLength &rl : rgn_runs_)
+    {
+        pRuns->x = rl.colb;
+        pRuns->y = rl.row;
+        pRuns->z = rl.cole;
+        pRuns += 1;
+    }
+    return MLR_SUCCESS;
+}
+
+cv::Ptr<Region> RegionImpl::Complement(const cv::Rect &universe) const
+{
+    const cv::Rect bbox = BoundingBox() - cv::Point(1, 1) + cv::Size(1, 2);
+    const cv::Rect rcUniv = bbox | universe;
+
+    RegionComplementOp compOp;
+    RunSequence resRuns = compOp.Do(rgn_runs_, row_begs_, rcUniv);
+
+    return makePtr<RegionImpl>(&resRuns);
+}
+
+cv::Ptr<Region> RegionImpl::Difference(const cv::Ptr<Region> &subRgn) const
+{
+    return makePtr<RegionImpl>();
+}
+
+cv::Ptr<Region> RegionImpl::Intersection(const cv::Ptr<Region> &otherRgn) const
+{
+    return makePtr<RegionImpl>();
+}
+
+cv::Ptr<Region> RegionImpl::SymmDifference(const cv::Ptr<Region> &otherRgn) const
+{
+    return makePtr<RegionImpl>();
+}
+
+cv::Ptr<Region> RegionImpl::Union2(const cv::Ptr<Region> &otherRgn) const
+{
+    return makePtr<RegionImpl>();
+}
+
+int RegionImpl::Connect(const int connectivity, std::vector<Ptr<Region>> &regions) const
 {
     regions.clear();
     if (RegionImpl::Empty())
@@ -373,7 +460,7 @@ void RegionImpl::DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& b
     cr->stroke();
 }
 
-void RegionImpl::TraceContour() const
+void RegionImpl::TraceAllContours() const
 {
     if (!rgn_runs_.empty() && contour_outers_.empty())
     {
@@ -396,6 +483,33 @@ void RegionImpl::TraceContour() const
             rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
             rdEncoder.Link();
             rdEncoder.Track(contour_outers_, contour_holes_);
+        }
+    }
+}
+
+void RegionImpl::TraceContour() const
+{
+    if (!rgn_runs_.empty() && contour_outers_.empty())
+    {
+        GatherBasicFeatures();
+
+        const int nThreads = tbb::task_scheduler_init::default_num_threads();
+        const int numRows = static_cast<int>(row_begs_.size() - 1);
+        const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
+
+        if (is_parallel)
+        {
+            RunLengthRDParallelEncoder rdEncoder;
+            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
+            rdEncoder.Link();
+            rdEncoder.Track(contour_);
+        }
+        else
+        {
+            RunLengthRDSerialEncoder rdEncoder;
+            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
+            rdEncoder.Link();
+            rdEncoder.Track(contour_);
         }
     }
 }

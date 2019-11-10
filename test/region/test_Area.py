@@ -27,16 +27,16 @@ class TestRegionArea(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
-        rgns = rgn.Connect(8)
+        r, rgns = rgn.Connect(8)
 
         startTime = time.perf_counter()
-        areas = rgns.Area()
+        area = rgn.Area()
         endTime = time.perf_counter()
         logging.info("Calc 'mista.png' areas spent {0:f}ms".format((endTime-startTime)*1000))
 
-        self.assertEqual(len(areas), 941, 'Mista component number error')
+        self.assertEqual(len(rgns), 941, 'Mista component number error')
 
-        areaSum = numpy.sum(areas)
+        areaSum = numpy.sum([r.Area() for r in rgns])
         self.assertAlmostEqual(rgn.Area(), areaSum, 'Region area {0:f} not equal sum of compoent areas {1:f}'.format(rgn.Area(), areaSum))
 
 if __name__ == '__main__':

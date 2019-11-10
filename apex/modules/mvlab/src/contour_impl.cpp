@@ -66,7 +66,7 @@ ContourImpl::ContourImpl(const std::vector<Point2f> &vertexes, const bool closed
 {
 }
 
-ContourImpl::ContourImpl(ScalablePoint2fSequence *vertexes, const bool closed)
+ContourImpl::ContourImpl(Point2fSequence *vertexes, const bool closed)
     : Contour()
     , is_closed_(closed)
     , vertexes_(std::move(*vertexes))

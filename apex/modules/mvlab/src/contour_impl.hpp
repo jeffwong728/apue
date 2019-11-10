@@ -22,7 +22,7 @@ public:
     ContourImpl(const Point2f &center, const Size2f &size, const float angle);
     ContourImpl(const Geom::Path &path, const bool closed);
     ContourImpl(const std::vector<Point2f> &vertexes, const bool closed);
-    ContourImpl(ScalablePoint2fSequence *vertexes, const bool closed);
+    ContourImpl(Point2fSequence *vertexes, const bool closed);
 
 public:
     int Draw(Mat &img, const Scalar& color, const float thickness, const int style) const CV_OVERRIDE;
@@ -40,7 +40,7 @@ public:
 
 public:
     const Geom::Path &GetPath() const { return *path_; }
-    const ScalablePoint2fSequence &GetVertexes() const { return vertexes_; }
+    const Point2fSequence &GetVertexes() const { return vertexes_; }
 
 private:
     void ClearCacheData();
@@ -49,7 +49,7 @@ private:
 private:
     bool is_closed_;
     const boost::optional<Geom::Path> path_;
-    const ScalablePoint2fSequence vertexes_;
+    const Point2fSequence vertexes_;
     mutable boost::optional<Point2f> start_;
     mutable boost::optional<double> length_;
     mutable boost::optional<double> area_;
