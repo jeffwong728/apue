@@ -7,6 +7,7 @@ namespace cv {
 namespace mvlab {
 struct RegionBoolOp
 {
+    static void GetRows(const RunSequence &srcRuns, const RowBeginSequence &rowBegs, UScalableIntSequence &rows);
 };
 
 struct RegionComplementOp : public RegionBoolOp
@@ -16,6 +17,7 @@ struct RegionComplementOp : public RegionBoolOp
 
 struct RegionDifferenceOp : public RegionBoolOp
 {
+    RunSequence Do(const RunSequence &srcRuns1, const RowBeginSequence &rowBegs1, const RunSequence &srcRuns2, const RowBeginSequence &rowBegs2);
 };
 
 struct RegionIntersectionOp : public RegionBoolOp

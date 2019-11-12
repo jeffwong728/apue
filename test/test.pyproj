@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{66d05c3d-6db7-4278-8d98-d48e4ec191c3}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>genperfplot.py</StartupFile>
+    <StartupFile>run.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -21,6 +21,7 @@
   <ItemGroup>
     <Compile Include="contour\test_Contour.py" />
     <Compile Include="contour\__init__.py" />
+    <Compile Include="extradata.py" />
     <Compile Include="genperfplot.py" />
     <Compile Include="region\test_Area.py" />
     <Compile Include="region\test_Complement.py" />
@@ -28,6 +29,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="region\__init__.py" />
+    <Compile Include="run.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="test_Debug.py" />
     <Compile Include="threshold\test_Threshold.py" />
     <Compile Include="threshold\__init__.py" />
@@ -40,6 +44,9 @@
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="report_template.html" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>

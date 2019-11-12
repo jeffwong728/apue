@@ -6,6 +6,7 @@ import unittest
 import numpy
 import time
 import logging
+import extradata
 
 class TestThreshold(unittest.TestCase):
     @classmethod
@@ -44,7 +45,7 @@ class TestThreshold(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgn = mvlab.Threshold(blue, 150, 255)
         endTime = time.perf_counter()
-        logging.info("Threshold 'scrach.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
 
         self.assertEqual(r, 0, "Threshold 'scrach.png' error")
 
@@ -55,7 +56,7 @@ class TestThreshold(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgn = mvlab.Threshold(blue, 150, 255)
         endTime = time.perf_counter()
-        logging.info("Threshold 'mista.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
 
         self.assertEqual(r, 0, "Threshold 'mista.png' error")
         self.assertEqual(rgn.Count(), 234794)
@@ -67,7 +68,7 @@ class TestThreshold(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgn = mvlab.Threshold(blue, 150, 255)
         endTime = time.perf_counter()
-        logging.info("Threshold 'digits.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
 
         self.assertEqual(r, 0, "Threshold 'digits.png' error")
 

@@ -43,6 +43,7 @@
 #define __OPENCV_MVLAB_PRECOMP__
 
 #include "myalloc11.hpp"
+#include "uvector.h"
 #include <set>
 #include <map>
 #include <vector>
@@ -83,5 +84,6 @@ using ScalableDoubleSequence        = std::vector<double, MyAlloc<double>>;
 using ScalablePoint2fSequence       = std::vector<cv::Point2f, MyAlloc<cv::Point2f>>;
 using ScalablePoint2dSequence       = std::vector<cv::Point2d, MyAlloc<cv::Point2d>>;
 using ScalableRectSequence          = std::vector<cv::Rect, MyAlloc<cv::Rect>>;
+using UScalableIntSequence          = ao::uvector<int, MyAlloc<int>>;
 
 #endif

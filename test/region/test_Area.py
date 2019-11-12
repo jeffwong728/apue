@@ -6,6 +6,7 @@ import unittest
 import numpy
 import time
 import logging
+import extradata
 
 class TestRegionArea(unittest.TestCase):
     @classmethod
@@ -32,7 +33,7 @@ class TestRegionArea(unittest.TestCase):
         startTime = time.perf_counter()
         area = rgn.Area()
         endTime = time.perf_counter()
-        logging.info("Calc 'mista.png' areas spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
 
         self.assertEqual(len(rgns), 941, 'Mista component number error')
 

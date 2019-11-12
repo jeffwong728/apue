@@ -6,6 +6,7 @@ import unittest
 import numpy
 import time
 import logging
+import extradata
 
 class TestRegionComplement(unittest.TestCase):
     @classmethod
@@ -16,45 +17,49 @@ class TestRegionComplement(unittest.TestCase):
                     filemode='a')
 
     def test_Box_Complement(self):
-        image = numpy.zeros((32, 64, 1), numpy.uint8)
+        image = numpy.zeros((48, 64, 1), numpy.uint8)
         image[10:20, 10:20] = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
         compRgn = rgn.Complement((0, 0, 0, 0))
+        extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         self.assertEqual(compRgn.Count(), 22)
         self.assertEqual(compRgn.CountRows(), 12)
         self.assertAlmostEqual(compRgn.Area(), 44)
 
     def test_2VBox_Complement(self):
-        image = numpy.zeros((32, 64, 1), numpy.uint8)
+        image = numpy.zeros((48, 64, 1), numpy.uint8)
         image[0:10, 10:20] = 255
         image[20:30, 10:20] = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
         compRgn = rgn.Complement((0, 0, 0, 0))
+        extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         self.assertEqual(compRgn.Count(), 52)
         self.assertEqual(compRgn.CountRows(), 32)
         self.assertAlmostEqual(compRgn.Area(), 184)
 
     def test_2HBox_Complement(self):
-        image = numpy.zeros((32, 64, 1), numpy.uint8)
+        image = numpy.zeros((48, 64, 1), numpy.uint8)
         image[0:10, 10:20] = 255
         image[0:10, 30:40] = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
         compRgn = rgn.Complement((0, 0, 0, 0))
+        extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         self.assertEqual(compRgn.Count(), 32)
         self.assertEqual(compRgn.CountRows(), 12)
         self.assertAlmostEqual(compRgn.Area(), 184)
 
     def test_2Hole_Complement(self):
-        image = numpy.zeros((32, 64, 1), numpy.uint8)
+        image = numpy.zeros((48, 64, 1), numpy.uint8)
         image[0:10, 10:20] = 255
         image[3:7, 13:17] = 0
         image[0:10, 30:40] = 255
         image[3:7, 33:37] = 0
         r, rgn = mvlab.Threshold(image, 150, 255)
         compRgn = rgn.Complement((0, 0, 0, 0))
+        extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         r, rgns = compRgn.Connect(8)
         self.assertEqual(len(rgns), 3)
@@ -67,7 +72,8 @@ class TestRegionComplement(unittest.TestCase):
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))
         endTime = time.perf_counter()
-        logging.info("Complement 'scrach.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         self.assertEqual(compRgn.Count(), 4348)
 
@@ -79,7 +85,8 @@ class TestRegionComplement(unittest.TestCase):
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))
         endTime = time.perf_counter()
-        logging.info("Complement 'mista.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         r, rgns = compRgn.Connect(8)
         self.assertEqual(len(rgns), 1072)
@@ -92,7 +99,8 @@ class TestRegionComplement(unittest.TestCase):
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))
         endTime = time.perf_counter()
-        logging.info("Complement 'digits.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         self.assertEqual(compRgn.Count(), 90084, 'Digits component number error')
 

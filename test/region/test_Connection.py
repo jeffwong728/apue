@@ -6,6 +6,7 @@ import unittest
 import numpy
 import time
 import logging
+import extradata
 
 class TestRegionConnection(unittest.TestCase):
     @classmethod
@@ -23,7 +24,7 @@ class TestRegionConnection(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgns = rgn.Connect(8)
         endTime = time.perf_counter()
-        logging.info("Connect 'scrach.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
 
         self.assertEqual(len(rgns), 94, 'Scrach component number error')
 
@@ -35,7 +36,7 @@ class TestRegionConnection(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgns = rgn.Connect(8)
         endTime = time.perf_counter()
-        logging.info("Connect 'mista.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
 
         self.assertEqual(len(rgns), 941, 'Mista component number error')
 
@@ -47,7 +48,7 @@ class TestRegionConnection(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgns = rgn.Connect(8)
         endTime = time.perf_counter()
-        logging.info("Connect 'digits.png' spent {0:f}ms".format((endTime-startTime)*1000))
+        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
 
         self.assertEqual(len(rgns), 5584, 'Digits component number error')
 

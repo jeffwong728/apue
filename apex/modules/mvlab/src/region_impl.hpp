@@ -2,6 +2,7 @@
 #define __OPENCV_MVLAB_REGION_IMPL_HPP__
 
 #include "contour_impl.hpp"
+#include "uvector.h"
 #include <opencv2/mvlab/region.hpp>
 #include <boost/optional.hpp>
 #include <tbb/scalable_allocator.h>
@@ -12,7 +13,6 @@ namespace mvlab {
 
 struct RunLength
 {
-    RunLength() : row(0), colb(0), cole(0), label(0) {}
     RunLength(const RunLength &r) : row(r.row), colb(r.colb), cole(r.cole), label(r.label) {}
     RunLength(const int ll, const int bb, const int ee) : row(ll), colb(bb), cole(ee), label(0) {}
     RunLength(const int ll, const int bb, const int ee, const int lab) : row(ll), colb(bb), cole(ee), label(lab) {}
@@ -23,7 +23,7 @@ struct RunLength
     int label;
 };
 
-using RunSequence                   = std::vector<RunLength, MyAlloc<RunLength>>;
+using RunSequence                   = ao::uvector<RunLength, MyAlloc<RunLength>>;
 using RunSequenceSequence           = std::vector<RunSequence, MyAlloc<RunSequence>>;
 using RunPtrSequence                = std::vector<RunLength *, MyAlloc<RunLength*>>;
 using RunConstPtrSequence           = std::vector<const RunLength *, MyAlloc<const RunLength*>>;

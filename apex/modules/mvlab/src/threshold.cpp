@@ -166,6 +166,7 @@ void Thresholder::operator()(const tbb::blocked_range<int>& br) const
                         {
                             pRun->row = row;
                             pRun->colb = i + n;
+                            pRun->label = 0;
                             b = false;
                         }
                         else

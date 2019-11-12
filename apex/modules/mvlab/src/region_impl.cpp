@@ -87,7 +87,7 @@ int RegionImpl::Draw(Mat &img,
         return MLR_REGION_EMPTY;
     }
 
-    TraceContour();
+    TraceAllContours();
 
     if (img.empty())
     {

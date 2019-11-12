@@ -229,7 +229,7 @@ int ContourImpl::Simplify(const float tolerance, std::vector<Point2f> &vertexes)
 
 void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
 {
-    if (GetPath().empty())
+    if (!path_ || path_->empty())
     {
         const auto &vertexes = GetVertexes();
         const int numVertexes = static_cast<int>(vertexes.size());
@@ -249,7 +249,7 @@ void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
     else
     {
         Geom::CairoPathSink cairoPathSink(cr->cobj());
-        cairoPathSink.feed(GetPath());
+        cairoPathSink.feed(*path_);
     }
 }
 
