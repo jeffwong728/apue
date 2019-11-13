@@ -72,7 +72,7 @@ class TestRegionComplement(unittest.TestCase):
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         self.assertEqual(compRgn.Count(), 4348)
@@ -85,7 +85,7 @@ class TestRegionComplement(unittest.TestCase):
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         r, rgns = compRgn.Connect(8)
@@ -99,7 +99,7 @@ class TestRegionComplement(unittest.TestCase):
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
         self.assertEqual(compRgn.Count(), 90084, 'Digits component number error')

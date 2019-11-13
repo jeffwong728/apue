@@ -28,6 +28,8 @@
     <Compile Include="region\test_Connection.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="region\test_Intersection.py" />
+    <Compile Include="region\test_Union.py" />
     <Compile Include="region\__init__.py" />
     <Compile Include="run.py">
       <SubType>Code</SubType>

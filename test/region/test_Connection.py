@@ -24,7 +24,7 @@ class TestRegionConnection(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgns = rgn.Connect(8)
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
         self.assertEqual(len(rgns), 94, 'Scrach component number error')
 
@@ -36,7 +36,7 @@ class TestRegionConnection(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgns = rgn.Connect(8)
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
         self.assertEqual(len(rgns), 941, 'Mista component number error')
 
@@ -48,7 +48,7 @@ class TestRegionConnection(unittest.TestCase):
         startTime = time.perf_counter()
         r, rgns = rgn.Connect(8)
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
         self.assertEqual(len(rgns), 5584, 'Digits component number error')
 

@@ -25,7 +25,7 @@ class TestContour(unittest.TestCase):
         startTime = time.perf_counter()
         r, outer = rgn.GetContour()
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
         self.assertEqual(r, 0, "Contour 'scrach.png' error")
 
@@ -38,7 +38,7 @@ class TestContour(unittest.TestCase):
         startTime = time.perf_counter()
         r, outer = rgn.GetContour()
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
         self.assertEqual(r, 0, "Contour 'mista.png' error")
 
@@ -51,7 +51,7 @@ class TestContour(unittest.TestCase):
         startTime = time.perf_counter()
         r, outer = rgn.GetContour()
         endTime = time.perf_counter()
-        extradata.perfData.setdefault(self.id(), "{0:.3f}ms".format((endTime-startTime)*1000))
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
         self.assertEqual(r, 0, "Contour 'digits.png' error")
 

@@ -21,7 +21,7 @@ RegionImpl::RegionImpl(const Rect2f &rect)
         int runIdx = 0;
         for (float y = 0.f; y < rect.height; ++y)
         {
-            rgnRuns.emplace_back(cvRound(y), cvRound(rect.x), cvRound(rect.x + rect.width));
+            rgnRuns.emplace_back(cvRound(y+rect.y), cvRound(rect.x), cvRound(rect.x + rect.width));
             runIdx += 1;
         }
 
@@ -315,7 +315,19 @@ cv::Ptr<Region> RegionImpl::Difference(const cv::Ptr<Region> &subRgn) const
 
 cv::Ptr<Region> RegionImpl::Intersection(const cv::Ptr<Region> &otherRgn) const
 {
+    const cv::Ptr<RegionImpl> otherRgnImpl = otherRgn.dynamicCast<RegionImpl>();
+    if (otherRgnImpl)
+    {
+        RegionIntersectionOp interOp;
+        RunSequence resRuns = interOp.Do2(rgn_runs_, otherRgnImpl->rgn_runs_);
+        if (!resRuns.empty())
+        {
+            return makePtr<RegionImpl>(&resRuns);
+        }
+    }
+
     return makePtr<RegionImpl>();
+
 }
 
 cv::Ptr<Region> RegionImpl::SymmDifference(const cv::Ptr<Region> &otherRgn) const
@@ -325,7 +337,19 @@ cv::Ptr<Region> RegionImpl::SymmDifference(const cv::Ptr<Region> &otherRgn) cons
 
 cv::Ptr<Region> RegionImpl::Union2(const cv::Ptr<Region> &otherRgn) const
 {
+    const cv::Ptr<RegionImpl> otherRgnImpl = otherRgn.dynamicCast<RegionImpl>();
+    if (otherRgnImpl)
+    {
+        RegionUnion2Op unionOp;
+        RunSequence resRuns = unionOp.Do(rgn_runs_, otherRgnImpl->rgn_runs_);
+        if (!resRuns.empty())
+        {
+            return makePtr<RegionImpl>(&resRuns);
+        }
+    }
+
     return makePtr<RegionImpl>();
+
 }
 
 int RegionImpl::Connect(const int connectivity, std::vector<Ptr<Region>> &regions) const

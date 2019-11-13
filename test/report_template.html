@@ -25,7 +25,8 @@
                         <tr>
                             <th>{{ test_case_name }}</th>
                             <th>Status</th>
-                            <th>Time</th>
+                            <th>Time(ms)</th>
+                            <th>Object</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -52,6 +53,11 @@
                                 {{ perf[test_case.test_id] }}
                                 {%- endif -%}
                             </td>
+                            <td>
+                                {%- if test_case.test_id in obj_path -%}
+                                <a href={{ obj_path[test_case.test_id] }}>link</a>
+                                {%- endif -%}
+                            </td>
                             <td class="col-xs-1">
                                 {%- if (test_case.stdout or test_case.err) %}
                                 <button class="btn btn-default btn-xs">View</button>
@@ -60,7 +66,7 @@
                         </tr>
                         {%- if (test_case.stdout or test_case.err or test_case.err) and test_case.outcome != test_case.SKIP %}
                         <tr style="display:none;">
-                            <td class="col-xs-9" colspan="4">
+                            <td class="col-xs-9" colspan="5">
                                 {%- if test_case.stdout %}<p>{{ test_case.stdout }}</p>{% endif %}
                                 {%- if test_case.err %}<p style="color:maroon;">{{ test_case.err[0].__name__ }}: {{ test_case.err[1] }}</p>{% endif %}
                                 {%- if test_case.err %}<p style="color:maroon;">{{ test_case.test_exception_info }}</p>{% endif %}
@@ -69,7 +75,7 @@
                         {%- endif %}
                         {%- if (test_case.stdout or test_case.err or test_case.err) and test_case.outcome == test_case.SKIP %}
                         <tr style="display:none;">
-                            <td class="col-xs-9" colspan="4">
+                            <td class="col-xs-9" colspan="5">
                                 {%- if test_case.stdout %}<p>{{ test_case.stdout }}</p>{% endif %}
                                 {%- if test_case.err %}<p style="color:maroon;">{{ test_case.err }}</p>{% endif %}
                             </td>
@@ -87,7 +93,14 @@
                                     {%- endif -%}
                                 </span>
                             </td>
-                            <td>0.01ms</td>
+                            <td>
+                                {%- if test_case.test_id in perf -%}
+                                {{ perf[test_case.test_id] }}
+                                {%- endif -%}
+                            </td>
+                            <td>
+                                <a href="mvlab.html">link</a>
+                            </td>
                             <td class="col-xs-1">
                                 {%- if test_case.subtests %}
                                 <button class="btn btn-default btn-xs">View</button>
@@ -96,7 +109,7 @@
                         </tr>
                         {%- if test_case.subtests %}
                         <tr style="display:none;">
-                            <td colspan="4">
+                            <td colspan="5">
 
                                 <table class='table table-hover table-responsive'>
                                     <tbody>
@@ -135,7 +148,7 @@
                         {%- endif %}
                         {%- endfor %}
                         <tr>
-                            <td colspan="4">
+                            <td colspan="5">
                                 Total: {{ summaries[test_case_name].total }}, Pass: {{ summaries[test_case_name].success }}{% if summaries[test_case_name].failure %}, Fail: {{ summaries[test_case_name].failure }}{% endif %}{% if summaries[test_case_name].error %}, Error: {{ summaries[test_case_name].error }}{% endif %}{% if summaries[test_case_name].skip %}, Skip: {{ summaries[test_case_name].skip }}{% endif %} -- Duration: {{ summaries[test_case_name].duration }}
                             </td>
                         </tr>
@@ -166,4 +179,4 @@
         });
     </script>
 </body>
-</html
+</html>
