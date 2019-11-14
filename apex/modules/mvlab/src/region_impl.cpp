@@ -10,6 +10,8 @@
 namespace cv {
 namespace mvlab {
 
+extern RunSequence RunLengthEncode(const cv::Mat &imgMat, const int minGray, const int maxGray);
+
 RegionImpl::RegionImpl(const Rect2f &rect)
     : RegionImpl()
 {
@@ -303,13 +305,24 @@ cv::Ptr<Region> RegionImpl::Complement(const cv::Rect &universe) const
     const cv::Rect rcUniv = bbox | universe;
 
     RegionComplementOp compOp;
-    RunSequence resRuns = compOp.Do(rgn_runs_, row_begs_, rcUniv);
+    RunSequence resRuns = compOp.Do2(rgn_runs_, rcUniv);
 
     return makePtr<RegionImpl>(&resRuns);
 }
 
 cv::Ptr<Region> RegionImpl::Difference(const cv::Ptr<Region> &subRgn) const
 {
+    const cv::Ptr<RegionImpl> subRgnImpl = subRgn.dynamicCast<RegionImpl>();
+    if (subRgnImpl)
+    {
+        RegionDifferenceOp diffOp;
+        RunSequence resRuns = diffOp.Do(rgn_runs_, subRgnImpl->rgn_runs_);
+        if (!resRuns.empty())
+        {
+            return makePtr<RegionImpl>(&resRuns);
+        }
+    }
+
     return makePtr<RegionImpl>();
 }
 
@@ -327,7 +340,6 @@ cv::Ptr<Region> RegionImpl::Intersection(const cv::Ptr<Region> &otherRgn) const
     }
 
     return makePtr<RegionImpl>();
-
 }
 
 cv::Ptr<Region> RegionImpl::SymmDifference(const cv::Ptr<Region> &otherRgn) const
@@ -349,7 +361,6 @@ cv::Ptr<Region> RegionImpl::Union2(const cv::Ptr<Region> &otherRgn) const
     }
 
     return makePtr<RegionImpl>();
-
 }
 
 int RegionImpl::Connect(const int connectivity, std::vector<Ptr<Region>> &regions) const
@@ -392,40 +403,14 @@ void RegionImpl::FromMask(const cv::Mat &mask)
     if (CV_8U == dph && 1 == cnl)
     {
         RunSequence &rgnRuns = const_cast<RunSequence &>(rgn_runs_);
-        for (int r = 0; r < mask.rows; ++r)
-        {
-            int cb = -1;
-            const uchar* pRow = mask.data + r * mask.step1();
-            for (int c = 0; c < mask.cols; ++c)
-            {
-                if (pRow[c])
-                {
-                    if (cb < 0)
-                    {
-                        cb = c;
-                    }
-                }
-                else
-                {
-                    if (cb > -1)
-                    {
-                        rgnRuns.emplace_back(r, cb, c);
-                        cb = -1;
-                    }
-                }
-            }
-
-            if (cb > -1)
-            {
-                rgnRuns.emplace_back(r, cb, mask.cols);
-            }
-        }
+        RunSequence allRuns = RunLengthEncode(mask, 1, 255);
+        rgnRuns.swap(allRuns);
     }
 }
 
 void RegionImpl::FromPathVector(const Geom::PathVector &pv)
 {
-    std::vector<uint8_t> buf;
+    UScalableUCharSequence buf;
     Geom::OptRect bbox = pv.boundsFast();
     if (bbox)
     {

@@ -148,7 +148,7 @@ public:
 		_end(_begin + n),
 		_endOfStorage(_end)
 	{
-		std::uninitialized_fill_n<Tp*,size_t>(_begin, n, val);
+		std::uninitialized_fill_n <Tp*,size_t>(_begin, n, val);
 	}
 	
 	/** @brief Construct a vector by copying elements from a range.

@@ -68,6 +68,7 @@ class TestRegionComplement(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'scrach.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn.Area()
 
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))
@@ -81,6 +82,7 @@ class TestRegionComplement(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn.Area()
 
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))
@@ -95,6 +97,7 @@ class TestRegionComplement(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 151, 255)
+        rgn.Area()
 
         startTime = time.perf_counter()
         compRgn = rgn.Complement((0, 0, 0, 0))

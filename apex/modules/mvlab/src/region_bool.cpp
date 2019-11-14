@@ -125,6 +125,155 @@ RunSequence RegionComplementOp::Do(const RunSequence &srcRuns, const RowBeginSeq
     return dstRuns;
 }
 
+RunSequence RegionComplementOp::Do2(const RunSequence &srcRuns, const cv::Rect &rcUniverse)
+{
+    RunSequence dstRuns(srcRuns.size() + rcUniverse.height + 1);
+    RunSequence::const_pointer cur2 = srcRuns.data();
+    const RunSequence::const_pointer end2 = srcRuns.data() + srcRuns.size();
+
+    int cur1 = rcUniverse.y;
+    const int end1 = rcUniverse.y + rcUniverse.height + 1;
+
+    const int colMin = rcUniverse.x;
+    const int colMax = rcUniverse.x + rcUniverse.width + 1;
+
+    RunSequence::pointer pResRun = dstRuns.data();
+    while (cur1 != end1 && cur2 != end2)
+    {
+        if (cur1 < cur2->row)
+        {
+            pResRun->row = cur1; pResRun->colb = colMin; pResRun->cole = colMax; pResRun->label = 0;
+            ++pResRun;
+            ++cur1;
+        }
+        else if (cur2->row < cur1)
+        {
+            ++cur2;
+        }
+        else
+        {
+            const int curR = cur1;
+            assert(curR == cur2->row);
+            RunSequence::const_pointer lastIncluded = cur2;
+
+            while (lastIncluded != end2 && lastIncluded->row == curR)
+            {
+                ++lastIncluded;
+            }
+
+            --lastIncluded;
+            pResRun->row = curR; pResRun->colb = colMin; pResRun->cole = cur2->colb; pResRun->label = 0;
+            ++pResRun;
+
+            while (cur2 != lastIncluded)
+            {
+                pResRun->row = curR; pResRun->colb = cur2->cole; pResRun->cole = (cur2 + 1)->colb; pResRun->label = 0;
+                assert(pResRun->colb < pResRun->cole);
+                ++pResRun;
+                ++cur2;
+            }
+
+            pResRun->row = curR; pResRun->colb = lastIncluded->cole; pResRun->cole = colMax; pResRun->label = 0;
+            assert(pResRun->colb < pResRun->cole);
+            ++pResRun;
+
+            ++cur1;
+        }
+    }
+
+    for (; cur1 != end1; ++cur1, ++pResRun)
+    {
+        pResRun->row = cur1; pResRun->colb = colMin; pResRun->cole = colMax; pResRun->label = 0;
+    }
+
+    assert(std::distance(dstRuns.data(), pResRun) == dstRuns.size());
+    return dstRuns;
+}
+
+RunSequence RegionDifferenceOp::Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2)
+{
+    if (srcRuns1.empty())
+    {
+        return RunSequence();
+    }
+
+    if (srcRuns2.empty())
+    {
+        return srcRuns1;
+    }
+
+    RunSequence dstRuns(srcRuns1.size() + srcRuns2.size());
+    RunSequence::const_pointer cur1 = srcRuns1.data();
+    RunSequence::const_pointer cur2 = srcRuns2.data();
+    const RunSequence::const_pointer end1 = srcRuns1.data() + srcRuns1.size();
+    const RunSequence::const_pointer end2 = srcRuns2.data() + srcRuns2.size();
+
+    RunSequence::pointer pResRun = dstRuns.data();
+    while (cur1 != end1 && cur2 != end2)
+    {
+        if (cur1->row < cur2->row || (cur1->row == cur2->row && cur1->cole <= cur2->colb))
+        {
+            pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
+            ++pResRun;
+            ++cur1;
+        }
+        else if (cur2->row < cur1->row || (cur1->row == cur2->row && cur2->cole <= cur1->colb))
+        {
+            ++cur2;
+        }
+        else
+        {
+            const int curR = cur1->row;
+            assert(curR == cur2->row);
+            RunSequence::const_pointer lastIncluded = cur2;
+            bool bIncremented = false;
+            while (lastIncluded != end2 && lastIncluded->row == curR && lastIncluded->colb < cur1->cole)
+            {
+                ++lastIncluded;
+                bIncremented = true;
+            }
+
+            if (bIncremented)
+            {
+                --lastIncluded;
+            }
+
+            // now all chords from cur2 to lastIncluded have an intersection with cur1
+            if (cur1->colb < cur2->colb)
+            {
+                pResRun->row = curR; pResRun->colb = cur1->colb; pResRun->cole = cur2->colb; pResRun->label = 0;
+                ++pResRun;
+            }
+
+            while (cur2 != lastIncluded)
+            {
+                pResRun->row = curR; pResRun->colb = cur2->cole; pResRun->cole = (cur2+1)->colb; pResRun->label = 0;
+                assert(pResRun->colb < pResRun->cole);
+                ++pResRun;
+                ++cur2;
+            }
+
+            if (cur1->cole > lastIncluded->cole)
+            {
+                pResRun->row = curR; pResRun->colb = lastIncluded->cole; pResRun->cole = cur1->cole; pResRun->label = 0;
+                assert(pResRun->colb < pResRun->cole);
+                ++pResRun;
+            }
+            ++cur1;
+        }
+    }
+
+    for (; cur1 != end1; ++cur1, ++pResRun)
+    {
+        pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
+    }
+
+    assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());
+    dstRuns.resize(std::distance(dstRuns.data(), pResRun));
+
+    return dstRuns;
+}
+
 RunSequence RegionIntersectionOp::Do(const RunSequence &srcRuns1,
     const RowBeginSequence &rowBegs1,
     const RunSequence &srcRuns2,

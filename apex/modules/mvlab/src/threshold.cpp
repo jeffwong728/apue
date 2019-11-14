@@ -8,7 +8,7 @@ namespace mvlab {
 class RunsPerRowCounter
 {
 public:
-    RunsPerRowCounter(const cv::Mat *const imgMat, ScalableIntSequence *const numRunsPerRow, const uint32_t minGray, const uint32_t maxGray)
+    RunsPerRowCounter(const cv::Mat *const imgMat, UScalableIntSequence *const numRunsPerRow, const uint32_t minGray, const uint32_t maxGray)
         : img_mat_(imgMat)
         , num_runs_per_row_(numRunsPerRow)
         , min_gray(minGray)
@@ -19,7 +19,7 @@ public:
 
 private:
     const cv::Mat *const img_mat_;
-    ScalableIntSequence *const num_runs_per_row_;
+    UScalableIntSequence *const num_runs_per_row_;
     const uint32_t min_gray;
     const uint32_t max_gray;
 };
@@ -85,7 +85,7 @@ void RunsPerRowCounter::operator()(const tbb::blocked_range<int>& br) const
 class Thresholder
 {
 public:
-    Thresholder(const cv::Mat *const imgMat, const ScalableIntSequence *const numRunsPerRow, RunSequence *const allRuns, const uint32_t minGray, const uint32_t maxGray)
+    Thresholder(const cv::Mat *const imgMat, const UScalableIntSequence *const numRunsPerRow, RunSequence *const allRuns, const uint32_t minGray, const uint32_t maxGray)
         : img_mat_(imgMat)
         , num_runs_per_row_(numRunsPerRow)
         , all_runs_(allRuns)
@@ -97,7 +97,7 @@ public:
 
 private:
     const cv::Mat *const img_mat_;
-    const ScalableIntSequence *const num_runs_per_row_;
+    const UScalableIntSequence *const num_runs_per_row_;
     RunSequence *const all_runs_;
     const uint32_t min_gray;
     const uint32_t max_gray;
@@ -188,6 +188,50 @@ void Thresholder::operator()(const tbb::blocked_range<int>& br) const
     }
 }
 
+RunSequence RunLengthEncode(const cv::Mat &imgMat, const int minGray, const int maxGray)
+{
+    const int nThreads = tbb::task_scheduler_init::default_num_threads();
+    const int numRows = imgMat.rows;
+
+    const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
+    if (is_parallel)
+    {
+        UScalableIntSequence numRunsPerRow(imgMat.rows);
+        std::memset(numRunsPerRow.data(), 0, numRunsPerRow.size() * sizeof(UScalableIntSequence::value_type));
+        RunsPerRowCounter numRunsCounter(&imgMat, &numRunsPerRow, minGray, maxGray);
+        tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), numRunsCounter);
+
+        for (int n = 1; n < imgMat.rows; ++n)
+        {
+            numRunsPerRow[n] += numRunsPerRow[n - 1];
+        }
+
+        RunSequence allRuns(numRunsPerRow.back());
+        Thresholder thresher(&imgMat, &numRunsPerRow, &allRuns, minGray, maxGray);
+        tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), thresher);
+
+        return allRuns;
+    }
+    else
+    {
+        UScalableIntSequence numRunsPerRow(imgMat.rows);
+        std::memset(numRunsPerRow.data(), 0, numRunsPerRow.size() * sizeof(UScalableIntSequence::value_type));
+        RunsPerRowCounter numRunsCounter(&imgMat, &numRunsPerRow, minGray, maxGray);
+        numRunsCounter(tbb::blocked_range<int>(0, imgMat.rows));
+
+        for (int n = 1; n < imgMat.rows; ++n)
+        {
+            numRunsPerRow[n] += numRunsPerRow[n - 1];
+        }
+
+        RunSequence allRuns(numRunsPerRow.back());
+        Thresholder thresher(&imgMat, &numRunsPerRow, &allRuns, minGray, maxGray);
+        thresher(tbb::blocked_range<int>(0, imgMat.rows));
+
+        return allRuns;
+    }
+}
+
 int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<Region> &region)
 {
     region = cv::makePtr<RegionImpl>();
@@ -225,19 +269,7 @@ int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<
         return MLR_IMAGE_FORMAT_ERROR;
     }
 
-    ScalableIntSequence numRunsPerRow(imgMat.rows);
-    RunsPerRowCounter numRunsCounter(&imgMat, &numRunsPerRow, minGray, maxGray);
-    tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), numRunsCounter);
-
-    for (int n = 1; n < imgMat.rows; ++n)
-    {
-        numRunsPerRow[n] += numRunsPerRow[n - 1];
-    }
-
-    RunSequence allRuns(numRunsPerRow.back());
-    Thresholder thresher(&imgMat, &numRunsPerRow, &allRuns, minGray, maxGray);
-    tbb::parallel_for(tbb::blocked_range<int>(0, imgMat.rows), thresher);
-
+    RunSequence allRuns = RunLengthEncode(imgMat, minGray, maxGray);
     region = cv::makePtr<RegionImpl>(&allRuns);
 
     return MLR_SUCCESS;

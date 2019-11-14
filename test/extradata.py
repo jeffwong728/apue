@@ -27,9 +27,12 @@ def SaveRegion(testId, rgn, sz=None):
     imgPathComps = testId.split(sep='.')
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     os.makedirs(imgPath, exist_ok=True)
+    if not sz:
+        sz = (0, 0)
     image = numpy.zeros((sz[0], sz[1], 4), numpy.uint8)
     r, image = rgn.Draw(image, (255, 255, 255, 255), (255, 255, 255, 255), 0, 0)
-    cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
 
-    global objPath
-    objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
+    if not r:
+        cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
+        global objPath
+        objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')

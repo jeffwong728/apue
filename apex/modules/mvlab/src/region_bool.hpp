@@ -14,10 +14,12 @@ struct RegionBoolOp
 struct RegionComplementOp : public RegionBoolOp
 {
     RunSequence Do(const RunSequence &srcRuns, const RowBeginSequence &rowBegs, const cv::Rect &rcUniverse);
+    RunSequence Do2(const RunSequence &srcRuns, const cv::Rect &rcUniverse);
 };
 
 struct RegionDifferenceOp : public RegionBoolOp
 {
+    RunSequence Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2);
 };
 
 struct RegionIntersectionOp : public RegionBoolOp

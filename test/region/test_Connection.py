@@ -52,5 +52,16 @@ class TestRegionConnection(unittest.TestCase):
 
         self.assertEqual(len(rgns), 5584, 'Digits component number error')
 
+    def test_PCB_Layout_Connection(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        r, rgn = mvlab.Threshold(image, 0, 50)
+
+        startTime = time.perf_counter()
+        r, rgns = rgn.Connect(8)
+        endTime = time.perf_counter()
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
+
+        self.assertEqual(len(rgns), 49, 'pcb_layout.png component number error')
+
 if __name__ == '__main__':
     unittest.main()

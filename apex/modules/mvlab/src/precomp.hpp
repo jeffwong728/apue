@@ -85,5 +85,6 @@ using ScalablePoint2fSequence       = std::vector<cv::Point2f, MyAlloc<cv::Point
 using ScalablePoint2dSequence       = std::vector<cv::Point2d, MyAlloc<cv::Point2d>>;
 using ScalableRectSequence          = std::vector<cv::Rect, MyAlloc<cv::Rect>>;
 using UScalableIntSequence          = ao::uvector<int, MyAlloc<int>>;
+using UScalableUCharSequence        = ao::uvector<uint8_t, MyAlloc<uint8_t>>;
 
 #endif

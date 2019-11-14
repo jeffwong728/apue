@@ -46,6 +46,7 @@ class TestThreshold(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SaveRegion(self.id(), rgn, image.shape)
 
         self.assertEqual(r, 0, "Threshold 'scrach.png' error")
 
@@ -57,6 +58,7 @@ class TestThreshold(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SaveRegion(self.id(), rgn, image.shape)
 
         self.assertEqual(r, 0, "Threshold 'mista.png' error")
         self.assertEqual(rgn.Count(), 234794)
@@ -69,8 +71,20 @@ class TestThreshold(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SaveRegion(self.id(), rgn, image.shape)
 
         self.assertEqual(r, 0, "Threshold 'digits.png' error")
+
+    def test_PCB_Layout_Threshold(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+
+        startTime = time.perf_counter()
+        r, rgn = mvlab.Threshold(image, 0, 50)
+        endTime = time.perf_counter()
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), rgn, image.shape)
+
+        self.assertEqual(r, 0)
 
 if __name__ == '__main__':
     unittest.main()
