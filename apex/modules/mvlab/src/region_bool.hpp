@@ -30,6 +30,7 @@ struct RegionIntersectionOp : public RegionBoolOp
 
 struct RegionSymmDifferenceOp : public RegionBoolOp
 {
+    RunSequence Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2);
 };
 
 struct RegionUnion2Op : public RegionBoolOp

@@ -344,6 +344,17 @@ cv::Ptr<Region> RegionImpl::Intersection(const cv::Ptr<Region> &otherRgn) const
 
 cv::Ptr<Region> RegionImpl::SymmDifference(const cv::Ptr<Region> &otherRgn) const
 {
+    const cv::Ptr<RegionImpl> otherRgnImpl = otherRgn.dynamicCast<RegionImpl>();
+    if (otherRgnImpl)
+    {
+        RegionSymmDifferenceOp symOp;
+        RunSequence resRuns = symOp.Do(rgn_runs_, otherRgnImpl->rgn_runs_);
+        if (!resRuns.empty())
+        {
+            return makePtr<RegionImpl>(&resRuns);
+        }
+    }
+
     return makePtr<RegionImpl>();
 }
 

@@ -21,6 +21,8 @@ def SaveImage(testId, img):
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     os.makedirs(imgPath, exist_ok=True)
     cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', img)
+    global objPath
+    objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
 
 def SaveRegion(testId, rgn, sz=None):
     baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')

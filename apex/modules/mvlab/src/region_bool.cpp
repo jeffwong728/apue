@@ -340,6 +340,110 @@ RunSequence RegionIntersectionOp::Do(const RunSequence &srcRuns1,
     return dstRuns;
 }
 
+RunSequence RegionSymmDifferenceOp::Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2)
+{
+    if (srcRuns1.empty())
+    {
+        return srcRuns2;
+    }
+
+    if (srcRuns2.empty())
+    {
+        return srcRuns1;
+    }
+
+    RunSequence dstRuns(srcRuns1.size() + srcRuns2.size());
+    RunSequence::const_pointer cur1 = srcRuns1.data();
+    RunSequence::const_pointer cur2 = srcRuns2.data();
+    const RunSequence::const_pointer end1 = srcRuns1.data() + srcRuns1.size();
+    const RunSequence::const_pointer end2 = srcRuns2.data() + srcRuns2.size();
+    constexpr int negInf = std::numeric_limits<int>::min();
+    ScalableIntSequence cols(1024);
+
+    RunLength negInfRun{ negInf, negInf, negInf, 0};
+    RunSequence::pointer pResRun = dstRuns.data();
+    RunSequence::pointer pPreRun = &negInfRun;
+    while (cur1 != end1 && cur2 != end2)
+    {
+        if (cur1->row < cur2->row || (cur1->row == cur2->row && cur1->cole < cur2->colb))
+        {
+            pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
+            pPreRun = pResRun;
+            ++pResRun;
+            ++cur1;
+        }
+        else if (cur2->row < cur1->row || (cur1->row == cur2->row && cur2->cole < cur1->colb))
+        {
+            pResRun->row = cur2->row; pResRun->colb = cur2->colb; pResRun->cole = cur2->cole; pResRun->label = 0;
+            pPreRun = pResRun; 
+            ++pResRun;
+            ++cur2;
+        }
+        else
+        {
+            assert(cur1->row == cur2->row);
+            const int curR = cur1->row;
+            RunSequence::const_pointer rowEnd1 = cur1;
+            RunSequence::const_pointer rowEnd2 = cur2;
+            while (rowEnd1 != end1 && rowEnd1->row == curR) ++rowEnd1;
+            while (rowEnd2 != end2 && rowEnd2->row == curR) ++rowEnd2;
+
+            cols.resize((std::distance(cur1, rowEnd1)+std::distance(cur2, rowEnd2))*2);
+            UScalableIntSequence::pointer pCol = cols.data();
+
+            for (; cur1 != rowEnd1; ++cur1)
+            {
+                *pCol = cur1->colb; ++pCol;
+                *pCol = cur1->cole; ++pCol;
+            }
+
+            for (; cur2 != rowEnd2; ++cur2)
+            {
+                *pCol = cur2->colb; ++pCol;
+                *pCol = cur2->cole; ++pCol;
+            }
+
+            std::sort(cols.begin(), cols.end());
+
+            bool odd = true;
+            UScalableIntSequence::pointer pColEnd = cols.data() + cols.size();
+            for (pCol = cols.data()+1; pCol != pColEnd; ++pCol)
+            {
+                if (odd && *pCol > *(pCol - 1))
+                {
+                    if (pPreRun->row == curR && pPreRun->cole == *(pCol-1))
+                    {
+                        pPreRun->cole = *pCol;
+                    }
+                    else
+                    {
+                        pResRun->row = curR; pResRun->colb = *(pCol - 1); pResRun->cole = *pCol; pResRun->label = 0;
+                        pPreRun = pResRun;
+                        ++pResRun;
+                    }
+                }
+
+                odd = !odd;
+            }
+        }
+    }
+
+    for (; cur1 != end1; ++cur1, ++pResRun)
+    {
+        pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
+    }
+
+    for (; cur2 != end2; ++cur2, ++pResRun)
+    {
+        pResRun->row = cur2->row; pResRun->colb = cur2->colb; pResRun->cole = cur2->cole; pResRun->label = 0;
+    }
+
+    assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());
+    dstRuns.resize(std::distance(dstRuns.data(), pResRun));
+
+    return dstRuns;
+}
+
 RunSequence RegionIntersectionOp::Do2(const RunSequence &srcRuns1, const RunSequence &srcRuns2)
 {
     if (srcRuns1.empty() || srcRuns2.empty())
@@ -406,50 +510,10 @@ RunSequence RegionUnion2Op::Do(const RunSequence &srcRuns1, const RunSequence &s
     const RunSequence::const_pointer end1 = srcRuns1.data() + srcRuns1.size();
     const RunSequence::const_pointer end2 = srcRuns2.data() + srcRuns2.size();
 
-    RunSequence::pointer pRevRun = dstRuns.data();
+    constexpr int negInf = std::numeric_limits<int>::min();
+    RunLength negInfRun{ negInf, negInf, negInf, 0 };
     RunSequence::pointer pResRun = dstRuns.data();
-    if (cur1->row < cur2->row)
-    {
-        pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
-        ++pResRun;
-        ++cur1;
-    }
-    else if (cur2->row < cur1->row)
-    {
-        pResRun->row  = cur2->row; pResRun->colb = cur2->colb; pResRun->cole = cur2->cole; pResRun->label = 0;
-        ++pResRun;
-        ++cur2;
-    }
-    else
-    {
-        if (cur1->colb < cur2->colb)
-        {
-            pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
-            ++pResRun;
-            ++cur1;
-        }
-        else if(cur2->colb < cur2->colb)
-        {
-            pResRun->row = cur2->row; pResRun->colb = cur2->colb; pResRun->cole = cur2->cole; pResRun->label = 0;
-            ++pResRun;
-            ++cur2;
-        }
-        else
-        {
-            if (cur1->cole < cur2->cole)
-            {
-                pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
-                ++pResRun;
-                ++cur1;
-            }
-            else
-            {
-                pResRun->row = cur2->row; pResRun->colb = cur2->colb; pResRun->cole = cur2->cole; pResRun->label = 0;
-                ++pResRun;
-                ++cur2;
-            }
-        }
-    }
+    RunSequence::pointer pPreRun = &negInfRun;
 
     while (cur1 != end1 && cur2 != end2)
     {
@@ -472,31 +536,60 @@ RunSequence RegionUnion2Op::Do(const RunSequence &srcRuns1, const RunSequence &s
             pNewRun = cur2;
             ++cur2;
         }
-        else
+        else if (cur1->cole < cur2->cole)
         {
             ++cur1;
         }
-
-        if (pNewRun->row == pRevRun->row && pNewRun->colb <= pRevRun->cole)
+        else if (cur2->cole < cur1->cole)
         {
-            pRevRun->cole = std::max(pNewRun->cole, pRevRun->cole);
+            pNewRun = cur2;
+            ++cur2;
+        }
+        else
+        {
+            ++cur1;
+            ++cur2;
+        }
+
+        if (pNewRun->row == pPreRun->row && pNewRun->colb <= pPreRun->cole)
+        {
+            pPreRun->cole = std::max(pNewRun->cole, pPreRun->cole);
         }
         else
         {
             pResRun->row = pNewRun->row; pResRun->colb = pNewRun->colb; pResRun->cole = pNewRun->cole; pResRun->label = 0;
-            pRevRun = pResRun;
+            pPreRun = pResRun;
             ++pResRun;
         }
     }
 
-    for (; cur1 != end1; ++cur1, ++pResRun)
+    for (; cur1 != end1; ++cur1)
     {
-        pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
+        if (cur1->row == pPreRun->row && cur1->colb <= pPreRun->cole)
+        {
+            pPreRun->cole = std::max(cur1->cole, pPreRun->cole);
+        }
+        else
+        {
+            pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
+            pPreRun = pResRun;
+            ++pResRun;
+        }
     }
 
-    for (; cur2 != end2; ++cur2, ++pResRun)
+    for (; cur2 != end2; ++cur2)
     {
         pResRun->row = cur2->row; pResRun->colb = cur2->colb; pResRun->cole = cur2->cole; pResRun->label = 0;
+        if (cur2->row == pPreRun->row && cur2->colb <= pPreRun->cole)
+        {
+            pPreRun->cole = std::max(cur2->cole, pPreRun->cole);
+        }
+        else
+        {
+            pResRun->row = cur2->row; pResRun->colb = cur2->colb; pResRun->cole = cur2->cole; pResRun->label = 0;
+            pPreRun = pResRun;
+            ++pResRun;
+        }
     }
 
     assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());

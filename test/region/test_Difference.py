@@ -38,6 +38,19 @@ class TestRegionDifference(unittest.TestCase):
         extradata.SaveRegion(self.id(), diffRgn)
         self.assertAlmostEqual(0.0, diffRgn.Area())
 
+    def test_AdjacentHBox_Difference(self):
+        image1 = numpy.zeros((48, 64, 1), numpy.uint8)
+        image1[10:20, 10:20] = 255
+        r, rgn1 = mvlab.Threshold(image1, 150, 255)
+
+        image2 = numpy.zeros((48, 64, 1), numpy.uint8)
+        image2[10:20, 20:30] = 255
+        r, rgn2 = mvlab.Threshold(image2, 150, 255)
+
+        dRgn = rgn1.Difference(rgn2)
+        self.assertAlmostEqual(dRgn.Area(), rgn1.Area())
+        self.assertEqual(dRgn.Count(), rgn1.Count())
+
     def test_2Circle_Include_Difference(self):
         rgn1 = mvlab.Region_CreateCircle((1250, 1250), 750)
         rgn2 = mvlab.Region_CreateCircle((1250, 1250), 700)

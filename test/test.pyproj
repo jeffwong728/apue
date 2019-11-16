@@ -29,8 +29,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="region\test_Create.py" />
+    <Compile Include="region\test_CrossVerify.py" />
     <Compile Include="region\test_Difference.py" />
     <Compile Include="region\test_Intersection.py" />
+    <Compile Include="region\test_SymmDifference.py" />
     <Compile Include="region\test_Union.py" />
     <Compile Include="region\__init__.py" />
     <Compile Include="run.py">
