@@ -38,7 +38,6 @@
     <Compile Include="run.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="test_Debug.py" />
     <Compile Include="threshold\test_Threshold.py" />
     <Compile Include="threshold\__init__.py" />
     <Compile Include="__init__.py" />

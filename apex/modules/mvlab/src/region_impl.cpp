@@ -358,6 +358,11 @@ cv::Ptr<Region> RegionImpl::SymmDifference(const cv::Ptr<Region> &otherRgn) cons
     return makePtr<RegionImpl>();
 }
 
+cv::Ptr<Region> RegionImpl::Union1(const std::vector<cv::Ptr<Region>> &otherRgns) const
+{
+    return makePtr<RegionImpl>();
+}
+
 cv::Ptr<Region> RegionImpl::Union2(const cv::Ptr<Region> &otherRgn) const
 {
     const cv::Ptr<RegionImpl> otherRgnImpl = otherRgn.dynamicCast<RegionImpl>();
@@ -372,6 +377,42 @@ cv::Ptr<Region> RegionImpl::Union2(const cv::Ptr<Region> &otherRgn) const
     }
 
     return makePtr<RegionImpl>();
+}
+
+bool RegionImpl::TestEqual(const cv::Ptr<Region> &otherRgn) const
+{
+    const cv::Ptr<RegionImpl> otherRgnImpl = otherRgn.dynamicCast<RegionImpl>();
+    if (!otherRgnImpl)
+    {
+        return false;
+    }
+
+    if (otherRgnImpl->rgn_runs_.size() != rgn_runs_.size())
+    {
+        return false;
+    }
+
+    RunSequence::const_iterator itRun = rgn_runs_.cbegin();
+    RunSequence::const_iterator itORun = otherRgnImpl->rgn_runs_.cbegin();
+    for (; itRun != rgn_runs_.cend(); ++itRun, ++itORun)
+    {
+        if (itRun->row != itORun->row || itRun->colb != itORun->colb || itRun->cole != itORun->cole)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool RegionImpl::TestPoint(const cv::Point &point) const
+{
+    return false;
+}
+
+bool RegionImpl::TestSubset(const cv::Ptr<Region> &otherRgn) const
+{
+    return false;
 }
 
 int RegionImpl::Connect(const int connectivity, std::vector<Ptr<Region>> &regions) const

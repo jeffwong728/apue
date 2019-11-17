@@ -40,7 +40,11 @@ public:
     CV_WRAP virtual cv::Ptr<Region> Difference(const cv::Ptr<Region> &subRgn) const = 0;
     CV_WRAP virtual cv::Ptr<Region> Intersection(const cv::Ptr<Region> &otherRgn) const = 0;
     CV_WRAP virtual cv::Ptr<Region> SymmDifference(const cv::Ptr<Region> &otherRgn) const = 0;
+    CV_WRAP virtual cv::Ptr<Region> Union1(const std::vector<cv::Ptr<Region>> &otherRgns) const = 0;
     CV_WRAP virtual cv::Ptr<Region> Union2(const cv::Ptr<Region> &otherRgn) const = 0;
+    CV_WRAP virtual bool TestEqual(const cv::Ptr<Region> &otherRgn) const = 0;
+    CV_WRAP virtual bool TestPoint(const cv::Point &point) const = 0;
+    CV_WRAP virtual bool TestSubset(const cv::Ptr<Region> &otherRgn) const = 0;
     CV_WRAP virtual int Connect(const int connectivity, CV_OUT std::vector<cv::Ptr<Region>> &regions) const = 0;
     CV_WRAP virtual int Draw(cv::InputOutputArray img, const cv::Scalar& fillColor, const cv::Scalar& borderColor, const float borderThickness = 1, const int borderStyle = 0) const = 0;
 };

@@ -17,7 +17,7 @@ class TestRegionCrossVerify(unittest.TestCase):
                     filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
                     filemode='a')
 
-    def test_Mista_Box_1(self):
+    def test_Mista_Box_Diff_Plus_Inter(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
@@ -31,7 +31,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         self.assertEqual(uRgn.CountRows(), rgn1.CountRows())
         self.assertAlmostEqual(uRgn.Area(), rgn1.Area())
 
-    def test_Mista_Box_2(self):
+    def test_Mista_Box_Diff_Plus_Diff(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
@@ -51,7 +51,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         self.assertEqual(sRgn.CountRows(), uRgn.CountRows())
         self.assertAlmostEqual(sRgn.Area(), uRgn.Area())
 
-    def test_Mista_Box_3(self):
+    def test_Mista_Box_Union_Minus_Inter(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
@@ -72,7 +72,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         self.assertEqual(sRgn1.CountRows(), sRgn2.CountRows())
         self.assertAlmostEqual(sRgn1.Area(), sRgn2.Area())
 
-    def test_Mista_Circle(self):
+    def test_Mista_Circle_Diff_Plus_Inter(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
@@ -86,7 +86,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         self.assertEqual(uRgn.CountRows(), rgn1.CountRows())
         self.assertAlmostEqual(uRgn.Area(), rgn1.Area())
 
-    def test_Mista_RotatedEllipse(self):
+    def test_Mista_RotatedEllipse_Diff_Plus_Inter(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
@@ -100,7 +100,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         self.assertEqual(uRgn.CountRows(), rgn1.CountRows())
         self.assertAlmostEqual(uRgn.Area(), rgn1.Area())
 
-    def test_2Circle_Overlap(self):
+    def test_2Circle_Overlap_Diff_Plus_Diff(self):
         rgn1 = mvlab.Region_CreateCircle((1250, 1250), 750)
         rgn2 = mvlab.Region_CreateCircle((2000, 1250), 700)
 
@@ -116,19 +116,19 @@ class TestRegionCrossVerify(unittest.TestCase):
     def test_Random_Rectangles_Union(self):
         random.seed()
         image1 = numpy.zeros((480, 640, 1), numpy.uint8)
-        for i in range(0, 30):
+        for i in range(0, 100):
             x = int(random.uniform(0, 640))
             y = int(random.uniform(0, 640))
-            w = int(random.uniform(0, 160))
-            h = int(random.uniform(0, 120))
+            w = int(random.uniform(0, 80))
+            h = int(random.uniform(0, 60))
             cv2.rectangle(image1, (x, y), (x+w, y+h), (255, 255, 255), -1)
 
         image2 = numpy.zeros((480, 640, 1), numpy.uint8)
-        for i in range(0, 10):
+        for i in range(0, 50):
             x = int(random.uniform(0, 640))
             y = int(random.uniform(0, 640))
             w = int(random.uniform(0, 320))
-            h = int(random.uniform(0, 240))
+            h = int(random.uniform(0, 30))
             cv2.rectangle(image2, (x, y), (x+w, y+h), (255, 255, 255), -1)
 
         r, rgn1 = mvlab.Threshold(image1, 150, 255)

@@ -52,17 +52,23 @@ public:
     Rect BoundingBox() const CV_OVERRIDE;
     int Count() const CV_OVERRIDE;
     int CountRows() const CV_OVERRIDE;
+    // Access
     int GetContour(cv::Ptr<Contour> &contour) const CV_OVERRIDE;
     int GetConvex(cv::Ptr<Contour> &convex) const CV_OVERRIDE;
     int GetPoints(std::vector<cv::Point> &points) const CV_OVERRIDE;
     int GetPolygon(cv::Ptr<Contour> &polygon, const float tolerance) const CV_OVERRIDE;
     int GetRuns(std::vector<cv::Point3i> &runs) const CV_OVERRIDE;
-
+    // Sets
     cv::Ptr<Region> Complement(const cv::Rect &universe) const CV_OVERRIDE;
     cv::Ptr<Region> Difference(const cv::Ptr<Region> &subRgn) const CV_OVERRIDE;
     cv::Ptr<Region> Intersection(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
     cv::Ptr<Region> SymmDifference(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
+    cv::Ptr<Region> Union1(const std::vector<cv::Ptr<Region>> &otherRgns) const CV_OVERRIDE;
     cv::Ptr<Region> Union2(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
+    // Tests
+    bool TestEqual(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
+    bool TestPoint(const cv::Point &point) const CV_OVERRIDE;
+    bool TestSubset(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
 
     int Connect(const int connectivity, std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
 
