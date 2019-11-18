@@ -61,7 +61,7 @@ class TestRegionComplement(unittest.TestCase):
         compRgn = rgn.Complement((0, 0, 0, 0))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        r, rgns = compRgn.Connect(8)
+        r, rgns = compRgn.Connect()
         self.assertEqual(len(rgns), 3)
 
     def test_Scrach_Complement(self):
@@ -90,7 +90,7 @@ class TestRegionComplement(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        r, rgns = compRgn.Connect(8)
+        r, rgns = compRgn.Connect()
         self.assertEqual(len(rgns), 1072)
 
     def test_Digits_Complement(self):

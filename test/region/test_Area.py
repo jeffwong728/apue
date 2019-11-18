@@ -28,7 +28,7 @@ class TestRegionArea(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
-        r, rgns = rgn.Connect(8)
+        r, rgns = rgn.Connect()
 
         startTime = time.perf_counter()
         area = rgn.Area()

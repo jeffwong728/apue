@@ -83,41 +83,6 @@ inline static
     }
 }
 
-cv::Ptr<RegionCollection> ConnectWuSerial::Connect(const Region *rgn, const int connectivity) const
-{
-    const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
-    if (!rgnImpl)
-    {
-        return makePtr<RegionCollectionImpl>();
-    }
-
-    RunPtrSequence rowRunPtrs;
-    ScalableIntSequence numRunsOfRgn;
-    ConnectCommon(rgn, connectivity, numRunsOfRgn, rowRunPtrs);
-
-    RunSequence &allRuns = const_cast<RunSequence &>(rgnImpl->GetAllRuns());
-    RunSequence collectionRuns(allRuns.size());
-    rowRunPtrs.resize(numRunsOfRgn.size()-1);
-    RunLength **pRunPtr = rowRunPtrs.data();
-    RunLength *pFirstRun = collectionRuns.data();
-
-    int *pNumEnd = numRunsOfRgn.data() + numRunsOfRgn.size();
-    for (int *pNum = numRunsOfRgn.data()+1; pNum != pNumEnd; ++pNum, ++pRunPtr)
-    {
-        *pRunPtr = pFirstRun + pNum[-1];
-        *pNum += pNum[-1];
-    }
-
-    for (const auto &run : allRuns)
-    {
-        auto &pRun = rowRunPtrs[run.label];
-        *pRun = run;
-        pRun += 1;
-    }
-
-    return makePtr<RegionCollectionImpl>(&collectionRuns, &numRunsOfRgn);
-}
-
 void ConnectWuSerial::Connect(const Region *rgn, const int connectivity, std::vector<Ptr<Region>> &regions) const
 {
     regions.clear();
@@ -129,11 +94,19 @@ void ConnectWuSerial::Connect(const Region *rgn, const int connectivity, std::ve
 
     RunPtrSequence rowRunPtrs;
     ScalableIntSequence numRunsOfRgn;
-    ConnectCommon(rgn, connectivity, numRunsOfRgn, rowRunPtrs);
 
-    RunSequenceSequence runSeqSeq(numRunsOfRgn.size()-1);
+    if (8 == connectivity)
+    {
+        ConnectCommon8(rgn, numRunsOfRgn, rowRunPtrs);
+    }
+    else
+    {
+        ConnectCommon4(rgn, numRunsOfRgn, rowRunPtrs);
+    }
 
-    auto pNumRuns = numRunsOfRgn.data()+1;
+    RunSequenceSequence runSeqSeq(numRunsOfRgn.size());
+
+    auto pNumRuns = numRunsOfRgn.data();
     auto pRunSeqSeqEnd = runSeqSeq.data() + runSeqSeq.size();
     for (auto pRunSeqSeq = runSeqSeq.data(); pRunSeqSeq != pRunSeqSeqEnd; ++pRunSeqSeq, ++pNumRuns)
     {
@@ -153,7 +126,7 @@ void ConnectWuSerial::Connect(const Region *rgn, const int connectivity, std::ve
     }
 }
 
-void ConnectWuSerial::ConnectCommon(const Region *rgn, const int connectivity, ScalableIntSequence &numRunsOfRgn, RunPtrSequence &rowRunPtrs) const
+void ConnectWuSerial::ConnectCommon8(const Region *rgn, ScalableIntSequence &numRunsOfRgn, RunPtrSequence &rowRunPtrs) const
 {
     const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
     RunSequence &allRuns = const_cast<RunSequence &>(rgnImpl->GetAllRuns());
@@ -234,12 +207,102 @@ void ConnectWuSerial::ConnectCommon(const Region *rgn, const int connectivity, S
 
     LabelT nLabels = flattenL(P, lunique);
 
-    numRunsOfRgn.resize(nLabels+1);
+    numRunsOfRgn.resize(nLabels);
     RunLength *pRunsEnd = allRuns.data() + allRuns.size();
     for (RunLength *pRun = allRuns.data(); pRun != pRunsEnd; ++pRun)
     {
         pRun->label = P[pRun->label];
-        numRunsOfRgn[pRun->label+1] += 1;
+        numRunsOfRgn[pRun->label] += 1;
+    }
+}
+
+void ConnectWuSerial::ConnectCommon4(const Region *rgn, ScalableIntSequence &numRunsOfRgn, RunPtrSequence &rowRunPtrs) const
+{
+    const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
+    RunSequence &allRuns = const_cast<RunSequence &>(rgnImpl->GetAllRuns());
+    const RowBeginSequence &rowRanges = rgnImpl->GetRowBeginSequence();
+    const cv::Rect bbox = rgnImpl->BoundingBox();
+    const int maxWidth = bbox.width + 3;
+
+    rowRunPtrs.resize(maxWidth);
+    ScalableIntSequence  vecP(allRuns.size());
+    RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox.x;
+
+    LabelT lunique = 0;
+    LabelT *P = vecP.data();
+    int rowPrev = std::numeric_limits<int>::min();
+
+    RunLength *pRuns = allRuns.data();
+    const int *pRowRunStarts = rowRanges.data();
+    const int numRows = static_cast<int>(rowRanges.size() - 1);
+
+    for (int row = 0; row < numRows; ++row)
+    {
+        RunLength *pRowRunBeg = pRuns;
+        RunLength *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
+
+        if ((rowPrev + 1) == pRuns->row)
+        {
+            for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                int col = pRun->colb;
+                while (!vRowRunPtrs[col] && col < pRun->cole)
+                {
+                    col += 1;
+                }
+
+                if (col >= pRun->cole)
+                {
+                    pRun->label = lunique; P[lunique] = lunique; lunique = lunique + 1;
+                }
+                else
+                {
+                    LabelT lab = vRowRunPtrs[col]->label;
+                    col = vRowRunPtrs[col]->cole + 1;
+
+                    for (; col < pRun->cole; ++col)
+                    {
+                        if (vRowRunPtrs[col])
+                        {
+                            lab = set_union(P, lab, vRowRunPtrs[col]->label);
+                            col = vRowRunPtrs[col]->cole;
+                        }
+                    }
+
+                    pRun->label = lab;
+                }
+            }
+        }
+        else
+        {
+            for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                pRun->label = lunique; P[lunique] = lunique; lunique = lunique + 1;
+            }
+        }
+
+        std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(RunLength *));
+        for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+        {
+            for (int col = pRun->colb; col < pRun->cole; ++col)
+            {
+                vRowRunPtrs[col] = pRun;
+            }
+        }
+
+        rowPrev = pRuns->row;
+        pRuns = pRowRunEnd;
+        pRowRunStarts += 1;
+    }
+
+    LabelT nLabels = flattenL(P, lunique);
+
+    numRunsOfRgn.resize(nLabels);
+    RunLength *pRunsEnd = allRuns.data() + allRuns.size();
+    for (RunLength *pRun = allRuns.data(); pRun != pRunsEnd; ++pRun)
+    {
+        pRun->label = P[pRun->label];
+        numRunsOfRgn[pRun->label] += 1;
     }
 }
 
@@ -323,39 +386,84 @@ void ConnectWuParallel::FirstScan8Connectivity::operator()(const tbb::blocked_ra
     chunksSizeAndLabels_[rowBeg + 1] = label - firstLabel;
 }
 
-cv::Ptr<RegionCollection> ConnectWuParallel::Connect(const Region *rgn, int connectivity) const
+ConnectWuParallel::FirstScan4Connectivity::FirstScan4Connectivity(LabelT *P,
+    int *chunksSizeAndLabels,
+    const cv::Rect &bbox,
+    const RowBeginSequence &rowRunBegs,
+    RunSequence &data)
+    : P_(P)
+    , chunksSizeAndLabels_(chunksSizeAndLabels)
+    , bbox_(bbox)
+    , rowRunBegs_(rowRunBegs)
+    , data_(data)
+{}
+
+void ConnectWuParallel::FirstScan4Connectivity::operator()(const tbb::blocked_range<int>& br) const
 {
-    const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
-    if (!rgnImpl)
+    const int rowBeg = br.begin();
+    const int rowEnd = br.end();
+    chunksSizeAndLabels_[rowBeg] = br.end();
+
+    LabelT label = rowRunBegs_[rowBeg];
+    const LabelT firstLabel = label;
+    const int maxWidth = bbox_.width + 3;
+
+    RunPtrSequence rowRunPtrs(maxWidth);
+    RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox_.x;
+    int rowPrev = std::numeric_limits<int>::min();
+    RunLength *pRuns = data_.data() + rowRunBegs_[rowBeg];
+    const int *pRowRunStarts = rowRunBegs_.data() + rowBeg;
+
+    for (int row = rowBeg; row != rowEnd; ++row)
     {
-        return makePtr<RegionCollectionImpl>();
+        RunLength *pRowRunBeg = pRuns;
+        RunLength *pRowRunEnd = pRuns + *(pRowRunStarts + 1) - *pRowRunStarts;
+
+        if ((rowPrev + 1) == pRuns->row) {
+            for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                int col = pRun->colb;
+                while (!vRowRunPtrs[col] && col < pRun->cole) {
+                    col += 1;
+                }
+
+                if (col >= pRun->cole) {
+                    pRun->label = label; P_[label] = label; label = label + 1;
+                }
+                else {
+                    LabelT lab = vRowRunPtrs[col]->label;
+                    col = vRowRunPtrs[col]->cole + 1;
+                    for (; col < pRun->cole; ++col)
+                    {
+                        if (vRowRunPtrs[col]) {
+                            lab = set_union(P_, lab, vRowRunPtrs[col]->label);
+                            col = vRowRunPtrs[col]->cole;
+                        }
+                    }
+                    pRun->label = lab;
+                }
+            }
+        }
+        else {
+            for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                pRun->label = label; P_[label] = label; label = label + 1;
+            }
+        }
+
+        std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(RunLength *));
+        for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+        {
+            for (int col = pRun->colb; col < pRun->cole; ++col)
+            {
+                vRowRunPtrs[col] = pRun;
+            }
+        }
+
+        rowPrev = pRuns->row; pRuns = pRowRunEnd; pRowRunStarts += 1;
     }
 
-    RunPtrSequence rowRunPtrs;
-    ScalableIntSequence numRunsOfRgn;
-    ConnectCommon(rgn, connectivity, numRunsOfRgn, rowRunPtrs);
-
-    RunSequence &allRuns = const_cast<RunSequence &>(rgnImpl->GetAllRuns());
-    RunSequence collectionRuns(allRuns.size());
-    rowRunPtrs.resize(numRunsOfRgn.size()-1);
-    RunLength **pRunPtr = rowRunPtrs.data();
-    RunLength *pFirstRun = collectionRuns.data();
-
-    int *pNumEnd = numRunsOfRgn.data() + numRunsOfRgn.size();
-    for (int *pNum = numRunsOfRgn.data() + 1; pNum != pNumEnd; ++pNum, ++pRunPtr)
-    {
-        *pRunPtr = pFirstRun + pNum[-1];
-        *pNum += pNum[-1];
-    }
-
-    for (const auto &run : allRuns)
-    {
-        auto &pRun = rowRunPtrs[run.label];
-        *pRun = run;
-        pRun += 1;
-    }
-
-    return makePtr<RegionCollectionImpl>(&collectionRuns, &numRunsOfRgn);
+    chunksSizeAndLabels_[rowBeg + 1] = label - firstLabel;
 }
 
 void ConnectWuParallel::Connect(const Region *rgn, const int connectivity, std::vector<Ptr<Region>> &regions) const
@@ -371,9 +479,9 @@ void ConnectWuParallel::Connect(const Region *rgn, const int connectivity, std::
     ScalableIntSequence numRunsOfRgn;
     ConnectCommon(rgn, connectivity, numRunsOfRgn, rowRunPtrs);
 
-    RunSequenceSequence runSeqSeq(numRunsOfRgn.size()-1);
+    RunSequenceSequence runSeqSeq(numRunsOfRgn.size());
 
-    auto pNumRuns = numRunsOfRgn.data()+1;
+    auto pNumRuns = numRunsOfRgn.data();
     auto pRunSeqSeqEnd = runSeqSeq.data() + runSeqSeq.size();
     for (auto pRunSeqSeq = runSeqSeq.data(); pRunSeqSeq != pRunSeqSeqEnd; ++pRunSeqSeq, ++pNumRuns)
     {
@@ -448,8 +556,59 @@ void ConnectWuParallel::mergeLabels8Connectivity(const RegionImpl &rgn,
     }
 }
 
-void ConnectWuParallel::mergeLabels4Connectivity(const RegionImpl &rgn, LabelT *P, const int *chunksSizeAndLabels) const
+void ConnectWuParallel::mergeLabels4Connectivity(const RegionImpl &rgn,
+    RunPtrSequence &rowRunPtrs,
+    LabelT *P,
+    const int *chunksSizeAndLabels) const
 {
+    RunSequence &allRuns = const_cast<RunSequence &>(rgn.GetAllRuns());
+    const RowBeginSequence &rowRunBegs = rgn.GetRowBeginSequence();
+    const int numRows = static_cast<int>(rowRunBegs.size() - 1);
+    const cv::Rect bbox = rgn.BoundingBox();
+    const int maxWidth = bbox.width + 3;
+    RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox.x;
+
+    for (int row = chunksSizeAndLabels[0]; row < numRows; row = chunksSizeAndLabels[row])
+    {
+        RunLength *pRowRunBeg = allRuns.data() + rowRunBegs[row];
+        RunLength *pRowRunEnd = pRowRunBeg + rowRunBegs[row + 1] - rowRunBegs[row];
+        int rowPrev = row == 0 ? std::numeric_limits<int>::min() : allRuns[rowRunBegs[row - 1]].row;
+        if ((rowPrev + 1) == pRowRunBeg->row)
+        {
+            std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(const RunLength *));
+            RunLength *pPrevRowRunBeg = allRuns.data() + rowRunBegs[row - 1];
+            RunLength *pPrevRowRunEnd = pPrevRowRunBeg + rowRunBegs[row] - rowRunBegs[row - 1];
+
+            for (RunLength *pRun = pPrevRowRunBeg; pRun != pPrevRowRunEnd; ++pRun)
+            {
+                for (int col = pRun->colb; col < pRun->cole; ++col)
+                {
+                    vRowRunPtrs[col] = pRun;
+                }
+            }
+
+            for (RunLength *pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
+            {
+                int col = pRun->colb;
+                while (!vRowRunPtrs[col] && col < pRun->cole) {
+                    col += 1;
+                }
+
+                if (col < pRun->cole) {
+                    LabelT lab = vRowRunPtrs[col]->label;
+                    col = vRowRunPtrs[col]->cole + 1;
+                    for (; col < pRun->cole; ++col)
+                    {
+                        if (vRowRunPtrs[col]) {
+                            lab = set_union(P, lab, vRowRunPtrs[col]->label);
+                            col = vRowRunPtrs[col]->cole;
+                        }
+                    }
+                    pRun->label = set_union(P, lab, pRun->label);
+                }
+            }
+        }
+    }
 }
 
 void ConnectWuParallel::ConnectCommon(const Region *rgn,
@@ -473,10 +632,19 @@ void ConnectWuParallel::ConnectCommon(const Region *rgn,
 
     const int nThreads = tbb::task_scheduler_init::default_num_threads();
     tbb::blocked_range<int> range(0, numRows, std::max(2, std::min(numRows / 2, nThreads * 4)));
-    tbb::parallel_for(range, FirstScan8Connectivity(P, chunksSizeAndLabels, bbox, rowRunBegs, allRuns));
 
-    rowRunPtrs.resize(maxWidth);
-    mergeLabels8Connectivity(*rgnImpl, rowRunPtrs, P, chunksSizeAndLabels);
+    if (8 == connectivity)
+    {
+        tbb::parallel_for(range, FirstScan8Connectivity(P, chunksSizeAndLabels, bbox, rowRunBegs, allRuns));
+        rowRunPtrs.resize(maxWidth);
+        mergeLabels8Connectivity(*rgnImpl, rowRunPtrs, P, chunksSizeAndLabels);
+    }
+    else
+    {
+        tbb::parallel_for(range, FirstScan4Connectivity(P, chunksSizeAndLabels, bbox, rowRunBegs, allRuns));
+        rowRunPtrs.resize(maxWidth);
+        mergeLabels4Connectivity(*rgnImpl, rowRunPtrs, P, chunksSizeAndLabels);
+    }
 
     LabelT nLabels = 0;
     for (int i = 0; i < numRows; i = chunksSizeAndLabels[i])
@@ -484,12 +652,12 @@ void ConnectWuParallel::ConnectCommon(const Region *rgn,
         flattenL(P, rowRunBegs[i], chunksSizeAndLabels[i + 1], nLabels);
     }
 
-    numRunsOfRgn.resize(nLabels+1);
+    numRunsOfRgn.resize(nLabels);
     RunLength *pRunsEnd = allRuns.data() + allRuns.size();
     for (RunLength *pRun = allRuns.data(); pRun != pRunsEnd; ++pRun)
     {
         pRun->label = P[pRun->label];
-        numRunsOfRgn[pRun->label+1] += 1;
+        numRunsOfRgn[pRun->label] += 1;
     }
 }
 

@@ -70,7 +70,7 @@ public:
     bool TestPoint(const cv::Point &point) const CV_OVERRIDE;
     bool TestSubset(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
 
-    int Connect(const int connectivity, std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
+    int Connect(std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
 
 public:
     const RunSequence &GetAllRuns() const { return rgn_runs_; }

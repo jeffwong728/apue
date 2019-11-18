@@ -20,7 +20,7 @@ class TestRegionConnection(unittest.TestCase):
         image[10:15, 20:50] = 255
         image[20:25, 20:50] = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
-        r, rgns = rgn.Connect(8)
+        r, rgns = rgn.Connect()
 
         self.assertEqual(len(rgns), 2, '2Box component number error')
         self.assertAlmostEqual(rgn.Area(), rgns[0].Area()+rgns[1].Area())
@@ -30,7 +30,7 @@ class TestRegionConnection(unittest.TestCase):
         image[10:15, 1:31] = 255
         image[10:15, 33:63] = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
-        r, rgns = rgn.Connect(8)
+        r, rgns = rgn.Connect()
 
         self.assertEqual(len(rgns), 2, '2Box component number error')
         self.assertAlmostEqual(rgn.Area(), rgns[0].Area()+rgns[1].Area())
@@ -41,7 +41,7 @@ class TestRegionConnection(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
 
         startTime = time.perf_counter()
-        r, rgns = rgn.Connect(8)
+        r, rgns = rgn.Connect()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegions(self.id(), rgns, image.shape)
@@ -54,7 +54,7 @@ class TestRegionConnection(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
 
         startTime = time.perf_counter()
-        r, rgns = rgn.Connect(8)
+        r, rgns = rgn.Connect()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegions(self.id(), rgns, image.shape)
@@ -67,7 +67,7 @@ class TestRegionConnection(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 151, 255)
 
         startTime = time.perf_counter()
-        r, rgns = rgn.Connect(8)
+        r, rgns = rgn.Connect()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegions(self.id(), rgns, image.shape)
@@ -79,7 +79,7 @@ class TestRegionConnection(unittest.TestCase):
         r, rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()
-        r, rgns = rgn.Connect(8)
+        r, rgns = rgn.Connect()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegions(self.id(), rgns, image.shape)

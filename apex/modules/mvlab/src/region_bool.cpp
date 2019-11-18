@@ -52,80 +52,7 @@ int RegionBoolOp::IntersectRows(UScalableIntSequence &rows1, UScalableIntSequenc
     return static_cast<int>(std::distance(rows1.begin(), pResRow1));
 }
 
-RunSequence RegionComplementOp::Do(const RunSequence &srcRuns, const RowBeginSequence &rowBegs, const cv::Rect &rcUniverse)
-{
-    const int numLines = rcUniverse.height + 1;
-    const int numRows = static_cast<int>(rowBegs.size()) - 1;
-
-    int numDstRuns = numLines - numRows;
-    const RowBeginSequence::const_pointer pRowBegEnd = rowBegs.data() + rowBegs.size();
-    for (RowBeginSequence::const_pointer pRowBeg = rowBegs.data()+1; pRowBeg != pRowBegEnd; ++pRowBeg)
-    {
-        numDstRuns += *pRowBeg - *(pRowBeg-1) + 1;
-    }
-
-    RunSequence dstRuns(numDstRuns);
-    RunSequence::pointer pDstRun = dstRuns.data();
-
-    int rIdx = 0;
-    RowBeginSequence::const_pointer pRowBeg = rowBegs.data();
-    const int lBeg = rcUniverse.y;
-    const int lEnd = rcUniverse.y + rcUniverse.height;
-    const RunSequence::const_pointer pRunBeg = srcRuns.data();
-    const int colMin = rcUniverse.x;
-    const int colMax = rcUniverse.x + rcUniverse.width + 1;
-    for (int l = lBeg; l <= lEnd; ++l)
-    {
-        if (rIdx < numRows)
-        {
-            const RunSequence::const_pointer pRowRunBeg = pRunBeg + *pRowBeg;
-            if (l == pRowRunBeg->row)
-            {
-                const RunSequence::const_pointer pRowRunEnd = pRunBeg + *(pRowBeg+1);
-                int colb = colMin;
-                for (RunSequence::const_pointer pRun = pRowRunBeg; pRun != pRowRunEnd; ++pRun)
-                {
-                    pDstRun->row = l;
-                    pDstRun->colb = colb;
-                    pDstRun->cole = pRun->colb;
-                    pDstRun->label = 0;
-                    colb = pRun->cole;
-
-                    pDstRun += 1;
-                }
-
-                pDstRun->row = l;
-                pDstRun->colb = colb;
-                pDstRun->cole = colMax;
-                pDstRun->label = 0;
-                pDstRun += 1;
-
-                rIdx += 1;
-                pRowBeg += 1;
-            }
-            else
-            {
-                pDstRun->row = l;
-                pDstRun->colb = colMin;
-                pDstRun->cole = colMax;
-                pDstRun->label = 0;
-                pDstRun += 1;
-            }
-        }
-        else
-        {
-            pDstRun->row = l;
-            pDstRun->colb = colMin;
-            pDstRun->cole = colMax;
-            pDstRun->label = 0;
-            pDstRun += 1;
-        }
-    }
-
-    return dstRuns;
-}
-
-RunSequence RegionComplementOp::Do2(const RunSequence &srcRuns, const cv::Rect &rcUniverse)
+RunSequence RegionComplementOp::Do(const RunSequence &srcRuns, const cv::Rect &rcUniverse)
 {
     RunSequence dstRuns(srcRuns.size() + rcUniverse.height + 1);
     RunSequence::const_pointer cur2 = srcRuns.data();
@@ -274,72 +201,6 @@ RunSequence RegionDifferenceOp::Do(const RunSequence &srcRuns1, const RunSequenc
     return dstRuns;
 }
 
-RunSequence RegionIntersectionOp::Do(const RunSequence &srcRuns1,
-    const RowBeginSequence &rowBegs1,
-    const RunSequence &srcRuns2,
-    const RowBeginSequence &rowBegs2)
-{
-    UScalableIntSequence rows1(rowBegs1.size() - 1);
-    UScalableIntSequence rows2(rowBegs2.size() - 1);
-    GetRows(srcRuns1, rowBegs1, rows1);
-    GetRows(srcRuns2, rowBegs2, rows2);
-
-    int numResRuns = 0;
-    int numInters = IntersectRows(rows1, rows2);
-    for (int i = 0; i < numInters; ++i)
-    {
-        const int interRowIdx1 = rows1[i];
-        const int interRowIdx2 = rows2[i];
-        numResRuns += (rowBegs1[interRowIdx1 + 1] - rowBegs1[interRowIdx1]) + (rowBegs2[interRowIdx2 + 1] - rowBegs2[interRowIdx2]) - 1;
-    }
-
-    if (0 == numResRuns)
-    {
-        return RunSequence();
-    }
-
-    RunSequence dstRuns(numResRuns);
-    RunSequence::const_pointer cur1 = srcRuns1.data() + rowBegs1[rows1[0]];
-    RunSequence::const_pointer cur2 = srcRuns2.data() + rowBegs2[rows2[0]];
-    const RunSequence::const_pointer end1 = srcRuns1.data() + rowBegs1[rows1[numInters - 1] + 1];
-    const RunSequence::const_pointer end2 = srcRuns2.data() + rowBegs1[rows1[numInters - 1] + 1];
-
-    RunSequence::pointer pResRun = dstRuns.data();
-    while (cur1 != end1 && cur2 != end2)
-    {
-        if (cur1->row < cur2->row || (cur1->row == cur2->row && cur1->cole <= cur2->colb))
-        {
-            ++cur1;
-        }
-        else if (cur2->row < cur1->row || (cur1->row == cur2->row && cur2->cole <= cur1->colb))
-        {
-            ++cur2;
-        }
-        else
-        {
-            pResRun->row = cur1->row;
-            pResRun->colb = std::max(cur1->colb, cur2->colb);
-            pResRun->cole = std::min(cur1->cole, cur2->cole);
-            pResRun->label = 0;
-            ++pResRun;
-            if (cur1->cole < cur2->cole)
-            {
-                ++cur1;
-            }
-            else
-            {
-                ++cur2;
-            }
-        }
-    }
-
-    numResRuns = static_cast<int>(std::distance(dstRuns.data(), pResRun));
-    assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());
-    dstRuns.resize(numResRuns);
-
-    return dstRuns;
-}
-
 RunSequence RegionSymmDifferenceOp::Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2)
 {
     if (srcRuns1.empty())
@@ -444,7 +305,7 @@ RunSequence RegionSymmDifferenceOp::Do(const RunSequence &srcRuns1, const RunSeq
     return dstRuns;
 }
 
-RunSequence RegionIntersectionOp::Do2(const RunSequence &srcRuns1, const RunSequence &srcRuns2)
+RunSequence RegionIntersectionOp::Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2)
 {
     if (srcRuns1.empty() || srcRuns2.empty())
     {

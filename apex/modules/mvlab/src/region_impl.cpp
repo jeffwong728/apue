@@ -305,7 +305,7 @@ cv::Ptr<Region> RegionImpl::Complement(const cv::Rect &universe) const
     const cv::Rect rcUniv = bbox | universe;
 
     RegionComplementOp compOp;
-    RunSequence resRuns = compOp.Do2(rgn_runs_, rcUniv);
+    RunSequence resRuns = compOp.Do(rgn_runs_, rcUniv);
 
     return makePtr<RegionImpl>(&resRuns);
 }
@@ -332,7 +332,7 @@ cv::Ptr<Region> RegionImpl::Intersection(const cv::Ptr<Region> &otherRgn) const
     if (otherRgnImpl)
     {
         RegionIntersectionOp interOp;
-        RunSequence resRuns = interOp.Do2(rgn_runs_, otherRgnImpl->rgn_runs_);
+        RunSequence resRuns = interOp.Do(rgn_runs_, otherRgnImpl->rgn_runs_);
         if (!resRuns.empty())
         {
             return makePtr<RegionImpl>(&resRuns);
@@ -407,20 +407,83 @@ bool RegionImpl::TestEqual(const cv::Ptr<Region> &otherRgn) const
 
 bool RegionImpl::TestPoint(const cv::Point &point) const
 {
+    auto lb = std::lower_bound(rgn_runs_.cbegin(), rgn_runs_.cend(), point.y, [](const RunLength &run, const int val) { return  run.row < val; });
+    while (lb != rgn_runs_.cend() && point.y == lb->row)
+    {
+        if (point.x < lb->cole && point.x >= lb->colb)
+        {
+            return true;
+        }
+
+        lb += 1;
+    }
+
     return false;
 }
 
 bool RegionImpl::TestSubset(const cv::Ptr<Region> &otherRgn) const
 {
-    return false;
+    const cv::Ptr<RegionImpl> otherRgnImpl = otherRgn.dynamicCast<RegionImpl>();
+    if (!otherRgnImpl)
+    {
+        return false;
+    }
+
+    if (otherRgnImpl->Empty())
+    {
+        return true;
+    }
+
+    RunSequence::const_pointer cur1 = otherRgnImpl->rgn_runs_.data();
+    RunSequence::const_pointer cur2 = rgn_runs_.data();
+    const RunSequence::const_pointer end1 = otherRgnImpl->rgn_runs_.data() + otherRgnImpl->rgn_runs_.size();
+    const RunSequence::const_pointer end2 = rgn_runs_.data() + rgn_runs_.size();
+    cur2 = std::lower_bound(cur2, end2, cur1->row, [](const RunLength &run, const int val) { return  run.row < val; });
+
+    while (cur1 != end1)
+    {
+        while (cur2 != end2 && cur1->row != cur2->row)
+        {
+            ++cur2;
+        }
+
+        bool foundContainingRun = false;
+        while (cur2 != end2 && cur1->row == cur2->row)
+        {
+            if (cur1->cole <= cur2->cole && cur1->colb >= cur2->colb)
+            {
+                foundContainingRun = true;
+                break;
+            }
+
+            ++cur2;
+        }
+
+        if (!foundContainingRun)
+        {
+            return false;
+        }
+
+        ++cur1;
+    }
+
+    return true;
 }
 
-int RegionImpl::Connect(const int connectivity, std::vector<Ptr<Region>> &regions) const
+int RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const
 {
     regions.clear();
     if (RegionImpl::Empty())
     {
         return MLR_REGION_EMPTY;
+    }
+
+    cv::String optVal;
+    int connectivity = 8;
+    GetGlobalOption("connectivity", optVal);
+    if ("4" == optVal)
+    {
+        connectivity = 4;
     }
 
     const int nThreads = tbb::task_scheduler_init::default_num_threads();
