@@ -13,13 +13,17 @@ public:
     Region() {}
     virtual ~Region() {}
 
-    CV_WRAP static cv::Ptr<Region> CreateEmpty();
-    CV_WRAP static cv::Ptr<Region> CreateRectangle(const cv::Rect2f &rect);
-    CV_WRAP static cv::Ptr<Region> CreateRotatedRectangle(const cv::RotatedRect &rotatedRect);
-    CV_WRAP static cv::Ptr<Region> CreateCircle(const cv::Point2f &center, const float radius);
-    CV_WRAP static cv::Ptr<Region> CreateEllipse(const cv::Point2f &center, const cv::Size2f &size);
-    CV_WRAP static cv::Ptr<Region> CreateRotatedEllipse(const cv::Point2f &center, const cv::Size2f &size, const float angle);
-    CV_WRAP static cv::Ptr<Region> CreatePolygon(const std::vector<cv::Point2f> &vertexes);
+    CV_WRAP static cv::Ptr<Region> GenEmpty();
+    CV_WRAP static cv::Ptr<Region> GenChecker(const cv::Size &sizeRegion, const cv::Size &sizePattern);
+    CV_WRAP static cv::Ptr<Region> GenTriangle(const cv::Point2f &v1, const cv::Point2f &v2, const cv::Point2f &v3);
+    CV_WRAP static cv::Ptr<Region> GenQuadrangle(const cv::Point2f &v1, const cv::Point2f &v2, const cv::Point2f &v3, const cv::Point2f &v4);
+    CV_WRAP static cv::Ptr<Region> GenRectangle(const cv::Rect2f &rect);
+    CV_WRAP static cv::Ptr<Region> GenRotatedRectangle(const cv::RotatedRect &rotatedRect);
+    CV_WRAP static cv::Ptr<Region> GenCircle(const cv::Point2f &center, const float radius);
+    CV_WRAP static cv::Ptr<Region> GenCircleSector(const cv::Point2f &center, const float radius, const float startAngle, const float endAngle);
+    CV_WRAP static cv::Ptr<Region> GenEllipse(const cv::Point2f &center, const cv::Size2f &size);
+    CV_WRAP static cv::Ptr<Region> GenRotatedEllipse(const cv::Point2f &center, const cv::Size2f &size, const float angle);
+    CV_WRAP static cv::Ptr<Region> GenPolygon(const std::vector<cv::Point2f> &vertexes);
 
 public:
     virtual int Draw(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness = 1, const int borderStyle = 0) const = 0;

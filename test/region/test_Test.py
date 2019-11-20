@@ -17,48 +17,48 @@ class TestRegionTest(unittest.TestCase):
                     filemode='a')
 
     def test_Empty(self):
-        rgn = mvlab.Region_CreateEmpty()
+        rgn = mvlab.Region_GenEmpty()
         self.assertTrue(rgn.Empty())
 
     def test_Not_Empty(self):
-        rgn = mvlab.Region_CreateCircle((20, 20), 10)
+        rgn = mvlab.Region_GenCircle((20, 20), 10)
         self.assertFalse(rgn.Empty())
 
     def test_Empty_Equal_Empty(self):
-        rgn1 = mvlab.Region_CreateEmpty()
-        rgn2 = mvlab.Region_CreateEmpty()
+        rgn1 = mvlab.Region_GenEmpty()
+        rgn2 = mvlab.Region_GenEmpty()
         self.assertTrue(rgn1.TestEqual(rgn2))
 
     def test_Empty_Not_Equal_Circle(self):
-        rgn1 = mvlab.Region_CreateEmpty()
-        rgn2 = mvlab.Region_CreateCircle((20, 20), 10)
+        rgn1 = mvlab.Region_GenEmpty()
+        rgn2 = mvlab.Region_GenCircle((20, 20), 10)
         self.assertFalse(rgn1.TestEqual(rgn2))
 
     def test_Circle_Not_Equal_Empty(self):
-        rgn1 = mvlab.Region_CreateCircle((20, 20), 10)
-        rgn2 = mvlab.Region_CreateEmpty()
+        rgn1 = mvlab.Region_GenCircle((20, 20), 10)
+        rgn2 = mvlab.Region_GenEmpty()
         self.assertFalse(rgn1.TestEqual(rgn2))
 
     def test_Circle_Equal_Circle(self):
-        rgn1 = mvlab.Region_CreateCircle((20, 20), 10)
-        rgn2 = mvlab.Region_CreateCircle((20, 20), 10)
+        rgn1 = mvlab.Region_GenCircle((20, 20), 10)
+        rgn2 = mvlab.Region_GenCircle((20, 20), 10)
         self.assertTrue(rgn1.TestEqual(rgn2))
 
     def test_Circles_Not_Equal(self):
-        rgn1 = mvlab.Region_CreateCircle((20, 20), 10)
-        rgn2 = mvlab.Region_CreateCircle((20, 20), 11)
+        rgn1 = mvlab.Region_GenCircle((20, 20), 10)
+        rgn2 = mvlab.Region_GenCircle((20, 20), 11)
         self.assertFalse(rgn1.TestEqual(rgn2))
 
     def test_Point_Outside_Empty_Region(self):
-        rgn = mvlab.Region_CreateEmpty()
+        rgn = mvlab.Region_GenEmpty()
         self.assertFalse(rgn.TestPoint((20, 28)))
 
     def test_Point_Inside_Circle(self):
-        rgn = mvlab.Region_CreateCircle((20, 20), 10)
+        rgn = mvlab.Region_GenCircle((20, 20), 10)
         self.assertTrue(rgn.TestPoint((20, 28)))
 
     def test_Point_Outside_Circle(self):
-        rgn = mvlab.Region_CreateCircle((20, 20), 10)
+        rgn = mvlab.Region_GenCircle((20, 20), 10)
         self.assertFalse(rgn.TestPoint((20, 32)))
 
     def test_Point_Inside_Mista(self):
@@ -84,8 +84,8 @@ class TestRegionTest(unittest.TestCase):
         self.assertFalse(r)
 
     def test_Empty_Region_Inside_Any_Region(self):
-        rgn = mvlab.Region_CreateEmpty()
-        rgn2 = mvlab.Region_CreateCircle((1311, 1939), 25)
+        rgn = mvlab.Region_GenEmpty()
+        rgn2 = mvlab.Region_GenCircle((1311, 1939), 25)
         self.assertTrue(rgn2.TestSubset(rgn))
         self.assertTrue(rgn.TestSubset(rgn))
         self.assertTrue(rgn2.TestSubset(rgn2))
@@ -119,7 +119,7 @@ class TestRegionTest(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 151, 255)
-        rgn2 = mvlab.Region_CreateCircle((1311, 1939), 25)
+        rgn2 = mvlab.Region_GenCircle((1311, 1939), 25)
 
         startTime = time.perf_counter()
         r = rgn.TestSubset(rgn2)
@@ -131,7 +131,7 @@ class TestRegionTest(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 151, 255)
-        rgn2 = mvlab.Region_CreateCircle((733, 1660), 10)
+        rgn2 = mvlab.Region_GenCircle((733, 1660), 10)
 
         startTime = time.perf_counter()
         r = rgn.TestSubset(rgn2)

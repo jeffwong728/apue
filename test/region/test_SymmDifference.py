@@ -84,7 +84,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         self.assertEqual(sRgn.Count(), 30)
 
     def test_SameRegion_SymmDifference(self):
-        rgn1 = mvlab.Region_CreateCircle((1250, 1250), 750)
+        rgn1 = mvlab.Region_GenCircle((1250, 1250), 750)
 
         startTime = time.perf_counter()
         symDiffRgn = rgn1.SymmDifference(rgn1)
@@ -104,7 +104,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
-        rgn2 = mvlab.Region_CreateRectangle((1000, 1000, 1000, 1000))
+        rgn2 = mvlab.Region_GenRectangle((1000, 1000, 1000, 1000))
 
         startTime = time.perf_counter()
         symDiffRgn = rgn1.SymmDifference(rgn2)
@@ -130,7 +130,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
-        rgn2 = mvlab.Region_CreateCircle((1250, 1250), 750)
+        rgn2 = mvlab.Region_GenCircle((1250, 1250), 750)
 
         startTime = time.perf_counter()
         symDiffRgn = rgn1.SymmDifference(rgn2)
@@ -149,7 +149,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
-        rgn2 = mvlab.Region_CreateRotatedEllipse((1250, 1250), (750, 500), 30)
+        rgn2 = mvlab.Region_GenRotatedEllipse((1250, 1250), (750, 500), 30)
 
         startTime = time.perf_counter()
         symDiffRgn = rgn1.SymmDifference(rgn2)

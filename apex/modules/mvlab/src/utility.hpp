@@ -18,7 +18,16 @@ public:
     static std::vector<double> GetDashesPattern(const int bls, const double lineWidth);
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz);
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz, UScalableUCharSequence &buf);
+    static inline float constrainAngle(float x);
 };
+
+inline float Util::constrainAngle(float x)
+{
+    x = std::fmod(x, 360.f);
+    if (x < 0)
+        x += 360;
+    return x;
+}
 
 }
 }

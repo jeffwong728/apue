@@ -6,4 +6,3 @@ C:\Python37\python.exe test\run.py
 @rem C:\Python37\python.exe test\genperfplot.py
 @rem start "" "%TEMP%\mvlab-perf.svg"
 @start "" reports\mvlab.html
-@pause

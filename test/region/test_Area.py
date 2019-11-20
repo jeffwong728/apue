@@ -17,11 +17,11 @@ class TestRegionArea(unittest.TestCase):
                     filemode='a')
 
     def test_Empty_Region(self):
-        rgn = mvlab.Region_CreateEmpty()
+        rgn = mvlab.Region_GenEmpty()
         self.assertAlmostEqual(rgn.Area(), 0.0, 'Empty region area {0:f} not 0.0'.format(rgn.Area()))
 
     def test_Rectangle_Region(self):
-        rgn = mvlab.Region_CreateRectangle((0, 0, 10, 10))
+        rgn = mvlab.Region_GenRectangle((0, 0, 10, 10))
         self.assertAlmostEqual(rgn.Area(), 100.0, 'Rectangle region area {0:f} not 100.0'.format(rgn.Area()))
 
     def test_Mista_Area(self):
