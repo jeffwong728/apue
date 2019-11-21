@@ -32,6 +32,17 @@ class TestRegionCreate(unittest.TestCase):
 
         self.assertAlmostEqual(rgn.Area(), 1e6, msg='Rectangle region area {0:f} not {1:f}'.format(rgn.Area(), 1e6))
 
+    def test_Create_RotatedRectangle(self):
+        startTime = time.perf_counter()
+        rgn = mvlab.Region_GenRotatedRectangle(((1000, 1000), (500, 800), 60))
+        endTime = time.perf_counter()
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), rgn)
+        self.verifyRegionIntegrity(rgn)
+
+        self.assertAlmostEqual(rgn.Centroid()[0], 1000, places=2)
+        self.assertAlmostEqual(rgn.Centroid()[1], 1000, places=2)
+
     def test_Create_Checker(self):
         startTime = time.perf_counter()
         rgn = mvlab.Region_GenChecker((1920, 1200), (95, 95))
@@ -75,6 +86,46 @@ class TestRegionCreate(unittest.TestCase):
         x, y = rgn.Centroid()
         self.assertAlmostEqual(x, 1250)
         self.assertAlmostEqual(y, 1250)
+
+    def test_Create_CircleSector(self):
+        startTime = time.perf_counter()
+        rgn = mvlab.Region_GenCircleSector((1250, 1250), 750.5, 350, 300)
+        endTime = time.perf_counter()
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), rgn)
+        self.verifyRegionIntegrity(rgn)
+
+    def test_Create_Ellipse(self):
+        startTime = time.perf_counter()
+        rgn = mvlab.Region_GenEllipse((1250, 1250), (750.5, 550.5))
+        endTime = time.perf_counter()
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), rgn)
+        self.verifyRegionIntegrity(rgn)
+
+        x, y = rgn.Centroid()
+        self.assertAlmostEqual(x, 1250)
+        self.assertAlmostEqual(y, 1250)
+
+    def test_Create_RotatedEllipse(self):
+        startTime = time.perf_counter()
+        rgn = mvlab.Region_GenRotatedEllipse((1250, 1250), (750.5, 550.5), 30)
+        endTime = time.perf_counter()
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), rgn)
+        self.verifyRegionIntegrity(rgn)
+
+        x, y = rgn.Centroid()
+        self.assertAlmostEqual(x, 1250, places=1)
+        self.assertAlmostEqual(y, 1250, places=1)
+
+    def test_Create_EllipseSector(self):
+        startTime = time.perf_counter()
+        rgn = mvlab.Region_GenEllipseSector((1250, 1250), (750.5, 550.5), 30, 350, 300)
+        endTime = time.perf_counter()
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), rgn)
+        self.verifyRegionIntegrity(rgn)
 
     def test_Create_Triangle(self):
         startTime = time.perf_counter()

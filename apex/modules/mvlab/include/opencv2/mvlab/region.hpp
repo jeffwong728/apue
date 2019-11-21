@@ -22,7 +22,8 @@ public:
     CV_WRAP static cv::Ptr<Region> GenCircle(const cv::Point2f &center, const float radius);
     CV_WRAP static cv::Ptr<Region> GenCircleSector(const cv::Point2f &center, const float radius, const float startAngle, const float endAngle);
     CV_WRAP static cv::Ptr<Region> GenEllipse(const cv::Point2f &center, const cv::Size2f &size);
-    CV_WRAP static cv::Ptr<Region> GenRotatedEllipse(const cv::Point2f &center, const cv::Size2f &size, const float angle);
+    CV_WRAP static cv::Ptr<Region> GenRotatedEllipse(const cv::Point2f &center, const cv::Size2f &size, const float phi);
+    CV_WRAP static cv::Ptr<Region> GenEllipseSector(const cv::Point2f &center, const cv::Size2f &size, const float phi, const float startAngle, const float endAngle);
     CV_WRAP static cv::Ptr<Region> GenPolygon(const std::vector<cv::Point2f> &vertexes);
 
 public:

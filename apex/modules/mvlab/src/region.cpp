@@ -19,8 +19,8 @@ static void genBottomFlatTriangle(const cv::Point2f (&v)[3], RunSequence &dstRun
     for (int y = yMin; y <= yMax; ++y)
     {
         pResRun->row = y;
-        pResRun->colb = cvRound(curx1);
-        pResRun->cole = cvRound(curx2) + 1;
+        pResRun->colb = cvFloor(curx1);
+        pResRun->cole = cvCeil(curx2) + 1;
         pResRun->label = 0;
         pResRun += 1;
         curx1 += invslope1;
@@ -43,11 +43,31 @@ static void genTopFlatTriangle(const cv::Point2f(&v)[3], RunSequence &dstRuns, c
     {
         pResRun -= 1;
         pResRun->row = y;
-        pResRun->colb = cvRound(curx1);
-        pResRun->cole = cvRound(curx2) + 1;
+        pResRun->colb = cvFloor(curx1);
+        pResRun->cole = cvCeil(curx2) + 1;
         pResRun->label = 0;
         curx1 -= invslope1;
         curx2 -= invslope2;
+    }
+}
+
+static cv::Point2f getIntersection3(const cv::Point2f &p0, const cv::Point2f &p1, const cv::Point2f &p2)
+{
+    const cv::Point2f v1 = p1 - p0;
+    const cv::Point2f v2 = p2 - p0;
+    const float b1 = p1.x*v1.x + p1.y*v1.y;
+    const float b2 = p2.x*v2.x + p2.y*v2.y;
+    const float A = v1.x*v2.y - v1.y*v2.x;
+
+    if (std::abs(A)>std::numeric_limits<float>::epsilon())
+    {
+        const float x = b1 * v2.y - b2 * v1.y;
+        const float y = b2 * v1.x - b1 * v2.x;
+        return cv::Point2f(x/A, y/A);
+    }
+    else
+    {
+        return (p1+p2)/2;
     }
 }
 
@@ -177,7 +197,10 @@ cv::Ptr<Region> Region::GenRectangle(const cv::Rect2f &rect)
 
 cv::Ptr<Region> Region::GenRotatedRectangle(const cv::RotatedRect &rotatedRect)
 {
-    return makePtr<RegionImpl>(rotatedRect);
+    Point2f corners[4];
+    rotatedRect.points(corners);
+
+    return Region::GenQuadrangle(corners[0], corners[1], corners[2], corners[3]);
 }
 
 cv::Ptr<Region> Region::GenCircle(const cv::Point2f &center, const float radius)
@@ -232,27 +255,138 @@ cv::Ptr<Region> Region::GenCircleSector(const cv::Point2f &center, const float r
     const float angBeg = Util::constrainAngle(startAngle);
     const float angEnd = Util::constrainAngle(endAngle);
     const float angExt = (angBeg < angEnd) ? (angEnd - angBeg) : (360.f - angBeg + angEnd);
+    const float angMid = angBeg + angExt / 2;
 
-    if (angExt < 180.f)
-    {
+    const float r = radius + 5;
+    const cv::Point2f ptBeg{ center.x + r * std::cos(Util::rad(angBeg)), center.y - r * std::sin(Util::rad(angBeg)) };
+    const cv::Point2f ptEnd{ center.x + r * std::cos(Util::rad(angEnd)), center.y - r * std::sin(Util::rad(angEnd)) };
+    const cv::Point2f ptMid{ center.x + r * std::cos(Util::rad(angMid)), center.y - r * std::sin(Util::rad(angMid)) };
 
-    }
-    else
-    {
+    const cv::Point2f p1 = getIntersection3(center, ptBeg, ptMid);
+    const cv::Point2f p2 = getIntersection3(center, ptEnd, ptMid);
 
-    }
+    cv::Ptr<Region> rgn1 = Region::GenTriangle(ptBeg, p1, center);
+    cv::Ptr<Region> rgn2 = Region::GenTriangle(p1, p2, center);
+    cv::Ptr<Region> rgn3 = Region::GenTriangle(ptEnd, p2, center);
 
-    return makePtr<RegionImpl>(center, radius);
+    return Region::GenCircle(center, radius)->Intersection(rgn1->Union2(rgn2)->Union2(rgn3));
 }
 
 cv::Ptr<Region> Region::GenEllipse(const cv::Point2f &center, const cv::Size2f &size)
 {
-    return makePtr<RegionImpl>(center, size);
+    if (size.width < 0.5f || size.height < 0.5f)
+    {
+        return makePtr<RegionImpl>();
+    }
+
+    const float a2 = size.width * size.width;
+    const float b2 = size.height * size.height;
+    const float k = a2 / b2;
+    const float ayMin = center.y - size.height;
+    const float ayMax = center.y + size.height;
+    int yMin = cvRound(ayMin);
+    int yMax = cvRound(ayMax);
+
+    while (static_cast<float>(yMin) < ayMin)
+    {
+        yMin += 1;
+    }
+
+    while (static_cast<float>(yMax) > ayMax)
+    {
+        yMax -= 1;
+    }
+
+    if (yMin > yMax)
+    {
+        return makePtr<RegionImpl>();
+    }
+
+    RunSequence dstRuns(yMax - yMin + 1);
+    RunSequence::pointer pResRun = dstRuns.data();
+
+    for (int y = yMin; y <= yMax; ++y)
+    {
+        const float dy = static_cast<float>(y) - center.y;
+        const float dx = cv::sqrt(a2 - k * dy * dy);
+
+        pResRun->row = y;
+        pResRun->colb = cvRound(center.x - dx);
+        pResRun->cole = cvRound(center.x + dx) + 1;
+        pResRun->label = 0;
+
+        pResRun += 1;
+    }
+
+    return makePtr<RegionImpl>(&dstRuns);
 }
 
-cv::Ptr<Region> Region::GenRotatedEllipse(const cv::Point2f &center, const cv::Size2f &size, const float angle)
+cv::Ptr<Region> Region::GenRotatedEllipse(const cv::Point2f &center, const cv::Size2f &size, const float phi)
 {
-    return makePtr<RegionImpl>(center, size, angle);
+    if (size.width < 0.5f || size.height < 0.5f)
+    {
+        return makePtr<RegionImpl>();
+    }
+
+    float const u = std::cos(Util::rad(-phi));
+    float const v = std::sin(Util::rad(-phi));
+    float const rmax = std::max(size.width, size.height);
+    float const l1 = rmax * rmax / (size.width*size.width);
+    float const l2 = rmax * rmax / (size.height*size.height);
+    float const a = l1 * u*u + l2 * v*v;
+    float const b = u * v*(l1 - l2);
+    float const c = l1 * v*v + l2 * u*u;
+    float const yb = std::sqrt(a*rmax*rmax / (a*c - b * b));
+    int const ymin = cvFloor(center.y - yb);
+    int const ymax = cvCeil(center.y + yb) + 1;
+
+    RunSequence dstRuns(ymax - ymin + 1);
+    RunSequence::pointer pResRun = dstRuns.data();
+
+    for (int y = ymin; y < ymax; ++y) {
+        float const Y = float(y) - center.y + 0.25f;
+        float const delta = b * b * Y * Y - a * (c * Y * Y - rmax * rmax);
+        if (delta > 0.f) {
+            float const sdelta = std::sqrt(delta);
+            pResRun->row = y;
+            pResRun->colb = cvRound(center.x - (b*Y + sdelta) / a);
+            pResRun->cole = cvRound(center.x - (b*Y - sdelta) / a) + 1;
+            pResRun->label = 0;
+
+            pResRun += 1;
+        }
+    }
+
+    dstRuns.resize(std::distance(dstRuns.data(), pResRun));
+    return makePtr<RegionImpl>(&dstRuns);
+}
+
+cv::Ptr<Region> Region::GenEllipseSector(const cv::Point2f &center, const cv::Size2f &size, const float phi, const float startAngle, const float endAngle)
+{
+    if (size.width < 0.5f || size.height < 0.5f)
+    {
+        return makePtr<RegionImpl>();
+    }
+
+    const float angBeg = Util::constrainAngle(startAngle);
+    const float angEnd = Util::constrainAngle(endAngle);
+    const float angExt = (angBeg < angEnd) ? (angEnd - angBeg) : (360.f - angBeg + angEnd);
+    const float angMid = angBeg + angExt / 2;
+
+    const float radius = std::max(size.width, size.height);
+    const float r = radius + 5;
+    const cv::Point2f ptBeg{ center.x + r * std::cos(Util::rad(angBeg)), center.y - r * std::sin(Util::rad(angBeg)) };
+    const cv::Point2f ptEnd{ center.x + r * std::cos(Util::rad(angEnd)), center.y - r * std::sin(Util::rad(angEnd)) };
+    const cv::Point2f ptMid{ center.x + r * std::cos(Util::rad(angMid)), center.y - r * std::sin(Util::rad(angMid)) };
+
+    const cv::Point2f p1 = getIntersection3(center, ptBeg, ptMid);
+    const cv::Point2f p2 = getIntersection3(center, ptEnd, ptMid);
+
+    cv::Ptr<Region> rgn1 = Region::GenTriangle(ptBeg, p1, center);
+    cv::Ptr<Region> rgn2 = Region::GenTriangle(p1, p2, center);
+    cv::Ptr<Region> rgn3 = Region::GenTriangle(ptEnd, p2, center);
+
+    return Region::GenRotatedEllipse(center, size, phi)->Intersection(rgn1->Union2(rgn2)->Union2(rgn3));
 }
 
 cv::Ptr<Region> Region::GenPolygon(const std::vector<cv::Point2f> &vertexes)
