@@ -147,6 +147,16 @@ int ContourImpl::Draw(InputOutputArray img, const Scalar& color, const float thi
     }
 }
 
+bool ContourImpl::Empty() const
+{
+    return vertexes_.empty();
+}
+
+int ContourImpl::Count() const
+{
+    return static_cast<int>(vertexes_.size());
+}
+
 double ContourImpl::Length() const
 {
     if (length_ == boost::none)
@@ -170,15 +180,27 @@ double ContourImpl::Area() const
 {
     if (area_ == boost::none)
     {
-        double area = 0.0;
-        Geom::Point centroid;
-        if (is_closed_ && !path_->empty())
+        if (is_closed_)
         {
-            Geom::centroid(Geom::paths_to_pw(Geom::PathVector(*path_)), centroid, area);
-        }
+            if (!vertexes_.empty())
+            {
+                area_ = cv::contourArea(vertexes_, false);
+            }
+            else if (path_ && !path_->empty())
+            {
+                double area = 0.0;
+                Geom::Point centroid;
+                Geom::centroid(Geom::paths_to_pw(Geom::PathVector(*path_)), centroid, area);
 
-        area_ = std::abs(area);
-        centroid_.emplace(centroid.x(), centroid.y());
+                area_ = std::abs(area);
+                centroid_.emplace(centroid.x(), centroid.y());
+            }
+            else
+            {
+                area_ = 0;
+                centroid_ = cv::Point2d();
+            }
+        }
     }
 
     return *area_;
@@ -198,33 +220,66 @@ Rect ContourImpl::BoundingBox() const
 {
     if (bbox_ == boost::none)
     {
-        cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
-        cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
-
-        cv::Rect rect;
-        if (!path_->empty())
+        if (!vertexes_.empty())
         {
-            Geom::OptRect oRect = path_->boundsFast();
-            if (oRect)
-            {
-                
-                rect.x = cvFloor(oRect->left());
-                rect.y = cvFloor(oRect->top());
-                rect.width = cvCeil(oRect->width());
-                rect.height = cvCeil(oRect->height());
-            }
+            bbox_ = cv::boundingRect(vertexes_);
         }
+        else if (path_ && !path_->empty())
+        {
+            cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+            cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
 
-        bbox_ = rect;
+            cv::Rect rect;
+            if (!path_->empty())
+            {
+                Geom::OptRect oRect = path_->boundsFast();
+                if (oRect)
+                {
+
+                    rect.x = cvFloor(oRect->left());
+                    rect.y = cvFloor(oRect->top());
+                    rect.width = cvCeil(oRect->width());
+                    rect.height = cvCeil(oRect->height());
+                }
+            }
+
+            bbox_ = rect;
+        }
+        else
+        {
+            bbox_ = cv::Rect();
+        }
     }
 
     return *bbox_;
 }
 
-int ContourImpl::Simplify(const float tolerance, std::vector<Point2f> &vertexes) const
+Ptr<Contour> ContourImpl::Simplify(const float tolerance) const
 {
-    vertexes.assign(vertexes_.cbegin(), vertexes_.cend());
-    return MLR_SUCCESS;
+    if (Empty())
+    {
+        return makePtr<ContourImpl>();
+    }
+    else
+    {
+        Point2fSequence approxCurve;
+        cv::approxPolyDP(vertexes_, approxCurve, tolerance, is_closed_);
+        return makePtr<ContourImpl>(&approxCurve, is_closed_);
+    }
+}
+
+int ContourImpl::GetPoints(std::vector<Point2f> &points) const
+{
+    if (vertexes_.empty())
+    {
+        points.clear();
+        return MLR_CONTOUR_EMPTY;
+    }
+    else
+    {
+        points.assign(vertexes_.cbegin(), vertexes_.cend());
+        return MLR_SUCCESS;
+    }
 }
 
 void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const

@@ -53,10 +53,10 @@ public:
     int Count() const CV_OVERRIDE;
     int CountRows() const CV_OVERRIDE;
     // Access
-    int GetContour(cv::Ptr<Contour> &contour) const CV_OVERRIDE;
-    int GetConvex(cv::Ptr<Contour> &convex) const CV_OVERRIDE;
+    cv::Ptr<Contour> GetContour() const CV_OVERRIDE;
+    cv::Ptr<Contour> GetConvex() const CV_OVERRIDE;
+    cv::Ptr<Contour> GetPolygon(const float tolerance) const CV_OVERRIDE;
     int GetPoints(std::vector<cv::Point> &points) const CV_OVERRIDE;
-    int GetPolygon(cv::Ptr<Contour> &polygon, const float tolerance) const CV_OVERRIDE;
     int GetRuns(std::vector<cv::Point3i> &runs) const CV_OVERRIDE;
     // Sets
     cv::Ptr<Region> Complement(const cv::Rect &universe) const CV_OVERRIDE;
@@ -69,7 +69,8 @@ public:
     bool TestEqual(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
     bool TestPoint(const cv::Point &point) const CV_OVERRIDE;
     bool TestSubset(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
-
+    // Geometric Transformations
+    cv::Ptr<Region> Move(const cv::Point &delta) const CV_OVERRIDE;
     int Connect(std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
 
 public:

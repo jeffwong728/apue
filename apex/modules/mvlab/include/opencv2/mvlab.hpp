@@ -17,7 +17,8 @@ constexpr int MLR_PARAMETER_ERROR                               = 5000;
 constexpr int MLR_PARAMETER_ERROR_GUARD                         = 5100;
 constexpr int MLR_IMAGE_EMPTY                                   = 10000;
 constexpr int MLR_IMAGE_FORMAT_ERROR                            = 10001;
-constexpr int MLR_REGION_EMPTY                                  = 20000;
+constexpr int MLR_REGION_EMPTY                                  = 11000;
+constexpr int MLR_CONTOUR_EMPTY                                 = 12000;
 constexpr int MLR_ERROR                                         = -1;
 constexpr int MLR_FAILURE                                       = MLR_ERROR;
 

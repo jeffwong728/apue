@@ -213,28 +213,25 @@ int RegionImpl::CountRows() const
     }
 }
 
-int RegionImpl::GetContour(cv::Ptr<Contour> &contour) const
+cv::Ptr<Contour> RegionImpl::GetContour() const
 {
     if (RegionImpl::Empty()) {
-        contour = cv::makePtr<ContourImpl>();
-        return MLR_REGION_EMPTY;
+        return cv::makePtr<ContourImpl>();
     } else {
         if (contour_) {
-            contour = contour_;
+            return contour_;
         } else if (!contour_outers_.empty()) {
-            contour = contour_outers_.front();
+            return contour_outers_.front();
         } else {
             TraceContour();
-            contour = contour_;
+            return contour_;
         }
-        return MLR_SUCCESS;
     }
 }
 
-int RegionImpl::GetConvex(cv::Ptr<Contour> &convex) const
+cv::Ptr<Contour> RegionImpl::GetConvex() const
 {
-    cv::Ptr<Contour> contour;
-    RegionImpl::GetContour(contour);
+    cv::Ptr<Contour> contour = RegionImpl::GetContour();
     if (contour)
     {
         cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
@@ -242,12 +239,10 @@ int RegionImpl::GetConvex(cv::Ptr<Contour> &convex) const
         {
             Point2fSequence cvxPoints;
             cv::convexHull(contImpl->GetVertexes(), cvxPoints);
-            convex = cv::makePtr<ContourImpl>(&cvxPoints, true);
-            return MLR_SUCCESS;
+            return cv::makePtr<ContourImpl>(&cvxPoints, true);
         }
     }
-
-    return MLR_FAILURE;
+    return makePtr<ContourImpl>();
 }
 
 int RegionImpl::GetPoints(std::vector<cv::Point> &points) const
@@ -267,10 +262,9 @@ int RegionImpl::GetPoints(std::vector<cv::Point> &points) const
     return MLR_SUCCESS;
 }
 
-int RegionImpl::GetPolygon(cv::Ptr<Contour> &polygon, const float tolerance) const
+cv::Ptr<Contour> RegionImpl::GetPolygon(const float tolerance) const
 {
-    cv::Ptr<Contour> contour;
-    RegionImpl::GetContour(contour);
+    cv::Ptr<Contour> contour = RegionImpl::GetContour();
     if (contour)
     {
         cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
@@ -278,11 +272,10 @@ int RegionImpl::GetPolygon(cv::Ptr<Contour> &polygon, const float tolerance) con
         {
             Point2fSequence approxPoints;
             cv::approxPolyDP(contImpl->GetVertexes(), approxPoints, tolerance, true);
-            polygon = cv::makePtr<ContourImpl>(&approxPoints, true);
-            return MLR_SUCCESS;
+            return cv::makePtr<ContourImpl>(&approxPoints, true);
         }
     }
-    return MLR_FAILURE;
+    return makePtr<ContourImpl>();
 }
 
 int RegionImpl::GetRuns(std::vector<cv::Point3i> &runs) const
@@ -468,6 +461,26 @@ bool RegionImpl::TestSubset(const cv::Ptr<Region> &otherRgn) const
     }
 
     return true;
+}
+
+cv::Ptr<Region> RegionImpl::Move(const cv::Point &delta) const
+{
+    if (Empty())
+    {
+        return makePtr<RegionImpl>();
+    }
+    else
+    {
+        RunSequence dstRuns(rgn_runs_.size());
+        std::memcpy(dstRuns.data(), rgn_runs_.data(), rgn_runs_.size() * sizeof(RunSequence::value_type));
+        for (RunLength &rl : dstRuns)
+        {
+            rl.row += delta.y;
+            rl.colb += delta.x;
+            rl.cole += delta.x;
+        }
+        return makePtr<RegionImpl>(&dstRuns);
+    }
 }
 
 int RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const

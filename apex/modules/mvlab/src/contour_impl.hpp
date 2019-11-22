@@ -29,11 +29,15 @@ public:
     int Draw(InputOutputArray img, const Scalar& color, float thickness, const int style) const CV_OVERRIDE;
 
 public:
+    bool Empty() const CV_OVERRIDE;
+    int Count() const CV_OVERRIDE;
     double Length() const CV_OVERRIDE;
     double Area() const CV_OVERRIDE;
     Point2d Centroid() const CV_OVERRIDE;
     Rect BoundingBox() const CV_OVERRIDE;
-    int Simplify(const float tolerance, CV_OUT std::vector<Point2f> &vertexes) const CV_OVERRIDE;
+    Ptr<Contour> Simplify(const float tolerance) const CV_OVERRIDE;
+    //Access
+    int GetPoints(std::vector<Point2f> &vertexes) const CV_OVERRIDE;
 
 public:
     void Feed(Cairo::RefPtr<Cairo::Context> &cr) const;

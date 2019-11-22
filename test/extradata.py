@@ -97,3 +97,27 @@ def SaveRegions(testId, rgns, sz=None):
         cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
         global objPath
         objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
+
+def SaveContours(testId, cturs, sz=None):
+    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    imgPathComps = testId.split(sep='.')
+    imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
+    os.makedirs(imgPath, exist_ok=True)
+
+    shape = None
+    if not sz:
+        sz = (0, 0, 0, 0)
+        for ctur in cturs:
+            sz = RectUnion(sz, ctur.BoundingBox())
+        shape = (sz[3], sz[2], 4)
+    else:
+        shape = (sz[0], sz[1], 4)
+
+    image = numpy.zeros(shape, numpy.uint8)
+    for ctur in cturs:
+        r, image = ctur.Draw(image, GetNextColor(), 1, 0)
+
+    if not r:
+        cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
+        global objPath
+        objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
