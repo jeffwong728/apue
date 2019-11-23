@@ -71,6 +71,127 @@ static cv::Point2f getIntersection3(const cv::Point2f &p0, const cv::Point2f &p1
     }
 }
 
+static RunSequence getConvexPoly(const cv::Point2f *vf, int npts)
+{
+    constexpr int shift = 10;
+    constexpr int delta = 1 << shift >> 1;
+    constexpr int XY_ONE = 1 << shift;
+    constexpr float F_XY_ONE = 1 << shift;
+
+    UScalablePointSequence v(npts);
+    const UScalablePointSequence::pointer pvEnd = v.data() + npts;
+    for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
+    {
+        pv->x = cvRound(vf->x * F_XY_ONE);
+        pv->y = cvRound(vf->y * F_XY_ONE);
+    }
+
+    struct
+    {
+        int idx, di;
+        int x, dx;
+        int ye;
+    } edge[2];
+
+    int y, imin = 0;
+    int edges = npts;
+    int xmin, xmax, ymin, ymax;
+
+    xmin = xmax = v[0].x;
+    ymin = ymax = v[0].y;
+
+    for (int i = 0; i < npts; i++)
+    {
+        const cv::Point &p = v[i];
+        if (p.y < ymin)
+        {
+            ymin = p.y;
+            imin = i;
+        }
+
+        ymax = std::max(ymax, p.y);
+        xmax = std::max(xmax, p.x);
+        xmin = std::min(xmin, p.x);
+    }
+
+    xmin = (xmin + delta) >> shift;
+    xmax = (xmax + delta) >> shift;
+    ymin = (ymin + delta) >> shift;
+    ymax = (ymax + delta) >> shift;
+
+    if (ymin > ymax)
+    {
+        return RunSequence();
+    }
+
+    RunSequence dstRuns(ymax - ymin + 1);
+    RunSequence::pointer pResRun = dstRuns.data();
+
+    edge[0].idx = edge[1].idx = imin;
+    edge[0].ye = edge[1].ye = y = ymin;
+    edge[0].di = 1;
+    edge[1].di = npts - 1;
+    edge[0].x = edge[1].x = -XY_ONE;
+    edge[0].dx = edge[1].dx = 0;
+
+    do
+    {
+        if (y < ymax || y == ymin)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                if (y >= edge[i].ye)
+                {
+                    int idx0 = edge[i].idx, di = edge[i].di;
+                    int idx = idx0 + di;
+                    if (idx >= npts) idx -= npts;
+                    int ty = 0;
+
+                    for (; edges-- > 0; )
+                    {
+                        ty = (v[idx].y + delta) >> shift;
+                        if (ty > y)
+                        {
+                            int xs = v[idx0].x;
+                            int xe = v[idx].x;
+
+                            edge[i].ye = ty;
+                            edge[i].dx = ((xe - xs) * 2 + (ty - y)) / (2 * (ty - y));
+                            edge[i].x = xs;
+                            edge[i].idx = idx;
+                            break;
+                        }
+                        idx0 = idx;
+                        idx += di;
+                        if (idx >= npts) idx -= npts;
+                    }
+                }
+            }
+        }
+
+        if (edges < 0)
+            break;
+
+        int left = 0, right = 1;
+        if (edge[0].x > edge[1].x)
+        {
+            left = 1, right = 0;
+        }
+
+        pResRun->row  = y;
+        pResRun->colb = (edge[left].x + delta) >> shift;
+        pResRun->cole  = ((edge[right].x + delta) >> shift) + 1;
+        pResRun->label = 0;
+        pResRun += 1;
+
+        edge[0].x += edge[0].dx;
+        edge[1].x += edge[1].dx;
+    } while (++y <= (int)ymax);
+
+    dstRuns.resize(std::distance(dstRuns.data(), pResRun));
+    return dstRuns;
+}
+
 cv::Ptr<Region> Region::GenEmpty()
 {
     return makePtr<RegionImpl>();
@@ -197,10 +318,17 @@ cv::Ptr<Region> Region::GenRectangle(const cv::Rect2f &rect)
 
 cv::Ptr<Region> Region::GenRotatedRectangle(const cv::RotatedRect &rotatedRect)
 {
-    Point2f corners[4];
-    rotatedRect.points(corners);
-
-    return Region::GenQuadrangle(corners[0], corners[1], corners[2], corners[3]);
+    if (rotatedRect.size.width > 0.5f && rotatedRect.size.height > 0.5f)
+    {
+        Point2f corners[4];
+        rotatedRect.points(corners);
+        RunSequence dstRuns = getConvexPoly(&corners[0], 4);
+        return makePtr<RegionImpl>(&dstRuns);
+    }
+    else
+    {
+        return makePtr<RegionImpl>();
+    }
 }
 
 cv::Ptr<Region> Region::GenCircle(const cv::Point2f &center, const float radius)
@@ -391,7 +519,15 @@ cv::Ptr<Region> Region::GenEllipseSector(const cv::Point2f &center, const cv::Si
 
 cv::Ptr<Region> Region::GenPolygon(const std::vector<cv::Point2f> &vertexes)
 {
-    return makePtr<RegionImpl>();
+    if (vertexes.size()>2)
+    {
+        RunSequence dstRuns = getConvexPoly(vertexes.data(), static_cast<int>(vertexes.size()));
+        return makePtr<RegionImpl>(&dstRuns);
+    }
+    else
+    {
+        return makePtr<RegionImpl>();
+    }
 }
 
 }

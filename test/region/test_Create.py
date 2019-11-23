@@ -34,14 +34,14 @@ class TestRegionCreate(unittest.TestCase):
 
     def test_Create_RotatedRectangle(self):
         startTime = time.perf_counter()
-        rgn = mvlab.Region_GenRotatedRectangle(((1000, 1000), (500, 800), 60))
+        rgn = mvlab.Region_GenRotatedRectangle(((1000, 1000), (500, 800), 30))
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveRegion(self.id(), rgn)
         self.verifyRegionIntegrity(rgn)
 
-        self.assertAlmostEqual(rgn.Centroid()[0], 1000, places=2)
-        self.assertAlmostEqual(rgn.Centroid()[1], 1000, places=2)
+        self.assertAlmostEqual(rgn.Centroid()[0], 1000, delta=1)
+        self.assertAlmostEqual(rgn.Centroid()[1], 1000, delta=1)
 
     def test_Create_Checker(self):
         startTime = time.perf_counter()
@@ -116,8 +116,8 @@ class TestRegionCreate(unittest.TestCase):
         self.verifyRegionIntegrity(rgn)
 
         x, y = rgn.Centroid()
-        self.assertAlmostEqual(x, 1250, places=1)
-        self.assertAlmostEqual(y, 1250, places=1)
+        self.assertAlmostEqual(x, 1250, delta=1)
+        self.assertAlmostEqual(y, 1250, delta=1)
 
     def test_Create_EllipseSector(self):
         startTime = time.perf_counter()
@@ -184,14 +184,12 @@ class TestRegionCreate(unittest.TestCase):
 
     def test_Create_Polygon(self):
         startTime = time.perf_counter()
-        rgn = mvlab.Region_GenCircle((1250, 1250), 750)
+        rgn = mvlab.Region_GenPolygon([(100, 50), (50, 150), (100, 200), (200, 200), (100, 150), (150, 100)])
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveRegion(self.id(), rgn)
 
-        x, y = rgn.Centroid()
-        self.assertAlmostEqual(x, 1250, places=2)
-        self.assertAlmostEqual(y, 1250, places=2)
+        self.verifyRegionIntegrity(rgn)
 
     def verifyRegionIntegrity (self, rgn):
         if not rgn:

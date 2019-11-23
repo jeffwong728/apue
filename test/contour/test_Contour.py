@@ -127,5 +127,15 @@ class TestContour(unittest.TestCase):
         rgn = rgn.Move((-bbox[0]+10, -bbox[1]+bbox[3]+20))
         extradata.SaveContours(self.id(), [souter, rgn.GetContour()])
 
+    def test_Draw_Ellipse(self):
+        image = numpy.zeros((480, 640), numpy.uint8)
+        points = [[100.5, 30.5], [40.5, 80.5], [10.5, 90.5]]
+        for point in points:
+            point[0] = int(round(point[0]*1024))
+            point[1] = int(round(point[1]*1024))
+        triangle = numpy.array(points, numpy.int32)
+        cv2.fillConvexPoly(image, triangle, (255, 255, 255, 255), 16, 10)
+        extradata.SaveImage(self.id(), image)
+
 if __name__ == '__main__':
     unittest.main()

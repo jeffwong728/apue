@@ -65,8 +65,10 @@ def SaveRegion(testId, rgn, sz=None):
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     os.makedirs(imgPath, exist_ok=True)
     if not sz:
-        sz = (0, 0)
-    image = numpy.zeros((sz[0], sz[1], 4), numpy.uint8)
+        sz = (0, 0, 0, 0)
+        sz = RectUnion(sz, rgn.BoundingBox())
+        shape = (sz[3]+10, sz[2]+10, 4)
+    image = numpy.zeros(shape, numpy.uint8)
     r, image = rgn.Draw(image, (255, 255, 255, 255), (255, 255, 255, 255), 0, 0)
 
     if not r:
@@ -85,9 +87,9 @@ def SaveRegions(testId, rgns, sz=None):
         sz = (0, 0, 0, 0)
         for rgn in rgns:
             sz = RectUnion(sz, rgn.BoundingBox())
-        shape = (sz[3], sz[2], 4)
+        shape = (sz[3]+10, sz[2]+10, 4)
     else:
-        shape = (sz[0], sz[1], 4)
+        shape = (sz[0]+10, sz[1]+10, 4)
 
     image = numpy.zeros(shape, numpy.uint8)
     for rgn in rgns:
@@ -109,9 +111,9 @@ def SaveContours(testId, cturs, sz=None):
         sz = (0, 0, 0, 0)
         for ctur in cturs:
             sz = RectUnion(sz, ctur.BoundingBox())
-        shape = (sz[3], sz[2], 4)
+        shape = (sz[3]+10, sz[2]+10, 4)
     else:
-        shape = (sz[0], sz[1], 4)
+        shape = (sz[0]+10, sz[1]+10, 4)
 
     image = numpy.zeros(shape, numpy.uint8)
     for ctur in cturs:
