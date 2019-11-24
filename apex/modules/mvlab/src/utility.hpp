@@ -20,6 +20,7 @@ public:
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz, UScalableUCharSequence &buf);
     static inline float constrainAngle(float x);
     static inline float rad(const float angle) { return angle * static_cast<float>(CV_PI) / 180.f; }
+    static inline float deg(const float angle) { return angle * 180.f / static_cast<float>(CV_PI); }
 };
 
 inline float Util::constrainAngle(float x)

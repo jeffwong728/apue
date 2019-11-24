@@ -17,7 +17,7 @@ public:
     ContourImpl() : is_closed_(false) {}
     ContourImpl(const Rect2f &rect);
     ContourImpl(const RotatedRect &rotatedRect);
-    ContourImpl(const Point2f &center, const float radius);
+    ContourImpl(const Point2f &center, const float radius, Point2fSequence *vertexes);
     ContourImpl(const Point2f &center, const Size2f &size);
     ContourImpl(const Point2f &center, const Size2f &size, const float angle);
     ContourImpl(const Geom::Path &path, const bool closed);
@@ -38,6 +38,9 @@ public:
     Ptr<Contour> Simplify(const float tolerance) const CV_OVERRIDE;
     //Access
     int GetPoints(std::vector<Point2f> &vertexes) const CV_OVERRIDE;
+    //Geometric Transformations
+    cv::Ptr<Contour> Move(const cv::Point &delta) const CV_OVERRIDE;
+    cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const CV_OVERRIDE;
 
 public:
     void Feed(Cairo::RefPtr<Cairo::Context> &cr) const;
@@ -51,7 +54,7 @@ private:
     void DrawVerified(Mat &img, const Scalar& color, const float thickness, const int style) const;
 
 private:
-    bool is_closed_;
+    const bool is_closed_;
     const boost::optional<Geom::Path> path_;
     const Point2fSequence vertexes_;
     mutable boost::optional<Point2f> start_;

@@ -12,14 +12,14 @@ public:
     Contour() {}
     virtual ~Contour() {}
 
-    CV_WRAP static Ptr<Contour> CreateEmpty();
-    CV_WRAP static Ptr<Contour> CreateRectangle(const Rect2f &rect);
-    CV_WRAP static Ptr<Contour> CreateRotatedRectangle(const RotatedRect &rotatedRect);
-    CV_WRAP static Ptr<Contour> CreateCircle(const Point2f &center, const float radius);
-    CV_WRAP static Ptr<Contour> CreateEllipse(const Point2f &center, const Size2f &size);
-    CV_WRAP static Ptr<Contour> CreateRotatedEllipse(const Point2f &center, const Size2f &size, const float angle);
-    CV_WRAP static Ptr<Contour> CreatePolygon(const std::vector<Point2f> &vertexes);
-    CV_WRAP static Ptr<Contour> CreatePolyline(const std::vector<Point2f> &vertexes);
+    CV_WRAP static Ptr<Contour> GenEmpty();
+    CV_WRAP static Ptr<Contour> GenRectangle(const Rect2f &rect);
+    CV_WRAP static Ptr<Contour> GenRotatedRectangle(const RotatedRect &rotatedRect);
+    CV_WRAP static Ptr<Contour> GenCircle(const Point2f &center, const float radius, const float resolution, const cv::String &pointOrder);
+    CV_WRAP static Ptr<Contour> GenEllipse(const Point2f &center, const Size2f &size);
+    CV_WRAP static Ptr<Contour> GenRotatedEllipse(const Point2f &center, const Size2f &size, const float angle);
+    CV_WRAP static Ptr<Contour> GenPolygon(const std::vector<Point2f> &vertexes);
+    CV_WRAP static Ptr<Contour> GenPolyline(const std::vector<Point2f> &vertexes);
 
 public:
     virtual int Draw(Mat &img, const Scalar& color, const float thickness = 1, const int style = 0) const = 0;
@@ -33,6 +33,8 @@ public:
     CV_WRAP virtual Rect BoundingBox() const = 0;
     CV_WRAP virtual Ptr<Contour> Simplify(const float tolerance) const = 0;
     CV_WRAP virtual int GetPoints(CV_OUT std::vector<Point2f> &vertexes) const = 0;
+    CV_WRAP virtual cv::Ptr<Contour> Move(const cv::Point &delta) const = 0;
+    CV_WRAP virtual cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const = 0;
     CV_WRAP virtual int Draw(InputOutputArray img, const Scalar& color, const float thickness = 1, const int style = 0) const = 0;
 };
 

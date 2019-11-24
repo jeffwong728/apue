@@ -483,6 +483,33 @@ cv::Ptr<Region> RegionImpl::Move(const cv::Point &delta) const
     }
 }
 
+cv::Ptr<Region> RegionImpl::Zoom(const cv::Size2f &scale) const
+{
+    if (!Empty())
+    {
+        cv::Ptr<Contour> contour = RegionImpl::GetContour();
+        if (contour)
+        {
+            cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
+            if (contImpl)
+            {
+                Point2fSequence points(contImpl->GetVertexes().cbegin(), contImpl->GetVertexes().cend());
+                for (cv::Point2f &point : points)
+                {
+                    point.x *= scale.width;
+                    point.y *= scale.height;
+                }
+
+                Point2fSequence approxPoints;
+                cv::approxPolyDP(points, approxPoints, 1.0, true);
+                return Region::GenPolygon(approxPoints);
+            }
+        }
+    }
+
+    return makePtr<RegionImpl>();
+}
+
 int RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const
 {
     regions.clear();

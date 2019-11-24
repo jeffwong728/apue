@@ -20,6 +20,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="contour\test_Contour.py" />
+    <Compile Include="contour\test_ContourCreate.py" />
     <Compile Include="contour\__init__.py" />
     <Compile Include="extradata.py" />
     <Compile Include="genperfplot.py" />
@@ -34,6 +35,7 @@
     <Compile Include="region\test_Intersection.py" />
     <Compile Include="region\test_SymmDifference.py" />
     <Compile Include="region\test_Test.py" />
+    <Compile Include="region\test_Transformation.py" />
     <Compile Include="region\test_Union.py" />
     <Compile Include="region\__init__.py" />
     <Compile Include="run.py">

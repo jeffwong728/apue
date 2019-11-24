@@ -182,13 +182,47 @@ class TestRegionCreate(unittest.TestCase):
             self.verifyRegionIntegrity(rgn)
         extradata.SaveRegion(self.id(), rgn)
 
-    def test_Create_Polygon(self):
-        startTime = time.perf_counter()
-        rgn = mvlab.Region_GenPolygon([(100, 50), (50, 150), (100, 200), (200, 200), (100, 150), (150, 100)])
-        endTime = time.perf_counter()
-        extradata.SavePerformanceData(self.id(), endTime-startTime)
+    def test_Create_Polygon_Zero(self):
+        rgn = mvlab.Region_GenPolygon([(100, 50), (100, 50), (100, 50), (100, 50), (100, 50), (100, 50), (100, 50)])
+        self.verifyRegionIntegrity(rgn)
+        self.assertEqual(0, rgn.Count())
+
+    def test_Create_Polygon_Line(self):
+        rgn = mvlab.Region_GenPolygon([(100, 100), (90, 90), (80, 80), (10, 10), (1, 1)])
+        self.verifyRegionIntegrity(rgn)
+        self.assertEqual(99, rgn.Count())
         extradata.SaveRegion(self.id(), rgn)
 
+    def test_Create_Polygon(self):
+        rgn = mvlab.Region_GenPolygon([(100, 50), (50, 150), (100, 200), (150, 180), (200, 200), (100, 150), (150, 100)])
+        extradata.SaveRegion(self.id(), rgn)
+        self.verifyRegionIntegrity(rgn)
+
+    def test_Create_Polygon_Bull(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        blue, green, red = cv2.split(image)
+
+        r, rgn = mvlab.Threshold(blue, 150, 255)
+        r, rgns = rgn.Connect()
+
+        for rgn in rgns:
+           if rgn.Area() > 140000 and rgn.Area() < 150000:
+               break
+
+        bbox = rgn.BoundingBox()
+        srgn = rgn.Move((-bbox[0]+10, -bbox[1]+10))
+        souter = srgn.GetContour()
+        souter = souter.Simplify(1)
+
+        r, points = souter.GetPoints()
+        points = [point for point in points]
+
+        startTime = time.perf_counter()
+        rgn = mvlab.Region_GenPolygon(points)
+        endTime = time.perf_counter()
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), rgn)
         self.verifyRegionIntegrity(rgn)
 
     def verifyRegionIntegrity (self, rgn):

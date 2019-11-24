@@ -5,7 +5,7 @@ import HtmlTestRunner
 import extradata
 
 extradata.init()
-tests = unittest.TestLoader().discover(start_dir='.', pattern='test_Create*.py')
+tests = unittest.TestLoader().discover(start_dir='.', pattern='test_ContourCreate*.py')
 tmplPath = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'report_template.html')
 
 teml_args = {

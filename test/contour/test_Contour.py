@@ -119,7 +119,7 @@ class TestContour(unittest.TestCase):
         print("Before Simplify: {0:d}".format(souter.Count()), end=os.linesep)
 
         startTime = time.perf_counter()
-        souter = souter.Simplify(3.0)
+        souter = souter.Simplify(1)
         endTime = time.perf_counter()
         print("After Simplify: {0:d}".format(souter.Count()), end=os.linesep)
 

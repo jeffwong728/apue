@@ -71,6 +71,7 @@ public:
     bool TestSubset(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
     // Geometric Transformations
     cv::Ptr<Region> Move(const cv::Point &delta) const CV_OVERRIDE;
+    cv::Ptr<Region> Zoom(const cv::Size2f &scale) const CV_OVERRIDE;
     int Connect(std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
 
 public:

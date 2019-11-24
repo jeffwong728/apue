@@ -31,10 +31,11 @@ ContourImpl::ContourImpl(const RotatedRect &rotatedRect)
     const_cast<boost::optional<Geom::Path>&>(path_).emplace(pv[0]);
 }
 
-ContourImpl::ContourImpl(const Point2f &center, const float radius)
+ContourImpl::ContourImpl(const Point2f &center, const float radius, Point2fSequence *vertexes)
     : Contour()
     , is_closed_(true)
     , path_(Geom::Circle(center.x, center.y, radius))
+    , vertexes_(std::move(*vertexes))
 {
 }
 
@@ -282,29 +283,39 @@ int ContourImpl::GetPoints(std::vector<Point2f> &points) const
     }
 }
 
+cv::Ptr<Contour> ContourImpl::Move(const cv::Point &delta) const
+{
+    return makePtr<ContourImpl>();
+}
+
+cv::Ptr<Contour> ContourImpl::Zoom(const cv::Size2f &scale) const
+{
+    return makePtr<ContourImpl>();
+}
+
 void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
 {
-    if (!path_ || path_->empty())
+    const auto &vertexes = GetVertexes();
+    const int numVertexes = static_cast<int>(vertexes.size());
+    if (numVertexes > 1)
     {
-        const auto &vertexes = GetVertexes();
-        const int numVertexes = static_cast<int>(vertexes.size());
-        if (numVertexes > 1)
+        cr->move_to(vertexes.front().x, vertexes.front().y);
+        for (int i = 1; i < numVertexes; ++i)
         {
-            cr->move_to(vertexes.front().x, vertexes.front().y);
-            for (int i = 1; i < numVertexes; ++i)
-            {
-                cr->line_to(vertexes[i].x, vertexes[i].y);
-            }
-            if (is_closed_)
-            {
-                cr->close_path();
-            }
+            cr->line_to(vertexes[i].x, vertexes[i].y);
+        }
+        if (is_closed_)
+        {
+            cr->close_path();
         }
     }
     else
     {
-        Geom::CairoPathSink cairoPathSink(cr->cobj());
-        cairoPathSink.feed(*path_);
+        if (path_ && !path_->empty())
+        {
+            Geom::CairoPathSink cairoPathSink(cr->cobj());
+            cairoPathSink.feed(*path_);
+        }
     }
 }
 

@@ -64,10 +64,13 @@ def SaveRegion(testId, rgn, sz=None):
     imgPathComps = testId.split(sep='.')
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     os.makedirs(imgPath, exist_ok=True)
+    shape = None
     if not sz:
         sz = (0, 0, 0, 0)
         sz = RectUnion(sz, rgn.BoundingBox())
         shape = (sz[3]+10, sz[2]+10, 4)
+    else:
+        shape = (sz[0]+10, sz[1]+10, 4)
     image = numpy.zeros(shape, numpy.uint8)
     r, image = rgn.Draw(image, (255, 255, 255, 255), (255, 255, 255, 255), 0, 0)
 
