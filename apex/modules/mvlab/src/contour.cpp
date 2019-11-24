@@ -34,7 +34,7 @@ Ptr<Contour> Contour::GenCircle(const Point2f &center, const float radius, const
         return makePtr<ContourImpl>();
     }
 
-    float radStep = resolution / radius;
+    const float radStep = resolution / radius;
     Point2fSequence corners(cvCeil(CV_2PI / radStep) + 2);
     Point2fSequence::pointer pCorner = corners.data();
 
@@ -61,9 +61,39 @@ Ptr<Contour> Contour::GenCircle(const Point2f &center, const float radius, const
     return makePtr<ContourImpl>(center, radius, &corners);
 }
 
-Ptr<Contour> Contour::GenEllipse(const Point2f &center, const Size2f &size)
+Ptr<Contour> Contour::GenEllipse(const Point2f &center, const Size2f &size, const float resolution, const cv::String &pointOrder)
 {
-    return makePtr<ContourImpl>(center, size);
+    if (size.width < 0.f || size.height < 0.f || resolution < 0.00001f)
+    {
+        return makePtr<ContourImpl>();
+    }
+
+    const float radius = std::min(size.width, size.height);
+    const float radStep = resolution / radius;
+    Point2fSequence corners(cvCeil(CV_2PI / radStep) + 2);
+    Point2fSequence::pointer pCorner = corners.data();
+
+    if (pointOrder == "negative")
+    {
+        for (float a = CV_2PI; a > 0.f; a -= radStep)
+        {
+            pCorner->x = center.x + size.width * std::cosf(a);
+            pCorner->y = center.y - size.height * std::sinf(a);
+            ++pCorner;
+        }
+    }
+    else
+    {
+        for (float a = 0.f; a < CV_2PI; a += radStep)
+        {
+            pCorner->x = center.x + size.width * std::cosf(a);
+            pCorner->y = center.y - size.height * std::sinf(a);
+            ++pCorner;
+        }
+    }
+
+    corners.resize(std::distance(corners.data(), pCorner));
+    return makePtr<ContourImpl>(center, size, &corners);
 }
 
 Ptr<Contour> Contour::GenRotatedEllipse(const Point2f &center, const Size2f &size, const float angle)

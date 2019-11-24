@@ -24,5 +24,13 @@ class TestContourCreate(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveContours(self.id(), [contr])
 
+    def test_Create_Ellipse_Contour(self):
+        startTime = time.perf_counter()
+        contr = mvlab.Contour_GenEllipse((1000, 1000), (500, 300), 5, 'negative')
+        endTime = time.perf_counter()
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), [contr])
+
 if __name__ == '__main__':
     unittest.main()
