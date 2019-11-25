@@ -27,7 +27,7 @@ public:
     CV_WRAP static cv::Ptr<Region> GenPolygon(const std::vector<cv::Point2f> &vertexes);
 
 public:
-    virtual int Draw(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness = 1, const int borderStyle = 0) const = 0;
+    virtual int Draw(Mat &img, const Scalar& fillColor) const = 0;
 
 public:
     CV_WRAP virtual bool Empty() const = 0;
@@ -53,7 +53,7 @@ public:
     CV_WRAP virtual cv::Ptr<Region> Move(const cv::Point &delta) const = 0;
     CV_WRAP virtual cv::Ptr<Region> Zoom(const cv::Size2f &scale) const = 0;
     CV_WRAP virtual int Connect(CV_OUT std::vector<cv::Ptr<Region>> &regions) const = 0;
-    CV_WRAP virtual int Draw(cv::InputOutputArray img, const cv::Scalar& fillColor, const cv::Scalar& borderColor, const float borderThickness = 1, const int borderStyle = 0) const = 0;
+    CV_WRAP virtual int Draw(cv::InputOutputArray img, const cv::Scalar& fillColor) const = 0;
 };
 
 }

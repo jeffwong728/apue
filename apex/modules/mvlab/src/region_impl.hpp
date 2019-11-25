@@ -42,8 +42,8 @@ public:
     RegionImpl(RunSequence *const runs);
 
 public:
-    int Draw(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const CV_OVERRIDE;
-    int Draw(InputOutputArray img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const CV_OVERRIDE;
+    int Draw(Mat &img, const Scalar& fillColor) const CV_OVERRIDE;
+    int Draw(InputOutputArray img, const Scalar& fillColor) const CV_OVERRIDE;
 
 public:
     bool Empty() const CV_OVERRIDE;
@@ -81,7 +81,8 @@ public:
 private:
     void FromMask(const cv::Mat &mask);
     void FromPathVector(const Geom::PathVector &pv);
-    void DrawVerified(Mat &img, const Scalar& fillColor, const Scalar& borderColor, const float borderThickness, const int borderStyle) const;
+    void DrawVerified(Mat &img, const Scalar& fillColor) const;
+    void DrawVerifiedGray(Mat &img, const Scalar& fillColor) const;
     void TraceAllContours() const;
     void TraceContour() const;
     void GatherBasicFeatures() const;

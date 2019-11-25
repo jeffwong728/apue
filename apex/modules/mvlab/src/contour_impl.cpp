@@ -47,10 +47,11 @@ ContourImpl::ContourImpl(const Point2f &center, const Size2f &size, Point2fSeque
 {
 }
 
-ContourImpl::ContourImpl(const Point2f &center, const Size2f &size, const float angle)
+ContourImpl::ContourImpl(const Point2f &center, const Size2f &size, const float angle, Point2fSequence *vertexes)
     : Contour()
     , is_closed_(true)
     , path_(Geom::Ellipse(center.x, center.y, size.width, size.height, angle))
+    , vertexes_(std::move(*vertexes))
 {
 }
 

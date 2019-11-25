@@ -15,9 +15,12 @@ public:
     CV_WRAP static Ptr<Contour> GenEmpty();
     CV_WRAP static Ptr<Contour> GenRectangle(const Rect2f &rect);
     CV_WRAP static Ptr<Contour> GenRotatedRectangle(const RotatedRect &rotatedRect);
-    CV_WRAP static Ptr<Contour> GenCircle(const Point2f &center, const float radius, const float resolution, const cv::String &pointOrder);
-    CV_WRAP static Ptr<Contour> GenEllipse(const Point2f &center, const Size2f &size, const float resolution, const cv::String &pointOrder);
-    CV_WRAP static Ptr<Contour> GenRotatedEllipse(const Point2f &center, const Size2f &size, const float angle);
+    CV_WRAP static Ptr<Contour> GenCircle(const Point2f &center, const float radius, const float resolution, const cv::String &specification);
+    CV_WRAP static Ptr<Contour> GenCircleSector(const Point2f &center, const float radius, const float startAngle, const float endAngle, const float resolution, const cv::String &specification);
+    CV_WRAP static Ptr<Contour> GenEllipse(const Point2f &center, const Size2f &size, const float resolution, const cv::String &specification);
+    CV_WRAP static Ptr<Contour> GenEllipseSector(const Point2f &center, const Size2f &size, const float startAngle, const float endAngle, const float resolution, const cv::String &specification);
+    CV_WRAP static Ptr<Contour> GenRotatedEllipse(const Point2f &center, const Size2f &size, const float angle, const float resolution, const cv::String &specification);
+    CV_WRAP static Ptr<Contour> GenRotatedEllipseSector(const Point2f &center, const Size2f &size, const float angle, const float startAngle, const float endAngle, const float resolution, const cv::String &specification);
     CV_WRAP static Ptr<Contour> GenPolygon(const std::vector<Point2f> &vertexes);
     CV_WRAP static Ptr<Contour> GenPolyline(const std::vector<Point2f> &vertexes);
 

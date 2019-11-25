@@ -72,7 +72,7 @@ def SaveRegion(testId, rgn, sz=None):
     else:
         shape = (sz[0]+10, sz[1]+10, 4)
     image = numpy.zeros(shape, numpy.uint8)
-    r, image = rgn.Draw(image, (255, 255, 255, 255), (255, 255, 255, 255), 0, 0)
+    r, image = rgn.Draw(image, (255, 255, 255, 255))
 
     if not r:
         cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
@@ -96,7 +96,7 @@ def SaveRegions(testId, rgns, sz=None):
 
     image = numpy.zeros(shape, numpy.uint8)
     for rgn in rgns:
-        r, image = rgn.Draw(image, GetNextColor(), (0, 0, 0, 0), 0, 0)
+        r, image = rgn.Draw(image, GetNextColor())
 
     if not r:
         cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
@@ -120,7 +120,7 @@ def SaveContours(testId, cturs, sz=None):
 
     image = numpy.zeros(shape, numpy.uint8)
     for ctur in cturs:
-        r, image = ctur.Draw(image, GetNextColor(), 1, 0)
+        r, image = ctur.Draw(image, GetNextColor(), 1.5, 0)
 
     if not r:
         cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)

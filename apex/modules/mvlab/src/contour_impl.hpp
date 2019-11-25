@@ -19,7 +19,7 @@ public:
     ContourImpl(const RotatedRect &rotatedRect);
     ContourImpl(const Point2f &center, const float radius, Point2fSequence *vertexes);
     ContourImpl(const Point2f &center, const Size2f &size, Point2fSequence *vertexes);
-    ContourImpl(const Point2f &center, const Size2f &size, const float angle);
+    ContourImpl(const Point2f &center, const Size2f &size, const float angle, Point2fSequence *vertexes);
     ContourImpl(const Geom::Path &path, const bool closed);
     ContourImpl(const std::vector<Point2f> &vertexes, const bool closed);
     ContourImpl(Point2fSequence *vertexes, const bool closed);
