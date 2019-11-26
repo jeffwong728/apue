@@ -2,7 +2,6 @@
 #define __OPENCV_MVLAB_CONNECTION_HPP__
 
 #include <opencv2/mvlab/region.hpp>
-#include <opencv2/mvlab/region_collection.hpp>
 #include "region_impl.hpp"
 
 namespace cv {

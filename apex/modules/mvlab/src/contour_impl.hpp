@@ -15,12 +15,6 @@ class ContourImpl : public Contour
 {
 public:
     ContourImpl() : is_closed_(false) {}
-    ContourImpl(const Rect2f &rect);
-    ContourImpl(const RotatedRect &rotatedRect);
-    ContourImpl(const Point2f &center, const float radius, Point2fSequence *vertexes);
-    ContourImpl(const Point2f &center, const Size2f &size, Point2fSequence *vertexes);
-    ContourImpl(const Point2f &center, const Size2f &size, const float angle, Point2fSequence *vertexes);
-    ContourImpl(const Geom::Path &path, const bool closed);
     ContourImpl(const std::vector<Point2f> &vertexes, const bool closed);
     ContourImpl(Point2fSequence *vertexes, const bool closed);
 
@@ -33,20 +27,23 @@ public:
     int Count() const CV_OVERRIDE;
     double Length() const CV_OVERRIDE;
     double Area() const CV_OVERRIDE;
-    Point2d Centroid() const CV_OVERRIDE;
-    Rect BoundingBox() const CV_OVERRIDE;
+    cv::Point2d Centroid() const CV_OVERRIDE;
+    cv::Rect BoundingBox() const CV_OVERRIDE;
     Ptr<Contour> Simplify(const float tolerance) const CV_OVERRIDE;
     //Access
     int GetPoints(std::vector<Point2f> &vertexes) const CV_OVERRIDE;
     //Geometric Transformations
     cv::Ptr<Contour> Move(const cv::Point &delta) const CV_OVERRIDE;
     cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const CV_OVERRIDE;
+    //Features
+    bool TestClosed() const CV_OVERRIDE;
+    bool TestPoint(const cv::Point2f &point) const CV_OVERRIDE;
+    bool TestSelfIntersection() const CV_OVERRIDE;
 
 public:
     void Feed(Cairo::RefPtr<Cairo::Context> &cr) const;
 
 public:
-    const Geom::Path &GetPath() const { return *path_; }
     const Point2fSequence &GetVertexes() const { return vertexes_; }
 
 private:
@@ -55,9 +52,7 @@ private:
 
 private:
     const bool is_closed_;
-    const boost::optional<Geom::Path> path_;
     const Point2fSequence vertexes_;
-    mutable boost::optional<Point2f> start_;
     mutable boost::optional<double> length_;
     mutable boost::optional<double> area_;
     mutable boost::optional<cv::Point2d> centroid_;

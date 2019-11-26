@@ -34,11 +34,6 @@ class RegionImpl : public Region
 {
 public:
     RegionImpl() { }
-    RegionImpl(const Rect2f &rect);
-    RegionImpl(const RotatedRect &rotatedRect);
-    RegionImpl(const Point2f &center, const float radius);
-    RegionImpl(const Point2f &center, const Size2f &size);
-    RegionImpl(const Point2f &center, const Size2f &size, const float angle);
     RegionImpl(RunSequence *const runs);
 
 public:

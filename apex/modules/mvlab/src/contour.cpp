@@ -11,7 +11,7 @@ Ptr<Contour> Contour::GenEmpty()
     return makePtr<ContourImpl>();
 }
 
-Ptr<Contour> Contour::GenRectangle(const Rect2f &rect)
+Ptr<Contour> Contour::GenRectangle(const cv::Rect2f &rect)
 {
     Point2fSequence points;
     points.reserve(4);
@@ -22,14 +22,14 @@ Ptr<Contour> Contour::GenRectangle(const Rect2f &rect)
     return makePtr<ContourImpl>(&points, true);
 }
 
-Ptr<Contour> Contour::GenRotatedRectangle(const RotatedRect &rotatedRect)
+Ptr<Contour> Contour::GenRotatedRectangle(const cv::RotatedRect &rotatedRect)
 {
     Point2fSequence corners(4);
     rotatedRect.points(corners.data());
     return makePtr<ContourImpl>(&corners, true);
 }
 
-Ptr<Contour> Contour::GenCircle(const Point2f &center, const float radius, const float resolution, const cv::String &specification)
+Ptr<Contour> Contour::GenCircle(const cv::Point2f &center, const float radius, const float resolution, const cv::String &specification)
 {
     if (radius < 0.f || resolution < 0.00001f)
     {
@@ -60,10 +60,10 @@ Ptr<Contour> Contour::GenCircle(const Point2f &center, const float radius, const
     }
 
     corners.resize(std::distance(corners.data(), pCorner));
-    return makePtr<ContourImpl>(center, radius, &corners);
+    return makePtr<ContourImpl>(&corners, true);
 }
 
-Ptr<Contour> Contour::GenCircleSector(const Point2f &center,
+Ptr<Contour> Contour::GenCircleSector(const cv::Point2f &center,
     const float radius,
     const float startAngle,
     const float endAngle,
@@ -121,7 +121,7 @@ Ptr<Contour> Contour::GenCircleSector(const Point2f &center,
     return makePtr<ContourImpl>(&corners, !boost::contains(specification, "arc"));
 }
 
-Ptr<Contour> Contour::GenEllipse(const Point2f &center, const Size2f &size, const float resolution, const cv::String &specification)
+Ptr<Contour> Contour::GenEllipse(const cv::Point2f &center, const cv::Size2f &size, const float resolution, const cv::String &specification)
 {
     if (size.width < 0.f || size.height < 0.f || resolution < 0.00001f)
     {
@@ -153,11 +153,11 @@ Ptr<Contour> Contour::GenEllipse(const Point2f &center, const Size2f &size, cons
     }
 
     corners.resize(std::distance(corners.data(), pCorner));
-    return makePtr<ContourImpl>(center, size, &corners);
+    return makePtr<ContourImpl>(&corners, true);
 }
 
-Ptr<Contour> Contour::GenEllipseSector(const Point2f &center,
-    const Size2f &size,
+Ptr<Contour> Contour::GenEllipseSector(const cv::Point2f &center,
+    const cv::Size2f &size,
     const float startAngle,
     const float endAngle,
     const float resolution,
@@ -215,8 +215,8 @@ Ptr<Contour> Contour::GenEllipseSector(const Point2f &center,
     return makePtr<ContourImpl>(&corners, !boost::contains(specification, "arc"));
 }
 
-Ptr<Contour> Contour::GenRotatedEllipse(const Point2f &center,
-    const Size2f &size,
+Ptr<Contour> Contour::GenRotatedEllipse(const cv::Point2f &center,
+    const cv::Size2f &size,
     const float angle,
     const float resolution,
     const cv::String &specification)
@@ -258,11 +258,11 @@ Ptr<Contour> Contour::GenRotatedEllipse(const Point2f &center,
     }
 
     corners.resize(std::distance(corners.data(), pCorner));
-    return makePtr<ContourImpl>(center, size, angle, &corners);
+    return makePtr<ContourImpl>(&corners, true);
 }
 
-Ptr<Contour> Contour::GenRotatedEllipseSector(const Point2f &center,
-    const Size2f &size,
+Ptr<Contour> Contour::GenRotatedEllipseSector(const cv::Point2f &center,
+    const cv::Size2f &size,
     const float angle,
     const float startAngle,
     const float endAngle,
@@ -332,14 +332,107 @@ Ptr<Contour> Contour::GenRotatedEllipseSector(const Point2f &center,
     return makePtr<ContourImpl>(&corners, !boost::contains(specification, "arc"));
 }
 
-Ptr<Contour> Contour::GenPolygon(const std::vector<Point2f> &vertexes)
+Ptr<Contour> Contour::GenPolygon(const std::vector<cv::Point2f> &vertexes)
 {
     return makePtr<ContourImpl>(vertexes, true);
 }
 
-Ptr<Contour> Contour::GenPolyline(const std::vector<Point2f> &vertexes)
+Ptr<Contour> Contour::GenPolyline(const std::vector<cv::Point2f> &vertexes)
 {
     return makePtr<ContourImpl>(vertexes, false);
+}
+
+Ptr<Contour> Contour::GenPolygonRounded(const std::vector<cv::Point2f> &vertexes,
+    const std::vector<cv::Size2f> &radius,
+    const float samplingInterval)
+{
+    if (vertexes.size()<3 || vertexes.size() != radius.size() || samplingInterval < 0.00001f)
+    {
+        return makePtr<ContourImpl>();
+    }
+
+    std::vector<cv::Point2f>::const_pointer p0 = vertexes.data() + vertexes.size() - 1;
+    const std::vector<cv::Point2f>::const_pointer pend = vertexes.data() + vertexes.size();
+
+    float len = 0.f;
+    std::vector<cv::Point2f>::const_pointer p1 = vertexes.data();
+    for (; p1 != pend; p0=p1, ++p1)
+    {
+        len += Util::dist(p0, p1);
+    }
+
+    Point2fSequence corners;
+    corners.reserve(cvCeil((len+ vertexes.size()*samplingInterval)/ samplingInterval) + vertexes.size());
+
+    p0 = vertexes.data() + vertexes.size() - 2;
+    p1 = vertexes.data() + vertexes.size() - 1;
+
+    std::vector<cv::Size2f>::const_pointer  r2 = radius.data();
+    std::vector<cv::Point2f>::const_pointer p2 = vertexes.data();
+    std::vector<cv::Size2f>::const_pointer  r1 = radius.data() + radius.size() - 1;
+    const float tol = samplingInterval * samplingInterval;
+    const cv::Point2f *prev = p0;
+    for (; p2 != pend; p0 = p1, p1 = p2, r1 = r2, ++p2, ++r2)
+    {
+        const cv::Point2f m0 = Util::midPoint(p0, p1);
+        const cv::Point2f m1 = Util::midPoint(p1, p2);
+        const float l0 = Util::dist(p0, p1) / 2;
+        const float l1 = Util::dist(p1, p2) / 2;
+
+        if (l0 > samplingInterval && l1 > samplingInterval)
+        {
+            const float t0 = std::max(0.f, std::min(l0, r1->width)) / l0;
+            const float t1 = std::max(0.f, std::min(l1, r1->height)) / l0;
+
+            const cv::Point2f pi = Util::interPoint(t0, p1, &m0);
+            const cv::Point2f pf = Util::interPoint(t1, p1, &m1);
+
+            if (Util::farPoint(&m0, prev, tol))
+            {
+                corners.emplace_back(m0);
+                prev = &corners.back();
+            }
+
+            if (Util::farPoint(&pi, prev, tol))
+            {
+                corners.emplace_back(pi);
+                prev = &corners.back();
+            }
+
+            Geom::QuadraticBezier crv(Geom::Point(pi.x, pi.y), Geom::Point(p1->x, p1->y), Geom::Point(pf.x, pf.y));
+            const double clen = crv.length(0.001);
+            if (clen > samplingInterval)
+            {
+                const double dt = samplingInterval / clen;
+                for (double t = 0.0; t < 1.0; t += dt)
+                {
+                    const Geom::Point dpt = crv.pointAt(t);
+                    const cv::Point2f fpt{static_cast<float>(dpt.x()), static_cast<float>(dpt.y())};
+                    if (Util::farPoint(&fpt, prev, tol))
+                    {
+                        corners.emplace_back(fpt);
+                        prev = &corners.back();
+                    }
+                }
+            }
+
+            if (Util::farPoint(&pf, prev, tol))
+            {
+                corners.emplace_back(pf);
+                prev = &corners.back();
+            }
+        }
+        else
+        {
+            if (Util::farPoint(p1, prev, tol))
+            {
+                corners.emplace_back(*p1);
+                prev = &corners.back();
+            }
+        }
+    }
+
+    return makePtr<ContourImpl>(&corners, true);
 }
 
 }

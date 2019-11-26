@@ -4,7 +4,6 @@
 #include <opencv2/core.hpp>
 #include "opencv2/mvlab/region.hpp"
 #include "opencv2/mvlab/contour.hpp"
-#include "opencv2/mvlab/region_collection.hpp"
 
 namespace cv {
 namespace mvlab {

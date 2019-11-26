@@ -1,6 +1,5 @@
 #include "precomp.hpp"
 #include "region_impl.hpp"
-#include "region_collection_impl.hpp"
 #include "rtd_encoder.hpp"
 #include "utility.hpp"
 #include "connection.hpp"
@@ -11,67 +10,6 @@ namespace cv {
 namespace mvlab {
 
 extern RunSequence RunLengthEncode(const cv::Mat &imgMat, const int minGray, const int maxGray);
-
-RegionImpl::RegionImpl(const Rect2f &rect)
-    : RegionImpl()
-{
-    if (rect.width > 0.f && rect.height > 0.f)
-    {
-        RunSequence &rgnRuns = const_cast<RunSequence &>(rgn_runs_);
-        rgnRuns.reserve(cvCeil(rect.height));
-
-        int runIdx = 0;
-        for (float y = 0.f; y < rect.height; ++y)
-        {
-            rgnRuns.emplace_back(cvRound(y+rect.y), cvRound(rect.x), cvRound(rect.x + rect.width));
-            runIdx += 1;
-        }
-
-        contour_outers_.emplace_back(makePtr<ContourImpl>(rect));
-    }
-}
-
-RegionImpl::RegionImpl(const RotatedRect &rotatedRect)
-    : RegionImpl()
-{
-    Point2f corners[4];
-    rotatedRect.points(corners);
-
-    Geom::PathVector pv;
-    Geom::PathBuilder pb(pv);
-    pb.moveTo(Geom::Point(corners[0].x, corners[0].y));
-    pb.lineTo(Geom::Point(corners[1].x, corners[1].y));
-    pb.lineTo(Geom::Point(corners[2].x, corners[2].y));
-    pb.lineTo(Geom::Point(corners[3].x, corners[3].y));
-    pb.closePath();
-
-    FromPathVector(pv);
-    contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
-}
-
-RegionImpl::RegionImpl(const Point2f &center, const float radius)
-    : RegionImpl()
-{
-    Geom::PathVector pv(Geom::Path(Geom::Circle(center.x, center.y, radius)));
-    FromPathVector(pv);
-    contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
-}
-
-RegionImpl::RegionImpl(const Point2f &center, const Size2f &size)
-    : RegionImpl()
-{
-    Geom::PathVector pv(Geom::Path(Geom::Ellipse(center.x, center.y, size.width, size.height, 0.0)));
-    FromPathVector(pv);
-    contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
-}
-
-RegionImpl::RegionImpl(const Point2f &center, const Size2f &size, const float angle)
-    : RegionImpl()
-{
-    Geom::PathVector pv(Geom::Path(Geom::Ellipse(center.x, center.y, size.width, size.height, angle)));
-    FromPathVector(pv);
-    contour_outers_.emplace_back(makePtr<ContourImpl>(pv.front(), true));
-}
 
 RegionImpl::RegionImpl(RunSequence *const runs)
     : rgn_runs_(std::move(*runs))
@@ -183,7 +121,7 @@ cv::Point2d RegionImpl::Centroid() const
     return *centroid_;
 }
 
-Rect RegionImpl::BoundingBox() const
+cv::Rect RegionImpl::BoundingBox() const
 {
     GatherBasicFeatures();
     return *bbox_;

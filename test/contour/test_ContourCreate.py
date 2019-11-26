@@ -112,5 +112,14 @@ class TestContourCreate(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveContours(self.id(), [contr])
 
+    def test_Create_PolygonRounded_Contour(self):
+        startTime = time.perf_counter()
+        points = [(100, 100), (50, 200), (150, 150), (250, 200), (200, 100)]
+        contr = mvlab.Contour_GenPolygonRounded(points, [(10, 10), (5, 5), (5, 5), (5, 5), (10, 10)], 1)
+        endTime = time.perf_counter()
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), [contr])
+
 if __name__ == '__main__':
     unittest.main()

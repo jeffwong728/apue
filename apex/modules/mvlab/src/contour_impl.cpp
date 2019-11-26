@@ -5,63 +5,6 @@
 
 namespace cv {
 namespace mvlab {
-
-ContourImpl::ContourImpl(const Rect2f &rect)
-    : Contour()
-    , is_closed_(true)
-    , path_(Geom::Rect(Geom::Point(rect.tl().x, rect.tl().y), Geom::Point(rect.br().x, rect.br().y)))
-{
-}
-
-ContourImpl::ContourImpl(const RotatedRect &rotatedRect)
-    : Contour()
-    , is_closed_(true)
-{
-    Point2f corners[4];
-    rotatedRect.points(corners);
-
-    Geom::PathVector pv;
-    Geom::PathBuilder pb(pv);
-    pb.moveTo(Geom::Point(corners[0].x, corners[0].y));
-    pb.lineTo(Geom::Point(corners[1].x, corners[1].y));
-    pb.lineTo(Geom::Point(corners[2].x, corners[2].y));
-    pb.lineTo(Geom::Point(corners[3].x, corners[3].y));
-    pb.closePath();
-
-    const_cast<boost::optional<Geom::Path>&>(path_).emplace(pv[0]);
-}
-
-ContourImpl::ContourImpl(const Point2f &center, const float radius, Point2fSequence *vertexes)
-    : Contour()
-    , is_closed_(true)
-    , path_(Geom::Circle(center.x, center.y, radius))
-    , vertexes_(std::move(*vertexes))
-{
-}
-
-ContourImpl::ContourImpl(const Point2f &center, const Size2f &size, Point2fSequence *vertexes)
-    : Contour()
-    , is_closed_(true)
-    , path_(Geom::Ellipse(center.x, center.y, size.width, size.height, 0.))
-    , vertexes_(std::move(*vertexes))
-{
-}
-
-ContourImpl::ContourImpl(const Point2f &center, const Size2f &size, const float angle, Point2fSequence *vertexes)
-    : Contour()
-    , is_closed_(true)
-    , path_(Geom::Ellipse(center.x, center.y, size.width, size.height, angle))
-    , vertexes_(std::move(*vertexes))
-{
-}
-
-ContourImpl::ContourImpl(const Geom::Path &path, const bool closed)
-    : Contour()
-    , is_closed_(closed)
-    , path_(path)
-{
-}
-
 ContourImpl::ContourImpl(const std::vector<Point2f> &vertexes, const bool closed)
     : Contour()
     , is_closed_(closed)
@@ -165,14 +108,38 @@ double ContourImpl::Length() const
     if (length_ == boost::none)
     {
         double len = 0.;
-        if (!path_->empty())
+        if (vertexes_.size() > 2)
         {
-            for (const Geom::Curve &curve : *path_)
+            const int numPoints = static_cast<int>(vertexes_.size()) - 1;
+            constexpr int simdSize = 8;
+            const int regularNumPoints = numPoints & (-simdSize);
+
+            len += Util::dist(vertexes_[0], vertexes_[numPoints]);
+
+            int n = 0;
+            const cv::Point2f *pt = vertexes_.data();
+            for (; n < regularNumPoints; n += simdSize)
             {
-                len += curve.length();
+                vcl::Vec8f v1, v2;
+                v1.load(reinterpret_cast<const float *>(pt));
+                v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+                vcl::Vec8f xprev = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                vcl::Vec8f yprev = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+                v1.load(reinterpret_cast<const float *>(pt + 1));
+                v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
+                vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+                vcl::Vec8f dx = x - xprev;
+                vcl::Vec8f dy = y - yprev;
+                len += vcl::horizontal_add(vcl::sqrt(dx*dx+dy*dy));
+            }
+
+            for (; n < numPoints; ++n, ++pt)
+            {
+                len += Util::dist(pt, pt+1);
             }
         }
-
         length_ = len;
     }
 
@@ -183,26 +150,44 @@ double ContourImpl::Area() const
 {
     if (area_ == boost::none)
     {
-        if (is_closed_)
+        if (is_closed_ && vertexes_.size()>2)
         {
-            if (!vertexes_.empty())
-            {
-                area_ = cv::contourArea(vertexes_, false);
-            }
-            else if (path_ && !path_->empty())
-            {
-                double area = 0.0;
-                Geom::Point centroid;
-                Geom::centroid(Geom::paths_to_pw(Geom::PathVector(*path_)), centroid, area);
+            double area = 0;
+            const int numPoints = static_cast<int>(vertexes_.size()) - 1;
+            constexpr int simdSize = 8;
+            const int regularNumPoints = numPoints & (-simdSize);
 
-                area_ = std::abs(area);
-                centroid_.emplace(centroid.x(), centroid.y());
-            }
-            else
+            int n = 0;
+            const cv::Point2f *pt = vertexes_.data();
+            for (; n < regularNumPoints; n += simdSize)
             {
-                area_ = 0;
-                centroid_ = cv::Point2d();
+                vcl::Vec8f v1, v2;
+                v1.load(reinterpret_cast<const float *>(pt));
+                v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+                vcl::Vec8f xprev = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                vcl::Vec8f yprev = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+                v1.load(reinterpret_cast<const float *>(pt + 1));
+                v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
+                vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+                vcl::Vec8f dx = x + xprev;
+                vcl::Vec8f dy = y - yprev;
+                area += vcl::horizontal_add(dx*dy);
+                pt += simdSize;
             }
+
+            for (; n <= numPoints; ++n)
+            {
+                const int n1 = (n == numPoints) ? 0 : (n+1);
+                area += (vertexes_[n1].x + vertexes_[n].x)*(vertexes_[n1].y - vertexes_[n].y);
+            }
+
+            area_ = std::abs(area/2);
+        }
+        else
+        {
+            area_ = 0;
         }
     }
 
@@ -213,40 +198,63 @@ cv::Point2d ContourImpl::Centroid() const
 {
     if (centroid_ == boost::none)
     {
-        Area();
+        centroid_ = cv::Point2d();
     }
 
     return *centroid_;
 }
 
-Rect ContourImpl::BoundingBox() const
+cv::Rect ContourImpl::BoundingBox() const
 {
     if (bbox_ == boost::none)
     {
         if (!vertexes_.empty())
         {
-            bbox_ = cv::boundingRect(vertexes_);
-        }
-        else if (path_ && !path_->empty())
-        {
-            cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
-            cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
+            const int numPoints = static_cast<int>(vertexes_.size());
+            constexpr int simdSize = 8;
+            const int regularNumPoints = numPoints & (-simdSize);
 
-            cv::Rect rect;
-            if (!path_->empty())
+            vcl::Vec8f top(std::numeric_limits<float>::max());
+            vcl::Vec8f left(std::numeric_limits<float>::max());
+            vcl::Vec8f bot(std::numeric_limits<float>::lowest());
+            vcl::Vec8f right(std::numeric_limits<float>::lowest());
+
+            int n = 0;
+            const cv::Point2f *pt = vertexes_.data();
+            for (; n < regularNumPoints; n += simdSize)
             {
-                Geom::OptRect oRect = path_->boundsFast();
-                if (oRect)
-                {
+                vcl::Vec8f v1, v2;
+                v1.load(reinterpret_cast<const float *>(pt));
+                v2.load(reinterpret_cast<const float *>(pt + simdSize/2));
+                vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
 
-                    rect.x = cvFloor(oRect->left());
-                    rect.y = cvFloor(oRect->top());
-                    rect.width = cvCeil(oRect->width());
-                    rect.height = cvCeil(oRect->height());
-                }
+                top   = vcl::min(top, x);
+                left  = vcl::min(left, y);
+                bot   = vcl::max(bot, x);
+                right = vcl::max(right, y);
+
+                pt += simdSize;
             }
 
-            bbox_ = rect;
+            float xmin = vcl::horizontal_min(left);
+            float xmax = vcl::horizontal_max(right);
+            float ymin = vcl::horizontal_min(top);
+            float ymax = vcl::horizontal_max(bot);
+            for (; n < numPoints; ++n, ++pt)
+            {
+                xmin = std::min(xmin, pt->x);
+                ymin = std::min(ymin, pt->y);
+                xmax = std::max(xmax, pt->x);
+                ymax = std::max(ymax, pt->y);
+            }
+
+            const int x = cvFloor(xmin);
+            const int y = cvFloor(ymin);
+            const int w = cvCeil(xmax) - x;
+            const int h = cvCeil(ymax) - y;
+
+            bbox_ = cv::Rect(x, y, w, h);
         }
         else
         {
@@ -295,6 +303,21 @@ cv::Ptr<Contour> ContourImpl::Zoom(const cv::Size2f &scale) const
     return makePtr<ContourImpl>();
 }
 
+bool ContourImpl::TestClosed() const
+{
+    return is_closed_;
+}
+
+bool ContourImpl::TestPoint(const cv::Point2f &point) const
+{
+    return false;
+}
+
+bool ContourImpl::TestSelfIntersection() const
+{
+    return false;
+}
+
 void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
 {
     const auto &vertexes = GetVertexes();
@@ -311,14 +334,6 @@ void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
             cr->close_path();
         }
     }
-    else
-    {
-        if (path_ && !path_->empty())
-        {
-            Geom::CairoPathSink cairoPathSink(cr->cobj());
-            cairoPathSink.feed(*path_);
-        }
-    }
 }
 
 void ContourImpl::ClearCacheData()
@@ -328,7 +343,6 @@ void ContourImpl::ClearCacheData()
     area_     = boost::none;
     centroid_ = boost::none;
     bbox_     = boost::none;
-    start_    = boost::none;
 }
 
 void ContourImpl::DrawVerified(Mat &img, const Scalar& color, const float thickness, const int style) const
