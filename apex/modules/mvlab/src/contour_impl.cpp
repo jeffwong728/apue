@@ -150,45 +150,7 @@ double ContourImpl::Area() const
 {
     if (area_ == boost::none)
     {
-        if (is_closed_ && vertexes_.size()>2)
-        {
-            double area = 0;
-            const int numPoints = static_cast<int>(vertexes_.size()) - 1;
-            constexpr int simdSize = 8;
-            const int regularNumPoints = numPoints & (-simdSize);
-
-            int n = 0;
-            const cv::Point2f *pt = vertexes_.data();
-            for (; n < regularNumPoints; n += simdSize)
-            {
-                vcl::Vec8f v1, v2;
-                v1.load(reinterpret_cast<const float *>(pt));
-                v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
-                vcl::Vec8f xprev = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                vcl::Vec8f yprev = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
-
-                v1.load(reinterpret_cast<const float *>(pt + 1));
-                v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
-                vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
-                vcl::Vec8f dx = x + xprev;
-                vcl::Vec8f dy = y - yprev;
-                area += vcl::horizontal_add(dx*dy);
-                pt += simdSize;
-            }
-
-            for (; n <= numPoints; ++n)
-            {
-                const int n1 = (n == numPoints) ? 0 : (n+1);
-                area += (vertexes_[n1].x + vertexes_[n].x)*(vertexes_[n1].y - vertexes_[n].y);
-            }
-
-            area_ = std::abs(area/2);
-        }
-        else
-        {
-            area_ = 0;
-        }
+        AreaCenter();
     }
 
     return *area_;
@@ -198,7 +160,7 @@ cv::Point2d ContourImpl::Centroid() const
 {
     if (centroid_ == boost::none)
     {
-        centroid_ = cv::Point2d();
+        AreaCenter();
     }
 
     return *centroid_;
@@ -293,14 +255,28 @@ int ContourImpl::GetPoints(std::vector<Point2f> &points) const
     }
 }
 
-cv::Ptr<Contour> ContourImpl::Move(const cv::Point &delta) const
+cv::Ptr<Contour> ContourImpl::Move(const cv::Point2f &delta) const
 {
-    return makePtr<ContourImpl>();
+    Point2fSequence vertexes(vertexes_.cbegin(), vertexes_.cend());
+    for (auto &v : vertexes)
+    {
+        v.x += delta.x;
+        v.y += delta.y;
+    }
+
+    return makePtr<ContourImpl>(&vertexes, is_closed_);
 }
 
 cv::Ptr<Contour> ContourImpl::Zoom(const cv::Size2f &scale) const
 {
-    return makePtr<ContourImpl>();
+    Point2fSequence vertexes(vertexes_.cbegin(), vertexes_.cend());
+    for (auto &v : vertexes)
+    {
+        v.x *= scale.width;
+        v.y *= scale.height;
+    }
+
+    return makePtr<ContourImpl>(&vertexes, is_closed_);
 }
 
 bool ContourImpl::TestClosed() const
@@ -336,15 +312,6 @@ void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
     }
 }
 
-void ContourImpl::ClearCacheData()
-{
-    length_   = boost::none;
-    bbox_     = boost::none;
-    area_     = boost::none;
-    centroid_ = boost::none;
-    bbox_     = boost::none;
-}
-
 void ContourImpl::DrawVerified(Mat &img, const Scalar& color, const float thickness, const int style) const
 {
     auto imgSurf = Cairo::ImageSurface::create(img.data, Cairo::Format::FORMAT_RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
@@ -361,6 +328,65 @@ void ContourImpl::DrawVerified(Mat &img, const Scalar& color, const float thickn
     cr->set_line_width(thickness);
     cr->set_source_rgba(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, color[3] / 255.0);
     cr->stroke();
+}
+
+void ContourImpl::AreaCenter() const
+{
+    if (is_closed_ && vertexes_.size() > 2)
+    {
+        double area = 0;
+        double cx = 0, cy = 0;
+        const int numPoints = static_cast<int>(vertexes_.size()) - 1;
+        constexpr int simdSize = 8;
+        const int regularNumPoints = numPoints & (-simdSize);
+
+        int n = 0;
+        const cv::Point2f *pt = vertexes_.data();
+        for (; n < regularNumPoints; n += simdSize)
+        {
+            vcl::Vec8f v1, v2;
+            v1.load(reinterpret_cast<const float *>(pt));
+            v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+            vcl::Vec8f xprev = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+            vcl::Vec8f yprev = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+            v1.load(reinterpret_cast<const float *>(pt + 1));
+            v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
+            vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+            vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+            vcl::Vec8f dx = xprev * y;
+            vcl::Vec8f dy = x * yprev;
+            vcl::Vec8f a = dx - dy;
+            area += vcl::horizontal_add(a);
+            cx += vcl::horizontal_add((x + xprev)*a);
+            cy += vcl::horizontal_add((y + yprev)*a);
+            pt += simdSize;
+        }
+
+        for (; n <= numPoints; ++n)
+        {
+            const int n1 = (n == numPoints) ? 0 : (n + 1);
+            const double a = vertexes_[n].x*vertexes_[n1].y - vertexes_[n1].x * vertexes_[n].y;
+            area += a;
+            cx += (vertexes_[n].x + vertexes_[n1].x)*a;
+            cy += (vertexes_[n].y + vertexes_[n1].y)*a;
+        }
+
+        area_ = std::abs(area / 2);
+        if (*area_ > 0.)
+        {
+            centroid_ = cv::Point2d(cx / (3 * area), cy / (3 * area));
+        }
+        else
+        {
+            centroid_ = cv::Point2d();
+        }
+    }
+    else
+    {
+        area_ = 0;
+        centroid_ = cv::Point2d();
+    }
 }
 
 }

@@ -37,7 +37,7 @@ public:
     CV_WRAP virtual cv::Rect BoundingBox() const = 0;
     CV_WRAP virtual Ptr<Contour> Simplify(const float tolerance) const = 0;
     CV_WRAP virtual int GetPoints(CV_OUT std::vector<cv::Point2f> &vertexes) const = 0;
-    CV_WRAP virtual cv::Ptr<Contour> Move(const cv::Point &delta) const = 0;
+    CV_WRAP virtual cv::Ptr<Contour> Move(const cv::Point2f &delta) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const = 0;
     CV_WRAP virtual bool TestClosed() const = 0;
     CV_WRAP virtual bool TestPoint(const cv::Point2f &point) const = 0;

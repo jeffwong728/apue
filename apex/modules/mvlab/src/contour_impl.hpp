@@ -33,7 +33,7 @@ public:
     //Access
     int GetPoints(std::vector<Point2f> &vertexes) const CV_OVERRIDE;
     //Geometric Transformations
-    cv::Ptr<Contour> Move(const cv::Point &delta) const CV_OVERRIDE;
+    cv::Ptr<Contour> Move(const cv::Point2f &delta) const CV_OVERRIDE;
     cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const CV_OVERRIDE;
     //Features
     bool TestClosed() const CV_OVERRIDE;
@@ -47,8 +47,8 @@ public:
     const Point2fSequence &GetVertexes() const { return vertexes_; }
 
 private:
-    void ClearCacheData();
     void DrawVerified(Mat &img, const Scalar& color, const float thickness, const int style) const;
+    void AreaCenter() const;
 
 private:
     const bool is_closed_;
