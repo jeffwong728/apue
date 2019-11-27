@@ -49,12 +49,11 @@ class TestContourFeatures(unittest.TestCase):
     def test_Contour_Length(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
         print('Contour Number of Points: {0:d}'.format(contr.Count()))
-
         startTime = time.perf_counter()
         len = contr.Length()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), endTime-startTime)
-        self.assertAlmostEqual(len, 2*math.pi*500, delta=0.5)
+        self.assertAlmostEqual(len, 2*math.pi*500, delta=0.001)
 
         contr = mvlab.Contour_GenEmpty()
         self.assertAlmostEqual(contr.Length(), 0)
@@ -129,6 +128,32 @@ class TestContourFeatures(unittest.TestCase):
         x, y = contr.Centroid()
         self.assertAlmostEqual(x, 2)
         self.assertAlmostEqual(y, 2)
+
+    def test_Contour_Point(self):
+        contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
+        print('Contour Number of Points: {0:d}'.format(contr.Count()))
+
+        startTime = time.perf_counter()
+        b = contr.TestPoint((1000, 1000))
+        endTime = time.perf_counter()
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        self.assertTrue(b)
+        points = [(100, 100), (100, 200), (200, 200), (200, 100)]
+        contr = mvlab.Contour_GenPolygon(points)
+        self.assertTrue(contr.TestPoint((150, 150)))
+        self.assertFalse(contr.TestPoint((150, 50)))
+        self.assertFalse(contr.TestPoint((150, 250)))
+        self.assertFalse(contr.TestPoint((50, 150)))
+        self.assertFalse(contr.TestPoint((250, 150)))
+
+        points = [(15, 190), (230, 190), (230, 45), (50, 45), (50, 100), (185, 100), (185, 145), (115, 145), (115, 10), (15, 10)]
+        contr = mvlab.Contour_GenPolygon(points)
+        self.assertTrue(contr.TestPoint((95, 115)))
+        self.assertFalse(contr.TestPoint((150, 120)))
+        self.assertFalse(contr.TestPoint((80, 70)))
+
+        rgn = mvlab.Region_GenPolygon(points)
+        extradata.SaveRegion(self.id(), rgn)
 
 if __name__ == '__main__':
     unittest.main()

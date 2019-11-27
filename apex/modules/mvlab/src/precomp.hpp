@@ -70,6 +70,11 @@
 #include <2geom/cairo-path-sink.h>
 #pragma warning( pop )
 
+constexpr int XY_SHIFT = 10;
+constexpr int XY_DELTA = 1 << XY_SHIFT >> 1;
+constexpr int XY_ONE = 1 << XY_SHIFT;
+constexpr float F_XY_ONE = 1 << XY_SHIFT;
+
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point2f> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point2d> : boost::true_type {};

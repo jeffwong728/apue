@@ -49,10 +49,13 @@ public:
 private:
     void DrawVerified(Mat &img, const Scalar& color, const float thickness, const int style) const;
     void AreaCenter() const;
+    void ChangedCoordinatesToFixed() const;
 
 private:
     const bool is_closed_;
     const Point2fSequence vertexes_;
+    mutable UScalableIntSequence x_fixed_;
+    mutable UScalableIntSequence y_fixed_;
     mutable boost::optional<double> length_;
     mutable boost::optional<double> area_;
     mutable boost::optional<cv::Point2d> centroid_;

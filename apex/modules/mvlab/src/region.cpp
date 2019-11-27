@@ -90,11 +90,6 @@ static cv::Point2f getIntersection3(const cv::Point2f &p0, const cv::Point2f &p1
 
 static RunSequence getConvexPoly(const cv::Point2f *vf, int npts)
 {
-    constexpr int shift = 10;
-    constexpr int delta = 1 << shift >> 1;
-    constexpr int XY_ONE = 1 << shift;
-    constexpr float F_XY_ONE = 1 << shift;
-
     UScalablePointSequence v(npts);
     const UScalablePointSequence::pointer pvEnd = v.data() + npts;
     for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
@@ -131,10 +126,10 @@ static RunSequence getConvexPoly(const cv::Point2f *vf, int npts)
         xmin = std::min(xmin, p.x);
     }
 
-    xmin = (xmin + delta) >> shift;
-    xmax = (xmax + delta) >> shift;
-    ymin = (ymin + delta) >> shift;
-    ymax = (ymax + delta) >> shift;
+    xmin = (xmin + XY_DELTA) >> XY_SHIFT;
+    xmax = (xmax + XY_DELTA) >> XY_SHIFT;
+    ymin = (ymin + XY_DELTA) >> XY_SHIFT;
+    ymax = (ymax + XY_DELTA) >> XY_SHIFT;
 
     if (ymin > ymax)
     {
@@ -166,7 +161,7 @@ static RunSequence getConvexPoly(const cv::Point2f *vf, int npts)
 
                     for (; edges-- > 0; )
                     {
-                        ty = (v[idx].y + delta) >> shift;
+                        ty = (v[idx].y + XY_DELTA) >> XY_SHIFT;
                         if (ty > y)
                         {
                             int xs = v[idx0].x;
@@ -196,8 +191,8 @@ static RunSequence getConvexPoly(const cv::Point2f *vf, int npts)
         }
 
         pResRun->row  = y;
-        pResRun->colb = (edge[left].x + delta) >> shift;
-        pResRun->cole  = ((edge[right].x + delta) >> shift) + 1;
+        pResRun->colb = (edge[left].x + XY_DELTA) >> XY_SHIFT;
+        pResRun->cole  = ((edge[right].x + XY_DELTA) >> XY_SHIFT) + 1;
         pResRun->label = 0;
         pResRun += 1;
 
@@ -211,16 +206,14 @@ static RunSequence getConvexPoly(const cv::Point2f *vf, int npts)
 
 static void collectPolyEdges_(const cv::Point* v, const int count, UScalablePolyEdgeSequence &edges)
 {
-    constexpr int shift = 10;
-    constexpr int delta = 1 << shift >> 1;
     cv::Point pt0 = v[count - 1], pt1;
-    pt0.y = (pt0.y + delta) >> shift;
+    pt0.y = (pt0.y + XY_DELTA) >> XY_SHIFT;
 
     UScalablePolyEdgeSequence::pointer pEdge = edges.data();
     for (int i = 0; i < count; i++, pt0 = pt1)
     {
         pt1 = v[i];
-        pt1.y = (pt1.y + delta) >> shift;
+        pt1.y = (pt1.y + XY_DELTA) >> XY_SHIFT;
 
         if (pt0.y == pt1.y)
             continue;
@@ -247,11 +240,6 @@ static void collectPolyEdges_(const cv::Point* v, const int count, UScalablePoly
 
 static RunSequence getPoly_(const cv::Point2f *vf, int npts)
 {
-    constexpr int shift = 10;
-    constexpr int delta = 1 << shift >> 1;
-    constexpr int XY_ONE = 1 << shift;
-    constexpr float F_XY_ONE = 1 << shift;
-
     UScalablePointSequence v(npts);
     const UScalablePointSequence::pointer pvEnd = v.data() + npts;
     for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
@@ -338,13 +326,13 @@ static RunSequence getPoly_(const cv::Point2f *vf, int npts)
                 int x1, x2;
                 if (keep_prelast->x > prelast->x)
                 {
-                    x1 = prelast->x >> shift;
-                    x2 = (keep_prelast->x + delta) >> shift;
+                    x1 = prelast->x >> XY_SHIFT;
+                    x2 = (keep_prelast->x + XY_DELTA) >> XY_SHIFT;
                 }
                 else
                 {
-                    x1 = keep_prelast->x >> shift;
-                    x2 = (prelast->x + delta) >> shift;
+                    x1 = keep_prelast->x >> XY_SHIFT;
+                    x2 = (prelast->x + XY_DELTA) >> XY_SHIFT;
                 }
 
                 if (y== dstRuns.back().row && x1 <= dstRuns.back().cole)

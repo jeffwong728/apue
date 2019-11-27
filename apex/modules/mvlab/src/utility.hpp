@@ -28,6 +28,11 @@ public:
     static inline cv::Point2f interPoint(const float t, const cv::Point2f *p0, const cv::Point2f *p1);
     static inline bool nearPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol);
     static inline bool farPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol);
+    static inline cv::Point changedToFixed(const cv::Point2f &point);
+    static inline int isLeft(const cv::Point &P0, const cv::Point &P1, const cv::Point &P2);
+    static inline float isLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2);
+    static inline int isLeft(const int P0x, const int P0y, const int P1x, const int P1y, const int P2x, const int P2y);
+    static inline vcl::Vec8f isLeft(const vcl::Vec8f &P0x, const vcl::Vec8f &P0y, const vcl::Vec8f &P1x, const vcl::Vec8f &P1y, const vcl::Vec8f &P2x, const vcl::Vec8f &P2y);
 };
 
 inline float Util::constrainAngle(float x)
@@ -66,6 +71,33 @@ inline bool Util::nearPoint(const cv::Point2f *p0, const cv::Point2f *p1, const 
 inline bool Util::farPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol)
 {
     return (square(p1->x - p0->x) + square(p1->y - p0->y)) > tol;
+}
+
+inline cv::Point Util::changedToFixed(const cv::Point2f &point)
+{
+    return cv::Point(cvRound(point.x * F_XY_ONE), cvRound(point.y * F_XY_ONE));
+}
+
+inline int Util::isLeft(const cv::Point &P0, const cv::Point &P1, const cv::Point &P2)
+{
+    return (P2.x - P0.x) * (P1.y - P0.y) - (P1.x - P0.x) * (P2.y - P0.y);
+}
+
+inline float Util::isLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2)
+{
+    return (P2.x - P0.x) * (P1.y - P0.y) - (P1.x - P0.x) * (P2.y - P0.y);
+}
+
+inline int Util::isLeft(const int P0x, const int P0y, const int P1x, const int P1y, const int P2x, const int P2y)
+{
+    return (P2x - P0x) * (P1y - P0y) - (P1x - P0x) * (P2y - P0y);
+}
+
+inline vcl::Vec8f Util::isLeft(const vcl::Vec8f &P0x, const vcl::Vec8f &P0y,
+    const vcl::Vec8f &P1x, const vcl::Vec8f &P1y,
+    const vcl::Vec8f &P2x, const vcl::Vec8f &P2y)
+{
+    return (P2x - P0x) * (P1y - P0y) - (P1x - P0x) * (P2y - P0y);
 }
 
 }

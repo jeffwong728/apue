@@ -133,6 +133,7 @@ double ContourImpl::Length() const
                 vcl::Vec8f dx = x - xprev;
                 vcl::Vec8f dy = y - yprev;
                 len += vcl::horizontal_add(vcl::sqrt(dx*dx+dy*dy));
+                pt += simdSize;
             }
 
             for (; n < numPoints; ++n, ++pt)
@@ -153,7 +154,7 @@ double ContourImpl::Area() const
         AreaCenter();
     }
 
-    return *area_;
+    return std::abs(*area_ / 2);
 }
 
 cv::Point2d ContourImpl::Centroid() const
@@ -286,7 +287,65 @@ bool ContourImpl::TestClosed() const
 
 bool ContourImpl::TestPoint(const cv::Point2f &point) const
 {
-    return false;
+    if (!is_closed_ || vertexes_.size() < 3)
+    {
+        return false;
+    }
+
+    constexpr int simdSize = 8;
+    const int numPoints = static_cast<int>(vertexes_.size()-1);
+    const int regularNumPoints = numPoints & (-simdSize);
+
+    int n = 0;
+    int wn = 0;
+    const cv::Point2f *pt  = vertexes_.data();
+    const cv::Point2f *pts = vertexes_.data();
+    const cv::Point2f *pte = vertexes_.data() + vertexes_.size() - 1;
+    const vcl::Vec8f Px(point.x);
+    const vcl::Vec8f Py(point.y);
+    for (; n < regularNumPoints; n += simdSize)
+    {
+        vcl::Vec8f v1, v2;
+        v1.load(reinterpret_cast<const float *>(pt));
+        v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+        vcl::Vec8f xi = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+        vcl::Vec8f yi = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+        v1.load(reinterpret_cast<const float *>(pt + 1));
+        v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
+        vcl::Vec8f xi1 = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+        vcl::Vec8f yi1 = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+        vcl::Vec8fb c0 = yi >= Py;
+        vcl::Vec8fb c1 = yi1 < Py;
+        vcl::Vec8f  l0 = Util::isLeft(xi, yi, xi1, yi1, Px, Py);
+        vcl::Vec8fb c2 = l0 > 0;
+        vcl::Vec8fb c3 = l0 < 0;
+        wn += vcl::horizontal_count(c0 && c1 && c2);
+        wn -= vcl::horizontal_count((!c0) && (!c1) && c3);
+
+        pt += simdSize;
+    }
+
+    for (; n <= numPoints; ++n, ++pt)
+    {
+        const cv::Point2f *pt1 = (pt==pte) ? pts : (pt + 1);
+        if (pt->y >= point.y) {
+            if (pt1->y < point.y)
+            {
+                if (Util::isLeft(*pt, *pt1, point) > 0)
+                    ++wn;
+            }
+        } else {
+            if (pt1->y >= point.y)
+            {
+                if (Util::isLeft(*pt, *pt1, point) < 0)
+                    --wn;
+            }
+        }
+    }
+
+    return wn & 1;
 }
 
 bool ContourImpl::TestSelfIntersection() const
@@ -372,8 +431,8 @@ void ContourImpl::AreaCenter() const
             cy += (vertexes_[n].y + vertexes_[n1].y)*a;
         }
 
-        area_ = std::abs(area / 2);
-        if (*area_ > 0.)
+        area_ = area;
+        if (std::abs(area) > 0.)
         {
             centroid_ = cv::Point2d(cx / (3 * area), cy / (3 * area));
         }
@@ -386,6 +445,49 @@ void ContourImpl::AreaCenter() const
     {
         area_ = 0;
         centroid_ = cv::Point2d();
+    }
+}
+
+void ContourImpl::ChangedCoordinatesToFixed() const
+{
+    if (!vertexes_.empty() && x_fixed_.empty())
+    {
+        constexpr int simdSize = 8;
+        const int numPoints = static_cast<int>(vertexes_.size());
+        const int regularNumPoints = numPoints & (-simdSize);
+
+        x_fixed_.resize(vertexes_.size()+1);
+        y_fixed_.resize(vertexes_.size()+1);
+
+        int n = 0;
+        const cv::Point2f *pt = vertexes_.data();
+        int *px = x_fixed_.data();
+        int *py = y_fixed_.data();
+        vcl::Vec8f a(F_XY_ONE);
+        for (; n < regularNumPoints; n += simdSize)
+        {
+            vcl::Vec8f v1, v2;
+            v1.load(reinterpret_cast<const float *>(pt));
+            v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+            vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+            vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+            vcl::Vec8i ix = vcl::roundi(x*a);
+            vcl::Vec8i iy = vcl::roundi(y*a);
+            ix.store(px);
+            iy.store(py);
+            pt += simdSize;
+            px += simdSize;
+            py += simdSize;
+        }
+
+        for (; n < numPoints; ++n, ++pt, ++px, ++py)
+        {
+            *px = cvRound(pt->x * F_XY_ONE);
+            *py = cvRound(pt->y * F_XY_ONE);
+        }
+
+        x_fixed_.back() = x_fixed_.front();
+        y_fixed_.back() = y_fixed_.front();
     }
 }
 
