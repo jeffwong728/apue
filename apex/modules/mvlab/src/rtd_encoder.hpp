@@ -30,8 +30,7 @@ public:
     static inline void GenerateRDCodes(const ScalableIntSequence &P_BUFFER, const ScalableIntSequence &C_BUFFER, const int l, RDEntry *&pRDList);
 
 protected:
-    RDEntry *rd_list_;
-    RDEntry *rd_list_end_;
+    ao::uvector<RDEntry, MyAlloc<RDEntry>> rd_list_;
 };
 
 class RunLengthRDSerialEncoder : public RDEncoder

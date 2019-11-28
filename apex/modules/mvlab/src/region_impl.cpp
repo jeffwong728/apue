@@ -167,7 +167,7 @@ cv::Ptr<Contour> RegionImpl::GetConvex() const
     if (contour)
     {
         cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
-        if (contImpl)
+        if (contImpl && !contImpl->Empty())
         {
             Point2fSequence cvxPoints;
             cv::convexHull(contImpl->GetVertexes(), cvxPoints);
@@ -200,7 +200,7 @@ cv::Ptr<Contour> RegionImpl::GetPolygon(const float tolerance) const
     if (contour)
     {
         cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
-        if (contImpl)
+        if (contImpl && !contImpl->Empty())
         {
             Point2fSequence approxPoints;
             cv::approxPolyDP(contImpl->GetVertexes(), approxPoints, tolerance, true);
@@ -283,7 +283,7 @@ cv::Ptr<Region> RegionImpl::SymmDifference(const cv::Ptr<Region> &otherRgn) cons
     return makePtr<RegionImpl>();
 }
 
-cv::Ptr<Region> RegionImpl::Union1(const std::vector<cv::Ptr<Region>> &otherRgns) const
+cv::Ptr<Region> RegionImpl::Union1(const std::vector<cv::Ptr<Region>> &/*otherRgns*/) const
 {
     return makePtr<RegionImpl>();
 }
@@ -423,7 +423,7 @@ cv::Ptr<Region> RegionImpl::Zoom(const cv::Size2f &scale) const
         if (contour)
         {
             cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
-            if (contImpl)
+            if (contImpl && !contImpl->Empty())
             {
                 Point2fSequence points(contImpl->GetVertexes().cbegin(), contImpl->GetVertexes().cend());
                 for (cv::Point2f &point : points)
@@ -547,7 +547,7 @@ void RegionImpl::DrawVerified(Mat &img, const Scalar& fillColor) const
     cr->fill();
 }
 
-void RegionImpl::DrawVerifiedGray(Mat &img, const Scalar& fillColor) const
+void RegionImpl::DrawVerifiedGray(Mat &/*img*/, const Scalar& fillColor) const
 {
     const uint8_t grayVal = cv::saturate_cast<uint8_t>((fillColor[0] + fillColor[1] + fillColor[2]) / 3);
 }

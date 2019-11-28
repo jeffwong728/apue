@@ -9,7 +9,7 @@ namespace mvlab {
 
 static std::map<cv::String, cv::String> g_GlobalOptions;
 
-int Initialize(const cv::String& fileName)
+int Initialize(const cv::String& /*fileName*/)
 {
     int inset = vcl::instrset_detect();
     if (inset < 8)

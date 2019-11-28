@@ -113,7 +113,7 @@ RunSequence RegionComplementOp::Do(const RunSequence &srcRuns, const cv::Rect &r
         pResRun->row = cur1; pResRun->colb = colMin; pResRun->cole = colMax; pResRun->label = 0;
     }
 
-    assert(std::distance(dstRuns.data(), pResRun) == dstRuns.size());
+    assert(std::distance(dstRuns.data(), pResRun) == (std::ptrdiff_t)dstRuns.size());
     return dstRuns;
 }
 
@@ -195,7 +195,7 @@ RunSequence RegionDifferenceOp::Do(const RunSequence &srcRuns1, const RunSequenc
         pResRun->row = cur1->row; pResRun->colb = cur1->colb; pResRun->cole = cur1->cole; pResRun->label = 0;
     }
 
-    assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());
+    assert(std::distance(dstRuns.data(), pResRun) <= (std::ptrdiff_t)dstRuns.size());
     dstRuns.resize(std::distance(dstRuns.data(), pResRun));
 
     return dstRuns;
@@ -299,7 +299,7 @@ RunSequence RegionSymmDifferenceOp::Do(const RunSequence &srcRuns1, const RunSeq
         pResRun->row = cur2->row; pResRun->colb = cur2->colb; pResRun->cole = cur2->cole; pResRun->label = 0;
     }
 
-    assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());
+    assert(std::distance(dstRuns.data(), pResRun) <= (std::ptrdiff_t)dstRuns.size());
     dstRuns.resize(std::distance(dstRuns.data(), pResRun));
 
     return dstRuns;
@@ -347,7 +347,7 @@ RunSequence RegionIntersectionOp::Do(const RunSequence &srcRuns1, const RunSeque
         }
     }
 
-    assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());
+    assert(std::distance(dstRuns.data(), pResRun) <= (std::ptrdiff_t)dstRuns.size());
     dstRuns.resize(std::distance(dstRuns.data(), pResRun));
 
     return dstRuns;
@@ -453,7 +453,7 @@ RunSequence RegionUnion2Op::Do(const RunSequence &srcRuns1, const RunSequence &s
         }
     }
 
-    assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());
+    assert(std::distance(dstRuns.data(), pResRun) <= (std::ptrdiff_t)dstRuns.size());
     dstRuns.resize(std::distance(dstRuns.data(), pResRun));
 
     return dstRuns;

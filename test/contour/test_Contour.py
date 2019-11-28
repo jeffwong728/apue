@@ -24,7 +24,7 @@ class TestContour(unittest.TestCase):
         outer = rgn.GetContour()
 
         self.assertEqual(r, 0, '2Box contour number error')
-        self.assertAlmostEqual(outer.Simplify(1.0).Area(), 150.0)
+        self.assertAlmostEqual(outer.Simplify(1.0).GetArea()[0], 150.0)
 
     def test_2HBox_Contour(self):
         image = numpy.zeros((32, 64, 1), numpy.uint8)
@@ -34,7 +34,7 @@ class TestContour(unittest.TestCase):
         outer = rgn.GetContour()
 
         self.assertEqual(r, 0, '2Box contour number error')
-        self.assertAlmostEqual(outer.Simplify(1.0).Area(), 150.0)
+        self.assertAlmostEqual(outer.Simplify(1.0).GetArea()[0], 150.0)
 
     def test_Contour_Points(self):
         image = numpy.zeros((48, 64, 1), numpy.uint8)
@@ -116,12 +116,12 @@ class TestContour(unittest.TestCase):
         bbox = rgn.BoundingBox()
         srgn = rgn.Move((-bbox[0]+10, -bbox[1]+10))
         souter = srgn.GetContour()
-        print("Before Simplify: {0:d}".format(souter.Count()), end=os.linesep)
+        print("Before Simplify: {0:d}".format(souter.CountPoints()[0][0]), end=os.linesep)
 
         startTime = time.perf_counter()
         souter = souter.Simplify(1)
         endTime = time.perf_counter()
-        print("After Simplify: {0:d}".format(souter.Count()), end=os.linesep)
+        print("After Simplify: {0:d}".format(souter.CountPoints()[0][0]), end=os.linesep)
 
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         rgn = rgn.Move((-bbox[0]+10, -bbox[1]+bbox[3]+20))

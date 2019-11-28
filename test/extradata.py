@@ -113,7 +113,8 @@ def SaveContours(testId, cturs, sz=None):
     if not sz:
         sz = (0, 0, 0, 0)
         for ctur in cturs:
-            sz = RectUnion(sz, ctur.BoundingBox())
+            for box in ctur.GetBoundingBox():
+                sz = RectUnion(sz, box)
         shape = (sz[3]+10, sz[2]+10, 4)
     else:
         shape = (sz[0]+10, sz[1]+10, 4)

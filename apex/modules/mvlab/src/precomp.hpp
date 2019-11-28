@@ -51,7 +51,10 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <algorithm>
+#pragma warning( push )
+#pragma warning( disable : 4389 4310 )
 #include <vectorclass.h>
+#pragma warning( pop )
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <tbb/tbb.h>
@@ -61,7 +64,7 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
 #pragma warning( push )
-#pragma warning( disable : 4819 4003 4267 )
+#pragma warning( disable : 4819 4003 4267 4244 )
 #include <2geom/2geom.h>
 #include <2geom/circle.h>
 #include <2geom/ellipse.h>
@@ -82,15 +85,22 @@ template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2f> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2d> : boost::true_type {};
 
-using Point2fSequence               = std::vector<cv::Point2f>;
-using ScalableIntSequence           = std::vector<int, MyAlloc<int>>;
-using ScalableIntSequenceSequence   = std::vector<ScalableIntSequence, MyAlloc<ScalableIntSequence>>;
-using ScalableDoubleSequence        = std::vector<double, MyAlloc<double>>;
-using ScalablePoint2fSequence       = std::vector<cv::Point2f, MyAlloc<cv::Point2f>>;
-using ScalablePoint2dSequence       = std::vector<cv::Point2d, MyAlloc<cv::Point2d>>;
-using ScalableRectSequence          = std::vector<cv::Rect, MyAlloc<cv::Rect>>;
-using UScalableIntSequence          = ao::uvector<int, MyAlloc<int>>;
-using UScalableUCharSequence        = ao::uvector<uint8_t, MyAlloc<uint8_t>>;
-using UScalablePointSequence        = ao::uvector<cv::Point, MyAlloc<cv::Point>>;
+using Point2fSequence                   = std::vector<cv::Point2f>;
+using ScalablePoint2fSequenceSequence   = std::vector<Point2fSequence, MyAlloc<Point2fSequence>>;
+using ScalableIntSequence               = std::vector<int, MyAlloc<int>>;
+using ScalableIntSequenceSequence       = std::vector<ScalableIntSequence, MyAlloc<ScalableIntSequence>>;
+using ScalableDoubleSequence            = std::vector<double, MyAlloc<double>>;
+using ScalablePoint2fSequence           = std::vector<cv::Point2f, MyAlloc<cv::Point2f>>;
+using ScalablePoint2dSequence           = std::vector<cv::Point2d, MyAlloc<cv::Point2d>>;
+using ScalableRectSequence              = std::vector<cv::Rect, MyAlloc<cv::Rect>>;
+using UScalableBoolSequence             = ao::uvector<bool, MyAlloc<bool>>;
+using UScalableIntSequence              = ao::uvector<int, MyAlloc<int>>;
+using UScalableFloatSequence            = ao::uvector<float, MyAlloc<float>>;
+using UScalableDoubleSequence           = ao::uvector<double, MyAlloc<double>>;
+using UScalableUCharSequence            = ao::uvector<uint8_t, MyAlloc<uint8_t>>;
+using UScalablePointSequence            = ao::uvector<cv::Point, MyAlloc<cv::Point>>;
+using UScalablePoint2fSequence          = ao::uvector<cv::Point2f, MyAlloc<cv::Point2f>>;
+using UScalablePoint2dSequence          = ao::uvector<cv::Point2d, MyAlloc<cv::Point2d>>;
+using UScalableRectSequence             = ao::uvector<cv::Rect, MyAlloc<cv::Rect>>;
 
 #endif

@@ -7,6 +7,7 @@ import numpy
 import time
 import logging
 import extradata
+import random
 
 class TestContourCreate(unittest.TestCase):
     @classmethod
@@ -119,6 +120,19 @@ class TestContourCreate(unittest.TestCase):
         endTime = time.perf_counter()
 
         extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), [contr])
+
+    def test_Create_Cross_Contour(self):
+        points = []
+        sizes = []
+        angles = []
+        random.seed()
+        for i in range(0, 50):
+            points.append((random.uniform(0, 640), random.uniform(0, 480)))
+            sizes.append((10, 10))
+            angles.append(random.uniform(0, 360))
+
+        contr = mvlab.Contour_GenCross(points, sizes, angles)
         extradata.SaveContours(self.id(), [contr])
 
 if __name__ == '__main__':
