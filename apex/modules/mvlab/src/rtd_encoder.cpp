@@ -115,11 +115,11 @@ void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour
                     Point2fSequence tcontour(contour.cbegin(), contour.cend());
                     if (1 == e.CODE)
                     {
-                        outers.push_back(cv::makePtr<ContourImpl>(&tcontour, true));
+                        outers.push_back(cv::makePtr<ContourImpl>(&tcontour, K_YES, true));
                     }
                     else
                     {
-                        holes.push_back(cv::makePtr<ContourImpl>(&tcontour, true));
+                        holes.push_back(cv::makePtr<ContourImpl>(&tcontour, K_YES, true));
                     }
                 }
             }
@@ -155,7 +155,7 @@ void RDEncoder::Track(Ptr<Contour> &outer)
             {
                 contour.emplace_back(contour.back().x, contour.front().y);
                 Point2fSequence tcontour(contour.cbegin(), contour.cend());
-                outer = cv::makePtr<ContourImpl>(&tcontour, true);
+                outer = cv::makePtr<ContourImpl>(&tcontour, K_YES, true);
             }
             break;
         }

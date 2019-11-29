@@ -77,6 +77,9 @@ constexpr int XY_SHIFT = 10;
 constexpr int XY_DELTA = 1 << XY_SHIFT >> 1;
 constexpr int XY_ONE = 1 << XY_SHIFT;
 constexpr float F_XY_ONE = 1 << XY_SHIFT;
+constexpr int K_NO = 0;
+constexpr int K_YES = 1;
+constexpr int K_UNKNOWN = 2;
 
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point2f> : boost::true_type {};

@@ -171,7 +171,7 @@ cv::Ptr<Contour> RegionImpl::GetConvex() const
         {
             Point2fSequence cvxPoints;
             cv::convexHull(contImpl->GetVertexes(), cvxPoints);
-            return cv::makePtr<ContourImpl>(&cvxPoints, true);
+            return cv::makePtr<ContourImpl>(&cvxPoints, K_YES, true);
         }
     }
     return makePtr<ContourImpl>();
@@ -204,7 +204,7 @@ cv::Ptr<Contour> RegionImpl::GetPolygon(const float tolerance) const
         {
             Point2fSequence approxPoints;
             cv::approxPolyDP(contImpl->GetVertexes(), approxPoints, tolerance, true);
-            return cv::makePtr<ContourImpl>(&approxPoints, true);
+            return cv::makePtr<ContourImpl>(&approxPoints, K_YES, true);
         }
     }
     return makePtr<ContourImpl>();

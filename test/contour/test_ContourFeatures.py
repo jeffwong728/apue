@@ -19,7 +19,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_BoundingBox(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.Count()))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
 
         startTime = time.perf_counter()
         x, y, w, h = contr.GetBoundingBox()[0]
@@ -32,7 +32,11 @@ class TestContourFeatures(unittest.TestCase):
         self.assertEqual(h, 1000)
 
         contr = mvlab.Contour_GenEmpty()
-        self.assertEqual(len(contr.GetBoundingBox()), 0)
+        x, y, w, h = contr.GetBoundingBox()[0]
+        self.assertEqual(x, 0)
+        self.assertEqual(y, 0)
+        self.assertEqual(w, 0)
+        self.assertEqual(h, 0)
 
         points = [(100, 100), (50, 200), (150, 150), (250, 200), (200, 100)]
         contr = mvlab.Contour_GenPolygon(points)
@@ -44,7 +48,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_Length(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.Count()))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
         startTime = time.perf_counter()
         l = contr.GetLength()[0]
         endTime = time.perf_counter()
@@ -52,7 +56,7 @@ class TestContourFeatures(unittest.TestCase):
         self.assertAlmostEqual(l, 2*math.pi*500, delta=0.001)
 
         contr = mvlab.Contour_GenEmpty()
-        self.assertEqual(len(contr.GetLength()), 0)
+        self.assertAlmostEqual(contr.GetLength()[0], 0)
 
         points = [(100, 100), (100, 200), (200, 200), (200, 100)]
         contr = mvlab.Contour_GenPolygon(points)
@@ -68,7 +72,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_Area(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.Count()))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
 
         startTime = time.perf_counter()
         a = contr.GetArea()[0]
@@ -77,7 +81,7 @@ class TestContourFeatures(unittest.TestCase):
         self.assertAlmostEqual(a, math.pi*500*500, delta=0.6)
 
         contr = mvlab.Contour_GenEmpty()
-        self.assertAlmostEqual(len(contr.GetArea()), 0)
+        self.assertAlmostEqual(contr.GetArea()[0], 0)
 
         points = [(100, 100), (100, 200), (200, 200), (200, 100)]
         contr = mvlab.Contour_GenPolygon(points)
@@ -93,7 +97,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_Centroid(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.Count()))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
 
         startTime = time.perf_counter()
         x, y = contr.GetCentroid()[0]
@@ -103,7 +107,9 @@ class TestContourFeatures(unittest.TestCase):
         self.assertAlmostEqual(y, 1000, delta=0.001)
 
         contr = mvlab.Contour_GenEmpty()
-        self.assertAlmostEqual(len(contr.GetCentroid()), 0)
+        x, y = contr.GetCentroid()[0]
+        self.assertAlmostEqual(x, 0)
+        self.assertAlmostEqual(y, 0)
 
         points = [(100, 100), (100, 200), (200, 200), (200, 100)]
         contr = mvlab.Contour_GenPolygon(points)
@@ -125,7 +131,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_Point(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.Count()))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
 
         startTime = time.perf_counter()
         b = contr.TestPoint((1000, 1000))[0]

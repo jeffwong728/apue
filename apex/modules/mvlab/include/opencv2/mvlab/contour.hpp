@@ -28,6 +28,14 @@ public:
 
 public:
     virtual int Draw(Mat &img, const Scalar& color, const float thickness = 1, const int style = 0) const = 0;
+    virtual int CountPoints() const = 0;
+    virtual double GetArea() const = 0;
+    virtual double GetLength() const = 0;
+    virtual cv::Point2d GetCentroid() const = 0;
+    virtual cv::Rect GetBoundingBox() const = 0;
+    virtual bool TestClosed() const = 0;
+    virtual bool TestPoint(const cv::Point2f &point) const = 0;
+    virtual bool TestSelfIntersection(const cv::String &closeContour) const = 0;
 
 public:
     CV_WRAP virtual bool Empty() const = 0;

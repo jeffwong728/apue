@@ -5,24 +5,27 @@
 
 namespace cv {
 namespace mvlab {
-ContourImpl::ContourImpl(const std::vector<Point2f> &vertexes, const bool closed)
+ContourImpl::ContourImpl(const std::vector<Point2f> &vertexes, const int isSimple, const bool closed)
     : Contour()
     , is_closed_(closed)
+    , is_simple_(isSimple)
     , curves_(1, vertexes)
 {
 }
 
-ContourImpl::ContourImpl(Point2fSequence *vertexes, const bool closed)
+ContourImpl::ContourImpl(Point2fSequence *vertexes, const int isSimple, const bool closed)
     : Contour()
     , is_closed_(closed)
+    , is_simple_(isSimple)
     , curves_(1)
 {
     vertexes->swap(const_cast<Point2fSequence &>(curves_.front()));
 }
 
-ContourImpl::ContourImpl(ScalablePoint2fSequenceSequence *curves, UScalableBoolSequence *closed)
+ContourImpl::ContourImpl(ScalablePoint2fSequenceSequence *curves, const int isSimple, const bool closed)
     : Contour()
-    , is_closed_(std::move(*closed))
+    , is_closed_(closed)
+    , is_simple_(isSimple)
     , curves_(std::move(*curves))
 {
 }
@@ -116,183 +119,37 @@ bool ContourImpl::Empty() const
 
 int ContourImpl::Count() const
 {
-    return static_cast<int>(curves_.size());
+    return 1;
 }
 
 void ContourImpl::CountPoints(std::vector<int> &cPoints) const
 {
-    cPoints.reserve(curves_.size());
-    for (const auto &c : curves_)
-    {
-        cPoints.push_back(static_cast<int>(c.size()));
-    }
+    cPoints.resize(0);
+    cPoints.push_back(ContourImpl::CountPoints());
 }
 
 void ContourImpl::GetLength(std::vector<double> &lengthes) const
 {
-    if (length_.empty() && !ContourImpl::Empty())
-    {
-        length_.resize(curves_.size());
-        const auto funtor = [this](const tbb::blocked_range<std::size_t>& r)
-        {
-            for (std::size_t i = r.begin(); i != r.end(); ++i)
-            {
-                const auto itLen = this->length_.begin() + i;
-                const auto &vertexes = *(this->curves_.cbegin() + i);
-
-                double len = 0.;
-                if (vertexes.size() > 2)
-                {
-                    const int numPoints = static_cast<int>(vertexes.size()) - 1;
-                    constexpr int simdSize = 8;
-                    const int regularNumPoints = numPoints & (-simdSize);
-
-                    len += Util::dist(vertexes[0], vertexes[numPoints]);
-
-                    int n = 0;
-                    const cv::Point2f *pt = vertexes.data();
-                    for (; n < regularNumPoints; n += simdSize)
-                    {
-                        vcl::Vec8f v1, v2;
-                        v1.load(reinterpret_cast<const float *>(pt));
-                        v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
-                        vcl::Vec8f xprev = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                        vcl::Vec8f yprev = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
-
-                        v1.load(reinterpret_cast<const float *>(pt + 1));
-                        v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
-                        vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                        vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
-                        vcl::Vec8f dx = x - xprev;
-                        vcl::Vec8f dy = y - yprev;
-                        len += vcl::horizontal_add(vcl::sqrt(dx*dx + dy * dy));
-                        pt += simdSize;
-                    }
-
-                    for (; n < numPoints; ++n, ++pt)
-                    {
-                        len += Util::dist(pt, pt + 1);
-                    }
-                }
-                *itLen = len;
-            }
-        };
-
-        if (1 == curves_.size())
-        {
-            funtor(tbb::blocked_range<std::size_t>(0, 1));
-        }
-        else
-        {
-            tbb::parallel_for(tbb::blocked_range<std::size_t>(0, curves_.size()), funtor);
-        }
-    }
-
-    lengthes.assign(length_.cbegin(), length_.cend());
+    lengthes.resize(0);
+    lengthes.push_back(ContourImpl::GetLength());
 }
 
 void ContourImpl::GetArea(std::vector<double> &areas) const
 {
-    if (area_.empty() && !ContourImpl::Empty())
-    {
-        AreaCenter();
-    }
-
-    areas.assign(area_.cbegin(), area_.cend());
-    for (double &a : areas)
-    {
-        a = std::abs(a / 2);
-    }
+    areas.resize(0);
+    areas.push_back(ContourImpl::GetArea());
 }
 
 void ContourImpl::GetCentroid(std::vector<cv::Point2f> &centroids) const
 {
-    if (centroid_.empty() && !ContourImpl::Empty())
-    {
-        AreaCenter();
-    }
-
-    centroids.assign(centroid_.cbegin(), centroid_.cend());
+    centroids.resize(0);
+    centroids.push_back(ContourImpl::GetCentroid());
 }
 
 void ContourImpl::GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) const
 {
-    if (bbox_.empty() && !ContourImpl::Empty())
-    {
-        bbox_.resize(curves_.size());
-        const auto funtor = [this](const tbb::blocked_range<std::size_t>& r)
-        {
-            for (std::size_t i = r.begin(); i != r.end(); ++i)
-            {
-                const auto itBBox = this->bbox_.begin() + i;
-                const auto &vertexes = *(this->curves_.cbegin() + i);
-
-                if (!vertexes.empty())
-                {
-                    const int numPoints = static_cast<int>(vertexes.size());
-                    constexpr int simdSize = 8;
-                    const int regularNumPoints = numPoints & (-simdSize);
-
-                    vcl::Vec8f top(std::numeric_limits<float>::max());
-                    vcl::Vec8f left(std::numeric_limits<float>::max());
-                    vcl::Vec8f bot(std::numeric_limits<float>::lowest());
-                    vcl::Vec8f right(std::numeric_limits<float>::lowest());
-
-                    int n = 0;
-                    const cv::Point2f *pt = vertexes.data();
-                    for (; n < regularNumPoints; n += simdSize)
-                    {
-                        vcl::Vec8f v1, v2;
-                        v1.load(reinterpret_cast<const float *>(pt));
-                        v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
-                        vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                        vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
-
-                        top = vcl::min(top, x);
-                        left = vcl::min(left, y);
-                        bot = vcl::max(bot, x);
-                        right = vcl::max(right, y);
-
-                        pt += simdSize;
-                    }
-
-                    float xmin = vcl::horizontal_min(left);
-                    float xmax = vcl::horizontal_max(right);
-                    float ymin = vcl::horizontal_min(top);
-                    float ymax = vcl::horizontal_max(bot);
-                    for (; n < numPoints; ++n, ++pt)
-                    {
-                        xmin = std::min(xmin, pt->x);
-                        ymin = std::min(ymin, pt->y);
-                        xmax = std::max(xmax, pt->x);
-                        ymax = std::max(ymax, pt->y);
-                    }
-
-                    const int x = cvFloor(xmin);
-                    const int y = cvFloor(ymin);
-                    const int w = cvCeil(xmax) - x;
-                    const int h = cvCeil(ymax) - y;
-
-                    *itBBox = cv::Rect(x, y, w, h);
-                }
-                else
-                {
-                    *itBBox = cv::Rect();
-                }
-            }
-        };
-
-        if (1 == curves_.size())
-        {
-            funtor(tbb::blocked_range<std::size_t>(0, 1));
-        }
-        else
-        {
-            tbb::parallel_for(tbb::blocked_range<std::size_t>(0, curves_.size()), funtor);
-        }
-    }
-
-    boundingBoxes.assign(bbox_.cbegin(), bbox_.cend());
+    boundingBoxes.resize(0);
+    boundingBoxes.push_back(ContourImpl::GetBoundingBox());
 }
 
 Ptr<Contour> ContourImpl::Simplify(const float tolerance) const
@@ -304,19 +161,16 @@ Ptr<Contour> ContourImpl::Simplify(const float tolerance) const
     else
     {
         ScalablePoint2fSequenceSequence approxCurves(curves_.size());
-        auto itClosed = is_closed_.cbegin();
         auto itCurve  = approxCurves.begin();
         for (const auto &c : curves_)
         {
             Point2fSequence approxCurve;
-            cv::approxPolyDP(c, approxCurve, tolerance, *itClosed);
+            cv::approxPolyDP(c, approxCurve, tolerance, is_closed_);
             itCurve->swap(approxCurve);
-            ++itClosed;
             ++itCurve;
         }
 
-        UScalableBoolSequence isclosed(is_closed_.cbegin(), is_closed_.cend());
-        return makePtr<ContourImpl>(&approxCurves, &isclosed);
+        return makePtr<ContourImpl>(&approxCurves, is_simple_, is_closed_);
     }
 }
 
@@ -350,8 +204,7 @@ cv::Ptr<Contour> ContourImpl::Move(const cv::Point2f &delta) const
         ++itCurve;
     }
 
-    UScalableBoolSequence isclosed(is_closed_.cbegin(), is_closed_.cend());
-    return makePtr<ContourImpl>(&curves, &isclosed);
+    return makePtr<ContourImpl>(&curves, is_simple_, is_closed_);
 }
 
 cv::Ptr<Contour> ContourImpl::Zoom(const cv::Size2f &scale) const
@@ -370,102 +223,19 @@ cv::Ptr<Contour> ContourImpl::Zoom(const cv::Size2f &scale) const
         ++itCurve;
     }
 
-    UScalableBoolSequence isclosed(is_closed_.cbegin(), is_closed_.cend());
-    return makePtr<ContourImpl>(&curves, &isclosed);
+    return makePtr<ContourImpl>(&curves, is_simple_, is_closed_);
 }
 
 void ContourImpl::TestClosed(std::vector<int> &isClosed) const
 {
-    isClosed.assign(is_closed_.cbegin(), is_closed_.cend());
+    isClosed.resize(0);
+    isClosed.push_back(is_closed_);
 }
 
 void ContourImpl::TestPoint(const cv::Point2f &point, std::vector<int> &isInside) const
 {
-    if (!ContourImpl::Empty())
-    {
-        isInside.resize(curves_.size());
-        const auto funtor = [&, this](const tbb::blocked_range<std::size_t>& r)
-        {
-            for (std::size_t i = r.begin(); i != r.end(); ++i)
-            {
-                const auto itInside = isInside.begin() + i;
-                const auto itClosed = this->is_closed_.cbegin() + i;
-                const auto &vertexes = *(this->curves_.cbegin() + i);
-
-                if (!(*itClosed) || vertexes.size() < 3)
-                {
-                    *itInside = false;
-                }
-                else
-                {
-                    constexpr int simdSize = 8;
-                    const int numPoints = static_cast<int>(vertexes.size() - 1);
-                    const int regularNumPoints = numPoints & (-simdSize);
-
-                    int n = 0;
-                    int wn = 0;
-                    const cv::Point2f *pt = vertexes.data();
-                    const cv::Point2f *pts = vertexes.data();
-                    const cv::Point2f *pte = vertexes.data() + vertexes.size() - 1;
-                    const vcl::Vec8f Px(point.x);
-                    const vcl::Vec8f Py(point.y);
-                    for (; n < regularNumPoints; n += simdSize)
-                    {
-                        vcl::Vec8f v1, v2;
-                        v1.load(reinterpret_cast<const float *>(pt));
-                        v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
-                        vcl::Vec8f xi = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                        vcl::Vec8f yi = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
-
-                        v1.load(reinterpret_cast<const float *>(pt + 1));
-                        v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
-                        vcl::Vec8f xi1 = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                        vcl::Vec8f yi1 = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
-
-                        vcl::Vec8fb c0 = yi >= Py;
-                        vcl::Vec8fb c1 = yi1 < Py;
-                        vcl::Vec8f  l0 = Util::isLeft(xi, yi, xi1, yi1, Px, Py);
-                        vcl::Vec8fb c2 = l0 > 0;
-                        vcl::Vec8fb c3 = l0 < 0;
-                        wn += vcl::horizontal_count(c0 && c1 && c2);
-                        wn -= vcl::horizontal_count((!c0) && (!c1) && c3);
-
-                        pt += simdSize;
-                    }
-
-                    for (; n <= numPoints; ++n, ++pt)
-                    {
-                        const cv::Point2f *pt1 = (pt == pte) ? pts : (pt + 1);
-                        if (pt->y >= point.y) {
-                            if (pt1->y < point.y)
-                            {
-                                if (Util::isLeft(*pt, *pt1, point) > 0)
-                                    ++wn;
-                            }
-                        }
-                        else {
-                            if (pt1->y >= point.y)
-                            {
-                                if (Util::isLeft(*pt, *pt1, point) < 0)
-                                    --wn;
-                            }
-                        }
-                    }
-
-                    *itInside = wn & 1;
-                }
-            }
-        };
-
-        if (1 == curves_.size())
-        {
-            funtor(tbb::blocked_range<std::size_t>(0, 1));
-        }
-        else
-        {
-            tbb::parallel_for(tbb::blocked_range<std::size_t>(0, curves_.size()), funtor);
-        }
-    }
+    isInside.resize(0);
+    isInside.push_back(ContourImpl::TestPoint(point));
 }
 
 void ContourImpl::TestSelfIntersection(const cv::String &/*closeContour*/, std::vector<int> &doesIntersect) const
@@ -475,7 +245,6 @@ void ContourImpl::TestSelfIntersection(const cv::String &/*closeContour*/, std::
 
 void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
 {
-    auto itCloseed = is_closed_.cbegin();
     for (const auto &vertexes : curves_)
     {
         const int numVertexes = static_cast<int>(vertexes.size());
@@ -487,12 +256,11 @@ void ContourImpl::Feed(Cairo::RefPtr<Cairo::Context> &cr) const
                 cr->line_to(vertexes[i].x, vertexes[i].y);
             }
 
-            if (*itCloseed)
+            if (is_closed_)
             {
                 cr->close_path();
             }
         }
-        ++itCloseed;
     }
 }
 
@@ -507,96 +275,85 @@ void ContourImpl::DrawVerified(Mat &img, const Scalar& color, const float thickn
         cr->set_dash(dashes, 0.);
     }
 
+    Feed(cr);
+
     cr->set_line_width(thickness);
     cr->set_source_rgba(color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, color[3] / 255.0);
-    Feed(cr);
     cr->stroke();
 }
 
 void ContourImpl::AreaCenter() const
 {
-    if (ContourImpl::Empty() || !area_.empty())
+    if (is_closed_ && !curves_.empty())
     {
-        return;
-    }
-
-    area_.resize(curves_.size());
-    centroid_.resize(curves_.size());
-
-    const auto funtor = [this](const tbb::blocked_range<std::size_t>& r)
-    {
-        for (std::size_t i = r.begin(); i != r.end(); ++i)
+        const auto &vertexes = curves_.front();
+        if (vertexes.size() > 2)
         {
-            const auto itClosed = this->is_closed_.cbegin() + i;
-            const auto itArea = this->area_.begin() + i;
-            const auto itCentroid = this->centroid_.begin() + i;
-            const auto &vertexes = *(this->curves_.cbegin() + i);
+            double area = 0;
+            double cx = 0, cy = 0;
+            const int numPoints = static_cast<int>(vertexes.size()) - 1;
+            constexpr int simdSize = 8;
+            const int regularNumPoints = numPoints & (-simdSize);
 
-            if (*itClosed && vertexes.size() > 2)
+            int n = 0;
+            const cv::Point2f *pt = vertexes.data();
+            for (; n < regularNumPoints; n += simdSize)
             {
-                double area = 0;
-                double cx = 0, cy = 0;
-                const int numPoints = static_cast<int>(vertexes.size()) - 1;
-                constexpr int simdSize = 8;
-                const int regularNumPoints = numPoints & (-simdSize);
+                vcl::Vec8f v1, v2;
+                v1.load(reinterpret_cast<const float *>(pt));
+                v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+                vcl::Vec8f xprev = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                vcl::Vec8f yprev = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
 
-                int n = 0;
-                const cv::Point2f *pt = vertexes.data();
-                for (; n < regularNumPoints; n += simdSize)
-                {
-                    vcl::Vec8f v1, v2;
-                    v1.load(reinterpret_cast<const float *>(pt));
-                    v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
-                    vcl::Vec8f xprev = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                    vcl::Vec8f yprev = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+                v1.load(reinterpret_cast<const float *>(pt + 1));
+                v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
+                vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+                vcl::Vec8f dx = xprev * y;
+                vcl::Vec8f dy = x * yprev;
+                vcl::Vec8f a = dx - dy;
+                area += vcl::horizontal_add(a);
+                cx += vcl::horizontal_add((x + xprev)*a);
+                cy += vcl::horizontal_add((y + yprev)*a);
+                pt += simdSize;
+            }
 
-                    v1.load(reinterpret_cast<const float *>(pt + 1));
-                    v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
-                    vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
-                    vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
-                    vcl::Vec8f dx = xprev * y;
-                    vcl::Vec8f dy = x * yprev;
-                    vcl::Vec8f a = dx - dy;
-                    area += vcl::horizontal_add(a);
-                    cx += vcl::horizontal_add((x + xprev)*a);
-                    cy += vcl::horizontal_add((y + yprev)*a);
-                    pt += simdSize;
-                }
+            for (; n <= numPoints; ++n)
+            {
+                const int n1 = (n == numPoints) ? 0 : (n + 1);
+                const double a = vertexes[n].x*vertexes[n1].y - vertexes[n1].x * vertexes[n].y;
+                area += a;
+                cx += (vertexes[n].x + vertexes[n1].x)*a;
+                cy += (vertexes[n].y + vertexes[n1].y)*a;
+            }
 
-                for (; n <= numPoints; ++n)
-                {
-                    const int n1 = (n == numPoints) ? 0 : (n + 1);
-                    const double a = vertexes[n].x*vertexes[n1].y - vertexes[n1].x * vertexes[n].y;
-                    area += a;
-                    cx += (vertexes[n].x + vertexes[n1].x)*a;
-                    cy += (vertexes[n].y + vertexes[n1].y)*a;
-                }
-
-                *itArea = area;
-                if (std::abs(area) > 0.)
-                {
-                    *itCentroid = cv::Point2d(cx / (3 * area), cy / (3 * area));
-                }
-                else
-                {
-                    *itCentroid = cv::Point2d();
-                }
+            area_ = area;
+            if (std::abs(area) > 0.)
+            {
+                centroid_ = cv::Point2d(cx / (3 * area), cy / (3 * area));
             }
             else
             {
-                *itArea = 0;
-                *itCentroid = cv::Point2d();
+                centroid_ = cv::Point2d();
             }
         }
-    };
-
-    if (1 == curves_.size())
-    {
-        funtor(tbb::blocked_range<std::size_t>(0, 1));
+        else
+        {
+            area_ = 0;
+            centroid_ = cv::Point2d();
+            for (const cv::Point2f &v : vertexes)
+            {
+                centroid_->x += v.x;
+                centroid_->y += v.y;
+            }
+            centroid_->x /= static_cast<int>(vertexes.size());
+            centroid_->y /= static_cast<int>(vertexes.size());
+        }
     }
     else
     {
-        tbb::parallel_for(tbb::blocked_range<std::size_t>(0, curves_.size()), funtor);
+        area_ = 0.;
+        centroid_ = cv::Point2d();
     }
 }
 
@@ -641,6 +398,222 @@ void ContourImpl::ChangedCoordinatesToFixed() const
         x_fixed_.back() = x_fixed_.front();
         y_fixed_.back() = y_fixed_.front();
     }
+}
+
+int ContourImpl::CountPoints() const
+{
+    int cPoints = 0;
+    for (const auto &vertexes : curves_)
+    {
+        cPoints += static_cast<int>(vertexes.size());
+    }
+    return cPoints;
+}
+
+double ContourImpl::GetArea() const
+{
+    if (boost::none == area_)
+    {
+        AreaCenter();
+    }
+
+    return std::abs(*area_/2);
+}
+
+double ContourImpl::GetLength() const
+{
+    if (boost::none == length_)
+    {
+        double len = 0.;
+        for (const auto &vertexes : curves_)
+        {
+            if (vertexes.size() > 1)
+            {
+                const int numPoints = static_cast<int>(vertexes.size()) - 1;
+                constexpr int simdSize = 8;
+                const int regularNumPoints = numPoints & (-simdSize);
+
+                if (is_closed_)
+                {
+                    len += Util::dist(vertexes[0], vertexes[numPoints]);
+                }
+
+                int n = 0;
+                const cv::Point2f *pt = vertexes.data();
+                for (; n < regularNumPoints; n += simdSize)
+                {
+                    vcl::Vec8f v1, v2;
+                    v1.load(reinterpret_cast<const float *>(pt));
+                    v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+                    vcl::Vec8f xprev = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                    vcl::Vec8f yprev = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+                    v1.load(reinterpret_cast<const float *>(pt + 1));
+                    v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
+                    vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                    vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+                    vcl::Vec8f dx = x - xprev;
+                    vcl::Vec8f dy = y - yprev;
+                    len += vcl::horizontal_add(vcl::sqrt(dx*dx + dy * dy));
+                    pt += simdSize;
+                }
+
+                for (; n < numPoints; ++n, ++pt)
+                {
+                    len += Util::dist(pt, pt + 1);
+                }
+            }
+        }
+
+        length_ = len;
+    }
+
+    return *length_;
+}
+cv::Point2d ContourImpl::GetCentroid() const
+{
+    if (boost::none == centroid_)
+    {
+        AreaCenter();
+    }
+
+    return *centroid_;
+}
+cv::Rect ContourImpl::GetBoundingBox() const
+{
+    if (boost::none == bbox_)
+    {
+        bbox_ = cv::Rect();
+        for (const auto &vertexes : curves_)
+        {
+            if (!vertexes.empty())
+            {
+                const int numPoints = static_cast<int>(vertexes.size());
+                constexpr int simdSize = 8;
+                const int regularNumPoints = numPoints & (-simdSize);
+
+                vcl::Vec8f top(std::numeric_limits<float>::max());
+                vcl::Vec8f left(std::numeric_limits<float>::max());
+                vcl::Vec8f bot(std::numeric_limits<float>::lowest());
+                vcl::Vec8f right(std::numeric_limits<float>::lowest());
+
+                int n = 0;
+                const cv::Point2f *pt = vertexes.data();
+                for (; n < regularNumPoints; n += simdSize)
+                {
+                    vcl::Vec8f v1, v2;
+                    v1.load(reinterpret_cast<const float *>(pt));
+                    v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+                    vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                    vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+                    top = vcl::min(top, x);
+                    left = vcl::min(left, y);
+                    bot = vcl::max(bot, x);
+                    right = vcl::max(right, y);
+
+                    pt += simdSize;
+                }
+
+                float xmin = vcl::horizontal_min(left);
+                float xmax = vcl::horizontal_max(right);
+                float ymin = vcl::horizontal_min(top);
+                float ymax = vcl::horizontal_max(bot);
+                for (; n < numPoints; ++n, ++pt)
+                {
+                    xmin = std::min(xmin, pt->x);
+                    ymin = std::min(ymin, pt->y);
+                    xmax = std::max(xmax, pt->x);
+                    ymax = std::max(ymax, pt->y);
+                }
+
+                const int x = cvFloor(xmin);
+                const int y = cvFloor(ymin);
+                const int w = cvCeil(xmax) - x;
+                const int h = cvCeil(ymax) - y;
+
+                *bbox_ |= cv::Rect(x, y, w, h);
+            }
+        }
+    }
+
+    return *bbox_;
+}
+bool ContourImpl::TestClosed() const
+{
+    return is_closed_;
+}
+
+bool ContourImpl::TestPoint(const cv::Point2f &point) const
+{
+    const auto &vertexes = curves_.front();
+    if (!is_closed_ || vertexes.size() < 3)
+    {
+        return false;
+    }
+    else
+    {
+        constexpr int simdSize = 8;
+        const int numPoints = static_cast<int>(vertexes.size() - 1);
+        const int regularNumPoints = numPoints & (-simdSize);
+
+        int n = 0;
+        int wn = 0;
+        const cv::Point2f *pt = vertexes.data();
+        const cv::Point2f *pts = vertexes.data();
+        const cv::Point2f *pte = vertexes.data() + vertexes.size() - 1;
+        const vcl::Vec8f Px(point.x);
+        const vcl::Vec8f Py(point.y);
+        for (; n < regularNumPoints; n += simdSize)
+        {
+            vcl::Vec8f v1, v2;
+            v1.load(reinterpret_cast<const float *>(pt));
+            v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+            vcl::Vec8f xi = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+            vcl::Vec8f yi = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+            v1.load(reinterpret_cast<const float *>(pt + 1));
+            v2.load(reinterpret_cast<const float *>(pt + 1 + simdSize / 2));
+            vcl::Vec8f xi1 = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+            vcl::Vec8f yi1 = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+            vcl::Vec8fb c0 = yi >= Py;
+            vcl::Vec8fb c1 = yi1 < Py;
+            vcl::Vec8f  l0 = Util::isLeft(xi, yi, xi1, yi1, Px, Py);
+            vcl::Vec8fb c2 = l0 > 0;
+            vcl::Vec8fb c3 = l0 < 0;
+            wn += vcl::horizontal_count(c0 && c1 && c2);
+            wn -= vcl::horizontal_count((!c0) && (!c1) && c3);
+
+            pt += simdSize;
+        }
+
+        for (; n <= numPoints; ++n, ++pt)
+        {
+            const cv::Point2f *pt1 = (pt == pte) ? pts : (pt + 1);
+            if (pt->y >= point.y) {
+                if (pt1->y < point.y)
+                {
+                    if (Util::isLeft(*pt, *pt1, point) > 0)
+                        ++wn;
+                }
+            }
+            else {
+                if (pt1->y >= point.y)
+                {
+                    if (Util::isLeft(*pt, *pt1, point) < 0)
+                        --wn;
+                }
+            }
+        }
+
+        return wn & 1;
+    }
+}
+
+bool ContourImpl::TestSelfIntersection(const cv::String &closeContour) const
+{
+    return !is_simple_;
 }
 
 }
