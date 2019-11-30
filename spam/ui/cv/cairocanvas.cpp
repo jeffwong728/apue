@@ -1517,7 +1517,7 @@ void CairoCanvas::ScaleShowImage(const wxSize &sToSize)
             cv::Size newSize(sToSize.GetWidth(), sToSize.GetHeight());
             bool shrink = newSize.width<srcMat_.cols || newSize.height<srcMat_.rows;
             ScopedTimer st(wxT("cv::resize"));
-            cv::resize(srcMat_, disMat_, newSize, 0.0, 0.0, shrink ? cv::INTER_AREA : cv::INTER_LINEAR);
+            cv::resize(srcMat_, disMat_, newSize, 0.0, 0.0, shrink ? cv::INTER_AREA : cv::INTER_NEAREST);
         }
         scrMat_ = disMat_.clone();
         Refresh(false);

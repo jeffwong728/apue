@@ -30,6 +30,7 @@ public:
     //Geometric Transformations
     cv::Ptr<Contour> Move(const cv::Point2f &delta) const CV_OVERRIDE;
     cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const CV_OVERRIDE;
+    cv::Ptr<Contour> AffineTrans(const cv::Matx33d &homoMat2D) const CV_OVERRIDE;
     //Features
     void TestClosed(std::vector<int> &isClosed) const CV_OVERRIDE;
     void TestPoint(const cv::Point2f &point, std::vector<int> &isInside) const CV_OVERRIDE;

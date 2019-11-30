@@ -46,4 +46,19 @@ PyObject* pyopencv_from(const Rect2f& r)
     return Py_BuildValue("(ffff)", r.x, r.y, r.width, r.height);
 }
 
+template<>
+bool pyopencv_to(PyObject* obj, Size2d& r, const char* name)
+{
+    CV_UNUSED(name);
+    if(!obj || obj == Py_None)
+        return true;
+    return PyArg_ParseTuple(obj, "dd", &r.width, &r.height) > 0;
+}
+
+template<>
+PyObject* pyopencv_from(const Size2d& r)
+{
+    return Py_BuildValue("(dd)", r.width, r.height);
+}
+
 #endif

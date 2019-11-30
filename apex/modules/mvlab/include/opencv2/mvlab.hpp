@@ -2,8 +2,9 @@
 #define __OPENCV_MVLAB_HPP__
 
 #include <opencv2/core.hpp>
-#include "opencv2/mvlab/region.hpp"
-#include "opencv2/mvlab/contour.hpp"
+#include <opencv2/mvlab/region.hpp>
+#include <opencv2/mvlab/contour.hpp>
+#include <opencv2/mvlab/transformations.hpp>
 
 namespace cv {
 namespace mvlab {

@@ -226,6 +226,29 @@ cv::Ptr<Contour> ContourImpl::Zoom(const cv::Size2f &scale) const
     return makePtr<ContourImpl>(&curves, is_simple_, is_closed_);
 }
 
+cv::Ptr<Contour> ContourImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
+{
+    const cv::Matx33d m0 = HomoMat2d::Translate(homoMat2D, cv::Point2d(0.5, 0.5));
+    const cv::Matx33d m1 = HomoMat2d::TranslateLocal(m0, cv::Point2d(-0.5, -0.5));
+    ScalablePoint2fSequenceSequence curves(curves_.size());
+    auto itCurve = curves.begin();
+    for (const auto &c : curves_)
+    {
+        Point2fSequence vertexes(c.cbegin(), c.cend());
+        for (auto &v : vertexes)
+        {
+            const float x = v.x;
+            const float y = v.y;
+            v.x = static_cast<float>(m1.val[0] * x + m1.val[1] * y + m1.val[2]);
+            v.y = static_cast<float>(m1.val[3] * x + m1.val[4] * y + m1.val[5]);
+        }
+        itCurve->swap(vertexes);
+        ++itCurve;
+    }
+
+    return makePtr<ContourImpl>(&curves, is_simple_, is_closed_);
+}
+
 void ContourImpl::TestClosed(std::vector<int> &isClosed) const
 {
     isClosed.resize(0);
@@ -507,10 +530,10 @@ cv::Rect ContourImpl::GetBoundingBox() const
                     vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
                     vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
 
-                    top = vcl::min(top, x);
-                    left = vcl::min(left, y);
-                    bot = vcl::max(bot, x);
-                    right = vcl::max(right, y);
+                    top = vcl::min(top, y);
+                    left = vcl::min(left, x);
+                    bot = vcl::max(bot, y);
+                    right = vcl::max(right, x);
 
                     pt += simdSize;
                 }

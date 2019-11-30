@@ -19,6 +19,16 @@
 #include <2geom/pathvector.h>
 #pragma warning( pop )
 
+struct RowRange
+{
+    RowRange() : row(0), beg(0), end(0) {}
+    RowRange(const int r, const int b, const int e) : row(r), beg(b), end(e) {}
+    int row;
+    int beg;
+    int end;
+};
+
+using RowRangeList = std::vector<RowRange>;
 using ScalablePointList = std::vector<cv::Point, tbb::scalable_allocator<cv::Point>>;
 
 template<typename TAngle>

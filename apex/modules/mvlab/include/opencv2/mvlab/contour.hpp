@@ -49,6 +49,7 @@ public:
     CV_WRAP virtual int GetPoints(CV_OUT std::vector<cv::Point2f> &vertexes) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> Move(const cv::Point2f &delta) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const = 0;
+    CV_WRAP virtual cv::Ptr<Contour> AffineTrans(const cv::Matx33d &homoMat2D) const = 0;
     CV_WRAP virtual void TestClosed(CV_OUT std::vector<int> &isClosed) const = 0;
     CV_WRAP virtual void TestPoint(const cv::Point2f &point, CV_OUT std::vector<int> &isInside) const = 0;
     CV_WRAP virtual void TestSelfIntersection(const cv::String &closeContour, CV_OUT std::vector<int> &doesIntersect) const = 0;

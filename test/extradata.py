@@ -117,7 +117,7 @@ def SaveContours(testId, cturs, sz=None):
                 sz = RectUnion(sz, box)
         shape = (sz[3]+10, sz[2]+10, 4)
     else:
-        shape = (sz[0]+10, sz[1]+10, 4)
+        shape = (sz[0], sz[1], 4)
 
     image = numpy.zeros(shape, numpy.uint8)
     for ctur in cturs:

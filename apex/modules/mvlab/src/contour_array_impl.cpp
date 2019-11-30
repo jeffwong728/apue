@@ -162,6 +162,19 @@ cv::Ptr<Contour> ContourArrayImpl::Zoom(const cv::Size2f &scale) const
     return contours;
 }
 
+cv::Ptr<Contour> ContourArrayImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
+{
+    cv::Ptr<ContourArrayImpl> contours = makePtr<ContourArrayImpl>();
+    contours->contours_.reserve(contours_.size());
+
+    for (const cv::Ptr<Contour> &c : contours_)
+    {
+        contours->contours_.push_back(c->AffineTrans(homoMat2D));
+    }
+
+    return contours;
+}
+
 void ContourArrayImpl::TestClosed(std::vector<int> &isClosed) const
 {
     isClosed.reserve(contours_.size());
