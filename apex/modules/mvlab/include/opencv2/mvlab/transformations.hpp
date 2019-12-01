@@ -23,6 +23,11 @@ public:
     CV_WRAP static cv::Matx33d Slant(const cv::Matx33d &homoMat2D, const double theta, const cv::Point2d &pxy, const cv::String &axis);
     CV_WRAP static cv::Matx33d SlantLocal(const cv::Matx33d &homoMat2D, const double theta, const cv::String &axis);
     CV_WRAP static cv::Matx33d Compose(const cv::Matx33d &homoMat2DLeft, const cv::Matx33d &homoMat2DRight);
+    CV_WRAP static cv::Matx33d Invert(const cv::Matx33d &homoMat2D);
+    CV_WRAP static cv::Matx33d Reflect(const cv::Matx33d &homoMat2D, const cv::Point2d &pxy, const cv::Point2d &qxy);
+    CV_WRAP static cv::Matx33d ReflectLocal(const cv::Matx33d &homoMat2D, const cv::Point2d &pxy);
+    CV_WRAP static cv::Matx33d VectorAngleToRigid(const cv::Point2d &point1, const double angle1, const cv::Point2d &point2, const double angle2);
+    CV_WRAP static double Determinant(const cv::Matx33d &homoMat2D);
     CV_WRAP static cv::Point2d AffineTransPixel(const cv::Matx33d &homoMat2D, const cv::Point2d &pixel);
     CV_WRAP static cv::Point2d AffineTransPoint2d(const cv::Matx33d &homoMat2D, const cv::Point2d &point);
 };

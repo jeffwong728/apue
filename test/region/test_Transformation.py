@@ -29,15 +29,30 @@ class TestRegionTransformation(unittest.TestCase):
                break
 
         startTime = time.perf_counter()
-        zrgn = rgn.Zoom((0.3, 0.3))
+        zrgn = rgn.Zoom((0.5, 0.5))
         endTime = time.perf_counter()
         self.verifyRegionIntegrity(zrgn)
 
-        bbox = zrgn.BoundingBox()
-        rgn = zrgn.Move((-bbox[0]+10, -bbox[1]+10))
-
         extradata.SavePerformanceData(self.id(), endTime-startTime)
-        extradata.SaveRegion(self.id(), rgn)
+        extradata.DrawRegion(self.id(), zrgn, image)
+
+    def test_Draw_Deer(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        blue, green, red = cv2.split(image)
+
+        r, rgn = mvlab.Threshold(blue, 150, 255)
+        r, rgns = rgn.Connect()
+
+        for rgn in rgns:
+           if rgn.Area() > 140000 and rgn.Area() < 150000:
+               break
+
+        startTime = time.perf_counter()
+        r, image = rgn.Draw(image, (255, 0, 0, 64))
+        endTime = time.perf_counter()
+        self.assertEqual(0, r)
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveImage(self.id(), image)
 
     def test_Affine_Deer(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))

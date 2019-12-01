@@ -77,6 +77,8 @@ private:
     void FromMask(const cv::Mat &mask);
     void FromPathVector(const Geom::PathVector &pv);
     void DrawVerified(Mat &img, const Scalar& fillColor) const;
+    void DrawVerifiedRGBA(Mat &img, const Scalar& fillColor) const;
+    void DrawVerifiedRGB(Mat &img, const Scalar& fillColor) const;
     void DrawVerifiedGray(Mat &img, const Scalar& fillColor) const;
     void TraceAllContours() const;
     void TraceContour() const;

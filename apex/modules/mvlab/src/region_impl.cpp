@@ -24,8 +24,6 @@ int RegionImpl::Draw(Mat &img,
         return MLR_REGION_EMPTY;
     }
 
-    TraceAllContours();
-
     if (img.empty())
     {
         const Rect bbox = RegionImpl::BoundingBox();
@@ -48,21 +46,15 @@ int RegionImpl::Draw(Mat &img,
     int cnl = img.channels();
     if (CV_8U == dph && 4 == cnl)
     {
-        DrawVerified(img, fillColor);
+        DrawVerifiedRGBA(img, fillColor);
     }
     else if (CV_8U == dph && 3 == cnl)
     {
-        Mat colorImg;
-        cvtColor(img, colorImg, cv::COLOR_BGR2BGRA);
-        DrawVerified(colorImg, fillColor);
-        cvtColor(colorImg, img, cv::COLOR_BGRA2BGR);
+        DrawVerifiedRGB(img, fillColor);
     }
     else if (CV_8U == dph && 1 == cnl)
     {
-        Mat colorImg;
-        cvtColor(img, colorImg, cv::COLOR_GRAY2BGRA);
-        DrawVerified(colorImg, fillColor);
-        cvtColor(colorImg, img, cv::COLOR_BGRA2GRAY);
+        DrawVerifiedGray(img, fillColor);
     }
     else
     {
@@ -547,9 +539,242 @@ void RegionImpl::DrawVerified(Mat &img, const Scalar& fillColor) const
     cr->fill();
 }
 
-void RegionImpl::DrawVerifiedGray(Mat &/*img*/, const Scalar& fillColor) const
+void RegionImpl::DrawVerifiedRGBA(Mat &img, const Scalar& fillColor) const
 {
-    const uint8_t grayVal = cv::saturate_cast<uint8_t>((fillColor[0] + fillColor[1] + fillColor[2]) / 3);
+    const uchar R = cv::saturate_cast<uchar>(fillColor[0]);
+    const uchar G = cv::saturate_cast<uchar>(fillColor[1]);
+    const uchar B = cv::saturate_cast<uchar>(fillColor[2]);
+    const int A = cv::saturate_cast<uchar>(fillColor[3]);
+    if (255 == A)
+    {
+        const auto filler = [&, R, G, B](const tbb::blocked_range<int> &br)
+        {
+            RunSequence::const_pointer pRun = rgn_runs_.data() + br.begin();
+            const RunSequence::const_pointer pRunEnd = rgn_runs_.data() + br.end();
+            for (; pRun != pRunEnd; ++pRun)
+            {
+                if (pRun->row >= 0 && pRun->row < img.rows)
+                {
+                    const int colb = std::max(pRun->colb, 0) * 4;
+                    const int cole = std::min(pRun->cole, img.cols) * 4;
+                    uchar *pRow = img.ptr<uchar>(pRun->row);
+                    for (int col = colb; col < cole; col += 4)
+                    {
+                        uchar *pSrcPixel = pRow + col;
+                        pSrcPixel[0] = B;
+                        pSrcPixel[1] = G;
+                        pSrcPixel[2] = R;
+                        pSrcPixel[3] = 255;
+                    }
+                }
+            }
+        };
+
+        if (rgn_runs_.size() > 64)
+        {
+            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+        }
+        else
+        {
+            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+        }
+    }
+    else if (0 == A)
+    {
+        // Not need to do anything
+    }
+    else
+    {
+        const int beta = 255 - A;
+        const int r = A * R;
+        const int g = A * G;
+        const int b = A * B;
+        const auto filler = [&, R, G, B](const tbb::blocked_range<int> &br)
+        {
+            RunSequence::const_pointer pRun = rgn_runs_.data() + br.begin();
+            const RunSequence::const_pointer pRunEnd = rgn_runs_.data() + br.end();
+            for (; pRun != pRunEnd; ++pRun)
+            {
+                if (pRun->row >= 0 && pRun->row < img.rows)
+                {
+                    const int colb = std::max(pRun->colb, 0) * 4;
+                    const int cole = std::min(pRun->cole, img.cols) * 4;
+                    uchar *pRow = img.ptr<uchar>(pRun->row);
+                    for (int col = colb; col < cole; col += 4)
+                    {
+                        uchar *pSrcPixel = pRow + col;
+                        pSrcPixel[0] = static_cast<uchar>((pSrcPixel[0] * beta + b) / 255);
+                        pSrcPixel[1] = static_cast<uchar>((pSrcPixel[1] * beta + g) / 255);
+                        pSrcPixel[2] = static_cast<uchar>((pSrcPixel[2] * beta + r) / 255);
+                        pSrcPixel[3] = 255;
+                    }
+                }
+            }
+        };
+
+        if (rgn_runs_.size() > 64)
+        {
+            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+        }
+        else
+        {
+            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+        }
+    }
+}
+
+void RegionImpl::DrawVerifiedRGB(Mat &img, const Scalar& fillColor) const
+{
+    const uchar R = cv::saturate_cast<uchar>(fillColor[0]);
+    const uchar G = cv::saturate_cast<uchar>(fillColor[1]);
+    const uchar B = cv::saturate_cast<uchar>(fillColor[2]);
+    const int A   = cv::saturate_cast<uchar>(fillColor[3]);
+    if (255 == A)
+    {
+        const auto filler = [&, R, G, B](const tbb::blocked_range<int> &br)
+        {
+            RunSequence::const_pointer pRun = rgn_runs_.data() + br.begin();
+            const RunSequence::const_pointer pRunEnd = rgn_runs_.data() + br.end();
+            for (; pRun != pRunEnd; ++pRun)
+            {
+                if (pRun->row >= 0 && pRun->row < img.rows)
+                {
+                    const int colb = std::max(pRun->colb, 0) * 3;
+                    const int cole = std::min(pRun->cole, img.cols) * 3;
+                    uchar *pRow = img.ptr<uchar>(pRun->row);
+                    for (int col = colb; col < cole; col += 3)
+                    {
+                        uchar *pSrcPixel = pRow + col;
+                        pSrcPixel[0] = B;
+                        pSrcPixel[1] = G;
+                        pSrcPixel[2] = R;
+                    }
+                }
+            }
+        };
+
+        if (rgn_runs_.size() > 64)
+        {
+            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+        }
+        else
+        {
+            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+        }
+    }
+    else if (0 == A)
+    {
+        // Not need to do anything
+    }
+    else
+    {
+        const int beta = 255 - A;
+        const int r = A * R;
+        const int g = A * G;
+        const int b = A * B;
+        const auto filler = [&, R, G, B](const tbb::blocked_range<int> &br)
+        {
+            RunSequence::const_pointer pRun = rgn_runs_.data() + br.begin();
+            const RunSequence::const_pointer pRunEnd = rgn_runs_.data() + br.end();
+            for (; pRun != pRunEnd; ++pRun)
+            {
+                if (pRun->row >= 0 && pRun->row < img.rows)
+                {
+                    const int colb = std::max(pRun->colb, 0) * 3;
+                    const int cole = std::min(pRun->cole, img.cols) * 3;
+                    uchar *pRow = img.ptr<uchar>(pRun->row);
+                    for (int col = colb; col < cole; col += 3)
+                    {
+                        uchar *pSrcPixel = pRow + col;
+                        pSrcPixel[0] = static_cast<uchar>((pSrcPixel[0] * beta + b) / 255);
+                        pSrcPixel[1] = static_cast<uchar>((pSrcPixel[1] * beta + g) / 255);
+                        pSrcPixel[2] = static_cast<uchar>((pSrcPixel[2] * beta + r) / 255);
+                    }
+                }
+            }
+        };
+
+        if (rgn_runs_.size() > 64)
+        {
+            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+        }
+        else
+        {
+            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+        }
+    }
+}
+
+void RegionImpl::DrawVerifiedGray(Mat &img, const Scalar& fillColor) const
+{
+    const uchar gray = cv::saturate_cast<uchar>((fillColor[0] + fillColor[1] + fillColor[2]) / 3);
+    const uchar alpha = cv::saturate_cast<uchar>(fillColor[3]);
+    if (255==alpha)
+    {
+        const auto filler = [&, gray](const tbb::blocked_range<int> &br)
+        {
+            RunSequence::const_pointer pRun = rgn_runs_.data() + br.begin();
+            const RunSequence::const_pointer pRunEnd = rgn_runs_.data() + br.end();
+            for (; pRun != pRunEnd; ++pRun)
+            {
+                if (pRun->row >= 0 && pRun->row < img.rows)
+                {
+                    const int colb = std::max(pRun->colb, 0);
+                    const int cole = std::min(pRun->cole, img.cols);
+                    if (colb < cole)
+                    {
+                        std::memset(img.ptr<uchar>(pRun->row) + colb, gray, cole - colb);
+                    }
+                }
+            }
+        };
+
+        if (rgn_runs_.size()>64)
+        {
+            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+        }
+        else
+        {
+            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+        }
+    }
+    else if (0 == alpha)
+    {
+        // Not need to do anything
+    }
+    else
+    {
+        const int a = alpha;
+        const int b = 255 - a;
+        const int c = a * gray;
+        const auto filler = [&, c](const tbb::blocked_range<int> &br)
+        {
+            RunSequence::const_pointer pRun = rgn_runs_.data() + br.begin();
+            const RunSequence::const_pointer pRunEnd = rgn_runs_.data() + br.end();
+            for (; pRun != pRunEnd; ++pRun)
+            {
+                if (pRun->row >= 0 && pRun->row < img.rows)
+                {
+                    const int colb = std::max(pRun->colb, 0);
+                    const int cole = std::min(pRun->cole, img.cols);
+                    uchar *pRow = img.ptr<uchar>(pRun->row);
+                    for (int col = colb ; col < cole; ++col)
+                    {
+                        pRow[col] = static_cast<uchar>((pRow[col]*b + c)/255);
+                    }
+                }
+            }
+        };
+
+        if (rgn_runs_.size() > 64)
+        {
+            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+        }
+        else
+        {
+            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+        }
+    }
 }
 
 void RegionImpl::TraceAllContours() const

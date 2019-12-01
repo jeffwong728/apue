@@ -72,7 +72,18 @@ def SaveRegion(testId, rgn, sz=None):
     else:
         shape = (sz[0]+10, sz[1]+10, 4)
     image = numpy.zeros(shape, numpy.uint8)
-    r, image = rgn.Draw(image, (255, 255, 255, 255))
+    r, image = rgn.Draw(image, (255, 255, 255, 128))
+
+    if not r:
+        cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
+        global objPath
+        objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
+
+def DrawRegion(testId, rgn, image):
+    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    imgPathComps = testId.split(sep='.')
+    imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
+    r, image = rgn.Draw(image, (255, 0, 0, 128))
 
     if not r:
         cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
