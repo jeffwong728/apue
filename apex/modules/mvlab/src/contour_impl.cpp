@@ -9,17 +9,17 @@ ContourImpl::ContourImpl(const std::vector<Point2f> &vertexes, const int isSimpl
     : Contour()
     , is_closed_(closed)
     , is_simple_(isSimple)
-    , curves_(1, vertexes)
+    , curves_(1, ScalablePoint2fSequence(vertexes.cbegin(), vertexes.cend()))
 {
 }
 
-ContourImpl::ContourImpl(Point2fSequence *vertexes, const int isSimple, const bool closed)
+ContourImpl::ContourImpl(ScalablePoint2fSequence *vertexes, const int isSimple, const bool closed)
     : Contour()
     , is_closed_(closed)
     , is_simple_(isSimple)
     , curves_(1)
 {
-    vertexes->swap(const_cast<Point2fSequence &>(curves_.front()));
+    vertexes->swap(const_cast<ScalablePoint2fSequence &>(curves_.front()));
 }
 
 ContourImpl::ContourImpl(ScalablePoint2fSequenceSequence *curves, const int isSimple, const bool closed)
@@ -114,15 +114,15 @@ int ContourImpl::Draw(InputOutputArray img, const Scalar& color, const float thi
 
 bool ContourImpl::Empty() const
 {
-    return curves_.empty() || std::all_of(curves_.cbegin(), curves_.cend(), [](const Point2fSequence &item) { return item.empty(); });
+    return curves_.empty() || std::all_of(curves_.cbegin(), curves_.cend(), [](const ScalablePoint2fSequence &item) { return item.empty(); });
 }
 
 int ContourImpl::Count() const
 {
-    return 1;
+    return ContourImpl::Empty()? 0 : 1;
 }
 
-void ContourImpl::CountPoints(std::vector<int> &cPoints) const
+void ContourImpl::GetCountPoints(std::vector<int> &cPoints) const
 {
     cPoints.resize(0);
     cPoints.push_back(ContourImpl::CountPoints());
@@ -131,25 +131,25 @@ void ContourImpl::CountPoints(std::vector<int> &cPoints) const
 void ContourImpl::GetLength(std::vector<double> &lengthes) const
 {
     lengthes.resize(0);
-    lengthes.push_back(ContourImpl::GetLength());
+    lengthes.push_back(ContourImpl::Length());
 }
 
 void ContourImpl::GetArea(std::vector<double> &areas) const
 {
     areas.resize(0);
-    areas.push_back(ContourImpl::GetArea());
+    areas.push_back(ContourImpl::Area());
 }
 
 void ContourImpl::GetCentroid(std::vector<cv::Point2f> &centroids) const
 {
     centroids.resize(0);
-    centroids.push_back(ContourImpl::GetCentroid());
+    centroids.push_back(ContourImpl::Centroid());
 }
 
 void ContourImpl::GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) const
 {
     boundingBoxes.resize(0);
-    boundingBoxes.push_back(ContourImpl::GetBoundingBox());
+    boundingBoxes.push_back(ContourImpl::BoundingBox());
 }
 
 Ptr<Contour> ContourImpl::Simplify(const float tolerance) const
@@ -165,8 +165,9 @@ Ptr<Contour> ContourImpl::Simplify(const float tolerance) const
         for (const auto &c : curves_)
         {
             Point2fSequence approxCurve;
-            cv::approxPolyDP(c, approxCurve, tolerance, is_closed_);
-            itCurve->swap(approxCurve);
+            cv::approxPolyDP(Point2fSequence(c.cbegin(), c.cend()), approxCurve, tolerance, is_closed_);
+            ScalablePoint2fSequence tPoints(approxCurve.cbegin(), approxCurve.cend());
+            itCurve->swap(tPoints);
             ++itCurve;
         }
 
@@ -194,7 +195,7 @@ cv::Ptr<Contour> ContourImpl::Move(const cv::Point2f &delta) const
     auto itCurve = curves.begin();
     for (const auto &c : curves_)
     {
-        Point2fSequence vertexes(c.cbegin(), c.cend());
+        ScalablePoint2fSequence vertexes(c.cbegin(), c.cend());
         for (auto &v : vertexes)
         {
             v.x += delta.x;
@@ -213,7 +214,7 @@ cv::Ptr<Contour> ContourImpl::Zoom(const cv::Size2f &scale) const
     auto itCurve = curves.begin();
     for (const auto &c : curves_)
     {
-        Point2fSequence vertexes(c.cbegin(), c.cend());
+        ScalablePoint2fSequence vertexes(c.cbegin(), c.cend());
         for (auto &v : vertexes)
         {
             v.x *= scale.width;
@@ -234,7 +235,7 @@ cv::Ptr<Contour> ContourImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
     auto itCurve = curves.begin();
     for (const auto &c : curves_)
     {
-        Point2fSequence vertexes(c.cbegin(), c.cend());
+        ScalablePoint2fSequence vertexes(c.cbegin(), c.cend());
         for (auto &v : vertexes)
         {
             const float x = v.x;
@@ -249,19 +250,19 @@ cv::Ptr<Contour> ContourImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
     return makePtr<ContourImpl>(&curves, is_simple_, is_closed_);
 }
 
-void ContourImpl::TestClosed(std::vector<int> &isClosed) const
+void ContourImpl::GetTestClosed(std::vector<int> &isClosed) const
 {
     isClosed.resize(0);
     isClosed.push_back(is_closed_);
 }
 
-void ContourImpl::TestPoint(const cv::Point2f &point, std::vector<int> &isInside) const
+void ContourImpl::GetTestPoint(const cv::Point2f &point, std::vector<int> &isInside) const
 {
     isInside.resize(0);
     isInside.push_back(ContourImpl::TestPoint(point));
 }
 
-void ContourImpl::TestSelfIntersection(const cv::String &/*closeContour*/, std::vector<int> &doesIntersect) const
+void ContourImpl::GetTestSelfIntersection(const cv::String &/*closeContour*/, std::vector<int> &doesIntersect) const
 {
     doesIntersect.clear();
 }
@@ -433,7 +434,7 @@ int ContourImpl::CountPoints() const
     return cPoints;
 }
 
-double ContourImpl::GetArea() const
+double ContourImpl::Area() const
 {
     if (boost::none == area_)
     {
@@ -443,7 +444,7 @@ double ContourImpl::GetArea() const
     return std::abs(*area_/2);
 }
 
-double ContourImpl::GetLength() const
+double ContourImpl::Length() const
 {
     if (boost::none == length_)
     {
@@ -493,7 +494,8 @@ double ContourImpl::GetLength() const
 
     return *length_;
 }
-cv::Point2d ContourImpl::GetCentroid() const
+
+cv::Point2d ContourImpl::Centroid() const
 {
     if (boost::none == centroid_)
     {
@@ -502,7 +504,8 @@ cv::Point2d ContourImpl::GetCentroid() const
 
     return *centroid_;
 }
-cv::Rect ContourImpl::GetBoundingBox() const
+
+cv::Rect ContourImpl::BoundingBox() const
 {
     if (boost::none == bbox_)
     {
@@ -634,7 +637,7 @@ bool ContourImpl::TestPoint(const cv::Point2f &point) const
     }
 }
 
-bool ContourImpl::TestSelfIntersection(const cv::String &closeContour) const
+bool ContourImpl::TestSelfIntersection(const cv::String &/*closeContour*/) const
 {
     return !is_simple_;
 }

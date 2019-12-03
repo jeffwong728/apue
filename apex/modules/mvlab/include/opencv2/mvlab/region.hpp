@@ -31,12 +31,17 @@ public:
 
 public:
     CV_WRAP virtual bool Empty() const = 0;
+    CV_WRAP virtual int Count() const = 0;
+    CV_WRAP virtual int CountRows() const = 0;
+    CV_WRAP virtual int CountConnect() const = 0;
+    CV_WRAP virtual int CountHoles() const = 0;
     CV_WRAP virtual double Area() const = 0;
     CV_WRAP virtual cv::Point2d Centroid() const = 0;
     CV_WRAP virtual cv::Rect BoundingBox() const = 0;
-    CV_WRAP virtual int Count() const = 0;
-    CV_WRAP virtual int CountRows() const = 0;
+    CV_WRAP virtual double AreaHoles() const = 0;
+    CV_WRAP virtual double Contlength() const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetContour() const = 0;
+    CV_WRAP virtual cv::Ptr<Contour> GetHole() const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetConvex() const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetPolygon(const float tolerance) const = 0;
     CV_WRAP virtual int GetPoints(CV_OUT std::vector<cv::Point> &points) const = 0;
@@ -52,6 +57,7 @@ public:
     CV_WRAP virtual bool TestSubset(const cv::Ptr<Region> &otherRgn) const = 0;
     CV_WRAP virtual cv::Ptr<Region> Move(const cv::Point &delta) const = 0;
     CV_WRAP virtual cv::Ptr<Region> Zoom(const cv::Size2f &scale) const = 0;
+    CV_WRAP virtual cv::Ptr<Region> AffineTrans(const cv::Matx33d &homoMat2D) const = 0;
     CV_WRAP virtual int Connect(CV_OUT std::vector<cv::Ptr<Region>> &regions) const = 0;
     CV_WRAP virtual int Draw(cv::InputOutputArray img, const cv::Scalar& fillColor) const = 0;
 };

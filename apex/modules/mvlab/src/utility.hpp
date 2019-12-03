@@ -21,6 +21,7 @@ public:
     static inline float constrainAngle(float x);
     static inline float square(float x) { return x * x; }
     static inline float rad(const float angle) { return angle * static_cast<float>(CV_PI) / 180.f; }
+    static inline double rad(const double angle) { return angle * CV_PI / 180.; }
     static inline float deg(const float angle) { return angle * 180.f / static_cast<float>(CV_PI); }
     static inline float dist(const cv::Point2f *p0, const cv::Point2f *p1);
     static inline float dist(const cv::Point2f &p0, const cv::Point2f &p1);

@@ -82,7 +82,7 @@ int ContourArrayImpl::Count() const
     return static_cast<int>(contours_.size());
 }
 
-void ContourArrayImpl::CountPoints(std::vector<int> &cPoints) const
+void ContourArrayImpl::GetCountPoints(std::vector<int> &cPoints) const
 {
     cPoints.reserve(contours_.size());
     for (const cv::Ptr<Contour> &c : contours_)
@@ -94,25 +94,25 @@ void ContourArrayImpl::CountPoints(std::vector<int> &cPoints) const
 void ContourArrayImpl::GetLength(std::vector<double> &lengthes) const
 {
     lengthes.resize(contours_.size());
-    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { lengthes[i] = contours_[i]->GetLength(); });
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { lengthes[i] = contours_[i]->Length(); });
 }
 
 void ContourArrayImpl::GetArea(std::vector<double> &areas) const
 {
     areas.resize(contours_.size());
-    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { areas[i] = contours_[i]->GetArea(); });
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { areas[i] = contours_[i]->Area(); });
 }
 
 void ContourArrayImpl::GetCentroid(std::vector<cv::Point2f> &centroids) const
 {
     centroids.resize(contours_.size());
-    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { centroids[i] = contours_[i]->GetCentroid(); });
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { centroids[i] = contours_[i]->Centroid(); });
 }
 
 void ContourArrayImpl::GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) const
 {
     boundingBoxes.resize(contours_.size());
-    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { boundingBoxes[i] = contours_[i]->GetBoundingBox(); });
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { boundingBoxes[i] = contours_[i]->BoundingBox(); });
 }
 
 Ptr<Contour> ContourArrayImpl::Simplify(const float tolerance) const
@@ -175,7 +175,7 @@ cv::Ptr<Contour> ContourArrayImpl::AffineTrans(const cv::Matx33d &homoMat2D) con
     return contours;
 }
 
-void ContourArrayImpl::TestClosed(std::vector<int> &isClosed) const
+void ContourArrayImpl::GetTestClosed(std::vector<int> &isClosed) const
 {
     isClosed.reserve(contours_.size());
     for (const cv::Ptr<Contour> &c : contours_)
@@ -184,13 +184,13 @@ void ContourArrayImpl::TestClosed(std::vector<int> &isClosed) const
     }
 }
 
-void ContourArrayImpl::TestPoint(const cv::Point2f &point, std::vector<int> &isInside) const
+void ContourArrayImpl::GetTestPoint(const cv::Point2f &point, std::vector<int> &isInside) const
 {
     isInside.resize(contours_.size());
     tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { isInside[i] = contours_[i]->TestPoint(point); });
 }
 
-void ContourArrayImpl::TestSelfIntersection(const cv::String &closeContour, std::vector<int> &doesIntersect) const
+void ContourArrayImpl::GetTestSelfIntersection(const cv::String &closeContour, std::vector<int> &doesIntersect) const
 {
     doesIntersect.resize(contours_.size());
     tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { doesIntersect[i] = contours_[i]->TestSelfIntersection(closeContour); });
@@ -208,7 +208,7 @@ int ContourArrayImpl::CountPoints() const
     }
 }
 
-double ContourArrayImpl::GetArea() const
+double ContourArrayImpl::Area() const
 {
     if (contours_.empty())
     {
@@ -216,11 +216,16 @@ double ContourArrayImpl::GetArea() const
     }
     else
     {
-        return contours_.front()->GetArea();
+        double a = 0.0;
+        for (const cv::Ptr<Contour> &c : contours_)
+        {
+            a += c->Area();
+        }
+        return a;
     }
 }
 
-double ContourArrayImpl::GetLength() const
+double ContourArrayImpl::Length() const
 {
     if (contours_.empty())
     {
@@ -228,10 +233,15 @@ double ContourArrayImpl::GetLength() const
     }
     else
     {
-        return contours_.front()->GetLength();
+        double l = 0.0;
+        for (const cv::Ptr<Contour> &c : contours_)
+        {
+            l += c->Length();
+        }
+        return l;
     }
 }
-cv::Point2d ContourArrayImpl::GetCentroid() const
+cv::Point2d ContourArrayImpl::Centroid() const
 {
     if (contours_.empty())
     {
@@ -239,10 +249,10 @@ cv::Point2d ContourArrayImpl::GetCentroid() const
     }
     else
     {
-        return contours_.front()->GetCentroid();
+        return contours_.front()->Centroid();
     }
 }
-cv::Rect ContourArrayImpl::GetBoundingBox() const
+cv::Rect ContourArrayImpl::BoundingBox() const
 {
     if (contours_.empty())
     {
@@ -250,7 +260,7 @@ cv::Rect ContourArrayImpl::GetBoundingBox() const
     }
     else
     {
-        return contours_.front()->GetBoundingBox();
+        return contours_.front()->BoundingBox();
     }
 }
 bool ContourArrayImpl::TestClosed() const

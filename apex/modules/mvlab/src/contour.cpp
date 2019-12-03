@@ -14,7 +14,7 @@ Ptr<Contour> Contour::GenEmpty()
 
 Ptr<Contour> Contour::GenRectangle(const cv::Rect2f &rect)
 {
-    Point2fSequence points;
+    ScalablePoint2fSequence points;
     points.reserve(4);
     points.emplace_back(rect.tl());
     points.emplace_back(rect.x, rect.y + rect.height);
@@ -25,7 +25,7 @@ Ptr<Contour> Contour::GenRectangle(const cv::Rect2f &rect)
 
 Ptr<Contour> Contour::GenRotatedRectangle(const cv::RotatedRect &rotatedRect)
 {
-    Point2fSequence corners(4);
+    ScalablePoint2fSequence corners(4);
     rotatedRect.points(corners.data());
     return makePtr<ContourImpl>(&corners, K_YES, true);
 }
@@ -38,8 +38,8 @@ Ptr<Contour> Contour::GenCircle(const cv::Point2f &center, const float radius, c
     }
 
     const float radStep = resolution / radius;
-    Point2fSequence corners(cvCeil(CV_2PI / radStep) + 2);
-    Point2fSequence::pointer pCorner = corners.data();
+    ScalablePoint2fSequence corners(cvCeil(CV_2PI / radStep) + 2);
+    ScalablePoint2fSequence::pointer pCorner = corners.data();
 
     if (boost::contains(specification, "negative"))
     {
@@ -81,8 +81,8 @@ Ptr<Contour> Contour::GenCircleSector(const cv::Point2f &center,
     }
 
     const float radStep = resolution / radius;
-    Point2fSequence corners(cvCeil(angExt / Util::deg(radStep)) + 3);
-    Point2fSequence::pointer pCorner = corners.data();
+    ScalablePoint2fSequence corners(cvCeil(angExt / Util::deg(radStep)) + 3);
+    ScalablePoint2fSequence::pointer pCorner = corners.data();
 
     if (boost::contains(specification, "negative"))
     {
@@ -131,8 +131,8 @@ Ptr<Contour> Contour::GenEllipse(const cv::Point2f &center, const cv::Size2f &si
 
     const float radius = std::min(size.width, size.height);
     const float radStep = resolution / radius;
-    Point2fSequence corners(cvCeil(CV_2PI / radStep) + 2);
-    Point2fSequence::pointer pCorner = corners.data();
+    ScalablePoint2fSequence corners(cvCeil(CV_2PI / radStep) + 2);
+    ScalablePoint2fSequence::pointer pCorner = corners.data();
 
     if (specification == "negative")
     {
@@ -175,8 +175,8 @@ Ptr<Contour> Contour::GenEllipseSector(const cv::Point2f &center,
     }
 
     const float radStep = resolution / radius;
-    Point2fSequence corners(cvCeil(angExt / Util::deg(radStep)) + 3);
-    Point2fSequence::pointer pCorner = corners.data();
+    ScalablePoint2fSequence corners(cvCeil(angExt / Util::deg(radStep)) + 3);
+    ScalablePoint2fSequence::pointer pCorner = corners.data();
 
     if (boost::contains(specification, "negative"))
     {
@@ -229,8 +229,8 @@ Ptr<Contour> Contour::GenRotatedEllipse(const cv::Point2f &center,
 
     const float radius = std::min(size.width, size.height);
     const float radStep = resolution / radius;
-    Point2fSequence corners(cvCeil(CV_2PI / radStep) + 2);
-    Point2fSequence::pointer pCorner = corners.data();
+    ScalablePoint2fSequence corners(cvCeil(CV_2PI / radStep) + 2);
+    ScalablePoint2fSequence::pointer pCorner = corners.data();
 
     const float alpha = std::cosf(Util::rad(angle));
     const float beta  = std::sinf(Util::rad(angle));
@@ -281,8 +281,8 @@ Ptr<Contour> Contour::GenRotatedEllipseSector(const cv::Point2f &center,
     }
 
     const float radStep = resolution / radius;
-    Point2fSequence corners(cvCeil(angExt / Util::deg(radStep)) + 3);
-    Point2fSequence::pointer pCorner = corners.data();
+    ScalablePoint2fSequence corners(cvCeil(angExt / Util::deg(radStep)) + 3);
+    ScalablePoint2fSequence::pointer pCorner = corners.data();
 
     const float alpha = std::cosf(Util::rad(angle));
     const float beta = std::sinf(Util::rad(angle));
@@ -362,7 +362,7 @@ Ptr<Contour> Contour::GenPolygonRounded(const std::vector<cv::Point2f> &vertexes
         len += Util::dist(p0, p1);
     }
 
-    Point2fSequence corners;
+    ScalablePoint2fSequence corners;
     corners.reserve(cvCeil((len+ vertexes.size()*samplingInterval)/ samplingInterval) + vertexes.size());
 
     p0 = vertexes.data() + vertexes.size() - 2;

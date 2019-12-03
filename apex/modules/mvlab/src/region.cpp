@@ -4,23 +4,6 @@
 
 namespace cv {
 namespace mvlab {
-struct PolyEdge
-{
-    int y0, y1;
-    int x, dx;
-    PolyEdge *next;
-};
-
-struct CmpEdges
-{
-    bool operator ()(const PolyEdge& e1, const PolyEdge& e2)
-    {
-        return e1.y0 - e2.y0 ? e1.y0 < e2.y0 :
-            e1.x - e2.x ? e1.x < e2.x : e1.dx < e2.dx;
-    }
-};
-
-using UScalablePolyEdgeSequence = ao::uvector<PolyEdge, MyAlloc<PolyEdge>>;
 
 static void genBottomFlatTriangle(const cv::Point2f (&v)[3], RunSequence &dstRuns, const int yMin, const int yMax)
 {
@@ -204,40 +187,6 @@ static RunSequence getConvexPoly(const cv::Point2f *vf, int npts)
     return dstRuns;
 }
 
-static void collectPolyEdges_(const cv::Point* v, const int count, UScalablePolyEdgeSequence &edges)
-{
-    cv::Point pt0 = v[count - 1], pt1;
-    pt0.y = (pt0.y + XY_DELTA) >> XY_SHIFT;
-
-    UScalablePolyEdgeSequence::pointer pEdge = edges.data();
-    for (int i = 0; i < count; i++, pt0 = pt1)
-    {
-        pt1 = v[i];
-        pt1.y = (pt1.y + XY_DELTA) >> XY_SHIFT;
-
-        if (pt0.y == pt1.y)
-            continue;
-
-        if (pt0.y < pt1.y)
-        {
-            pEdge->y0 = pt0.y;
-            pEdge->y1 = pt1.y;
-            pEdge->x = pt0.x;
-        }
-        else
-        {
-            pEdge->y0 = pt1.y;
-            pEdge->y1 = pt0.y;
-            pEdge->x = pt1.x;
-        }
-
-        pEdge->dx = (pt1.x - pt0.x) / (pt1.y - pt0.y);
-        ++pEdge;
-    }
-
-    edges.resize(std::distance(edges.data(), pEdge));
-}
-
 static RunSequence getPoly_(const cv::Point2f *vf, int npts)
 {
     UScalablePointSequence v(npts);
@@ -249,139 +198,10 @@ static RunSequence getPoly_(const cv::Point2f *vf, int npts)
     }
 
     UScalablePolyEdgeSequence edges(npts+1);
-    collectPolyEdges_(v.data(), npts, edges);
-
-    int total = static_cast<int>(edges.size());
-    int y_max = INT_MIN, y_min = INT_MAX;
-    int x_max = INT_MIN, x_min = INT_MAX;
-
-    for (const auto &e1 : edges)
-    {
-        assert(e1.y0 < e1.y1);
-        const int x1 = e1.x + (e1.y1 - e1.y0) * e1.dx;
-        y_min = std::min(y_min, e1.y0);
-        y_max = std::max(y_max, e1.y1);
-        x_min = std::min(x_min, e1.x);
-        x_max = std::max(x_max, e1.x);
-        x_min = std::min(x_min, x1);
-        x_max = std::max(x_max, x1);
-    }
-
-    if (y_min > y_max)
-    {
-        return RunSequence();
-    }
-
-    std::sort(edges.begin(), edges.end(), CmpEdges());
-
-    // start drawing
-    PolyEdge tmp;
-    tmp.y0 = INT_MAX;
-    edges.push_back(tmp); // after this point we do not add
-                          // any elements to edges, thus we can use pointers
-    int i = 0;
-    tmp.next = 0;
-    PolyEdge *e = &edges[i];
-
-    RunSequence dstRuns;
-    dstRuns.reserve((y_max - y_min + 1) * 3);
-    for (int y = e->y0; y < y_max; y++)
-    {
-        PolyEdge *last, *prelast, *keep_prelast;
-        int sort_flag = 0;
-        int draw = 0;
-
-        prelast = &tmp;
-        last = tmp.next;
-        while (last || e->y0 == y)
-        {
-            if (last && last->y1 == y)
-            {
-                // exclude edge if y reaches its lower point
-                prelast->next = last->next;
-                last = last->next;
-                continue;
-            }
-            keep_prelast = prelast;
-            if (last && (e->y0 > y || last->x < e->x))
-            {
-                // go to the next edge in active list
-                prelast = last;
-                last = last->next;
-            }
-            else if (i < total)
-            {
-                // insert new edge into active list if y reaches its upper point
-                prelast->next = e;
-                e->next = last;
-                prelast = e;
-                e = &edges[++i];
-            }
-            else
-                break;
-
-            if (draw)
-            {
-                // convert x's from fixed-point to image coordinates
-                int x1, x2;
-                if (keep_prelast->x > prelast->x)
-                {
-                    x1 = prelast->x >> XY_SHIFT;
-                    x2 = (keep_prelast->x + XY_DELTA) >> XY_SHIFT;
-                }
-                else
-                {
-                    x1 = keep_prelast->x >> XY_SHIFT;
-                    x2 = (prelast->x + XY_DELTA) >> XY_SHIFT;
-                }
-
-                if (y== dstRuns.back().row && x1 <= dstRuns.back().cole)
-                {
-                    dstRuns.back().cole = x2 + 1;
-                }
-                else
-                {
-                    dstRuns.emplace_back(y, x1, x2 + 1);
-                }
-
-                keep_prelast->x += keep_prelast->dx;
-                prelast->x += prelast->dx;
-            }
-            draw ^= 1;
-        }
-
-        // sort edges (using bubble sort)
-        keep_prelast = 0;
-
-        do
-        {
-            prelast = &tmp;
-            last = tmp.next;
-
-            while (last != keep_prelast && last->next != 0)
-            {
-                PolyEdge *te = last->next;
-
-                // swap edges
-                if (last->x > te->x)
-                {
-                    prelast->next = te;
-                    last->next = te->next;
-                    te->next = last;
-                    prelast = te;
-                    sort_flag = 1;
-                }
-                else
-                {
-                    prelast = last;
-                    last = te;
-                }
-            }
-            keep_prelast = prelast;
-        } while (sort_flag && keep_prelast != tmp.next && keep_prelast != &tmp);
-    }
-
-    return dstRuns;
+    UScalablePolyEdgeSequence::pointer pEdge = edges.data();
+    CollectPolyEdges_(v.data(), npts, pEdge);
+    edges.resize(std::distance(edges.data(), pEdge));
+    return FillEdgeCollection_(edges);
 }
 
 cv::Ptr<Region> Region::GenEmpty()

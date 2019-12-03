@@ -19,7 +19,7 @@ public:
 public:
     bool Empty() const CV_OVERRIDE;
     int Count() const CV_OVERRIDE;
-    void CountPoints(std::vector<int> &cPoints) const CV_OVERRIDE;
+    void GetCountPoints(std::vector<int> &cPoints) const CV_OVERRIDE;
     void GetArea(std::vector<double> &areas) const CV_OVERRIDE;
     void GetLength(std::vector<double> &lengthes) const CV_OVERRIDE;
     void GetCentroid(std::vector<cv::Point2f> &centroids) const CV_OVERRIDE;
@@ -32,19 +32,22 @@ public:
     cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const CV_OVERRIDE;
     cv::Ptr<Contour> AffineTrans(const cv::Matx33d &homoMat2D) const CV_OVERRIDE;
     //Features
-    void TestClosed(std::vector<int> &isClosed) const CV_OVERRIDE;
-    void TestPoint(const cv::Point2f &point, std::vector<int> &isInside) const CV_OVERRIDE;
-    void TestSelfIntersection(const cv::String &closeContour, std::vector<int> &doesIntersect) const CV_OVERRIDE;
+    void GetTestClosed(std::vector<int> &isClosed) const CV_OVERRIDE;
+    void GetTestPoint(const cv::Point2f &point, std::vector<int> &isInside) const CV_OVERRIDE;
+    void GetTestSelfIntersection(const cv::String &closeContour, std::vector<int> &doesIntersect) const CV_OVERRIDE;
 
 public:
     int CountPoints() const CV_OVERRIDE;
-    double GetArea() const CV_OVERRIDE;
-    double GetLength() const CV_OVERRIDE;
-    cv::Point2d GetCentroid() const CV_OVERRIDE;
-    cv::Rect GetBoundingBox() const CV_OVERRIDE;
+    double Area() const CV_OVERRIDE;
+    double Length() const CV_OVERRIDE;
+    cv::Point2d Centroid() const CV_OVERRIDE;
+    cv::Rect BoundingBox() const CV_OVERRIDE;
     bool TestClosed() const CV_OVERRIDE;
     bool TestPoint(const cv::Point2f &point) const CV_OVERRIDE;
     bool TestSelfIntersection(const cv::String &closeContour) const CV_OVERRIDE;
+
+public:
+    const std::vector<cv::Ptr<Contour>> &GetContours() const { return contours_; }
 
 private:
     std::vector<cv::Ptr<Contour>> contours_;

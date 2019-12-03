@@ -2,6 +2,7 @@
 #define __OPENCV_MVLAB_REGION_IMPL_HPP__
 
 #include "contour_impl.hpp"
+#include "contour_array_impl.hpp"
 #include "uvector.h"
 #include <opencv2/mvlab/region.hpp>
 #include <boost/optional.hpp>
@@ -10,6 +11,20 @@
 
 namespace cv {
 namespace mvlab {
+struct PolyEdge
+{
+    int y0, y1;
+    int x, dx;
+    PolyEdge *next;
+};
+
+struct CmpEdges
+{
+    bool operator ()(const PolyEdge& e1, const PolyEdge& e2)
+    {
+        return e1.y0 - e2.y0 ? e1.y0 < e2.y0 : e1.x - e2.x ? e1.x < e2.x : e1.dx < e2.dx;
+    }
+};
 
 struct RunLength
 {
@@ -29,6 +44,7 @@ using RunPtrSequence                = std::vector<RunLength *, MyAlloc<RunLength
 using RunConstPtrSequence           = std::vector<const RunLength *, MyAlloc<const RunLength*>>;
 using RowBeginSequence              = ScalableIntSequence;
 using RowBeginSequenceSequence      = ScalableIntSequenceSequence;
+using UScalablePolyEdgeSequence     = ao::uvector<PolyEdge, MyAlloc<PolyEdge>>;
 
 class RegionImpl : public Region
 {
@@ -45,10 +61,15 @@ public:
     double Area() const CV_OVERRIDE;
     Point2d Centroid() const CV_OVERRIDE;
     Rect BoundingBox() const CV_OVERRIDE;
+    double AreaHoles() const CV_OVERRIDE;
+    double Contlength() const CV_OVERRIDE;
     int Count() const CV_OVERRIDE;
     int CountRows() const CV_OVERRIDE;
+    int CountConnect() const CV_OVERRIDE;
+    int CountHoles() const CV_OVERRIDE;
     // Access
     cv::Ptr<Contour> GetContour() const CV_OVERRIDE;
+    cv::Ptr<Contour> GetHole() const CV_OVERRIDE;
     cv::Ptr<Contour> GetConvex() const CV_OVERRIDE;
     cv::Ptr<Contour> GetPolygon(const float tolerance) const CV_OVERRIDE;
     int GetPoints(std::vector<cv::Point> &points) const CV_OVERRIDE;
@@ -67,6 +88,7 @@ public:
     // Geometric Transformations
     cv::Ptr<Region> Move(const cv::Point &delta) const CV_OVERRIDE;
     cv::Ptr<Region> Zoom(const cv::Size2f &scale) const CV_OVERRIDE;
+    cv::Ptr<Region> AffineTrans(const cv::Matx33d &homoMat2D) const CV_OVERRIDE;
     int Connect(std::vector<Ptr<Region>> &regions) const CV_OVERRIDE;
 
 public:
@@ -76,24 +98,29 @@ public:
 private:
     void FromMask(const cv::Mat &mask);
     void FromPathVector(const Geom::PathVector &pv);
-    void DrawVerified(Mat &img, const Scalar& fillColor) const;
     void DrawVerifiedRGBA(Mat &img, const Scalar& fillColor) const;
     void DrawVerifiedRGB(Mat &img, const Scalar& fillColor) const;
     void DrawVerifiedGray(Mat &img, const Scalar& fillColor) const;
-    void TraceAllContours() const;
     void TraceContour() const;
     void GatherBasicFeatures() const;
+    void GetContourInfo(const cv::Ptr<Contour> &contour, int &numEdges, int &maxNumPoints) const;
+    void ZoomContourToEdges(const cv::Ptr<Contour> &contour, const cv::Size2f &scale, UScalablePointSequence &v, UScalablePolyEdgeSequence::pointer &pEdge) const;
+    void AffineContourToEdges(const cv::Ptr<Contour> &contour, const cv::Matx33d &m, UScalablePointSequence &v, UScalablePolyEdgeSequence::pointer &pEdge) const;
 
 private:
     const RunSequence                    rgn_runs_;
     mutable RowBeginSequence             row_begs_;
     mutable boost::optional<double>      area_;
+    mutable boost::optional<double>      hole_area_;
+    mutable boost::optional<double>      cont_length_;
     mutable boost::optional<cv::Point2d> centroid_;
     mutable boost::optional<cv::Rect>    bbox_;
-    mutable std::vector<Ptr<Contour>>    contour_outers_;
-    mutable std::vector<Ptr<Contour>>    contour_holes_;
     mutable cv::Ptr<Contour> contour_;
+    mutable cv::Ptr<Contour> hole_;
 };
+
+extern void CollectPolyEdges_(const cv::Point* v, const int count, UScalablePolyEdgeSequence::pointer &pEdge);
+extern RunSequence FillEdgeCollection_(UScalablePolyEdgeSequence &edges);
 
 }
 }

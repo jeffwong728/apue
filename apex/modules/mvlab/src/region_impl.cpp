@@ -103,20 +103,52 @@ bool RegionImpl::Empty() const
 
 double RegionImpl::Area() const
 {
-    GatherBasicFeatures();
+    if (boost::none == area_)
+    {
+        GatherBasicFeatures();
+    }
+
     return *area_;
 }
 
 cv::Point2d RegionImpl::Centroid() const
 {
-    GatherBasicFeatures();
+    if (boost::none == centroid_)
+    {
+        GatherBasicFeatures();
+    }
+
     return *centroid_;
 }
 
 cv::Rect RegionImpl::BoundingBox() const
 {
-    GatherBasicFeatures();
+    if (boost::none == bbox_)
+    {
+        GatherBasicFeatures();
+    }
+
     return *bbox_;
+}
+
+double RegionImpl::AreaHoles() const
+{
+    if (boost::none == hole_area_)
+    {
+        hole_area_ = RegionImpl::GetHole()->Area();
+    }
+
+    return *hole_area_;
+}
+
+double RegionImpl::Contlength() const
+{
+    if (boost::none == cont_length_)
+    {
+        cont_length_ = RegionImpl::GetContour()->Length();
+    }
+
+    return *cont_length_;
 }
 
 int RegionImpl::Count() const
@@ -137,6 +169,16 @@ int RegionImpl::CountRows() const
     }
 }
 
+int RegionImpl::CountConnect() const
+{
+    return RegionImpl::GetContour()->Count();
+}
+
+int RegionImpl::CountHoles() const
+{
+    return RegionImpl::GetHole()->Count();
+}
+
 cv::Ptr<Contour> RegionImpl::GetContour() const
 {
     if (RegionImpl::Empty()) {
@@ -144,11 +186,25 @@ cv::Ptr<Contour> RegionImpl::GetContour() const
     } else {
         if (contour_) {
             return contour_;
-        } else if (!contour_outers_.empty()) {
-            return contour_outers_.front();
         } else {
             TraceContour();
-            return contour_;
+            return contour_ ? contour_ : cv::makePtr<ContourImpl>();
+        }
+    }
+}
+
+cv::Ptr<Contour> RegionImpl::GetHole() const
+{
+    if (RegionImpl::Empty()) {
+        return cv::makePtr<ContourImpl>();
+    }
+    else {
+        if (hole_) {
+            return hole_;
+        }
+        else {
+            TraceContour();
+            return hole_ ? hole_ : cv::makePtr<ContourImpl>();
         }
     }
 }
@@ -162,8 +218,9 @@ cv::Ptr<Contour> RegionImpl::GetConvex() const
         if (contImpl && !contImpl->Empty())
         {
             Point2fSequence cvxPoints;
-            cv::convexHull(contImpl->GetVertexes(), cvxPoints);
-            return cv::makePtr<ContourImpl>(&cvxPoints, K_YES, true);
+            cv::convexHull(Point2fSequence(contImpl->GetVertexes().cbegin(), contImpl->GetVertexes().cend()), cvxPoints);
+            ScalablePoint2fSequence tPoints(cvxPoints.cbegin(), cvxPoints.cend());
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
         }
     }
     return makePtr<ContourImpl>();
@@ -195,8 +252,9 @@ cv::Ptr<Contour> RegionImpl::GetPolygon(const float tolerance) const
         if (contImpl && !contImpl->Empty())
         {
             Point2fSequence approxPoints;
-            cv::approxPolyDP(contImpl->GetVertexes(), approxPoints, tolerance, true);
-            return cv::makePtr<ContourImpl>(&approxPoints, K_YES, true);
+            cv::approxPolyDP(Point2fSequence(contImpl->GetVertexes().cbegin(), contImpl->GetVertexes().cend()), approxPoints, tolerance, true);
+            ScalablePoint2fSequence tPoints(approxPoints.cbegin(), approxPoints.cend());
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
         }
     }
     return makePtr<ContourImpl>();
@@ -411,23 +469,55 @@ cv::Ptr<Region> RegionImpl::Zoom(const cv::Size2f &scale) const
 {
     if (!Empty())
     {
-        cv::Ptr<Contour> contour = RegionImpl::GetContour();
-        if (contour)
-        {
-            cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
-            if (contImpl && !contImpl->Empty())
-            {
-                Point2fSequence points(contImpl->GetVertexes().cbegin(), contImpl->GetVertexes().cend());
-                for (cv::Point2f &point : points)
-                {
-                    point.x *= scale.width;
-                    point.y *= scale.height;
-                }
+        TraceContour();
 
-                Point2fSequence approxPoints;
-                cv::approxPolyDP(points, approxPoints, 1.0, true);
-                return Region::GenPolygon(approxPoints);
-            }
+        int numEdges = 0;
+        int maxNumPoints = 0;
+        GetContourInfo(contour_, numEdges, maxNumPoints);
+        GetContourInfo(hole_, numEdges, maxNumPoints);
+
+        UScalablePointSequence v(maxNumPoints);
+        UScalablePolyEdgeSequence edges(numEdges);
+        UScalablePolyEdgeSequence::pointer pEdge = edges.data();
+        ZoomContourToEdges(contour_, scale, v, pEdge);
+        ZoomContourToEdges(hole_, scale, v, pEdge);
+
+        edges.resize(std::distance(edges.data(), pEdge));
+        if (edges.size()>1)
+        {
+            RunSequence runs = FillEdgeCollection_(edges);
+            return makePtr<RegionImpl>(&runs);
+        }
+    }
+
+    return makePtr<RegionImpl>();
+}
+
+cv::Ptr<Region> RegionImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
+{
+    if (!Empty())
+    {
+        TraceContour();
+
+        int numEdges = 0;
+        int maxNumPoints = 0;
+        GetContourInfo(contour_, numEdges, maxNumPoints);
+        GetContourInfo(hole_, numEdges, maxNumPoints);
+
+        UScalablePointSequence v(maxNumPoints);
+        UScalablePolyEdgeSequence edges(numEdges);
+        UScalablePolyEdgeSequence::pointer pEdge = edges.data();
+
+        const cv::Matx33d m0 = HomoMat2d::Translate(homoMat2D, cv::Point2d(0.5, 0.5));
+        const cv::Matx33d m1 = HomoMat2d::TranslateLocal(m0, cv::Point2d(-0.5, -0.5));
+        AffineContourToEdges(contour_, m1, v, pEdge);
+        AffineContourToEdges(hole_, m1, v, pEdge);
+
+        edges.resize(std::distance(edges.data(), pEdge));
+        if (edges.size() > 1)
+        {
+            RunSequence runs = FillEdgeCollection_(edges);
+            return makePtr<RegionImpl>(&runs);
         }
     }
 
@@ -471,7 +561,11 @@ int RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const
 
 const RowBeginSequence &RegionImpl::GetRowBeginSequence() const
 {
-    GatherBasicFeatures();
+    if (!rgn_runs_.empty() && row_begs_.empty())
+    {
+        GatherBasicFeatures();
+    }
+
     return row_begs_;
 }
 
@@ -508,35 +602,6 @@ void RegionImpl::FromPathVector(const Geom::PathVector &pv)
             run.row += rect.y;
         }
     }
-}
-
-void RegionImpl::DrawVerified(Mat &img, const Scalar& fillColor) const
-{
-    auto imgSurf = Cairo::ImageSurface::create(img.data, Cairo::Format::FORMAT_RGB24, img.cols, img.rows, static_cast<int>(img.step1()));
-    auto cr = Cairo::Context::create(imgSurf);
-
-    cr->translate(0.5, 0.5);
-
-    for (const auto &contour : contour_outers_)
-    {
-        Ptr<ContourImpl> spContour = contour.dynamicCast<ContourImpl>();
-        if (spContour)
-        {
-            spContour->Feed(cr);
-        }
-    }
-
-    for (const auto &contour : contour_holes_)
-    {
-        Ptr<ContourImpl> spContour = contour.dynamicCast<ContourImpl>();
-        if (spContour)
-        {
-            spContour->Feed(cr);
-        }
-    }
-
-    cr->set_source_rgba(fillColor[0] / 255.0, fillColor[1] / 255.0, fillColor[2] / 255.0, fillColor[3] / 255.0);
-    cr->fill();
 }
 
 void RegionImpl::DrawVerifiedRGBA(Mat &img, const Scalar& fillColor) const
@@ -777,113 +842,336 @@ void RegionImpl::DrawVerifiedGray(Mat &img, const Scalar& fillColor) const
     }
 }
 
-void RegionImpl::TraceAllContours() const
-{
-    if (!rgn_runs_.empty() && contour_outers_.empty())
-    {
-        GatherBasicFeatures();
-
-        const int nThreads = tbb::task_scheduler_init::default_num_threads();
-        const int numRows = static_cast<int>(row_begs_.size() - 1);
-        const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
-
-        if (is_parallel)
-        {
-            RunLengthRDParallelEncoder rdEncoder;
-            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
-            rdEncoder.Link();
-            rdEncoder.Track(contour_outers_, contour_holes_);
-        }
-        else
-        {
-            RunLengthRDSerialEncoder rdEncoder;
-            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
-            rdEncoder.Link();
-            rdEncoder.Track(contour_outers_, contour_holes_);
-        }
-    }
-}
-
 void RegionImpl::TraceContour() const
 {
-    if (!rgn_runs_.empty() && contour_outers_.empty())
+    if (!rgn_runs_.empty() && !contour_ && !hole_)
     {
-        GatherBasicFeatures();
+        const auto &rowBegs = GetRowBeginSequence();
 
         const int nThreads = tbb::task_scheduler_init::default_num_threads();
-        const int numRows = static_cast<int>(row_begs_.size() - 1);
+        const int numRows = static_cast<int>(rowBegs.size() - 1);
         const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
 
         if (is_parallel)
         {
             RunLengthRDParallelEncoder rdEncoder;
-            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
+            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), rowBegs);
             rdEncoder.Link();
-            rdEncoder.Track(contour_);
+            std::vector<Ptr<Contour>> outers, holes;
+            rdEncoder.Track(outers, holes);
+            contour_ = makePtr<ContourArrayImpl>(&outers);
+            hole_ = makePtr<ContourArrayImpl>(&holes);
         }
         else
         {
             RunLengthRDSerialEncoder rdEncoder;
-            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), row_begs_);
+            rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), rowBegs);
             rdEncoder.Link();
-            rdEncoder.Track(contour_);
+            std::vector<Ptr<Contour>> outers, holes;
+            rdEncoder.Track(outers, holes);
+            contour_ = makePtr<ContourArrayImpl>(&outers);
+            hole_    = makePtr<ContourArrayImpl>(&holes);
         }
     }
 }
 
 void RegionImpl::GatherBasicFeatures() const
 {
-    if (area_ == boost::none)
+    if (!rgn_runs_.empty())
     {
-        if (!rgn_runs_.empty())
+        row_begs_.reserve(rgn_runs_.back().row-rgn_runs_.front().row + 2);
+        const int numRuns = static_cast<int>(rgn_runs_.size());
+        int currentRow = rgn_runs_.front().row;
+
+        double a = 0, x = 0, y = 0;
+        cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
+        cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
+
+        int begIdx = 0;
+        for (int runIdx = 0; runIdx < numRuns; ++runIdx)
         {
-            row_begs_.reserve(rgn_runs_.back().row-rgn_runs_.front().row + 2);
-            const int numRuns = static_cast<int>(rgn_runs_.size());
-            int currentRow = rgn_runs_.front().row;
-
-            double a = 0, x = 0, y = 0;
-            cv::Point minPoint{ std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
-            cv::Point maxPoint{ std::numeric_limits<int>::min(), std::numeric_limits<int>::min() };
-
-            int begIdx = 0;
-            for (int runIdx = 0; runIdx < numRuns; ++runIdx)
+            const RunLength &rl = rgn_runs_[runIdx];
+            if (rl.row != currentRow)
             {
-                const RunLength &rl = rgn_runs_[runIdx];
-                if (rl.row != currentRow)
+                row_begs_.emplace_back(begIdx); begIdx = runIdx; currentRow = rl.row;
+            }
+
+            const auto n = rl.cole - rl.colb;
+            a += n;
+            x += (rl.cole - 1 + rl.colb) * n / 2.0;
+            y += rl.row * n;
+
+            if (rl.row < minPoint.y) { minPoint.y = rl.row; }
+            if (rl.row > maxPoint.y) { maxPoint.y = rl.row; }
+            if (rl.colb < minPoint.x) { minPoint.x = rl.colb; }
+            if (rl.cole > maxPoint.x) { maxPoint.x = rl.cole; }
+        }
+
+        row_begs_.emplace_back(begIdx);
+        row_begs_.emplace_back(numRuns);
+
+        area_ = a;
+        if (a > 0) {
+            centroid_.emplace(x / a, y / a);
+        } else {
+            centroid_.emplace(0, 0);
+        }
+
+        bbox_ = cv::Rect(minPoint, maxPoint);
+    }
+    else
+    {
+        area_.emplace(0);
+        bbox_.emplace(0, 0, 0, 0);
+        centroid_.emplace(0, 0);
+    }
+}
+
+void RegionImpl::GetContourInfo(const cv::Ptr<Contour> &contour, int &numEdges, int &maxNumPoints) const
+{
+    if (contour)
+    {
+        cv::Ptr<ContourArrayImpl> contourArray = contour.dynamicCast<ContourArrayImpl>();
+        const std::vector<cv::Ptr<Contour>> &contours = contourArray->GetContours();
+        for (const cv::Ptr<Contour> &cont : contours)
+        {
+            if (cont)
+            {
+                const int numpoints = cont->CountPoints();
+                numEdges += (numpoints + 1);
+                maxNumPoints = std::max(maxNumPoints, numpoints);
+            }
+        }
+    }
+}
+
+void RegionImpl::ZoomContourToEdges(const cv::Ptr<Contour> &contour,
+    const cv::Size2f &scale,
+    UScalablePointSequence &v,
+    UScalablePolyEdgeSequence::pointer &pEdge) const
+{
+    if (contour)
+    {
+        cv::Ptr<ContourArrayImpl> contourArray = contour.dynamicCast<ContourArrayImpl>();
+        const std::vector<cv::Ptr<Contour>> &contours = contourArray->GetContours();
+        for (const cv::Ptr<Contour> &cont : contours)
+        {
+            if (cont)
+            {
+                cv::Ptr<ContourImpl> contImpl = cont.dynamicCast<ContourImpl>();
+                if (contImpl && !contImpl->Empty())
                 {
-                    row_begs_.emplace_back(begIdx); begIdx = runIdx; currentRow = rl.row;
+                    const int numpoints = contImpl->CountPoints();
+                    const UScalablePointSequence::pointer pvEnd = v.data() + numpoints;
+                    auto vf = contImpl->GetVertexes().data();
+                    for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
+                    {
+                        pv->x = cvRound(vf->x * F_XY_ONE * scale.width);
+                        pv->y = cvRound(vf->y * F_XY_ONE * scale.height);
+                    }
+
+                    CollectPolyEdges_(v.data(), numpoints, pEdge);
                 }
-
-                const auto n = rl.cole - rl.colb;
-                a += n;
-                x += (rl.cole - 1 + rl.colb) * n / 2.0;
-                y += rl.row * n;
-
-                if (rl.row < minPoint.y) { minPoint.y = rl.row; }
-                if (rl.row > maxPoint.y) { maxPoint.y = rl.row; }
-                if (rl.colb < minPoint.x) { minPoint.x = rl.colb; }
-                if (rl.cole > maxPoint.x) { maxPoint.x = rl.cole; }
             }
+        }
+    }
+}
 
-            row_begs_.emplace_back(begIdx);
-            row_begs_.emplace_back(numRuns);
-
-            area_ = a;
-            if (a > 0) {
-                centroid_.emplace(x / a, y / a);
-            } else {
-                centroid_.emplace(0, 0);
+void RegionImpl::AffineContourToEdges(const cv::Ptr<Contour> &contour,
+    const cv::Matx33d &m,
+    UScalablePointSequence &v,
+    UScalablePolyEdgeSequence::pointer &pEdge) const
+{
+    if (contour)
+    {
+        cv::Ptr<ContourArrayImpl> contourArray = contour.dynamicCast<ContourArrayImpl>();
+        const std::vector<cv::Ptr<Contour>> &contours = contourArray->GetContours();
+        for (const cv::Ptr<Contour> &cont : contours)
+        {
+            if (cont)
+            {
+                cv::Ptr<ContourImpl> contImpl = cont.dynamicCast<ContourImpl>();
+                if (contImpl && !contImpl->Empty())
+                {
+                    const int numpoints = contImpl->CountPoints();
+                    const UScalablePointSequence::pointer pvEnd = v.data() + numpoints;
+                    auto vf = contImpl->GetVertexes().data();
+                    for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
+                    {
+                        pv->x = cvRound((m.val[0] * vf->x + m.val[1] * vf->y + m.val[2])*D_XY_ONE);
+                        pv->y = cvRound((m.val[3] * vf->x + m.val[4] * vf->y + m.val[5])*D_XY_ONE);
+                    }
+                    CollectPolyEdges_(v.data(), numpoints, pEdge);
+                }
             }
+        }
+    }
+}
 
-            bbox_ = cv::Rect(minPoint, maxPoint);
+void CollectPolyEdges_(const cv::Point* v, const int count, UScalablePolyEdgeSequence::pointer &pEdge)
+{
+    cv::Point pt0 = v[count - 1], pt1;
+    pt0.y = (pt0.y + XY_DELTA) >> XY_SHIFT;
+
+    for (int i = 0; i < count; i++, pt0 = pt1)
+    {
+        pt1 = v[i];
+        pt1.y = (pt1.y + XY_DELTA) >> XY_SHIFT;
+
+        if (pt0.y == pt1.y)
+            continue;
+
+        if (pt0.y < pt1.y)
+        {
+            pEdge->y0 = pt0.y;
+            pEdge->y1 = pt1.y;
+            pEdge->x = pt0.x;
         }
         else
         {
-            area_.emplace(0);
-            bbox_.emplace(0, 0, 0, 0);
-            centroid_.emplace(0, 0);
+            pEdge->y0 = pt1.y;
+            pEdge->y1 = pt0.y;
+            pEdge->x = pt1.x;
         }
+
+        pEdge->dx = (pt1.x - pt0.x) / (pt1.y - pt0.y);
+        ++pEdge;
     }
+}
+
+RunSequence FillEdgeCollection_(UScalablePolyEdgeSequence &edges)
+{
+    int total = static_cast<int>(edges.size());
+    int y_max = INT_MIN, y_min = INT_MAX;
+    int x_max = INT_MIN, x_min = INT_MAX;
+
+    for (const auto &e1 : edges)
+    {
+        assert(e1.y0 < e1.y1);
+        const int x1 = e1.x + (e1.y1 - e1.y0) * e1.dx;
+        y_min = std::min(y_min, e1.y0);
+        y_max = std::max(y_max, e1.y1);
+        x_min = std::min(x_min, e1.x);
+        x_max = std::max(x_max, e1.x);
+        x_min = std::min(x_min, x1);
+        x_max = std::max(x_max, x1);
+    }
+
+    if (y_min > y_max)
+    {
+        return RunSequence();
+    }
+
+    std::sort(edges.begin(), edges.end(), CmpEdges());
+
+    // start drawing
+    PolyEdge tmp;
+    tmp.y0 = INT_MAX;
+    edges.push_back(tmp); // after this point we do not add
+                          // any elements to edges, thus we can use pointers
+    int i = 0;
+    tmp.next = 0;
+    PolyEdge *e = &edges[i];
+
+    RunSequence dstRuns;
+    dstRuns.reserve((y_max - y_min + 1) * 3);
+    for (int y = e->y0; y < y_max; y++)
+    {
+        PolyEdge *last, *prelast, *keep_prelast;
+        int sort_flag = 0;
+        int draw = 0;
+
+        prelast = &tmp;
+        last = tmp.next;
+        while (last || e->y0 == y)
+        {
+            if (last && last->y1 == y)
+            {
+                // exclude edge if y reaches its lower point
+                prelast->next = last->next;
+                last = last->next;
+                continue;
+            }
+            keep_prelast = prelast;
+            if (last && (e->y0 > y || last->x < e->x))
+            {
+                // go to the next edge in active list
+                prelast = last;
+                last = last->next;
+            }
+            else if (i < total)
+            {
+                // insert new edge into active list if y reaches its upper point
+                prelast->next = e;
+                e->next = last;
+                prelast = e;
+                e = &edges[++i];
+            }
+            else
+                break;
+
+            if (draw)
+            {
+                // convert x's from fixed-point to image coordinates
+                int x1, x2;
+                if (keep_prelast->x > prelast->x)
+                {
+                    x1 = prelast->x >> XY_SHIFT;
+                    x2 = (keep_prelast->x + XY_DELTA) >> XY_SHIFT;
+                }
+                else
+                {
+                    x1 = keep_prelast->x >> XY_SHIFT;
+                    x2 = (prelast->x + XY_DELTA) >> XY_SHIFT;
+                }
+
+                if (y == dstRuns.back().row && x1 <= dstRuns.back().cole)
+                {
+                    dstRuns.back().cole = x2 + 1;
+                }
+                else
+                {
+                    dstRuns.emplace_back(y, x1, x2 + 1);
+                }
+
+                keep_prelast->x += keep_prelast->dx;
+                prelast->x += prelast->dx;
+            }
+            draw ^= 1;
+        }
+
+        // sort edges (using bubble sort)
+        keep_prelast = 0;
+
+        do
+        {
+            prelast = &tmp;
+            last = tmp.next;
+
+            while (last != keep_prelast && last->next != 0)
+            {
+                PolyEdge *te = last->next;
+
+                // swap edges
+                if (last->x > te->x)
+                {
+                    prelast->next = te;
+                    last->next = te->next;
+                    te->next = last;
+                    prelast = te;
+                    sort_flag = 1;
+                }
+                else
+                {
+                    prelast = last;
+                    last = te;
+                }
+            }
+            keep_prelast = prelast;
+        } while (sort_flag && keep_prelast != tmp.next && keep_prelast != &tmp);
+    }
+
+    return dstRuns;
 }
 
 }

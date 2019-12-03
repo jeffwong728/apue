@@ -19,7 +19,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_BoundingBox(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()))
 
         startTime = time.perf_counter()
         x, y, w, h = contr.GetBoundingBox()[0]
@@ -48,7 +48,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_Length(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()))
         startTime = time.perf_counter()
         l = contr.GetLength()[0]
         endTime = time.perf_counter()
@@ -72,7 +72,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_Area(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()))
 
         startTime = time.perf_counter()
         a = contr.GetArea()[0]
@@ -97,7 +97,7 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_Centroid(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()))
 
         startTime = time.perf_counter()
         x, y = contr.GetCentroid()[0]
@@ -131,26 +131,26 @@ class TestContourFeatures(unittest.TestCase):
 
     def test_Contour_Point(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
-        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()[0][0]))
+        print('Contour Number of Points: {0:d}'.format(contr.CountPoints()))
 
         startTime = time.perf_counter()
-        b = contr.TestPoint((1000, 1000))[0]
+        b = contr.TestPoint((1000, 1000))
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         self.assertTrue(b)
         points = [(100, 100), (100, 200), (200, 200), (200, 100)]
         contr = mvlab.Contour_GenPolygon(points)
-        self.assertTrue(contr.TestPoint((150, 150))[0])
-        self.assertFalse(contr.TestPoint((150, 50))[0])
-        self.assertFalse(contr.TestPoint((150, 250))[0])
-        self.assertFalse(contr.TestPoint((50, 150))[0])
-        self.assertFalse(contr.TestPoint((250, 150))[0])
+        self.assertTrue(contr.TestPoint((150, 150)))
+        self.assertFalse(contr.TestPoint((150, 50)))
+        self.assertFalse(contr.TestPoint((150, 250)))
+        self.assertFalse(contr.TestPoint((50, 150)))
+        self.assertFalse(contr.TestPoint((250, 150)))
 
         points = [(15, 190), (230, 190), (230, 45), (50, 45), (50, 100), (185, 100), (185, 145), (115, 145), (115, 10), (15, 10)]
         contr = mvlab.Contour_GenPolygon(points)
-        self.assertTrue(contr.TestPoint((95, 115))[0])
-        self.assertFalse(contr.TestPoint((150, 120))[0])
-        self.assertFalse(contr.TestPoint((80, 70))[0])
+        self.assertTrue(contr.TestPoint((95, 115)))
+        self.assertFalse(contr.TestPoint((150, 120)))
+        self.assertFalse(contr.TestPoint((80, 70)))
 
         rgn = mvlab.Region_GenPolygon(points)
         extradata.SaveRegion(self.id(), rgn)

@@ -77,6 +77,7 @@ constexpr int XY_SHIFT = 10;
 constexpr int XY_DELTA = 1 << XY_SHIFT >> 1;
 constexpr int XY_ONE = 1 << XY_SHIFT;
 constexpr float F_XY_ONE = 1 << XY_SHIFT;
+constexpr float D_XY_ONE = 1 << XY_SHIFT;
 constexpr int K_NO = 0;
 constexpr int K_YES = 1;
 constexpr int K_UNKNOWN = 2;
@@ -89,13 +90,13 @@ template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2d> : boost::true_type {};
 
 using Point2fSequence                   = std::vector<cv::Point2f>;
-using ScalablePoint2fSequenceSequence   = std::vector<Point2fSequence, MyAlloc<Point2fSequence>>;
 using ScalableIntSequence               = std::vector<int, MyAlloc<int>>;
 using ScalableIntSequenceSequence       = std::vector<ScalableIntSequence, MyAlloc<ScalableIntSequence>>;
 using ScalableDoubleSequence            = std::vector<double, MyAlloc<double>>;
 using ScalablePoint2fSequence           = std::vector<cv::Point2f, MyAlloc<cv::Point2f>>;
 using ScalablePoint2dSequence           = std::vector<cv::Point2d, MyAlloc<cv::Point2d>>;
 using ScalableRectSequence              = std::vector<cv::Rect, MyAlloc<cv::Rect>>;
+using ScalablePoint2fSequenceSequence   = std::vector<ScalablePoint2fSequence, MyAlloc<ScalablePoint2fSequence>>;
 using UScalableBoolSequence             = ao::uvector<bool, MyAlloc<bool>>;
 using UScalableIntSequence              = ao::uvector<int, MyAlloc<int>>;
 using UScalableFloatSequence            = ao::uvector<float, MyAlloc<float>>;
