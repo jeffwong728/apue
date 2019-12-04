@@ -24,7 +24,9 @@ public:
     void GetLength(std::vector<double> &lengthes) const CV_OVERRIDE;
     void GetCentroid(std::vector<cv::Point2f> &centroids) const CV_OVERRIDE;
     void GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) const CV_OVERRIDE;
-    Ptr<Contour> Simplify(const float tolerance) const CV_OVERRIDE;
+    void GetCircularity(std::vector<double> &circularities) const CV_OVERRIDE;
+    cv::Ptr<Contour> Simplify(const float tolerance) const CV_OVERRIDE;
+    cv::Ptr<Contour> GetConvex() const CV_OVERRIDE;
     //Access
     int GetPoints(std::vector<Point2f> &vertexes) const CV_OVERRIDE;
     //Geometric Transformations
@@ -42,6 +44,7 @@ public:
     double Length() const CV_OVERRIDE;
     cv::Point2d Centroid() const CV_OVERRIDE;
     cv::Rect BoundingBox() const CV_OVERRIDE;
+    double Circularity() const CV_OVERRIDE;
     bool TestClosed() const CV_OVERRIDE;
     bool TestPoint(const cv::Point2f &point) const CV_OVERRIDE;
     bool TestSelfIntersection(const cv::String &closeContour) const CV_OVERRIDE;

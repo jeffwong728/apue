@@ -38,11 +38,14 @@ public:
     CV_WRAP virtual double Length() const = 0;
     CV_WRAP virtual cv::Point2d Centroid() const = 0;
     CV_WRAP virtual cv::Rect BoundingBox() const = 0;
+    CV_WRAP virtual double Circularity() const = 0;
     CV_WRAP virtual void GetArea(CV_OUT std::vector<double> &areas) const = 0;
     CV_WRAP virtual void GetLength(CV_OUT std::vector<double> &lengthes) const = 0;
     CV_WRAP virtual void GetCentroid(CV_OUT std::vector<cv::Point2f> &centroids) const = 0;
     CV_WRAP virtual void GetBoundingBox(CV_OUT std::vector<cv::Rect> &boundingBoxes) const = 0;
-    CV_WRAP virtual Ptr<Contour> Simplify(const float tolerance) const = 0;
+    CV_WRAP virtual void GetCircularity(CV_OUT std::vector<double> &circularities) const = 0;
+    CV_WRAP virtual cv::Ptr<Contour> Simplify(const float tolerance) const = 0;
+    CV_WRAP virtual cv::Ptr<Contour> GetConvex() const = 0;
     CV_WRAP virtual int GetPoints(CV_OUT std::vector<cv::Point2f> &vertexes) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> Move(const cv::Point2f &delta) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const = 0;

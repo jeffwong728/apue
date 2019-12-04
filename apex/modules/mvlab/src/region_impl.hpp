@@ -79,7 +79,7 @@ public:
     cv::Ptr<Region> Difference(const cv::Ptr<Region> &subRgn) const CV_OVERRIDE;
     cv::Ptr<Region> Intersection(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
     cv::Ptr<Region> SymmDifference(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
-    cv::Ptr<Region> Union1(const std::vector<cv::Ptr<Region>> &otherRgns) const CV_OVERRIDE;
+    cv::Ptr<Region> Union1() const CV_OVERRIDE;
     cv::Ptr<Region> Union2(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;
     // Tests
     bool TestEqual(const cv::Ptr<Region> &otherRgn) const CV_OVERRIDE;

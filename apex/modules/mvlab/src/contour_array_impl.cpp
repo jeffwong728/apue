@@ -115,11 +115,26 @@ void ContourArrayImpl::GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) cons
     tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { boundingBoxes[i] = contours_[i]->BoundingBox(); });
 }
 
-Ptr<Contour> ContourArrayImpl::Simplify(const float tolerance) const
+void ContourArrayImpl::GetCircularity(std::vector<double> &circularities) const
+{
+    circularities.resize(contours_.size());
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { circularities[i] = contours_[i]->Circularity(); });
+}
+
+cv::Ptr<Contour> ContourArrayImpl::Simplify(const float tolerance) const
 {
     cv::Ptr<ContourArrayImpl> contours = makePtr<ContourArrayImpl>();
     contours->contours_.resize(contours_.size());
     tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { contours->contours_[i] = contours_[i]->Simplify(tolerance); });
+
+    return contours;
+}
+
+cv::Ptr<Contour> ContourArrayImpl::GetConvex() const
+{
+    cv::Ptr<ContourArrayImpl> contours = makePtr<ContourArrayImpl>();
+    contours->contours_.resize(contours_.size());
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { contours->contours_[i] = contours_[i]->GetConvex(); });
 
     return contours;
 }
@@ -241,6 +256,7 @@ double ContourArrayImpl::Length() const
         return l;
     }
 }
+
 cv::Point2d ContourArrayImpl::Centroid() const
 {
     if (contours_.empty())
@@ -252,6 +268,7 @@ cv::Point2d ContourArrayImpl::Centroid() const
         return contours_.front()->Centroid();
     }
 }
+
 cv::Rect ContourArrayImpl::BoundingBox() const
 {
     if (contours_.empty())
@@ -263,6 +280,19 @@ cv::Rect ContourArrayImpl::BoundingBox() const
         return contours_.front()->BoundingBox();
     }
 }
+
+double ContourArrayImpl::Circularity() const
+{
+    if (contours_.empty())
+    {
+        return 0.;
+    }
+    else
+    {
+        return contours_.front()->Circularity();
+    }
+}
+
 bool ContourArrayImpl::TestClosed() const
 {
     if (contours_.empty())

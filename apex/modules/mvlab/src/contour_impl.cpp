@@ -1,6 +1,7 @@
 #include "precomp.hpp"
 #include "contour_impl.hpp"
 #include "utility.hpp"
+#include "convex_hull.hpp"
 #include <opencv2/mvlab.hpp>
 
 namespace cv {
@@ -152,6 +153,12 @@ void ContourImpl::GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) const
     boundingBoxes.push_back(ContourImpl::BoundingBox());
 }
 
+void ContourImpl::GetCircularity(std::vector<double> &circularities) const
+{
+    circularities.resize(0);
+    circularities.push_back(ContourImpl::Circularity());
+}
+
 Ptr<Contour> ContourImpl::Simplify(const float tolerance) const
 {
     if (Empty())
@@ -173,6 +180,39 @@ Ptr<Contour> ContourImpl::Simplify(const float tolerance) const
 
         return makePtr<ContourImpl>(&approxCurves, is_simple_, is_closed_);
     }
+}
+
+cv::Ptr<Contour> ContourImpl::GetConvex() const
+{
+    if (!Empty())
+    {
+        if (1 == curves_.size())
+        {
+            ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(curves_.front().data(), static_cast<int>(curves_.front().size()));
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+        }
+        else
+        {
+            std::size_t numPoints = 0;
+            for (const auto &c : curves_)
+            {
+                numPoints += c.size();
+            }
+
+            UScalablePoint2fSequence points(numPoints);
+            UScalablePoint2fSequence::pointer pDst = points.data();
+            for (const auto &c : curves_)
+            {
+                std::memcpy(pDst, c.data(), c.size()*sizeof(ScalablePoint2fSequence::value_type));
+                pDst += c.size();
+            }
+
+            ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(points.data(), static_cast<int>(points.size()));
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+        }
+    }
+
+    return makePtr<ContourImpl>();
 }
 
 int ContourImpl::GetPoints(std::vector<Point2f> &points) const
@@ -565,6 +605,62 @@ cv::Rect ContourImpl::BoundingBox() const
 
     return *bbox_;
 }
+
+double ContourImpl::Circularity() const
+{
+    if (boost::none == circularity_)
+    {
+        const double F = ContourImpl::Area();
+        const cv::Point2d C = ContourImpl::Centroid();
+        if (is_closed_ && K_YES==is_simple_ && F>0. && !curves_.empty())
+        {
+            const auto &vertexes = curves_.front();
+            vcl::Vec8f cx(static_cast<float>(C.x));
+            vcl::Vec8f cy(static_cast<float>(C.y));
+            vcl::Vec8f vMaxDist(0.f);
+
+            const int numPoints = static_cast<int>(vertexes.size());
+            constexpr int simdSize = 8;
+            const int regularNumPoints = numPoints & (-simdSize);
+
+            int n = 0;
+            const cv::Point2f *pt = vertexes.data();
+            for (; n < regularNumPoints; n += simdSize)
+            {
+                vcl::Vec8f v1, v2;
+                v1.load(reinterpret_cast<const float *>(pt));
+                v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+                vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+                vMaxDist = vcl::max(vcl::square(x - cx) + vcl::square(y - cy), vMaxDist);
+
+                pt += simdSize;
+            }
+
+            double maxDist = vcl::horizontal_max(vMaxDist);
+            for (; n < numPoints; ++n, ++pt)
+            {
+                maxDist = std::max(maxDist, Util::square(pt->x - C.x) + Util::square(pt->y - C.y));
+            }
+
+            if (maxDist>0.)
+            {
+                circularity_ = std::min(1.0, F / (maxDist*CV_PI));
+            }
+            else
+            {
+                circularity_ = 0.;
+            }
+        }
+        else
+        {
+            circularity_ = 0.;
+        }
+    }
+
+    return *circularity_;
+}
+
 bool ContourImpl::TestClosed() const
 {
     return is_closed_;

@@ -1,6 +1,7 @@
 #include "precomp.hpp"
 #include "connection.hpp"
 #include "region_impl.hpp"
+#include "utility.hpp"
 
 namespace cv {
 namespace mvlab {
@@ -91,16 +92,14 @@ void ConnectWuSerial::Connect(const Region *rgn, const int connectivity, std::ve
         return;
     }
 
-    RunPtrSequence rowRunPtrs;
     ScalableIntSequence numRunsOfRgn;
-
     if (8 == connectivity)
     {
-        ConnectCommon8(rgn, numRunsOfRgn, rowRunPtrs);
+        ConnectCommon8(rgn, numRunsOfRgn);
     }
     else
     {
-        ConnectCommon4(rgn, numRunsOfRgn, rowRunPtrs);
+        ConnectCommon4(rgn, numRunsOfRgn);
     }
 
     RunSequenceSequence runSeqSeq(numRunsOfRgn.size());
@@ -125,7 +124,7 @@ void ConnectWuSerial::Connect(const Region *rgn, const int connectivity, std::ve
     }
 }
 
-void ConnectWuSerial::ConnectCommon8(const Region *rgn, ScalableIntSequence &numRunsOfRgn, RunPtrSequence &rowRunPtrs) const
+void ConnectWuSerial::ConnectCommon8(const Region *rgn, ScalableIntSequence &numRunsOfRgn) const
 {
     const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
     RunSequence &allRuns = const_cast<RunSequence &>(rgnImpl->GetAllRuns());
@@ -133,9 +132,10 @@ void ConnectWuSerial::ConnectCommon8(const Region *rgn, ScalableIntSequence &num
     const cv::Rect bbox = rgnImpl->BoundingBox();
     const int maxWidth = bbox.width + 3;
 
-    rowRunPtrs.resize(maxWidth);
+    AdaptBuffer<RunLength *> rowRunPtrs(maxWidth);
     ScalableIntSequence  vecP(allRuns.size());
     RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox.x;
+    std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(RunLength *));
 
     LabelT lunique = 0;
     LabelT *P = vecP.data();
@@ -215,7 +215,7 @@ void ConnectWuSerial::ConnectCommon8(const Region *rgn, ScalableIntSequence &num
     }
 }
 
-void ConnectWuSerial::ConnectCommon4(const Region *rgn, ScalableIntSequence &numRunsOfRgn, RunPtrSequence &rowRunPtrs) const
+void ConnectWuSerial::ConnectCommon4(const Region *rgn, ScalableIntSequence &numRunsOfRgn) const
 {
     const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
     RunSequence &allRuns = const_cast<RunSequence &>(rgnImpl->GetAllRuns());
@@ -223,9 +223,10 @@ void ConnectWuSerial::ConnectCommon4(const Region *rgn, ScalableIntSequence &num
     const cv::Rect bbox = rgnImpl->BoundingBox();
     const int maxWidth = bbox.width + 3;
 
-    rowRunPtrs.resize(maxWidth);
+    AdaptBuffer<RunLength *> rowRunPtrs(maxWidth);
     ScalableIntSequence  vecP(allRuns.size());
     RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox.x;
+    std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(RunLength *));
 
     LabelT lunique = 0;
     LabelT *P = vecP.data();
@@ -327,11 +328,12 @@ void ConnectWuParallel::FirstScan8Connectivity::operator()(const tbb::blocked_ra
     const LabelT firstLabel = label;
     const int maxWidth = bbox_.width + 3;
 
-    RunPtrSequence rowRunPtrs(maxWidth);
+    AdaptBuffer<RunLength *> rowRunPtrs(maxWidth);
     RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox_.x;
     int rowPrev = std::numeric_limits<int>::min();
     RunLength *pRuns = data_.data() + rowRunBegs_[rowBeg];
     const int *pRowRunStarts = rowRunBegs_.data() + rowBeg;
+    std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(RunLength *));
 
     for (int row = rowBeg; row != rowEnd; ++row)
     {
@@ -407,11 +409,12 @@ void ConnectWuParallel::FirstScan4Connectivity::operator()(const tbb::blocked_ra
     const LabelT firstLabel = label;
     const int maxWidth = bbox_.width + 3;
 
-    RunPtrSequence rowRunPtrs(maxWidth);
+    AdaptBuffer<RunLength *> rowRunPtrs(maxWidth);
     RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox_.x;
     int rowPrev = std::numeric_limits<int>::min();
     RunLength *pRuns = data_.data() + rowRunBegs_[rowBeg];
     const int *pRowRunStarts = rowRunBegs_.data() + rowBeg;
+    std::memset(rowRunPtrs.data(), 0, maxWidth * sizeof(RunLength *));
 
     for (int row = rowBeg; row != rowEnd; ++row)
     {
@@ -474,9 +477,8 @@ void ConnectWuParallel::Connect(const Region *rgn, const int connectivity, std::
         return;
     }
 
-    RunPtrSequence rowRunPtrs;
     ScalableIntSequence numRunsOfRgn;
-    ConnectCommon(rgn, connectivity, numRunsOfRgn, rowRunPtrs);
+    ConnectCommon(rgn, connectivity, numRunsOfRgn);
 
     RunSequenceSequence runSeqSeq(numRunsOfRgn.size());
 
@@ -501,7 +503,6 @@ void ConnectWuParallel::Connect(const Region *rgn, const int connectivity, std::
 }
 
 void ConnectWuParallel::mergeLabels8Connectivity(const RegionImpl &rgn,
-    RunPtrSequence &rowRunPtrs,
     LabelT *P,
     const int *chunksSizeAndLabels) const
 {
@@ -510,6 +511,8 @@ void ConnectWuParallel::mergeLabels8Connectivity(const RegionImpl &rgn,
     const int numRows = static_cast<int>(rowRunBegs.size() - 1);
     const cv::Rect bbox = rgn.BoundingBox();
     const int maxWidth = bbox.width + 3;
+
+    AdaptBuffer<RunLength *> rowRunPtrs(maxWidth);
     RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox.x;
 
     for (int row = chunksSizeAndLabels[0]; row < numRows; row = chunksSizeAndLabels[row])
@@ -556,7 +559,6 @@ void ConnectWuParallel::mergeLabels8Connectivity(const RegionImpl &rgn,
 }
 
 void ConnectWuParallel::mergeLabels4Connectivity(const RegionImpl &rgn,
-    RunPtrSequence &rowRunPtrs,
     LabelT *P,
     const int *chunksSizeAndLabels) const
 {
@@ -565,6 +567,8 @@ void ConnectWuParallel::mergeLabels4Connectivity(const RegionImpl &rgn,
     const int numRows = static_cast<int>(rowRunBegs.size() - 1);
     const cv::Rect bbox = rgn.BoundingBox();
     const int maxWidth = bbox.width + 3;
+
+    AdaptBuffer<RunLength *> rowRunPtrs(maxWidth);
     RunLength **vRowRunPtrs = rowRunPtrs.data() + 1 - bbox.x;
 
     for (int row = chunksSizeAndLabels[0]; row < numRows; row = chunksSizeAndLabels[row])
@@ -612,8 +616,7 @@ void ConnectWuParallel::mergeLabels4Connectivity(const RegionImpl &rgn,
 
 void ConnectWuParallel::ConnectCommon(const Region *rgn,
     const int connectivity,
-    ScalableIntSequence &numRunsOfRgn,
-    RunPtrSequence &rowRunPtrs) const
+    ScalableIntSequence &numRunsOfRgn) const
 {
     const RegionImpl *rgnImpl = dynamic_cast<const RegionImpl*>(rgn);
     RunSequence &allRuns = const_cast<RunSequence &>(rgnImpl->GetAllRuns());
@@ -635,14 +638,12 @@ void ConnectWuParallel::ConnectCommon(const Region *rgn,
     if (8 == connectivity)
     {
         tbb::parallel_for(range, FirstScan8Connectivity(P, chunksSizeAndLabels, bbox, rowRunBegs, allRuns));
-        rowRunPtrs.resize(maxWidth);
-        mergeLabels8Connectivity(*rgnImpl, rowRunPtrs, P, chunksSizeAndLabels);
+        mergeLabels8Connectivity(*rgnImpl, P, chunksSizeAndLabels);
     }
     else
     {
         tbb::parallel_for(range, FirstScan4Connectivity(P, chunksSizeAndLabels, bbox, rowRunBegs, allRuns));
-        rowRunPtrs.resize(maxWidth);
-        mergeLabels4Connectivity(*rgnImpl, rowRunPtrs, P, chunksSizeAndLabels);
+        mergeLabels4Connectivity(*rgnImpl, P, chunksSizeAndLabels);
     }
 
     LabelT nLabels = 0;

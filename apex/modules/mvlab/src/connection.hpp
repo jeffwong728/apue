@@ -16,8 +16,8 @@ public:
     void Connect(const Region *rgn, const int connectivity, std::vector<Ptr<Region>> &regions) const;
 
 private:
-    void ConnectCommon8(const Region *rgn, ScalableIntSequence &numRunsOfRgn, RunPtrSequence &rowRunPtrs) const;
-    void ConnectCommon4(const Region *rgn, ScalableIntSequence &numRunsOfRgn, RunPtrSequence &rowRunPtrs) const;
+    void ConnectCommon8(const Region *rgn, ScalableIntSequence &numRunsOfRgn) const;
+    void ConnectCommon4(const Region *rgn, ScalableIntSequence &numRunsOfRgn) const;
 };
 
 class ConnectWuParallel
@@ -53,11 +53,11 @@ public:
 
 public:
     void Connect(const Region *rgn, const int connectivity, std::vector<Ptr<Region>> &regions) const;
-    void mergeLabels8Connectivity(const RegionImpl &rgn, RunPtrSequence &rowRunPtrs, LabelT *P, const int *chunksSizeAndLabels) const;
-    void mergeLabels4Connectivity(const RegionImpl &rgn, RunPtrSequence &rowRunPtrs, LabelT *P, const int *chunksSizeAndLabels) const;
+    void mergeLabels8Connectivity(const RegionImpl &rgn, LabelT *P, const int *chunksSizeAndLabels) const;
+    void mergeLabels4Connectivity(const RegionImpl &rgn, LabelT *P, const int *chunksSizeAndLabels) const;
 
 private:
-    void ConnectCommon(const Region *rgn, const int connectivity, ScalableIntSequence &numRunsOfRgn, RunPtrSequence &rowRunPtrs) const;
+    void ConnectCommon(const Region *rgn, const int connectivity, ScalableIntSequence &numRunsOfRgn) const;
 };
 
 }

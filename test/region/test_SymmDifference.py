@@ -89,7 +89,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         startTime = time.perf_counter()
         symDiffRgn = rgn1.SymmDifference(rgn1)
         endTime = time.perf_counter()
-        extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveRegion(self.id(), symDiffRgn)
         self.assertAlmostEqual(0.0, symDiffRgn.Area())
 
@@ -109,7 +109,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         startTime = time.perf_counter()
         symDiffRgn = rgn1.SymmDifference(rgn2)
         endTime = time.perf_counter()
-        extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveRegion(self.id(), symDiffRgn, image1.shape)
 
         dRgn1 = rgn1.Difference(rgn2)
@@ -135,7 +135,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         startTime = time.perf_counter()
         symDiffRgn = rgn1.SymmDifference(rgn2)
         endTime = time.perf_counter()
-        extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveRegion(self.id(), symDiffRgn, image1.shape)
 
         uRgn = rgn1.Union2(rgn2)
@@ -154,7 +154,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         startTime = time.perf_counter()
         symDiffRgn = rgn1.SymmDifference(rgn2)
         endTime = time.perf_counter()
-        extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveRegion(self.id(), symDiffRgn, image1.shape)
 
         uRgn = rgn1.Union2(rgn2)

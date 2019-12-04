@@ -57,6 +57,7 @@
 #pragma warning( pop )
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgproc/types_c.h>
 #include <tbb/tbb.h>
 #include <tbb/scalable_allocator.h>
 #include <cairomm/cairomm.h>

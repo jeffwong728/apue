@@ -4,6 +4,7 @@
 #include "utility.hpp"
 #include "connection.hpp"
 #include "region_bool.hpp"
+#include "convex_hull.hpp"
 #include <opencv2/mvlab.hpp>
 
 namespace cv {
@@ -214,14 +215,7 @@ cv::Ptr<Contour> RegionImpl::GetConvex() const
     cv::Ptr<Contour> contour = RegionImpl::GetContour();
     if (contour)
     {
-        cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
-        if (contImpl && !contImpl->Empty())
-        {
-            Point2fSequence cvxPoints;
-            cv::convexHull(Point2fSequence(contImpl->GetVertexes().cbegin(), contImpl->GetVertexes().cend()), cvxPoints);
-            ScalablePoint2fSequence tPoints(cvxPoints.cbegin(), cvxPoints.cend());
-            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
-        }
+        return contour->GetConvex();
     }
     return makePtr<ContourImpl>();
 }
@@ -333,7 +327,7 @@ cv::Ptr<Region> RegionImpl::SymmDifference(const cv::Ptr<Region> &otherRgn) cons
     return makePtr<RegionImpl>();
 }
 
-cv::Ptr<Region> RegionImpl::Union1(const std::vector<cv::Ptr<Region>> &/*otherRgns*/) const
+cv::Ptr<Region> RegionImpl::Union1() const
 {
     return makePtr<RegionImpl>();
 }

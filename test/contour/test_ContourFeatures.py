@@ -155,5 +155,27 @@ class TestContourFeatures(unittest.TestCase):
         rgn = mvlab.Region_GenPolygon(points)
         extradata.SaveRegion(self.id(), rgn)
 
+    def test_Contour_Circularity(self):
+        c = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
+        self.assertAlmostEqual(c.Circularity(), 1.0, delta=0.001)
+
+        e = mvlab.Contour_GenEllipse((1000, 1000), (500, 300), 5, 'negative')
+        self.assertAlmostEqual(e.Circularity(), 0.6, delta=0.001)
+
+        e = mvlab.Contour_GenEllipse((1000, 1000), (500, 100), 5, 'negative')
+        self.assertAlmostEqual(e.Circularity(), 0.2, delta=0.001)
+
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        blue, green, red = cv2.split(image)
+        r, rgn = mvlab.Threshold(blue, 151, 255)
+        r, rgns = rgn.Connect()
+
+        roundDigits = []
+        for rgn in rgns:
+            c = rgn.GetContour()
+            if c.Circularity() > 0.6 and c.Area() > 10:
+                roundDigits.append(c)
+        extradata.SaveContours(self.id(), roundDigits)
+
 if __name__ == '__main__':
     unittest.main()
