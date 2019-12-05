@@ -23,6 +23,7 @@ class TestRegionFeatures(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 50, 255)
 
         c = rgn.GetContour()
+        mvlab.SetGlobalOption('convexhullalgo', 'AndrewMonotoneChain')
         startTime = time.perf_counter()
         ch = c.GetConvex()
         endTime = time.perf_counter()
@@ -35,6 +36,7 @@ class TestRegionFeatures(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
 
         c = rgn.GetContour()
+        mvlab.SetGlobalOption('convexhullalgo', 'Melkman')
         startTime = time.perf_counter()
         ch = c.GetConvex()
         endTime = time.perf_counter()
