@@ -12,6 +12,11 @@ struct CHullCmpPoints
     {
         return p1->x < p2->x || (p1->x == p2->x && p1->y < p2->y);
     }
+
+    bool operator()(const cv::Point_<_Tp> &p1, const cv::Point_<_Tp> &p2) const
+    {
+        return p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y);
+    }
 };
 
 template<typename _Tp>
@@ -88,8 +93,14 @@ static int SklanskyImpl(const cv::Point_<_Tp>** array, int start, int end, int* 
 
 ScalablePoint2fSequence ConvexHull::Sklansky(const cv::Point2f *points, const int cPoints)
 {
-    if (0==cPoints) return ScalablePoint2fSequence();
-    if (1 == cPoints) return ScalablePoint2fSequence(1, *points);
+    if (cPoints < 4) {
+        ScalablePoint2fSequence hull(cPoints);
+        for (int i = 0; i < cPoints; ++i)
+        {
+            hull[i] = points[i];
+        }
+        return hull;
+    }
 
     const bool clockwise = false;
     AdaptBuffer<const Point2f*> _pointer(cPoints);
@@ -180,6 +191,151 @@ ScalablePoint2fSequence ConvexHull::Sklansky(const cv::Point2f *points, const in
     {
         hull[i] = points[hullbuf[i]];
     }
+
+    return hull;
+}
+
+ScalablePoint2fSequence ConvexHull::AndrewMonotoneChain(const cv::Point2f *points, const int cPoints)
+{
+    if (cPoints < 4) {
+        ScalablePoint2fSequence hull(cPoints);
+        for (int i = 0; i < cPoints; ++i)
+        {
+            hull[i] = points[i];
+        }
+        return hull;
+    }
+
+    AdaptBuffer<cv::Point2f> pointPtrs(cPoints);
+    std::memcpy(pointPtrs.data(), points, cPoints*sizeof(cv::Point2f));
+    std::sort(pointPtrs.data(), pointPtrs.data() + cPoints, CHullCmpPoints<float>());
+
+    ScalablePoint2fSequence hull(cPoints);
+    cv::Point2f *H = hull.data();
+    const cv::Point2f *P = pointPtrs.data();
+
+    // the output array H[] will be used as the stack
+    int    bot = 0, top = (-1);   // indices for bottom and top of the stack
+    int    i = 0;                 // array scan index
+
+    // Get the indices of points with min x-coord and min|max y-coord
+    int minmin = 0;
+    float xmin = P[0].x;
+    for (i = 1; i < cPoints; i++)
+        if (P[i].x != xmin) break;
+    int minmax = i - 1;
+    if (minmax == cPoints - 1) {       // degenerate case: all x-coords == xmin
+        H[++top] = P[minmin];
+        if (P[minmax].y != P[minmin].y) // a  nontrivial segment
+            H[++top] = P[minmax];
+        hull.resize(top+1);
+        return hull;
+    }
+
+    // Get the indices of points with max x-coord and min|max y-coord
+    int maxmin, maxmax = cPoints - 1;
+    float xmax = P[cPoints - 1].x;
+    for (i = cPoints - 2; i >= 0; i--)
+        if (P[i].x != xmax) break;
+    maxmin = i + 1;
+
+    // Compute the lower hull on the stack H
+    H[++top] = P[minmin];      // push  minmin point onto stack
+    i = minmax;
+    while (++i <= maxmin)
+    {
+        // the lower line joins P[minmin]  with P[maxmin]
+        if (Util::isLeft(P[minmin], P[maxmin], P[i]) <= 0 && i < maxmin)
+            continue;           // ignore P[i] above or on the lower line
+
+        while (top > 0)         // there are at least 2 points on the stack
+        {
+            // test if  P[i] is left of the line at the stack top
+            if (Util::isLeft(H[top - 1], H[top], P[i]) < 0)
+                break;         // P[i] is a new hull  vertex
+            else
+                top--;         // pop top point off  stack
+        }
+        H[++top] = P[i];        // push P[i] onto stack
+    }
+
+    // Next, compute the upper hull on the stack H above  the bottom hull
+    if (maxmax != maxmin)      // if  distinct xmax points
+        H[++top] = P[maxmax];  // push maxmax point onto stack
+    bot = top;                  // the bottom point of the upper hull stack
+    i = maxmin;
+    while (--i >= minmax)
+    {
+        // the upper line joins P[maxmax]  with P[minmax]
+        if (Util::isLeft(P[maxmax], P[minmax], P[i]) <= 0 && i > minmax)
+            continue;           // ignore P[i] below or on the upper line
+
+        while (top > bot)     // at least 2 points on the upper stack
+        {
+            // test if  P[i] is left of the line at the stack top
+            if (Util::isLeft(H[top - 1], H[top], P[i]) < 0)
+                break;         // P[i] is a new hull  vertex
+            else
+                top--;         // pop top point off  stack
+        }
+        H[++top] = P[i];        // push P[i] onto stack
+    }
+
+    if (minmax == minmin)
+        --top;
+
+    hull.resize(top+1);
+    return hull;
+}
+
+ScalablePoint2fSequence ConvexHull::MelkmanSimpleHull(const cv::Point2f *points, const int cPoints)
+{
+    if (cPoints < 4) {
+        ScalablePoint2fSequence hull(cPoints);
+        for (int i = 0; i < cPoints; ++i)
+        {
+            hull[i] = points[i];
+        }
+        return hull;
+    }
+
+    AdaptBuffer<cv::Point2f> pointPtrs(2*cPoints+1);
+    // initialize a deque D[] from bottom to top so that the
+    // 1st three vertices of P[] are a ccw triangle
+    cv::Point2f *D = pointPtrs.data();
+    int bot = cPoints - 2, top = bot + 3;    // initial bottom and top deque indices
+    D[bot] = D[top] = points[2];        // 3rd vertex is at both bot and top
+    if (Util::isLeft(points[0], points[1], points[2]) > 0) {
+        D[bot + 1] = points[0];
+        D[bot + 2] = points[1];           // ccw vertices are: 2,0,1,2
+    }
+    else {
+        D[bot + 1] = points[1];
+        D[bot + 2] = points[0];           // ccw vertices are: 2,1,0,2
+    }
+
+    // compute the hull on the deque D[]
+    for (int i = 3; i < cPoints; i++) {   // process the rest of vertices
+        // test if next vertex is inside the deque hull
+        if ((Util::isLeft(D[bot], D[bot + 1], points[i]) > 0) &&
+            (Util::isLeft(D[top - 1], D[top], points[i]) > 0))
+            continue;         // skip an interior vertex
+
+   // incrementally add an exterior vertex to the deque hull
+   // get the rightmost tangent at the deque bot
+        while (Util::isLeft(D[bot], D[bot + 1], points[i]) <= 0)
+            ++bot;                 // remove bot of deque
+        D[--bot] = points[i];           // insert P[i] at bot of deque
+
+        // get the leftmost tangent at the deque top
+        while (Util::isLeft(D[top - 1], D[top], points[i]) <= 0)
+            --top;                 // pop top of deque
+        D[++top] = points[i];           // push P[i] onto top of deque
+    }
+
+    ScalablePoint2fSequence hull(top - bot+1);
+    for (int h = 0; h <= (top - bot); ++h)
+        hull[h] = D[bot + h];
 
     return hull;
 }

@@ -186,10 +186,25 @@ cv::Ptr<Contour> ContourImpl::GetConvex() const
 {
     if (!Empty())
     {
+        cv::String optVal;
+        GetGlobalOption("convexhullalgo", optVal);
         if (1 == curves_.size())
         {
-            ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(curves_.front().data(), static_cast<int>(curves_.front().size()));
-            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+            if ("Melkman" == optVal)
+            {
+                ScalablePoint2fSequence tPoints = ConvexHull::MelkmanSimpleHull(curves_.front().data(), static_cast<int>(curves_.front().size()));
+                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+            }
+            else if ("Sklansky"==optVal)
+            {
+                ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(curves_.front().data(), static_cast<int>(curves_.front().size()));
+                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+            }
+            else
+            {
+                ScalablePoint2fSequence tPoints = ConvexHull::AndrewMonotoneChain(curves_.front().data(), static_cast<int>(curves_.front().size()));
+                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+            }
         }
         else
         {
@@ -207,8 +222,16 @@ cv::Ptr<Contour> ContourImpl::GetConvex() const
                 pDst += c.size();
             }
 
-            ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(points.data(), static_cast<int>(points.size()));
-            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+            if ("Sklansky" == optVal)
+            {
+                ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(points.data(), static_cast<int>(points.size()));
+                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+            }
+            else
+            {
+                ScalablePoint2fSequence tPoints = ConvexHull::AndrewMonotoneChain(points.data(), static_cast<int>(points.size()));
+                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+            }
         }
     }
 
