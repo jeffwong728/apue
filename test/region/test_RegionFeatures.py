@@ -23,7 +23,7 @@ class TestRegionFeatures(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 50, 255)
 
         c = rgn.GetContour()
-        mvlab.SetGlobalOption('convexhullalgo', 'AndrewMonotoneChain')
+        mvlab.SetGlobalOption('convexhullalgo', 'Melkman')
         startTime = time.perf_counter()
         ch = c.GetConvex()
         endTime = time.perf_counter()
@@ -42,6 +42,40 @@ class TestRegionFeatures(unittest.TestCase):
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveContours(self.id(), [c, ch])
+
+    def test_Digits_MiniCircle(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        blue, green, red = cv2.split(image)
+        r, rgn = mvlab.Threshold(blue, 50, 255)
+
+        c = rgn.GetContour()
+        startTime = time.perf_counter()
+        ch = c.GetSmallestCircle()
+        endTime = time.perf_counter()
+
+        conts = [c]
+        for mc in ch:
+            conts.append(mvlab.Contour_GenCircle((mc[0], mc[1]), mc[2], 1.5, 'negative'))
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), conts)
+
+    def test_Mista_MiniCircle(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        blue, green, red = cv2.split(image)
+        r, rgn = mvlab.Threshold(blue, 150, 255)
+
+        c = rgn.GetContour()
+        startTime = time.perf_counter()
+        ch = c.GetSmallestCircle()
+        endTime = time.perf_counter()
+
+        conts = [c]
+        for mc in ch:
+            conts.append(mvlab.Contour_GenCircle((mc[0], mc[1]), mc[2], 1.5, 'negative'))
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), conts)
 
 if __name__ == '__main__':
     unittest.main()

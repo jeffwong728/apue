@@ -2,6 +2,7 @@
 typedef std::vector<cv::Ptr<cv::mvlab::Region>> vector_Ptr_Region;
 typedef std::vector<cv::Ptr<cv::mvlab::Contour>> vector_Ptr_Contour;
 typedef std::vector<cv::Point2d> vector_Point2d;
+typedef std::vector<cv::Point3d> vector_Point3d;
 typedef std::vector<cv::Point3i> vector_Point3i;
 typedef std::vector<cv::Size2f> vector_Size2f;
 

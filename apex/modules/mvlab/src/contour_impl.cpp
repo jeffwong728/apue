@@ -2,6 +2,7 @@
 #include "contour_impl.hpp"
 #include "utility.hpp"
 #include "convex_hull.hpp"
+#include "Miniball.hpp"
 #include <opencv2/mvlab.hpp>
 
 namespace cv {
@@ -151,6 +152,12 @@ void ContourImpl::GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) const
 {
     boundingBoxes.resize(0);
     boundingBoxes.push_back(ContourImpl::BoundingBox());
+}
+
+void ContourImpl::GetSmallestCircle(std::vector< cv::Point3d> &miniCircles) const
+{
+    miniCircles.resize(0);
+    miniCircles.push_back(ContourImpl::SmallestCircle());
 }
 
 void ContourImpl::GetCircularity(std::vector<double> &circularities) const
@@ -627,6 +634,51 @@ cv::Rect ContourImpl::BoundingBox() const
     }
 
     return *bbox_;
+}
+
+cv::Point3d ContourImpl::SmallestCircle() const
+{
+    typedef const cv::Point2f* PointIterator;
+    typedef const float* CoordIterator;
+    typedef Miniball::Miniball<2, Miniball::CoordAccessor<PointIterator, CoordIterator>> MB;
+
+    if (boost::none == mini_ball_)
+    {
+        mini_ball_ = cv::Point3d();
+        if (!Empty())
+        {
+            if (1 == curves_.size())
+            {
+                MB mb(curves_.front().data(), curves_.front().data() + curves_.front().size());
+                mini_ball_->x = *mb.center();
+                mini_ball_->y = *(mb.center()+1);
+                mini_ball_->z = std::sqrt(mb.squared_radius());
+            }
+            else
+            {
+                std::size_t numPoints = 0;
+                for (const auto &c : curves_)
+                {
+                    numPoints += c.size();
+                }
+
+                UScalablePoint2fSequence points(numPoints);
+                UScalablePoint2fSequence::pointer pDst = points.data();
+                for (const auto &c : curves_)
+                {
+                    std::memcpy(pDst, c.data(), c.size() * sizeof(ScalablePoint2fSequence::value_type));
+                    pDst += c.size();
+                }
+
+                MB mb(points.data(), points.data() + points.size());
+                mini_ball_->x = *mb.center();
+                mini_ball_->y = *(mb.center() + 1);
+                mini_ball_->z = std::sqrt(mb.squared_radius());
+            }
+        }
+    }
+
+    return *mini_ball_;
 }
 
 double ContourImpl::Circularity() const

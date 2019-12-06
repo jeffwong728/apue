@@ -1,3 +1,6 @@
+#ifndef __OPENCV_MVLAB_MYALLOC11_HPP__
+#define __OPENCV_MVLAB_MYALLOC11_HPP__
+
 #include <cstddef>    // for size_t
 #include <mimalloc.h>
 
@@ -42,3 +45,5 @@ bool operator!= (const MyAlloc<T1>&,
                  const MyAlloc<T2>&) noexcept {
     return false;
 }
+
+#endif //__OPENCV_MVLAB_MYALLOC11_HPP__

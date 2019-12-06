@@ -115,6 +115,12 @@ void ContourArrayImpl::GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) cons
     tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { boundingBoxes[i] = contours_[i]->BoundingBox(); });
 }
 
+void ContourArrayImpl::GetSmallestCircle(std::vector< cv::Point3d> &miniCircles) const
+{
+    miniCircles.resize(contours_.size());
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { miniCircles[i] = contours_[i]->SmallestCircle(); });
+}
+
 void ContourArrayImpl::GetCircularity(std::vector<double> &circularities) const
 {
     circularities.resize(contours_.size());
@@ -278,6 +284,18 @@ cv::Rect ContourArrayImpl::BoundingBox() const
     else
     {
         return contours_.front()->BoundingBox();
+    }
+}
+
+cv::Point3d ContourArrayImpl::SmallestCircle() const
+{
+    if (contours_.empty())
+    {
+        return cv::Point3d();
+    }
+    else
+    {
+        return contours_.front()->SmallestCircle();
     }
 }
 
