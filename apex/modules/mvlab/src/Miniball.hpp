@@ -169,7 +169,7 @@ namespace Miniball {
   // ================
   template <int d, typename CoordAccessor>
   Miniball<d, CoordAccessor>::Miniball (Pit begin, Pit end, 
-				     CoordAccessor ca) 
+                     CoordAccessor ca) 
     : points_begin (begin), 
       points_end (end), 
       coord_accessor (ca), 
@@ -182,7 +182,7 @@ namespace Miniball {
       current_c (NULL), 
       current_sqr_r (NT(-1)),
       default_tol (NT(10) * std::numeric_limits<NT>::epsilon())
-  {	
+  {
     assert (points_begin != points_end);
 
     // set initial center
@@ -243,17 +243,17 @@ namespace Miniball {
     NT e, max_e = nt0;
     // compute maximum absolute excess of support points
     for (SupportPointIterator it = support_points_begin(); 
-	 it != support_points_end(); ++it) {
+     it != support_points_end(); ++it) {
       e = excess (*it);
       if (e < nt0) e = -e;
       if (e > max_e) {
-	max_e = e; 
+    max_e = e; 
       }
     }
     // compute maximum excess of any point
     for (Pit i = points_begin; i != points_end; ++i)
       if ((e = excess (i)) > max_e)
-	max_e = e;
+    max_e = e;
    
     subopt = suboptimality();
     assert (current_sqr_r > nt0 || max_e == nt0);
@@ -292,16 +292,16 @@ namespace Miniball {
     // incremental construction
     for (Sit i = L.begin(); i != n;) 
       {
-	// INV: (support_end - L.begin() == |S|-|B|)
-	assert (std::distance (L.begin(), support_end) == ssize - fsize);
+    // INV: (support_end - L.begin() == |S|-|B|)
+    assert (std::distance (L.begin(), support_end) == ssize - fsize);
        
-	Sit j = i++; 
-	if (excess(*j) > nt0) 
-	  if (push(*j)) {          // B := B + p_i
-	    mtf_mb (j);            // mtf_mb (L_{i-1}, B + p_i)
-	    pop();                 // B := B - p_i
-	    mtf_move_to_front(j);  
-	  }
+    Sit j = i++; 
+    if (excess(*j) > nt0) 
+      if (push(*j)) {          // B := B + p_i
+        mtf_mb (j);            // mtf_mb (L_{i-1}, B + p_i)
+        pop();                 // B := B - p_i
+        mtf_move_to_front(j);  
+      }
       }
     // POST: the range [L.begin(), support_end) stores the set S\B
   }
@@ -334,32 +334,32 @@ namespace Miniball {
       pivot = points_begin;
       max_e = nt0;
       for (k = points_begin; k != n; ++k) {
-	p = coord_accessor(k);
-	e = -sqr_r_local;
+    p = coord_accessor(k);
+    e = -sqr_r_local;
     c_local = current_c;
-	for (int j=0; j<d; ++j)
-	  e += mb_sqr<NT>(*p++-*c_local++);
-	if (e > max_e) {
-	  max_e = e;
-	  pivot = k;
-	}
+    for (int j=0; j<d; ++j)
+      e += mb_sqr<NT>(*p++-*c_local++);
+    if (e > max_e) {
+      max_e = e;
+      pivot = k;
+    }
       }
 
       if (sqr_r_local < 0 || max_e > sqr_r_local * default_tol) {
-	// check if the pivot is already contained in the support set
-	if (std::find(L.begin(), support_end, pivot) == support_end) {
-	  assert (fsize == 0);
-	  if (push (pivot)) {
-	    mtf_mb(support_end);
-	    pop();
-	    pivot_move_to_front(pivot);
-	  }
-	}
+    // check if the pivot is already contained in the support set
+    if (std::find(L.begin(), support_end, pivot) == support_end) {
+      assert (fsize == 0);
+      if (push (pivot)) {
+        mtf_mb(support_end);
+        pop();
+        pivot_move_to_front(pivot);
+      }
+    }
       }
       if (old_sqr_r < current_sqr_r)
-	loops_without_progress = 0;
+    loops_without_progress = 0;
       else
-	++loops_without_progress; 
+    ++loops_without_progress; 
     } while (loops_without_progress < 2);
   }
 
@@ -401,51 +401,51 @@ namespace Miniball {
  
     if (fsize==0) {
       for (i=0; i<d; ++i)
-	q0[i] = *p++;
+    q0[i] = *p++;
       for (i=0; i<d; ++i)
-	c[0][i] = q0[i];
+    c[0][i] = q0[i];
       sqr_r[0] = nt0;
     } 
     else {
       // set v_fsize to Q_fsize
       for (i=0; i<d; ++i)
-	//v[fsize][i] = p[i]-q0[i];
-	v[fsize][i] = *p++-q0[i];
+    //v[fsize][i] = p[i]-q0[i];
+    v[fsize][i] = *p++-q0[i];
       
       // compute the a_{fsize,i}, i< fsize
       for (i=1; i<fsize; ++i) {
-	a[fsize][i] = nt0;
-	for (j=0; j<d; ++j)
-	  a[fsize][i] += v[i][j] * v[fsize][j];
-	a[fsize][i]*=(2/z[i]);
+    a[fsize][i] = nt0;
+    for (j=0; j<d; ++j)
+      a[fsize][i] += v[i][j] * v[fsize][j];
+    a[fsize][i]*=(2/z[i]);
       }
       
       // update v_fsize to Q_fsize-\bar{Q}_fsize
       for (i=1; i<fsize; ++i) {
-	for (j=0; j<d; ++j)
-	  v[fsize][j] -= a[fsize][i]*v[i][j];
+    for (j=0; j<d; ++j)
+      v[fsize][j] -= a[fsize][i]*v[i][j];
       }
       
       // compute z_fsize
       z[fsize]=nt0;
       for (j=0; j<d; ++j)
-	z[fsize] += mb_sqr<NT>(v[fsize][j]);
+    z[fsize] += mb_sqr<NT>(v[fsize][j]);
       z[fsize]*=2;
       
       // reject push if z_fsize too small
       if (z[fsize]<eps*current_sqr_r) {
-	return false;
+    return false;
       }
       
       // update c, sqr_r
       p=cit;
       NT e = -sqr_r[fsize-1];
       for (i=0; i<d; ++i)
-	e += mb_sqr<NT>(*p++-c[fsize-1][i]);
+    e += mb_sqr<NT>(*p++-c[fsize-1][i]);
       f[fsize]=e/z[fsize];
       
       for (i=0; i<d; ++i)
-	c[fsize][i] = c[fsize-1][i]+f[fsize]*v[fsize][i];
+    c[fsize][i] = c[fsize-1][i]+f[fsize]*v[fsize][i];
       sqr_r[fsize] = sqr_r[fsize-1] + e*f[fsize]/2;
     }
     current_c = c[fsize];
@@ -464,7 +464,7 @@ namespace Miniball {
     for (int i=ssize-1; i>0; --i) {
       l[i] = f[i];
       for (int k=ssize-1; k>i; --k)
-	l[i]-=a[k][i]*l[k];
+    l[i]-=a[k][i]*l[k];
       if (l[i] < min_l) min_l = l[i];
       l[0] -= l[i];
     }

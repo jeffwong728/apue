@@ -453,6 +453,8 @@ void ContourImpl::AreaCenter() const
 
 void ContourImpl::ChangedCoordinatesToFixed() const
 {
+    UScalableIntSequence x_fixed_;
+    UScalableIntSequence y_fixed_;
     if (!curves_.empty() && x_fixed_.empty())
     {
         constexpr int simdSize = 8;

@@ -11,7 +11,7 @@
 namespace cv {
 namespace mvlab {
 
-class ContourImpl : public Contour
+class ContourImpl : public Contour, public std::enable_shared_from_this<ContourImpl>
 {
 public:
     ContourImpl() : is_closed_(false), is_simple_(K_UNKNOWN) {}
@@ -71,8 +71,6 @@ private:
     const bool is_closed_;
     mutable int is_simple_; // No Self Intersection
     const ScalablePoint2fSequenceSequence curves_;
-    mutable UScalableIntSequence x_fixed_;
-    mutable UScalableIntSequence y_fixed_;
     mutable boost::optional<double> length_;
     mutable boost::optional<double> area_;
     mutable boost::optional<double> circularity_;
