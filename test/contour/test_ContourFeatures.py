@@ -155,6 +155,21 @@ class TestContourFeatures(unittest.TestCase):
         rgn = mvlab.Region_GenPolygon(points)
         extradata.SaveRegion(self.id(), rgn)
 
+    def test_Contour_Convex(self):
+        contr1 = mvlab.Contour_GenCircle((50, 50), 20, 1, 'negative')
+        self.assertTrue(contr1.TestConvex())
+
+        contr2 = mvlab.Contour_GenPolygon([(100, 100), (100, 200), (200, 200), (200, 100)])
+        self.assertTrue(contr2.TestConvex())
+
+        contr3 = mvlab.Contour_GenPolygon([(15, 190), (230, 190), (230, 45), (50, 45), (50, 100), (185, 100), (185, 145), (115, 145), (115, 10), (15, 10)])
+        self.assertFalse(contr3.TestConvex())
+
+        contr4 = mvlab.Contour_GenPolygon([(200, 100), (100, 200), (200, 150), (300, 200)])
+        self.assertFalse(contr4.TestConvex())
+
+        extradata.SaveContours(self.id(), [contr1, contr2, contr3, contr4])
+
     def test_Contour_Circularity(self):
         c = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
         self.assertAlmostEqual(c.Circularity(), 1.0, delta=0.001)

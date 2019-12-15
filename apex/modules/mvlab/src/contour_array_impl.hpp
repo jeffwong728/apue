@@ -36,6 +36,7 @@ public:
     cv::Ptr<Contour> AffineTrans(const cv::Matx33d &homoMat2D) const CV_OVERRIDE;
     //Features
     void GetTestClosed(std::vector<int> &isClosed) const CV_OVERRIDE;
+    void GetTestConvex(std::vector<int> &isConvex) const CV_OVERRIDE;
     void GetTestPoint(const cv::Point2f &point, std::vector<int> &isInside) const CV_OVERRIDE;
     void GetTestSelfIntersection(const cv::String &closeContour, std::vector<int> &doesIntersect) const CV_OVERRIDE;
 
@@ -47,7 +48,9 @@ public:
     cv::Rect BoundingBox() const CV_OVERRIDE;
     cv::Point3d SmallestCircle() const CV_OVERRIDE;
     double Circularity() const CV_OVERRIDE;
+    cv::Scalar Diameter() const CV_OVERRIDE;
     bool TestClosed() const CV_OVERRIDE;
+    bool TestConvex() const CV_OVERRIDE;
     bool TestPoint(const cv::Point2f &point) const CV_OVERRIDE;
     bool TestSelfIntersection(const cv::String &closeContour) const CV_OVERRIDE;
 

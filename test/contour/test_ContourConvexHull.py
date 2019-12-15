@@ -24,6 +24,38 @@ class TestContourConvexHull(unittest.TestCase):
         self.assertEqual(4, hull.CountPoints())
         extradata.SaveContours(self.id(), [hull, contr])
 
+    def test_Andrew_Monotone_Chain_Convex(self):
+        contr = mvlab.Contour_GenPolygon([(150, 100), (100, 100), (100, 150), (100, 200), (100, 200), (150, 200), (200, 200), (200, 150), (200, 100)])
+        mvlab.SetGlobalOption('convex_hull_method', 'Andrew')
+        hull = contr.GetConvex()
+        self.assertEqual(4, hull.CountPoints())
+        print(hull.GetPoints()[1])
+        extradata.SaveContours(self.id(), [hull, contr])
+
+    def test_Sklansky_Convex(self):
+        contr = mvlab.Contour_GenPolygon([(150, 100), (100, 100), (100, 150), (100, 200), (100, 200), (150, 200), (200, 200), (200, 150), (200, 100)])
+        mvlab.SetGlobalOption('convex_hull_method', 'Sklansky')
+        hull = contr.GetConvex()
+        self.assertEqual(4, hull.CountPoints())
+        print(hull.GetPoints()[1])
+        extradata.SaveContours(self.id(), [hull, contr])
+
+    def test_Melkman_Convex_CCW(self):
+        contr = mvlab.Contour_GenPolygon([(150, 150), (200, 200), (200, 150), (200, 100), (100, 100), (100, 100), (100, 200)])
+        mvlab.SetGlobalOption('convex_hull_method', 'Melkman')
+        hull = contr.GetConvex()
+        self.assertEqual(4, hull.CountPoints())
+        print(hull.GetPoints()[1])
+        extradata.SaveContours(self.id(), [hull, contr])
+
+    def test_Melkman_Convex_CW(self):
+        contr = mvlab.Contour_GenPolygon([(100, 200), (100, 100), (100, 100), (200, 100), (200, 150), (200, 200), (150, 150)])
+        mvlab.SetGlobalOption('convex_hull_method', 'Melkman')
+        hull = contr.GetConvex()
+        self.assertEqual(4, hull.CountPoints())
+        print(hull.GetPoints()[1])
+        extradata.SaveContours(self.id(), [hull, contr])
+
     def test_Random_Polygon(self):
         n = int(random.uniform(1, 100))
         points = []
@@ -31,9 +63,9 @@ class TestContourConvexHull(unittest.TestCase):
             points.append((random.uniform(0, 640), random.uniform(0, 480)))
 
         plg = mvlab.Contour_GenPolygon(points)
-        mvlab.SetGlobalOption('convexhullalgo', 'Sklansky')
+        mvlab.SetGlobalOption('convex_hull_method', 'Sklansky')
         sklansky = plg.GetConvex()
-        mvlab.SetGlobalOption('convexhullalgo', 'AndrewMonotoneChain')
+        mvlab.SetGlobalOption('convex_hull_method', 'Andrew')
         andrew = plg.GetConvex()
 
         self.assertEqual(sklansky.CountPoints(), andrew.CountPoints())

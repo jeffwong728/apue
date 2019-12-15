@@ -2,6 +2,7 @@
 #include "contour_impl.hpp"
 #include "utility.hpp"
 #include "convex_hull.hpp"
+#include "rot_calipers.hpp"
 #include "Miniball.hpp"
 #include <opencv2/mvlab.hpp>
 
@@ -11,6 +12,7 @@ ContourImpl::ContourImpl(const std::vector<Point2f> &vertexes, const int isSimpl
     : Contour()
     , is_closed_(closed)
     , is_simple_(isSimple)
+    , is_convex_(K_UNKNOWN)
     , curves_(1, ScalablePoint2fSequence(vertexes.cbegin(), vertexes.cend()))
 {
 }
@@ -19,6 +21,7 @@ ContourImpl::ContourImpl(ScalablePoint2fSequence *vertexes, const int isSimple, 
     : Contour()
     , is_closed_(closed)
     , is_simple_(isSimple)
+    , is_convex_(K_UNKNOWN)
     , curves_(1)
 {
     vertexes->swap(const_cast<ScalablePoint2fSequence &>(curves_.front()));
@@ -28,6 +31,7 @@ ContourImpl::ContourImpl(ScalablePoint2fSequenceSequence *curves, const int isSi
     : Contour()
     , is_closed_(closed)
     , is_simple_(isSimple)
+    , is_convex_(K_UNKNOWN)
     , curves_(std::move(*curves))
 {
 }
@@ -193,52 +197,20 @@ cv::Ptr<Contour> ContourImpl::GetConvex() const
 {
     if (!Empty())
     {
-        cv::String optVal;
-        GetGlobalOption("convexhullalgo", optVal);
-        if (1 == curves_.size())
+        if (ContourImpl::TestConvex())
         {
-            if ("Melkman" == optVal)
-            {
-                ScalablePoint2fSequence tPoints = ConvexHull::MelkmanSimpleHull(curves_.front().data(), static_cast<int>(curves_.front().size()));
-                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
-            }
-            else if ("Sklansky"==optVal)
-            {
-                ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(curves_.front().data(), static_cast<int>(curves_.front().size()));
-                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
-            }
-            else
-            {
-                ScalablePoint2fSequence tPoints = ConvexHull::AndrewMonotoneChain(curves_.front().data(), static_cast<int>(curves_.front().size()));
-                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
-            }
+            return (cv::Ptr<ContourImpl>)const_cast<ContourImpl *>(this)->shared_from_this();
         }
         else
         {
-            std::size_t numPoints = 0;
-            for (const auto &c : curves_)
+            if (!convex_hull_)
             {
-                numPoints += c.size();
+                convex_hull_ = GetConvexImpl();
+                cv::Ptr<ContourImpl> contImp = convex_hull_.dynamicCast<ContourImpl>();
+                contImp->is_simple_ = K_YES;
+                contImp->is_convex_ = K_YES;
             }
-
-            UScalablePoint2fSequence points(numPoints);
-            UScalablePoint2fSequence::pointer pDst = points.data();
-            for (const auto &c : curves_)
-            {
-                std::memcpy(pDst, c.data(), c.size()*sizeof(ScalablePoint2fSequence::value_type));
-                pDst += c.size();
-            }
-
-            if ("Sklansky" == optVal)
-            {
-                ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(points.data(), static_cast<int>(points.size()));
-                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
-            }
-            else
-            {
-                ScalablePoint2fSequence tPoints = ConvexHull::AndrewMonotoneChain(points.data(), static_cast<int>(points.size()));
-                return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
-            }
+            return convex_hull_;
         }
     }
 
@@ -324,6 +296,12 @@ void ContourImpl::GetTestClosed(std::vector<int> &isClosed) const
 {
     isClosed.resize(0);
     isClosed.push_back(is_closed_);
+}
+
+void ContourImpl::GetTestConvex(std::vector<int> &isConvex) const
+{
+    isConvex.resize(0);
+    isConvex.push_back(ContourImpl::TestConvex());
 }
 
 void ContourImpl::GetTestPoint(const cv::Point2f &point, std::vector<int> &isInside) const
@@ -493,6 +471,57 @@ void ContourImpl::ChangedCoordinatesToFixed() const
 
         x_fixed_.back() = x_fixed_.front();
         y_fixed_.back() = y_fixed_.front();
+    }
+}
+
+cv::Ptr<Contour> ContourImpl::GetConvexImpl() const
+{
+    cv::String optVal;
+    GetGlobalOption("convex_hull_method", optVal);
+    if (1 == curves_.size())
+    {
+        if ("Melkman" == optVal)
+        {
+            ScalablePoint2fSequence tPoints = ConvexHull::MelkmanSimpleHull(curves_.front().data(), static_cast<int>(curves_.front().size()));
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+        }
+        else if ("Sklansky" == optVal)
+        {
+            ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(curves_.front().data(), static_cast<int>(curves_.front().size()));
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+        }
+        else
+        {
+            ScalablePoint2fSequence tPoints = ConvexHull::AndrewMonotoneChain(curves_.front().data(), static_cast<int>(curves_.front().size()));
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+        }
+    }
+    else
+    {
+        std::size_t numPoints = 0;
+        for (const auto &c : curves_)
+        {
+            numPoints += c.size();
+        }
+
+        UScalablePoint2fSequence points(numPoints);
+        UScalablePoint2fSequence::pointer pDst = points.data();
+        for (const auto &c : curves_)
+        {
+            std::memcpy(pDst, c.data(), c.size() * sizeof(ScalablePoint2fSequence::value_type));
+            pDst += c.size();
+        }
+
+        if ("Sklansky" == optVal)
+        {
+            ScalablePoint2fSequence tPoints = ConvexHull::Sklansky(points.data(), static_cast<int>(points.size()));
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+        }
+        else
+        {
+            ScalablePoint2fSequence tPoints = ConvexHull::AndrewMonotoneChain(points.data(), static_cast<int>(points.size()));
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+        }
     }
 }
 
@@ -738,9 +767,97 @@ double ContourImpl::Circularity() const
     return *circularity_;
 }
 
+cv::Scalar ContourImpl::Diameter() const
+{
+    if (ContourImpl::Empty())
+    {
+        return cv::Scalar();
+    }
+    else
+    {
+        if (ContourImpl::TestConvex())
+        {
+            const auto &vertexes = curves_.front();
+            const int n = static_cast<int>(vertexes.size());
+            return RotatingCaliper::diameterBruteForce(vertexes.data(), n);
+        }
+        else
+        {
+            return ContourImpl::GetConvex()->Diameter();
+        }
+    }
+}
+
 bool ContourImpl::TestClosed() const
 {
     return is_closed_;
+}
+
+bool ContourImpl::TestConvex() const
+{
+    if (K_UNKNOWN != is_convex_)
+    {
+        return K_YES == is_convex_;
+    }
+    else
+    {
+        if (is_simple_)
+        {
+            if (curves_.empty() || curves_.front().empty())
+            {
+                is_convex_ = K_NO;
+                return false;
+            }
+            else
+            {
+                if (curves_.front().size()<4)
+                {
+                    is_convex_ = K_YES;
+                    return true;
+                }
+                else
+                {
+                    const auto &vertexes = curves_.front();
+                    const int n = static_cast<int>(vertexes.size());
+                    const cv::Point2f *prev_pt = vertexes.data() + vertexes.size() - 2;
+                    const cv::Point2f *cur_pt  = vertexes.data() + vertexes.size() - 1;
+                    const cv::Point2f *end_pt  = vertexes.data() + vertexes.size();
+                    float dx0 = cur_pt->x - prev_pt->x;
+                    float dy0 = cur_pt->y - prev_pt->y;
+                    int orientation = 0;
+
+                    for (const cv::Point2f *pt = vertexes.data(); pt != end_pt; ++pt)
+                    {
+                        prev_pt = cur_pt;
+                        cur_pt = pt;
+
+                        const float dx = cur_pt->x - prev_pt->x;
+                        const float dy = cur_pt->y - prev_pt->y;
+                        const float dxdy0 = dx * dy0;
+                        const float dydx0 = dy * dx0;
+
+                        orientation |= (dydx0 > dxdy0) ? 1 : ((dydx0 < dxdy0) ? 2 : 3);
+                        if (orientation == 3)
+                        {
+                            is_convex_ = K_NO;
+                            return false;
+                        }
+
+                        dx0 = dx;
+                        dy0 = dy;
+                    }
+
+                    is_convex_ = K_YES;
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            is_convex_ = K_NO;
+            return false;
+        }
+    }
 }
 
 bool ContourImpl::TestPoint(const cv::Point2f &point) const

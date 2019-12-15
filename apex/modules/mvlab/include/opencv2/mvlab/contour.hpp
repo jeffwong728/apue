@@ -27,7 +27,7 @@ public:
     CV_WRAP static Ptr<Contour> GenCross(const std::vector<cv::Point2f> &center, const std::vector<cv::Size2f> &size, const std::vector<float> &angle);
 
 public:
-    virtual int Draw(Mat &img, const Scalar& color, const float thickness = 1, const int style = 0) const = 0;
+    virtual int Draw(cv::Mat &img, const cv::Scalar& color, const float thickness = 1, const int style = 0) const = 0;
 
 public:
     CV_WRAP virtual bool Empty() const = 0;
@@ -40,6 +40,7 @@ public:
     CV_WRAP virtual cv::Rect BoundingBox() const = 0;
     CV_WRAP virtual cv::Point3d SmallestCircle() const = 0;
     CV_WRAP virtual double Circularity() const = 0;
+    CV_WRAP virtual cv::Scalar Diameter() const = 0;
     CV_WRAP virtual void GetArea(CV_OUT std::vector<double> &areas) const = 0;
     CV_WRAP virtual void GetLength(CV_OUT std::vector<double> &lengthes) const = 0;
     CV_WRAP virtual void GetCentroid(CV_OUT std::vector<cv::Point2f> &centroids) const = 0;
@@ -53,9 +54,11 @@ public:
     CV_WRAP virtual cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> AffineTrans(const cv::Matx33d &homoMat2D) const = 0;
     CV_WRAP virtual bool TestClosed() const = 0;
+    CV_WRAP virtual bool TestConvex() const = 0;
     CV_WRAP virtual bool TestPoint(const cv::Point2f &point) const = 0;
     CV_WRAP virtual bool TestSelfIntersection(const cv::String &closeContour) const = 0;
     CV_WRAP virtual void GetTestClosed(CV_OUT std::vector<int> &isClosed) const = 0;
+    CV_WRAP virtual void GetTestConvex(CV_OUT std::vector<int> &isConvex) const = 0;
     CV_WRAP virtual void GetTestPoint(const cv::Point2f &point, CV_OUT std::vector<int> &isInside) const = 0;
     CV_WRAP virtual void GetTestSelfIntersection(const cv::String &closeContour, CV_OUT std::vector<int> &doesIntersect) const = 0;
     CV_WRAP virtual int Draw(cv::InputOutputArray img, const cv::Scalar& color, const float thickness = 1, const int style = 0) const = 0;

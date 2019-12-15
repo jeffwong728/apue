@@ -9,7 +9,11 @@ cv::RotatedRect RotatingCaliper::minAreaRect(const cv::Point2f *points, const in
 {
     RotatedRect box;
 
-    if( cPoints == 2 )
+    if (cPoints > 2)
+    {
+        cv::Point2f out[3];
+    }
+    else if( cPoints == 2 )
     {
         box.center.x = (points[0].x + points[1].x)*0.5f;
         box.center.y = (points[0].y + points[1].y)*0.5f;
@@ -27,6 +31,36 @@ cv::RotatedRect RotatingCaliper::minAreaRect(const cv::Point2f *points, const in
 
     box.angle = (float)(box.angle*180/CV_PI);
     return box;
+}
+
+cv::Scalar RotatingCaliper::diameterBruteForce(const cv::Point2f *points, const int cPoints)
+{
+    int m = 0;
+    int n = 0;
+    float maxSqrDist = 0;
+    for (int i = 0; i < cPoints; ++i)
+    {
+        for (int j = i+1; j < cPoints; ++j)
+        {
+            cv::Point2f dxy = points[j] - points[i];
+            const float sqrDist = dxy.dot(dxy);
+            if (sqrDist > maxSqrDist)
+            {
+                maxSqrDist = sqrDist;
+                m = i;
+                n = j;
+            }
+        }
+    }
+
+    if (cPoints)
+    {
+        return cv::Scalar(points[m].x, points[m].y, points[n].x, points[n].y);
+    }
+    else
+    {
+        return cv::Scalar();
+    }
 }
 
 }

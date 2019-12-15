@@ -89,6 +89,7 @@ template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2f> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Rect2d> : boost::true_type {};
+template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Scalar> : boost::true_type {};
 
 using Point2fSequence                   = std::vector<cv::Point2f>;
 using ScalableIntSequence               = std::vector<int, MyAlloc<int>>;

@@ -305,7 +305,7 @@ ScalablePoint2fSequence ConvexHull::MelkmanSimpleHull(const cv::Point2f *points,
     cv::Point2f *D = pointPtrs.data();
     int bot = cPoints - 2, top = bot + 3;    // initial bottom and top deque indices
     D[bot] = D[top] = points[2];        // 3rd vertex is at both bot and top
-    if (Util::isLeft(points[0], points[1], points[2]) > 0) {
+    if (Util::isLeft(points[0], points[1], points[2]) < 0) {
         D[bot + 1] = points[0];
         D[bot + 2] = points[1];           // ccw vertices are: 2,0,1,2
     }
@@ -317,24 +317,24 @@ ScalablePoint2fSequence ConvexHull::MelkmanSimpleHull(const cv::Point2f *points,
     // compute the hull on the deque D[]
     for (int i = 3; i < cPoints; i++) {   // process the rest of vertices
         // test if next vertex is inside the deque hull
-        if ((Util::isLeft(D[bot], D[bot + 1], points[i]) > 0) &&
-            (Util::isLeft(D[top - 1], D[top], points[i]) > 0))
+        if ((Util::isLeft(D[bot], D[bot + 1], points[i]) < 0) &&
+            (Util::isLeft(D[top - 1], D[top], points[i]) < 0))
             continue;         // skip an interior vertex
 
    // incrementally add an exterior vertex to the deque hull
    // get the rightmost tangent at the deque bot
-        while (Util::isLeft(D[bot], D[bot + 1], points[i]) <= 0)
+        while (Util::isLeft(D[bot], D[bot + 1], points[i]) >= 0)
             ++bot;                 // remove bot of deque
         D[--bot] = points[i];           // insert P[i] at bot of deque
 
         // get the leftmost tangent at the deque top
-        while (Util::isLeft(D[top - 1], D[top], points[i]) <= 0)
+        while (Util::isLeft(D[top - 1], D[top], points[i]) >= 0)
             --top;                 // pop top of deque
         D[++top] = points[i];           // push P[i] onto top of deque
     }
 
-    ScalablePoint2fSequence hull(top - bot+1);
-    for (int h = 0; h <= (top - bot); ++h)
+    ScalablePoint2fSequence hull(top - bot);
+    for (int h = 0; h < (top - bot); ++h)
         hull[h] = D[bot + h];
 
     return hull;

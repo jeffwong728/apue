@@ -205,6 +205,12 @@ void ContourArrayImpl::GetTestClosed(std::vector<int> &isClosed) const
     }
 }
 
+void ContourArrayImpl::GetTestConvex(std::vector<int> &isConvex) const
+{
+    isConvex.resize(contours_.size());
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { isConvex[i] = contours_[i]->TestConvex(); });
+}
+
 void ContourArrayImpl::GetTestPoint(const cv::Point2f &point, std::vector<int> &isInside) const
 {
     isInside.resize(contours_.size());
@@ -311,6 +317,11 @@ double ContourArrayImpl::Circularity() const
     }
 }
 
+cv::Scalar ContourArrayImpl::Diameter() const
+{
+    return cv::Scalar();
+}
+
 bool ContourArrayImpl::TestClosed() const
 {
     if (contours_.empty())
@@ -320,6 +331,18 @@ bool ContourArrayImpl::TestClosed() const
     else
     {
         return contours_.front()->TestClosed();
+    }
+}
+
+bool ContourArrayImpl::TestConvex() const
+{
+    if (contours_.empty())
+    {
+        return false;
+    }
+    else
+    {
+        return contours_.front()->TestConvex();
     }
 }
 
