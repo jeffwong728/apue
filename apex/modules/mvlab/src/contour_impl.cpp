@@ -779,7 +779,7 @@ cv::Scalar ContourImpl::Diameter() const
         {
             const auto &vertexes = curves_.front();
             const int n = static_cast<int>(vertexes.size());
-            return RotatingCaliper::diameterBruteForce(vertexes.data(), n);
+            return RotatingCaliper::diameterSIMD(vertexes.data(), n);
         }
         else
         {

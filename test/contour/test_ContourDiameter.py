@@ -110,7 +110,6 @@ class TestContourDiameter(unittest.TestCase):
         points = []
         for i in range(0, n):
             points.append((random.uniform(0, 640), random.uniform(0, 480)))
-
         plg = mvlab.Contour_GenPolygon(points)
         crosses = mvlab.Contour_GenCross(points, [(5, 5)]*n, [0]*n)
         d = plg.Diameter()

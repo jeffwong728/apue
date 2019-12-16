@@ -16,6 +16,7 @@ public:
 public:
     static cv::RotatedRect minAreaRect(const cv::Point2f *points, const int cPoints);
     static cv::Scalar diameterBruteForce(const cv::Point2f *points, const int cPoints);
+    static cv::Scalar diameterSIMD(const cv::Point2f *points, const int cPoints);
 };
 
 }
