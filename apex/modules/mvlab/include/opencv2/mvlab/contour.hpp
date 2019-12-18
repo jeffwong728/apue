@@ -41,6 +41,7 @@ public:
     CV_WRAP virtual cv::Point3d SmallestCircle() const = 0;
     CV_WRAP virtual double Circularity() const = 0;
     CV_WRAP virtual cv::Scalar Diameter() const = 0;
+    CV_WRAP virtual cv::RotatedRect SmallestRectangle() const = 0;
     CV_WRAP virtual void GetArea(CV_OUT std::vector<double> &areas) const = 0;
     CV_WRAP virtual void GetLength(CV_OUT std::vector<double> &lengthes) const = 0;
     CV_WRAP virtual void GetCentroid(CV_OUT std::vector<cv::Point2f> &centroids) const = 0;

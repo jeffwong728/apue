@@ -24,6 +24,7 @@
     <Compile Include="contour\test_ContourCreate.py" />
     <Compile Include="contour\test_ContourDiameter.py" />
     <Compile Include="contour\test_ContourFeatures.py" />
+    <Compile Include="contour\test_ContourMinAreaRect.py" />
     <Compile Include="contour\__init__.py" />
     <Compile Include="extradata.py" />
     <Compile Include="genperfplot.py" />

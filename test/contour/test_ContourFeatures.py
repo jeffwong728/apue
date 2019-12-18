@@ -75,25 +75,29 @@ class TestContourFeatures(unittest.TestCase):
         print('Contour Number of Points: {0:d}'.format(contr.CountPoints()))
 
         startTime = time.perf_counter()
-        a = contr.GetArea()[0]
+        a = contr.Area()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         self.assertAlmostEqual(a, math.pi*500*500, delta=0.6)
 
         contr = mvlab.Contour_GenEmpty()
-        self.assertAlmostEqual(contr.GetArea()[0], 0)
+        self.assertAlmostEqual(contr.Area(), 0)
 
         points = [(100, 100), (100, 200), (200, 200), (200, 100)]
         contr = mvlab.Contour_GenPolygon(points)
-        self.assertAlmostEqual(contr.GetArea()[0], 100*100)
+        self.assertAlmostEqual(contr.Area(), 100*100)
 
         points = [(1, 1), (1, 2), (1, 3), (2, 3), (3, 3), (3, 2), (3, 1), (2, 1)]
         contr = mvlab.Contour_GenPolygon(points)
-        self.assertAlmostEqual(contr.GetArea()[0], 4)
+        self.assertAlmostEqual(contr.Area(), 4)
 
         points = [(1, 1), (1, 2), (1, 3), (2, 3), (3, 3), (3, 2), (3, 1), (2, 1), (1.5, 1)]
         contr = mvlab.Contour_GenPolygon(points)
-        self.assertAlmostEqual(contr.GetArea()[0], 4)
+        self.assertAlmostEqual(contr.Area(), 4)
+
+        points = [(8.817269 , 38.88925), (250.22852 , 16.357777), (444.14212 , 1.1392639)]
+        contr = mvlab.Contour_GenPolygon(points)
+        self.assertAlmostEqual(contr.Area(), 347.61962890625)
 
     def test_Contour_Centroid(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')
@@ -138,6 +142,11 @@ class TestContourFeatures(unittest.TestCase):
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         self.assertTrue(b)
+
+        contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'positive')
+        self.assertTrue(contr.TestPoint((1000, 1000)))
+        self.assertFalse(contr.TestPoint((2000, 2000)))
+
         points = [(100, 100), (100, 200), (200, 200), (200, 100)]
         contr = mvlab.Contour_GenPolygon(points)
         self.assertTrue(contr.TestPoint((150, 150)))
@@ -164,11 +173,28 @@ class TestContourFeatures(unittest.TestCase):
 
         contr3 = mvlab.Contour_GenPolygon([(15, 190), (230, 190), (230, 45), (50, 45), (50, 100), (185, 100), (185, 145), (115, 145), (115, 10), (15, 10)])
         self.assertFalse(contr3.TestConvex())
+        self.assertTrue(contr3.GetConvex().TestConvex())
 
         contr4 = mvlab.Contour_GenPolygon([(200, 100), (100, 200), (200, 150), (300, 200)])
         self.assertFalse(contr4.TestConvex())
+        self.assertTrue(contr4.GetConvex().TestConvex())
 
-        extradata.SaveContours(self.id(), [contr1, contr2, contr3, contr4])
+        contr5 = mvlab.Contour_GenPolygon([(100, 100), (100, 150), (100, 200), (200, 200), (200, 100)])
+        self.assertFalse(contr5.TestConvex())
+        self.assertTrue(contr5.GetConvex().TestConvex())
+
+        contr6 = mvlab.Contour_GenPolygon([(100, 100), (50, 150), (100, 200), (200, 200), (200, 100)])
+        self.assertTrue(contr6.TestConvex())
+
+        contr7 = mvlab.Contour_GenPolygon([(100, 100), (50, 150), (50, 150), (100, 200), (200, 200), (200, 100)])
+        self.assertFalse(contr7.TestConvex())
+        self.assertTrue(contr7.GetConvex().TestConvex())
+
+        contr8 = mvlab.Contour_GenPolygon([(100, 100), (50, 150), (100, 200), (200, 200), (200, 100), (100, 100)])
+        self.assertFalse(contr8.TestConvex())
+        self.assertTrue(contr8.GetConvex().TestConvex())
+
+        extradata.SaveContours(self.id(), [contr1, contr2, contr3, contr4, contr5, contr6, contr7, contr8])
 
     def test_Contour_Circularity(self):
         c = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')

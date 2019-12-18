@@ -322,6 +322,11 @@ cv::Scalar ContourArrayImpl::Diameter() const
     return cv::Scalar();
 }
 
+cv::RotatedRect ContourArrayImpl::SmallestRectangle() const
+{
+    return cv::RotatedRect();
+}
+
 bool ContourArrayImpl::TestClosed() const
 {
     if (contours_.empty())

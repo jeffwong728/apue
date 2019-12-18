@@ -28,6 +28,7 @@ public:
     static inline float dist(const cv::Point2f &p0, const cv::Point2f &p1);
     static inline cv::Point2f midPoint(const cv::Point2f *p0, const cv::Point2f *p1);
     static inline cv::Point2f interPoint(const float t, const cv::Point2f *p0, const cv::Point2f *p1);
+    static inline cv::Point2f interPoint(const float t, const cv::Point2f &p0, const cv::Point2f &p1);
     static inline bool nearPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol);
     static inline bool farPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol);
     static inline cv::Point changedToFixed(const cv::Point2f &point);
@@ -211,7 +212,12 @@ inline cv::Point2f Util::midPoint(const cv::Point2f *p0, const cv::Point2f *p1)
 
 inline cv::Point2f Util::interPoint(const float t, const cv::Point2f *p0, const cv::Point2f *p1)
 {
-    return t * (*p0) + (1 - t) * (*p1);
+    return (1 - t) * (*p0) + t * (*p1);
+}
+
+inline cv::Point2f Util::interPoint(const float t, const cv::Point2f &p0, const cv::Point2f &p1)
+{
+    return (1 - t) * p0 + t * p1;
 }
 
 inline bool Util::nearPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol)

@@ -779,11 +779,32 @@ cv::Scalar ContourImpl::Diameter() const
         {
             const auto &vertexes = curves_.front();
             const int n = static_cast<int>(vertexes.size());
-            return RotatingCaliper::diameterSIMD(vertexes.data(), n);
+            return RotatingCaliper::diameter(vertexes.data(), n);
         }
         else
         {
             return ContourImpl::GetConvex()->Diameter();
+        }
+    }
+}
+
+cv::RotatedRect ContourImpl::SmallestRectangle() const
+{
+    if (ContourImpl::Empty())
+    {
+        return cv::RotatedRect();
+    }
+    else
+    {
+        if (ContourImpl::TestConvex())
+        {
+            const auto &vertexes = curves_.front();
+            const int n = static_cast<int>(vertexes.size());
+            return RotatingCaliper::minAreaRect(vertexes.data(), n);
+        }
+        else
+        {
+            return ContourImpl::GetConvex()->SmallestRectangle();
         }
     }
 }
@@ -801,7 +822,7 @@ bool ContourImpl::TestConvex() const
     }
     else
     {
-        if (is_simple_)
+        if (K_YES == is_simple_)
         {
             if (curves_.empty() || curves_.front().empty())
             {
@@ -854,7 +875,6 @@ bool ContourImpl::TestConvex() const
         }
         else
         {
-            is_convex_ = K_NO;
             return false;
         }
     }

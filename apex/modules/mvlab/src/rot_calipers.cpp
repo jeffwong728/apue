@@ -11,7 +11,7 @@ cv::RotatedRect RotatingCaliper::minAreaRect(const cv::Point2f *points, const in
 
     if (cPoints > 2)
     {
-        cv::Point2f out[3];
+        return minAreaRectBruteForce(points, cPoints);
     }
     else if( cPoints == 2 )
     {
@@ -31,6 +31,158 @@ cv::RotatedRect RotatingCaliper::minAreaRect(const cv::Point2f *points, const in
 
     box.angle = (float)(box.angle*180/CV_PI);
     return box;
+}
+
+cv::RotatedRect RotatingCaliper::minAreaRectBruteForce(const cv::Point2f *points, const int cPoints)
+{
+    const float sArea = Util::isLeft(points[cPoints - 1], points[0], points[1]);
+    const bool orientCCW = sArea > 0;
+    int minLeft = 0, minRight = 0, minTop = 0, minBot0 = 0, minBot1 = 0;
+    float minArea = std::numeric_limits<float>::max();
+    if (orientCCW)
+    {
+        const cv::Point2f sv = points[0] - points[cPoints - 1];
+        for (int i0 = cPoints - 1, i1 = 0; i1 < cPoints; i0 = i1++)
+        {
+            const cv::Point2f u = points[i1] - points[i0];
+            const cv::Point2f v{ u.y, -u.x };
+            const float sqrLenU = u.dot(u);
+
+            float lMin = std::numeric_limits<float>::max(), rMax = std::numeric_limits<float>::lowest(), tMax = std::numeric_limits<float>::lowest();
+            int l = i1, r = i1, t = i1;
+            for (int i = 0; i < cPoints; ++i)
+            {
+                const cv::Point2f diff = points[i] - points[i0];
+                const float du = u.dot(diff);
+                const float dv = v.dot(diff);
+
+                if (du > rMax) { rMax = du; r = i; }
+                if (dv > tMax) { tMax = dv; t = i; }
+                if (du < lMin) { lMin = du; l = i; }
+            }
+
+            const float area = (rMax - lMin) * tMax / sqrLenU;
+            if (area < minArea)
+            {
+                minArea = area; minLeft = l; minRight = r; minTop = t; minBot0 = i0; minBot1 = i1;
+            }
+
+            if (sv.dot(u) < 0.f)
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        const cv::Point2f sv = points[0] - points[cPoints - 1];
+        for (int i0 = cPoints - 1, i1 = 0; i1 < cPoints; i0 = i1++)
+        {
+            const cv::Point2f u = points[i1] - points[i0];
+            const cv::Point2f v{ -u.y, u.x };
+            const float sqrLenU = u.dot(u);
+
+            float lMax = std::numeric_limits<float>::lowest(), rMin = std::numeric_limits<float>::max(), tMax = std::numeric_limits<float>::lowest();
+            int l = i1, r = i1, t = i1;
+            for (int i = 0; i < cPoints; ++i)
+            {
+                const cv::Point2f diff = points[i] - points[i0];
+                const float du = u.dot(diff);
+                const float dv = v.dot(diff);
+
+                if (du > lMax) { lMax = du; l = i; }
+                if (dv > tMax) { tMax = dv; t = i; }
+                if (du < rMin) { rMin = du; r = i; }
+            }
+
+            const float area = (lMax - rMin) * tMax / sqrLenU;
+            if (area < minArea)
+            {
+                minArea = area; minLeft = l; minRight = r; minTop = t; minBot0 = i0; minBot1 = i1;
+            }
+
+            if (sv.dot(u) < 0.f)
+            {
+                break;
+            }
+        }
+    }
+
+    const cv::Point2f w = points[minBot1] - points[minBot0];
+    const cv::Point2f wl = points[minLeft] - points[minBot0];
+    const cv::Point2f wr = points[minRight] - points[minBot0];
+
+    const float sqrLenW = w.dot(w);
+    const float wtr = w.dot(wr) / sqrLenW;
+    const float wtl = w.dot(wl) / sqrLenW;
+    if (sqrLenW < 6*std::numeric_limits<float>::epsilon())
+    {
+        return cv::RotatedRect();
+    }
+
+    const cv::Point2f pl = Util::interPoint(wtl, points[minBot0], points[minBot1]);
+    const cv::Point2f pr = Util::interPoint(wtr, points[minBot0], points[minBot1]);
+
+    cv::Point2f v = points[minLeft] - pl;
+    float sqrLenV = v.dot(v);
+    if (sqrLenV < 6 * std::numeric_limits<float>::epsilon())
+    {
+        if (orientCCW)
+        {
+            v = cv::Point2f(w.y, -w.x);
+        }
+        else
+        {
+            const cv::Point2f w0 = points[minBot0] - points[minBot1];
+            v = cv::Point2f(w0.y, -w0.x);
+        }
+    }
+
+    sqrLenV = v.dot(v);
+    if (sqrLenV < 6 * std::numeric_limits<float>::epsilon())
+    {
+        return cv::RotatedRect();
+    }
+
+    const cv::Point2f vt = points[minTop] - pl;
+
+    const float vtt = v.dot(vt) / sqrLenV;
+    const cv::Point2f pt = Util::interPoint(vtt, pl, v+pl);
+
+    const cv::Point2f wv = pr - pl;
+    const cv::Point2f hv = pt - pl;
+    const float width = std::sqrt(wv.dot(wv));
+    const float height = std::sqrt(hv.dot(hv));
+
+    if (width < height)
+    {
+        const float ang = Util::constrainAngle(Util::deg(std::atan2(v.y, v.x)));
+        cv::RotatedRect rr{ (pt + pr) / 2, Size2f(height, width),  ang };
+        return rr;
+    }
+    else
+    {
+        const float ang = Util::constrainAngle(Util::deg(std::atan2(w.y, w.x)));
+        cv::RotatedRect rr{ (pt + pr) / 2, Size2f(width, height),  ang };
+        return rr;
+    }
+}
+
+cv::Scalar RotatingCaliper::diameter(const cv::Point2f *points, const int cPoints)
+{
+    constexpr int simdSize = 8+1;
+    if (cPoints < simdSize)
+    {
+        return diameterBruteForce(points, cPoints);
+    }
+    else if (cPoints < simdSize * 3)
+    {
+        return diameterSIMD(points, cPoints);
+    }
+    else
+    {
+        return diameterShamos(points, cPoints);
+    }
 }
 
 cv::Scalar RotatingCaliper::diameterBruteForce(const cv::Point2f *points, const int cPoints)
@@ -112,7 +264,7 @@ cv::Scalar RotatingCaliper::diameterSIMD(const cv::Point2f *points, const int cP
                 {
                     maxSqrDist = arrDist[k];
                     m = i;
-                    n = arrIdx[k];
+                    n = arrIdx[k&7];
                 }
             }
         }
@@ -138,6 +290,98 @@ cv::Scalar RotatingCaliper::diameterSIMD(const cv::Point2f *points, const int cP
     {
         return cv::Scalar();
     }
+}
+
+cv::Scalar RotatingCaliper::diameterShamos(const cv::Point2f *points, const int cPoints)
+{
+    int k = 1;
+    const int m = cPoints - 1;
+    const bool orientCCW = Util::isLeft(points[m], points[0], points[k]) > 0;
+
+    if (orientCCW)
+    {
+        while (Util::isLeft(points[m], points[0], points[k + 1]) > Util::isLeft(points[m], points[0], points[k]))
+        {
+            k += 1;
+        }
+    }
+    else
+    {
+        while (Util::isLeft(points[m], points[0], points[k + 1]) < Util::isLeft(points[m], points[0], points[k]))
+        {
+            k += 1;
+        }
+    }
+
+    int mm = 0;
+    int mn = 0;
+    float maxSqrDist = 0;
+
+    int i = 0;
+    int j = k;
+
+    if (orientCCW)
+    {
+        while (i <= k && j <= m)
+        {
+            cv::Point2f dxy = points[j] - points[i];
+            float sqrDist = dxy.dot(dxy);
+            if (sqrDist > maxSqrDist)
+            {
+                maxSqrDist = sqrDist;
+                mm = i;
+                mn = j;
+            }
+
+            while ((j < m) && (Util::isLeft(points[i], points[i + 1], points[j + 1]) > Util::isLeft(points[i], points[i + 1], points[j])))
+            {
+                dxy = points[j] - points[i];
+                sqrDist = dxy.dot(dxy);
+                if (sqrDist > maxSqrDist)
+                {
+                    maxSqrDist = sqrDist;
+                    mm = i;
+                    mn = j;
+                }
+
+                j += 1;
+            }
+
+            i += 1;
+        }
+    }
+    else
+    {
+        while (i <= k && j <= m)
+        {
+            cv::Point2f dxy = points[j] - points[i];
+            float sqrDist = dxy.dot(dxy);
+            if (sqrDist > maxSqrDist)
+            {
+                maxSqrDist = sqrDist;
+                mm = i;
+                mn = j;
+            }
+
+            while ((j < m) && (Util::isLeft(points[i], points[i + 1], points[j + 1]) < Util::isLeft(points[i], points[i + 1], points[j])))
+            {
+                dxy = points[j] - points[i];
+                sqrDist = dxy.dot(dxy);
+                if (sqrDist > maxSqrDist)
+                {
+                    maxSqrDist = sqrDist;
+                    mm = i;
+                    mn = j;
+                }
+
+                j += 1;
+            }
+
+            i += 1;
+        }
+    }
+
+    return cv::Scalar(points[mm].x, points[mm].y, points[mn].x, points[mn].y);
 }
 
 }

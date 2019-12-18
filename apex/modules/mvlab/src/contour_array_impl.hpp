@@ -49,6 +49,7 @@ public:
     cv::Point3d SmallestCircle() const CV_OVERRIDE;
     double Circularity() const CV_OVERRIDE;
     cv::Scalar Diameter() const CV_OVERRIDE;
+    cv::RotatedRect SmallestRectangle() const CV_OVERRIDE;
     bool TestClosed() const CV_OVERRIDE;
     bool TestConvex() const CV_OVERRIDE;
     bool TestPoint(const cv::Point2f &point) const CV_OVERRIDE;
