@@ -34,6 +34,7 @@ public:
     static inline cv::Point changedToFixed(const cv::Point2f &point);
     static inline int isLeft(const cv::Point &P0, const cv::Point &P1, const cv::Point &P2);
     static inline float isLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2);
+    static inline int isTolLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2, const float tol= G_F_TOL);
     static inline int isLeft(const int P0x, const int P0y, const int P1x, const int P1y, const int P2x, const int P2y);
     static inline vcl::Vec8f isLeft(const vcl::Vec8f &P0x, const vcl::Vec8f &P0y, const vcl::Vec8f &P1x, const vcl::Vec8f &P1y, const vcl::Vec8f &P2x, const vcl::Vec8f &P2y);
 };
@@ -243,6 +244,23 @@ inline int Util::isLeft(const cv::Point &P0, const cv::Point &P1, const cv::Poin
 inline float Util::isLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2)
 {
     return (P2.x - P0.x) * (P1.y - P0.y) - (P1.x - P0.x) * (P2.y - P0.y);
+}
+
+inline int Util::isTolLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2, const float tol)
+{
+    const float dx = P1.x - P0.x;
+    const float dy = P1.y - P0.y;
+    const float sxy = dx * dx + dy * dy;
+    const float a = (P2.x - P0.x) * dy - dx * (P2.y - P0.y);
+    const float aa = a*a;
+    if (aa > (tol*sxy))
+    {
+        return a > 0 ? 1 : -1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 inline int Util::isLeft(const int P0x, const int P0y, const int P1x, const int P1y, const int P2x, const int P2y)

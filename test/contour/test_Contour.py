@@ -24,7 +24,7 @@ class TestContour(unittest.TestCase):
         outer = rgn.GetContour()
 
         self.assertEqual(r, 0, '2Box contour number error')
-        self.assertAlmostEqual(outer.Simplify(1.0).GetArea()[0], 150.0)
+        self.assertAlmostEqual(outer.Simplify(1.0).Area(), rgn.Area())
 
     def test_2HBox_Contour(self):
         image = numpy.zeros((32, 64, 1), numpy.uint8)
@@ -34,7 +34,7 @@ class TestContour(unittest.TestCase):
         outer = rgn.GetContour()
 
         self.assertEqual(r, 0, '2Box contour number error')
-        self.assertAlmostEqual(outer.Simplify(1.0).GetArea()[0], 150.0)
+        self.assertAlmostEqual(outer.Simplify(1.0).Area(), rgn.Area())
 
     def test_Contour_Points(self):
         image = numpy.zeros((48, 64, 1), numpy.uint8)

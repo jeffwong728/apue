@@ -248,7 +248,7 @@ cv::Ptr<Contour> RegionImpl::GetPolygon(const float tolerance) const
             Point2fSequence approxPoints;
             cv::approxPolyDP(Point2fSequence(contImpl->GetVertexes().cbegin(), contImpl->GetVertexes().cend()), approxPoints, tolerance, true);
             ScalablePoint2fSequence tPoints(approxPoints.cbegin(), approxPoints.cend());
-            return cv::makePtr<ContourImpl>(&tPoints, K_YES, true);
+            return cv::makePtr<ContourImpl>(&tPoints, K_YES);
         }
     }
     return makePtr<ContourImpl>();

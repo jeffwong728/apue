@@ -77,3 +77,4 @@ config
 .vs
 __pycache__
 reports
+/test/data

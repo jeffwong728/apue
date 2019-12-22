@@ -14,10 +14,10 @@ namespace mvlab {
 class ContourImpl : public Contour, public std::enable_shared_from_this<ContourImpl>
 {
 public:
-    ContourImpl() : is_closed_(false), is_simple_(K_UNKNOWN), is_convex_(K_UNKNOWN) {}
-    ContourImpl(const std::vector<Point2f> &vertexes, const int isSimple, const bool closed);
-    ContourImpl(ScalablePoint2fSequence *vertexes, const int isSimple, const bool closed);
-    ContourImpl(ScalablePoint2fSequenceSequence *curves, const int isSimple, const bool closed);
+    ContourImpl() : is_simple_(K_UNKNOWN), is_convex_(K_UNKNOWN) {}
+    ContourImpl(const std::vector<Point2f> &vertexes, const int isSimple);
+    ContourImpl(ScalablePoint2fSequence *vertexes, const int isSimple);
+    ContourImpl(ScalablePoint2fSequenceSequence *curves, const int isSimple);
 
 public:
     int Draw(Mat &img, const Scalar& color, const float thickness, const int style) const CV_OVERRIDE;
@@ -84,7 +84,6 @@ private:
     mutable boost::optional<cv::Scalar> diameter_;
     mutable int is_simple_;
     mutable int is_convex_;
-    const bool is_closed_;
 };
 
 }

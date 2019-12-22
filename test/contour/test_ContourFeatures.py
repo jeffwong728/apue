@@ -164,6 +164,7 @@ class TestContourFeatures(unittest.TestCase):
         rgn = mvlab.Region_GenPolygon(points)
         extradata.SaveRegion(self.id(), rgn)
 
+    @unittest.skip('Not reliable right now because polygon may be non-simple')
     def test_Contour_Convex(self):
         contr1 = mvlab.Contour_GenCircle((50, 50), 20, 1, 'negative')
         self.assertTrue(contr1.TestConvex())
@@ -217,6 +218,13 @@ class TestContourFeatures(unittest.TestCase):
             if c.Circularity() > 0.6 and c.Area() > 10:
                 roundDigits.append(c)
         extradata.SaveContours(self.id(), roundDigits)
+
+    def test_Contour_SelfIntersection(self):
+        contr1 = mvlab.Contour_GenPolygon([(100, 100), (200, 200), (100, 200), (200, 100)])
+        self.assertTrue(contr1.TestSelfIntersection('false'))
+
+        contr2 = mvlab.Contour_GenPolygon([(100, 100), (100, 200), (200, 100), (200, 200)])
+        self.assertTrue(contr2.TestSelfIntersection('false'))
 
 if __name__ == '__main__':
     unittest.main()
