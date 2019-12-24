@@ -20,8 +20,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="contour\test_Contour.py" />
+    <Compile Include="contour\test_ContourArea.py" />
     <Compile Include="contour\test_ContourConvexHull.py" />
     <Compile Include="contour\test_ContourConvexHullAndrew.py" />
+    <Compile Include="contour\test_ContourConvexHullMelkman.py" />
     <Compile Include="contour\test_ContourConvexHullSklansky.py" />
     <Compile Include="contour\test_ContourCreate.py" />
     <Compile Include="contour\test_ContourDiameter.py" />

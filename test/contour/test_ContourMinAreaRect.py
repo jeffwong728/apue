@@ -13,11 +13,32 @@ import random
 class TestContourMinAreaRect(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mvlab.SetGlobalOption('convex_hull_method', 'Sklansky')
+        mvlab.SetGlobalOption('convex_hull_method', 'Andrew')
         logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
                     filemode='a')
+
+    def test_All_Points_Coincidence_MinAreaRect(self):
+        points = [(300, 300)]*10
+        plg = mvlab.Contour_GenPolygon(points)
+        minRect = plg.SmallestRectangle()
+        self.assertAlmostEqual(minRect[0][0], 300.0)
+        self.assertAlmostEqual(minRect[0][1], 300.0)
+
+    def test_Identical_X_MinAreaRect(self):
+        points = [(100, 100), (100, 200), (100, 300), (100, 400), (100, 500)]
+        plg = mvlab.Contour_GenPolygon(points)
+        minRect = plg.SmallestRectangle()
+        self.assertAlmostEqual(minRect[0][0], 100.0)
+        self.assertAlmostEqual(minRect[0][1], 300.0)
+
+    def test_Identical_Y_MinAreaRect(self):
+        points = [(100, 100), (200, 100), (300, 100), (400, 100), (450, 100), (500, 100)]
+        plg = mvlab.Contour_GenPolygon(points)
+        minRect = plg.SmallestRectangle()
+        self.assertAlmostEqual(minRect[0][0], 300.0)
+        self.assertAlmostEqual(minRect[0][1], 100.0)
 
     def test_Triangle_MinAreaRect_CW(self):
         points = [(50, 200), (100, 100), (150, 200)]
@@ -59,7 +80,7 @@ class TestContourMinAreaRect(unittest.TestCase):
         self.assertAlmostEqual(minRect[0][1], 150.0)
         self.assertAlmostEqual(minRect[1][0], 200.0)
         self.assertAlmostEqual(minRect[1][1], 100.0)
-        self.assertAlmostEqual(minRect[2], 180.0)
+        self.assertAlmostEqual(minRect[2], 0.0)
 
     def test_Trapezoid_MinAreaRect_CCW(self):
         points = [(100, 100), (50, 200), (250, 200), (200, 100)]

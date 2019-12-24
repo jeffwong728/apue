@@ -281,6 +281,18 @@ cv::Point2d ContourArrayImpl::Centroid() const
     }
 }
 
+cv::Point2d ContourArrayImpl::PointsCenter() const
+{
+    if (contours_.empty())
+    {
+        return cv::Point2d();
+    }
+    else
+    {
+        return contours_.front()->PointsCenter();
+    }
+}
+
 cv::Rect ContourArrayImpl::BoundingBox() const
 {
     if (contours_.empty())
@@ -335,7 +347,14 @@ bool ContourArrayImpl::TestClosed() const
     }
     else
     {
-        return contours_.front()->TestClosed();
+        for (const auto &contr : contours_)
+        {
+            if (!contr->TestClosed())
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }
 

@@ -30,11 +30,13 @@ public:
     static inline cv::Point2f interPoint(const float t, const cv::Point2f *p0, const cv::Point2f *p1);
     static inline cv::Point2f interPoint(const float t, const cv::Point2f &p0, const cv::Point2f &p1);
     static inline bool nearPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol);
-    static inline bool farPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol);
+    static inline bool farPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol = G_F_TOL);
+    static inline bool farPoint(const cv::Point2f &p0, const cv::Point2f &p1, const float tol = G_F_TOL);
+    static inline bool nearPoint(const cv::Point2f &p0, const cv::Point2f &p1, const float tol = G_F_TOL);
     static inline cv::Point changedToFixed(const cv::Point2f &point);
     static inline int isLeft(const cv::Point &P0, const cv::Point &P1, const cv::Point &P2);
     static inline float isLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2);
-    static inline int isTolLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2, const float tol= G_F_TOL);
+    static inline int isTolLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2, const float tol = G_F_TOL);
     static inline int isLeft(const int P0x, const int P0y, const int P1x, const int P1y, const int P2x, const int P2y);
     static inline vcl::Vec8f isLeft(const vcl::Vec8f &P0x, const vcl::Vec8f &P0y, const vcl::Vec8f &P1x, const vcl::Vec8f &P1y, const vcl::Vec8f &P2x, const vcl::Vec8f &P2y);
 };
@@ -229,6 +231,18 @@ inline bool Util::nearPoint(const cv::Point2f *p0, const cv::Point2f *p1, const 
 inline bool Util::farPoint(const cv::Point2f *p0, const cv::Point2f *p1, const float tol)
 {
     return (square(p1->x - p0->x) + square(p1->y - p0->y)) > tol;
+}
+
+inline bool Util::farPoint(const cv::Point2f &p0, const cv::Point2f &p1, const float tol)
+{
+    const cv::Point2f dxy = p0 - p1;
+    return dxy.dot(dxy) > tol;
+}
+
+inline bool Util::nearPoint(const cv::Point2f &p0, const cv::Point2f &p1, const float tol)
+{
+    const cv::Point2f dxy = p0 - p1;
+    return dxy.dot(dxy) < tol;
 }
 
 inline cv::Point Util::changedToFixed(const cv::Point2f &point)

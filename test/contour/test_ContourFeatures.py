@@ -164,7 +164,6 @@ class TestContourFeatures(unittest.TestCase):
         rgn = mvlab.Region_GenPolygon(points)
         extradata.SaveRegion(self.id(), rgn)
 
-    @unittest.skip('Not reliable right now because polygon may be non-simple')
     def test_Contour_Convex(self):
         contr1 = mvlab.Contour_GenCircle((50, 50), 20, 1, 'negative')
         self.assertTrue(contr1.TestConvex())
@@ -192,7 +191,7 @@ class TestContourFeatures(unittest.TestCase):
         self.assertTrue(contr7.GetConvex().TestConvex())
 
         contr8 = mvlab.Contour_GenPolygon([(100, 100), (50, 150), (100, 200), (200, 200), (200, 100), (100, 100)])
-        self.assertFalse(contr8.TestConvex())
+        self.assertTrue(contr8.TestConvex())
         self.assertTrue(contr8.GetConvex().TestConvex())
 
         extradata.SaveContours(self.id(), [contr1, contr2, contr3, contr4, contr5, contr6, contr7, contr8])

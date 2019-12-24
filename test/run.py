@@ -6,7 +6,9 @@ import extradata
 import argparse
 
 extradata.init()
-tests = unittest.TestLoader().discover(start_dir='.', pattern='test_Contour*.py')
+testLoader = unittest.TestLoader()
+tests = testLoader.loadTestsFromNames(['contour.test_ContourConvexHullAndrew', 'contour.test_ContourConvexHullMelkman'])
+#tests = testLoader.discover(start_dir='.', pattern='test_*Wkt*.py')
 tmplPath = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'report_template.html')
 
 teml_args = {

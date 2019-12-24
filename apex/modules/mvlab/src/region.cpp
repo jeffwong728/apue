@@ -233,7 +233,7 @@ cv::Ptr<Region> Region::GenChecker(const cv::Size &sizeRegion, const cv::Size &s
         }
     }
 
-    assert(std::distance(dstRuns.data(), pResRun) <= dstRuns.size());
+    assert(std::distance(dstRuns.data(), pResRun) <= (long)dstRuns.size());
     dstRuns.resize(std::distance(dstRuns.data(), pResRun));
 
     return makePtr<RegionImpl>(&dstRuns);

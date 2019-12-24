@@ -64,10 +64,13 @@
 #include <boost/optional.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
+#pragma warning( push )
+#pragma warning( disable : 4100 4702)
 #include <boost/geometry.hpp>
 #include <boost/geometry/core/exception.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
 #include <boost/geometry/geometries/register/ring.hpp>
+#pragma warning( pop )
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267 4244 )
 #include <2geom/2geom.h>
@@ -86,7 +89,8 @@ constexpr double D_XY_ONE = 1 << XY_SHIFT;
 constexpr int K_NO = 0;
 constexpr int K_YES = 1;
 constexpr int K_UNKNOWN = 2;
-constexpr float G_F_TOL = 0.0001f;
+constexpr float  G_F_TOL = 0.0001f;
+constexpr double G_D_TOL = 0.0001;
 
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point> : boost::true_type {};
 template <> struct boost::optional_config::optional_uses_direct_storage_for<cv::Point2f> : boost::true_type {};

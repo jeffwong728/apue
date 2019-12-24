@@ -45,6 +45,7 @@ public:
     double Area() const CV_OVERRIDE;
     double Length() const CV_OVERRIDE;
     cv::Point2d Centroid() const CV_OVERRIDE;
+    cv::Point2d PointsCenter() const CV_OVERRIDE;
     cv::Rect BoundingBox() const CV_OVERRIDE;
     cv::Point3d SmallestCircle() const CV_OVERRIDE;
     double Circularity() const CV_OVERRIDE;

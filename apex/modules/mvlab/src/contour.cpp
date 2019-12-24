@@ -346,10 +346,26 @@ Ptr<Contour> Contour::GenRotatedEllipseSector(const cv::Point2f &center,
 
 Ptr<Contour> Contour::GenPolygon(const std::vector<cv::Point2f> &vertexes)
 {
-    ScalablePoint2fSequence corners(vertexes.size()+1);
-    std::memcpy(corners.data(), vertexes.data(), sizeof(cv::Point2f)*vertexes.size());
-    corners.back() = corners.front();
-    return makePtr<ContourImpl>(&corners, K_UNKNOWN);
+    if (vertexes.empty())
+    {
+        return makePtr<ContourImpl>();
+    }
+    else
+    {
+        const cv::Point2f dxy = vertexes.front() - vertexes.back();
+        if (dxy.dot(dxy) > 0.f)
+        {
+            ScalablePoint2fSequence corners(vertexes.size() + 1);
+            std::memcpy(corners.data(), vertexes.data(), sizeof(cv::Point2f)*vertexes.size());
+            corners.back() = corners.front();
+            return makePtr<ContourImpl>(&corners, K_UNKNOWN);
+        }
+        else
+        {
+            return makePtr<ContourImpl>(vertexes, K_UNKNOWN);
+        }
+
+    }
 }
 
 Ptr<Contour> Contour::GenPolyline(const std::vector<cv::Point2f> &vertexes)
@@ -483,17 +499,114 @@ Ptr<Contour> Contour::GenCross(const std::vector<cv::Point2f> &center, const std
 
 cv::Ptr<Contour> Contour::ReadWkt(const cv::String &wkt)
 {
-    ScalablePoint2fSequence ring;
     try
     {
+        ScalablePoint2fSequence ring;
         boost::geometry::read_wkt(wkt, ring);
         return makePtr<ContourImpl>(&ring, K_UNKNOWN);
     }
-    catch (boost::geometry::exception &)
+    catch (const boost::geometry::exception &)
     {
-        return makePtr<ContourImpl>();
     }
 
+    typedef boost::geometry::model::polygon<cv::Point2f, true, true, std::vector, std::vector, MyAlloc, MyAlloc> polygon_t;
+    typedef boost::geometry::model::multi_polygon<polygon_t, std::vector, MyAlloc> mpolygon_t;
+
+    try
+    {
+        polygon_t plg;
+        boost::geometry::read_wkt(wkt, plg);
+
+        ScalablePoint2fSequenceSequence curves(1+plg.inners().size());
+
+        curves[0].resize(plg.outer().size());
+        std::memcpy(curves[0].data(), plg.outer().data(), sizeof(cv::Point2f)*plg.outer().size());
+
+        int i = 1;
+        for (const auto &innerRing : plg.inners())
+        {
+            curves[i].resize(innerRing.size());
+            std::memcpy(curves[i].data(), innerRing.data(), sizeof(cv::Point2f)*innerRing.size());
+            ++i;
+        }
+
+        return makePtr<ContourImpl>(&curves, K_UNKNOWN);
+    }
+    catch (const boost::geometry::exception &)
+    {
+    }
+
+    try
+    {
+        mpolygon_t mplg;
+        boost::geometry::read_wkt(wkt, mplg);
+
+        std::vector<cv::Ptr<Contour>> contours(mplg.size());
+
+        int n = 0;
+        for (const polygon_t &plg : mplg)
+        {
+            ScalablePoint2fSequenceSequence curves(1 + plg.inners().size());
+
+            curves[0].resize(plg.outer().size());
+            std::memcpy(curves[0].data(), plg.outer().data(), sizeof(cv::Point2f)*plg.outer().size());
+
+            int i = 1;
+            for (const auto &innerRing : plg.inners())
+            {
+                curves[i].resize(innerRing.size());
+                std::memcpy(curves[i].data(), innerRing.data(), sizeof(cv::Point2f)*innerRing.size());
+                ++i;
+            }
+
+            contours[n++] = makePtr<ContourImpl>(&curves, K_UNKNOWN);
+        }
+
+        return makePtr<ContourArrayImpl>(&contours);
+    }
+    catch (const boost::geometry::exception &)
+    {
+    }
+
+    typedef boost::geometry::model::linestring<cv::Point2f, std::vector, MyAlloc> linestring_t;
+    typedef boost::geometry::model::multi_linestring<linestring_t, std::vector, MyAlloc> mlinestring_t;
+
+    try
+    {
+        linestring_t lnstr;
+        boost::geometry::read_wkt(wkt, lnstr);
+
+        ScalablePoint2fSequence curve(lnstr.size());
+        std::memcpy(curve.data(), lnstr.data(), sizeof(cv::Point2f)*lnstr.size());
+
+        return makePtr<ContourImpl>(&curve, K_UNKNOWN);
+    }
+    catch (const boost::geometry::exception &)
+    {
+    }
+
+    try
+    {
+        mlinestring_t mlnstr;
+        boost::geometry::read_wkt(wkt, mlnstr);
+
+        int n = 0;
+        std::vector<cv::Ptr<Contour>> contours(mlnstr.size());
+        for (const linestring_t &lnstr : mlnstr)
+        {
+            ScalablePoint2fSequence curve(lnstr.size());
+            std::memcpy(curve.data(), lnstr.data(), sizeof(cv::Point2f)*lnstr.size());
+
+            contours[n++] = makePtr<ContourImpl>(&curve, K_UNKNOWN);
+        }
+
+        return makePtr<ContourArrayImpl>(&contours);
+    }
+    catch (const boost::geometry::exception &)
+    {
+    }
+
+    return makePtr<ContourImpl>();
 }
 
 }

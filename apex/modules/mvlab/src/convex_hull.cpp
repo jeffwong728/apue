@@ -93,7 +93,7 @@ static int SklanskyImpl(const cv::Point_<_Tp>** array, int start, int end, int* 
 
 ScalablePoint2fSequence ConvexHull::Sklansky(const cv::Point2f *points, const int cPoints)
 {
-    if (cPoints < 5) {
+    if (cPoints < 4) {
         ScalablePoint2fSequence hull(cPoints);
         for (int i = 0; i < cPoints; ++i)
         {
@@ -198,20 +198,15 @@ ScalablePoint2fSequence ConvexHull::Sklansky(const cv::Point2f *points, const in
 
 ScalablePoint2fSequence ConvexHull::AndrewMonotoneChain(const cv::Point2f *points, const int cPoints)
 {
-    if (cPoints < 5) {
-        ScalablePoint2fSequence hull(cPoints);
-        for (int i = 0; i < cPoints; ++i)
-        {
-            hull[i] = points[i];
-        }
-        return hull;
+    if (cPoints < 4) {
+        return Trivial(points, cPoints);
     }
 
     AdaptBuffer<cv::Point2f> pointPtrs(cPoints);
     std::memcpy(pointPtrs.data(), points, cPoints*sizeof(cv::Point2f));
     std::sort(pointPtrs.data(), pointPtrs.data() + cPoints, CHullCmpPoints<float>());
 
-    ScalablePoint2fSequence hull(cPoints+3);
+    ScalablePoint2fSequence hull(cPoints+2);
     cv::Point2f *H = hull.data();
     const cv::Point2f *P = pointPtrs.data();
 
@@ -229,7 +224,8 @@ ScalablePoint2fSequence ConvexHull::AndrewMonotoneChain(const cv::Point2f *point
         H[++top] = P[minmin];
         if (P[minmax].y != P[minmin].y) // a  nontrivial segment
             H[++top] = P[minmax];
-        hull.resize(top+1);
+        hull.resize(top+2);
+        hull.back() = hull.front();
         return hull;
     }
 
@@ -254,14 +250,13 @@ ScalablePoint2fSequence ConvexHull::AndrewMonotoneChain(const cv::Point2f *point
             // test if  P[i] is left of the line at the stack top
             if (Util::isTolLeft(H[top - 1], H[top], P[i]) < 0)
                 break;         // P[i] is a new hull  vertex
-            else
-                top--;         // pop top point off  stack
+            top--;         // pop top point off  stack
         }
         H[++top] = P[i];        // push P[i] onto stack
     }
 
     // Next, compute the upper hull on the stack H above  the bottom hull
-    if (maxmax != maxmin)      // if  distinct xmax points
+    if (maxmax != maxmin && !Util::nearPoint(P[maxmax], P[maxmin]))      // if  distinct xmax points
         H[++top] = P[maxmax];  // push maxmax point onto stack
     bot = top;                  // the bottom point of the upper hull stack
     i = maxmin;
@@ -276,28 +271,22 @@ ScalablePoint2fSequence ConvexHull::AndrewMonotoneChain(const cv::Point2f *point
             // test if  P[i] is left of the line at the stack top
             if (Util::isTolLeft(H[top - 1], H[top], P[i]) < 0)
                 break;         // P[i] is a new hull  vertex
-            else
-                top--;         // pop top point off  stack
+            top--;         // pop top point off  stack
         }
         H[++top] = P[i];        // push P[i] onto stack
     }
 
-    if (minmax != minmin)
-        H[++top] = P[minmin];
+    if (Util::nearPoint(P[minmax], P[minmin])) --top;
 
-    hull.resize(top+1);
+    hull.resize(top+2);
+    hull.back() = hull.front();
     return hull;
 }
 
 ScalablePoint2fSequence ConvexHull::MelkmanSimpleHull(const cv::Point2f *points, const int cPoints)
 {
-    if (cPoints < 5) {
-        ScalablePoint2fSequence hull(cPoints);
-        for (int i = 0; i < cPoints; ++i)
-        {
-            hull[i] = points[i];
-        }
-        return hull;
+    if (cPoints < 4) {
+        return Trivial(points, cPoints);
     }
 
     AdaptBuffer<cv::Point2f> pointPtrs(2*cPoints+2);
@@ -334,11 +323,32 @@ ScalablePoint2fSequence ConvexHull::MelkmanSimpleHull(const cv::Point2f *points,
         D[++top] = points[i];           // push P[i] onto top of deque
     }
 
-    ScalablePoint2fSequence hull(top - bot + 1);
-    for (int h = 0; h <= (top - bot); ++h)
+    ScalablePoint2fSequence hull(top - bot+1);
+    for (int h = 0; h < (top - bot); ++h)
         hull[h] = D[bot + h];
-
+    hull.back() = hull.front();
     return hull;
+}
+
+ScalablePoint2fSequence ConvexHull::Trivial(const cv::Point2f *points, const int cPoints)
+{
+    if (cPoints <= 0)
+    {
+        return ScalablePoint2fSequence();
+    }
+    else
+    {
+        ScalablePoint2fSequence hull(cPoints);
+        hull[0] = points[0];
+        for (int i = 0, j=1; j < cPoints; ++j)
+        {
+            if (Util::farPoint(points[i], points[j]))
+            {
+                hull[++i] = points[j];
+            }
+        }
+        return hull;
+    }
 }
 
 }

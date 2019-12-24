@@ -31,7 +31,7 @@ public:
     void GetLength(std::vector<double> &lengthes) const CV_OVERRIDE;
     void GetCentroid(std::vector<cv::Point2f> &centroids) const CV_OVERRIDE;
     void GetBoundingBox(std::vector<cv::Rect> &boundingBoxes) const CV_OVERRIDE;
-    void GetSmallestCircle(std::vector< cv::Point3d> &miniCircles) const CV_OVERRIDE;
+    void GetSmallestCircle(std::vector<cv::Point3d> &miniCircles) const CV_OVERRIDE;
     void GetCircularity(std::vector<double> &circularities) const CV_OVERRIDE;
     cv::Ptr<Contour> Simplify(const float tolerance) const CV_OVERRIDE;
     cv::Ptr<Contour> GetConvex() const CV_OVERRIDE;
@@ -52,6 +52,7 @@ public:
     double Area() const CV_OVERRIDE;
     double Length() const CV_OVERRIDE;
     cv::Point2d Centroid() const CV_OVERRIDE;
+    cv::Point2d PointsCenter() const CV_OVERRIDE;
     cv::Rect BoundingBox() const CV_OVERRIDE;
     cv::Point3d SmallestCircle() const CV_OVERRIDE;
     double Circularity() const CV_OVERRIDE;
@@ -71,6 +72,7 @@ private:
     void AreaCenter() const;
     void ChangedCoordinatesToFixed() const;
     cv::Ptr<Contour> GetConvexImpl() const;
+    bool IsCurveClosed(const int i) const;
 
 private:
     const ScalablePoint2fSequenceSequence curves_;
@@ -79,6 +81,7 @@ private:
     mutable boost::optional<double> area_;
     mutable boost::optional<double> circularity_;
     mutable boost::optional<cv::Point2d> centroid_;
+    mutable boost::optional<cv::Point2d> point_cloud_center_;
     mutable boost::optional<cv::Point3d> mini_ball_;
     mutable boost::optional<cv::Rect> bbox_;
     mutable boost::optional<cv::Scalar> diameter_;

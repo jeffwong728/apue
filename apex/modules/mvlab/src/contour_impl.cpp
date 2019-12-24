@@ -318,8 +318,12 @@ cv::Ptr<Contour> ContourImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
 
 void ContourImpl::GetTestClosed(std::vector<int> &isClosed) const
 {
-    isClosed.resize(0);
-    isClosed.push_back(ContourImpl::TestClosed());
+    isClosed.resize(curves_.size());
+    const int numCurves = static_cast<int>(curves_.size());
+    for (int c = 0; c < numCurves; ++c)
+    {
+        isClosed[c] = IsCurveClosed(c);
+    }
 }
 
 void ContourImpl::GetTestConvex(std::vector<int> &isConvex) const
@@ -424,13 +428,13 @@ void ContourImpl::AreaCenter() const
             }
 
             area_ = area;
-            if (std::abs(area) > 0.)
+            if (std::abs(area) > G_D_TOL)
             {
                 centroid_ = cv::Point2d(cx / (3 * area), cy / (3 * area));
             }
             else
             {
-                centroid_ = cv::Point2d();
+                centroid_ = ContourImpl::PointsCenter();
             }
         }
         else
@@ -451,7 +455,7 @@ void ContourImpl::AreaCenter() const
     else
     {
         area_ = 0.;
-        centroid_ = cv::Point2d();
+        centroid_ = ContourImpl::PointsCenter();
     }
 }
 
@@ -508,7 +512,7 @@ cv::Ptr<Contour> ContourImpl::GetConvexImpl() const
     {
         if ("Melkman" == optVal)
         {
-            ScalablePoint2fSequence tPoints = ConvexHull::MelkmanSimpleHull(curves_.front().data(), static_cast<int>(curves_.front().size()));
+            ScalablePoint2fSequence tPoints = ConvexHull::MelkmanSimpleHull(curves_.front().data(), static_cast<int>(curves_.front().size())-1);
             return cv::makePtr<ContourImpl>(&tPoints, K_YES);
         }
         else if ("Sklansky" == optVal)
@@ -551,12 +555,25 @@ cv::Ptr<Contour> ContourImpl::GetConvexImpl() const
     }
 }
 
+bool ContourImpl::IsCurveClosed(const int i) const
+{
+    if (curves_[i].size() < 2)
+    {
+        return false;
+    }
+    else
+    {
+        const cv::Point2f dxy = curves_[i].front() - curves_[i].back();
+        return dxy.dot(dxy) < std::numeric_limits<float>::epsilon();
+    }
+}
+
 int ContourImpl::CountPoints() const
 {
-    int cPoints = 0;
+    int cPoints = 0, i = 0;
     for (const auto &vertexes : curves_)
     {
-        cPoints += static_cast<int>(vertexes.size()) - ContourImpl::TestClosed();
+        cPoints += static_cast<int>(vertexes.size()) - IsCurveClosed(i++);
     }
     return cPoints;
 }
@@ -625,6 +642,62 @@ cv::Point2d ContourImpl::Centroid() const
     }
 
     return *centroid_;
+}
+
+cv::Point2d ContourImpl::PointsCenter() const
+{
+    if (boost::none == point_cloud_center_)
+    {
+        double sx = 0.;
+        double sy = 0.;
+        int numTotalPoints = 0;
+        for (const auto &vertexes : curves_)
+        {
+            if (!vertexes.empty())
+            {
+                const cv::Point2f dxy = vertexes.front() - vertexes.back();
+                const int numPoints = static_cast<int>(vertexes.size()) - (dxy.dot(dxy) < std::numeric_limits<float>::epsilon());
+                numTotalPoints += numPoints;
+
+                constexpr int simdSize = 8;
+                const int regularNumPoints = numPoints & (-simdSize);
+
+                int n = 0;
+                const cv::Point2f *pt = vertexes.data();
+                vcl::Vec8f svx(0), svy(0);
+                for (; n < regularNumPoints; n += simdSize)
+                {
+                    vcl::Vec8f v1, v2;
+                    v1.load(reinterpret_cast<const float *>(pt));
+                    v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+                    svx += vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+                    svy += vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+                    pt += simdSize;
+                }
+
+                sx += vcl::horizontal_add(svx);
+                sy += vcl::horizontal_add(svy);
+
+                for (; n < numPoints; ++n, ++pt)
+                {
+                    sx += pt->x;
+                    sy += pt->y;
+                }
+            }
+        }
+
+        if (numTotalPoints)
+        {
+            point_cloud_center_ = cv::Point2d(sx / numTotalPoints, sy / numTotalPoints);
+        }
+        else
+        {
+            point_cloud_center_ = cv::Point2d();
+        }
+    }
+
+    return *point_cloud_center_;
 }
 
 cv::Rect ContourImpl::BoundingBox() const
@@ -832,14 +905,21 @@ cv::RotatedRect ContourImpl::SmallestRectangle() const
 
 bool ContourImpl::TestClosed() const
 {
-    if (curves_.empty() || curves_.front().size() < 2)
+    if (curves_.empty())
     {
         return false;
     }
     else
     {
-        const cv::Point2f dxy = curves_.front().front() - curves_.front().back();
-        return dxy.dot(dxy) < std::numeric_limits<float>::epsilon();
+        const int numCurves = static_cast<int>(curves_.size());
+        for (int c = 0; c < numCurves; ++c)
+        {
+            if (!IsCurveClosed(c))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
@@ -851,27 +931,32 @@ bool ContourImpl::TestConvex() const
     }
     else
     {
-        if (ContourImpl::TestSelfIntersection(""))
+        if (ContourImpl::TestSelfIntersection("true"))
         {
-            if (curves_.empty() || curves_.front().empty())
+            is_convex_ = K_NO;
+            return false;
+        }
+        else
+        {
+            if ((1 != curves_.size()) || curves_.front().empty())
             {
                 is_convex_ = K_NO;
                 return false;
             }
             else
             {
-                if (curves_.front().size()<4)
+                if (curves_.front().size() < 4)
                 {
-                    is_convex_ = K_YES;
-                    return true;
+                    is_convex_ = K_NO;
+                    return false;
                 }
                 else
                 {
                     const auto &vertexes = curves_.front();
-                    const int n = static_cast<int>(vertexes.size());
-                    const cv::Point2f *prev_pt = vertexes.data() + vertexes.size() - 2;
-                    const cv::Point2f *cur_pt  = vertexes.data() + vertexes.size() - 1;
-                    const cv::Point2f *end_pt  = vertexes.data() + vertexes.size();
+                    const int n = static_cast<int>(vertexes.size()) - ContourImpl::TestClosed();
+                    const cv::Point2f *prev_pt = vertexes.data() + n - 2;
+                    const cv::Point2f *cur_pt = vertexes.data() + n - 1;
+                    const cv::Point2f *end_pt = vertexes.data() + n;
                     float dx0 = cur_pt->x - prev_pt->x;
                     float dy0 = cur_pt->y - prev_pt->y;
                     int orientation = 0;
@@ -902,10 +987,6 @@ bool ContourImpl::TestConvex() const
                 }
             }
         }
-        else
-        {
-            return false;
-        }
     }
 }
 
@@ -925,7 +1006,6 @@ bool ContourImpl::TestPoint(const cv::Point2f &point) const
         int n = 0;
         int wn = 0;
         const cv::Point2f *pt = vertexes.data();
-        const cv::Point2f *pte = vertexes.data() + vertexes.size() - 1;
         const vcl::Vec8f Px(point.x);
         const vcl::Vec8f Py(point.y);
         for (; n < regularNumPoints; n += simdSize)

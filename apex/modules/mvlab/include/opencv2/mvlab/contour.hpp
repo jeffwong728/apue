@@ -38,6 +38,7 @@ public:
     CV_WRAP virtual double Area() const = 0;
     CV_WRAP virtual double Length() const = 0;
     CV_WRAP virtual cv::Point2d Centroid() const = 0;
+    CV_WRAP virtual cv::Point2d PointsCenter() const = 0;
     CV_WRAP virtual cv::Rect BoundingBox() const = 0;
     CV_WRAP virtual cv::Point3d SmallestCircle() const = 0;
     CV_WRAP virtual double Circularity() const = 0;

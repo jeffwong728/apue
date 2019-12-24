@@ -14,6 +14,7 @@ public:
     ConvexHull() = delete;
 
 public:
+    static ScalablePoint2fSequence Trivial(const cv::Point2f *points, const int cPoints);
     static ScalablePoint2fSequence Sklansky(const cv::Point2f *points, const int cPoints);
     static ScalablePoint2fSequence AndrewMonotoneChain(const cv::Point2f *points, const int cPoints);
     static ScalablePoint2fSequence MelkmanSimpleHull(const cv::Point2f *points, const int cPoints);
