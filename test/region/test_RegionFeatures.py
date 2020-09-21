@@ -21,8 +21,9 @@ class TestRegionFeatures(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 50, 255)
+        rgns = rgn.Connect()
 
-        c = rgn.GetContour()
+        c = rgns.GetContour()
         mvlab.SetGlobalOption('convex_hull_method', 'Melkman')
         startTime = time.perf_counter()
         ch = c.GetConvex()
@@ -34,8 +35,9 @@ class TestRegionFeatures(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgns = rgn.Connect()
 
-        c = rgn.GetContour()
+        c = rgns.GetContour()
         mvlab.SetGlobalOption('convex_hull_method', 'Melkman')
         startTime = time.perf_counter()
         ch = c.GetConvex()
@@ -47,8 +49,9 @@ class TestRegionFeatures(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 50, 255)
+        rgns = rgn.Connect()
 
-        c = rgn.GetContour()
+        c = rgns.GetContour()
         startTime = time.perf_counter()
         ch = c.GetSmallestCircle()
         endTime = time.perf_counter()
@@ -64,8 +67,9 @@ class TestRegionFeatures(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgns = rgn.Connect()
 
-        c = rgn.GetContour()
+        c = rgns.GetContour()
         startTime = time.perf_counter()
         ch = c.GetSmallestCircle()
         endTime = time.perf_counter()

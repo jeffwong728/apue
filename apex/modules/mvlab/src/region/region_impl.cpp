@@ -1,20 +1,70 @@
 #include "precomp.hpp"
 #include "region_impl.hpp"
+#include "region_array_impl.hpp"
 #include "rtd_encoder.hpp"
 #include "utility.hpp"
 #include "connection.hpp"
 #include "region_bool.hpp"
-#include "convex_hull.hpp"
+#include <convex_hull.hpp>
+#include <hdf5/h5group_impl.hpp>
 #include <opencv2/mvlab.hpp>
+
+BOOST_CLASS_EXPORT_IMPLEMENT(cv::mvlab::Region)
+BOOST_CLASS_EXPORT_IMPLEMENT(cv::mvlab::RegionImpl)
 
 namespace cv {
 namespace mvlab {
 
+const cv::String RegionImpl::type_guid_s{"FFF61A27-41E0-4ED8-9C08-8A6B124E9008"};
 extern RunSequence RunLengthEncode(const cv::Mat &imgMat, const int minGray, const int maxGray);
 
 RegionImpl::RegionImpl(RunSequence *const runs)
     : rgn_runs_(std::move(*runs))
 {
+}
+
+RegionImpl::RegionImpl(const cv::Mat &runs)
+{
+    if (runs.empty())
+    {
+        return;
+    }
+
+    if (CV_32S != runs.depth() || 4 != runs.channels() || 2 != runs.dims || 1 != runs.cols)
+    {
+        return;
+    }
+
+    RunSequence aRuns(runs.rows);
+    for (int r=0; r<runs.rows; ++r)
+    {
+        const cv::Vec<int, 4> &elem = runs.at<cv::Vec<int, 4>>(cv::Vec<int, 2>(r, 0));
+        RunLength &run = aRuns[r];
+        run.row = elem[0];
+        run.colb = elem[1];
+        run.cole = elem[2];
+        run.label = elem[3];
+    }
+
+    const_cast<RunSequence &>(rgn_runs_).swap(aRuns);
+}
+
+RegionImpl::RegionImpl(const std::string &bytes)
+{
+    try
+    {
+        std::istringstream iss(bytes, std::ios_base::in | std::ios_base::binary);
+        boost::iostreams::filtering_istream fin;
+        fin.push(boost::iostreams::lzma_decompressor());
+        fin.push(iss);
+
+        boost::archive::text_iarchive ia(fin);
+        ia >> boost::serialization::make_nvp("region", *this);
+    }
+    catch (const std::exception &e)
+    {
+        err_msg_ = e.what();
+    }
 }
 
 int RegionImpl::Draw(Mat &img,
@@ -132,6 +182,43 @@ cv::Rect RegionImpl::BoundingBox() const
     return *bbox_;
 }
 
+cv::Point3d RegionImpl::SmallestCircle() const
+{
+    if (min_circle_ == boost::none)
+    {
+        float radius = 0;
+        cv::Point2f center;
+        std::vector<cv::Point> points;
+        points.reserve(rgn_runs_.size() * 2);
+
+        for (const RunLength &r : rgn_runs_)
+        {
+            const auto n = r.cole - r.colb;
+            if (1 == n)
+            {
+                points.emplace_back(r.colb, r.row);
+            }
+            else
+            {
+                points.emplace_back(r.colb, r.row);
+                points.emplace_back(r.cole - 1, r.row);
+            }
+        }
+
+        if (points.empty())
+        {
+            min_circle_.emplace(0.0, 0.0, 0.0);
+        }
+        else
+        {
+            cv::minEnclosingCircle(points, center, radius);
+            min_circle_.emplace(center.x, center.y, radius);
+        }
+    }
+
+    return *min_circle_;
+}
+
 double RegionImpl::AreaHoles() const
 {
     if (boost::none == hole_area_)
@@ -153,6 +240,11 @@ double RegionImpl::Contlength() const
 }
 
 int RegionImpl::Count() const
+{
+    return 1;
+}
+
+int RegionImpl::CountRuns() const
 {
     return static_cast<int>(rgn_runs_.size());
 }
@@ -178,6 +270,18 @@ int RegionImpl::CountConnect() const
 int RegionImpl::CountHoles() const
 {
     return RegionImpl::GetHole()->Count();
+}
+
+cv::Ptr<Region> RegionImpl::SelectObj(const int index) const
+{
+    if (0 == index)
+    {
+        return (cv::Ptr<RegionImpl>)const_cast<RegionImpl *>(this)->shared_from_this();
+    }
+    else
+    {
+        return cv::Ptr<RegionImpl>();
+    }
 }
 
 cv::Ptr<Contour> RegionImpl::GetContour() const
@@ -220,7 +324,7 @@ cv::Ptr<Contour> RegionImpl::GetConvex() const
     return makePtr<ContourImpl>();
 }
 
-int RegionImpl::GetPoints(std::vector<cv::Point> &points) const
+void RegionImpl::GetPoints(std::vector<cv::Point> &points) const
 {
     const int numPoints = cvCeil(RegionImpl::Area());
     points.resize(numPoints);
@@ -234,7 +338,6 @@ int RegionImpl::GetPoints(std::vector<cv::Point> &points) const
             pPoints += 1;
         }
     }
-    return MLR_SUCCESS;
 }
 
 cv::Ptr<Contour> RegionImpl::GetPolygon(const float tolerance) const
@@ -242,19 +345,12 @@ cv::Ptr<Contour> RegionImpl::GetPolygon(const float tolerance) const
     cv::Ptr<Contour> contour = RegionImpl::GetContour();
     if (contour)
     {
-        cv::Ptr<ContourImpl> contImpl = contour.dynamicCast<ContourImpl>();
-        if (contImpl && !contImpl->Empty())
-        {
-            Point2fSequence approxPoints;
-            cv::approxPolyDP(Point2fSequence(contImpl->GetVertexes().cbegin(), contImpl->GetVertexes().cend()), approxPoints, tolerance, true);
-            ScalablePoint2fSequence tPoints(approxPoints.cbegin(), approxPoints.cend());
-            return cv::makePtr<ContourImpl>(&tPoints, K_YES);
-        }
+        contour->Simplify(tolerance);
     }
     return makePtr<ContourImpl>();
 }
 
-int RegionImpl::GetRuns(std::vector<cv::Point3i> &runs) const
+void RegionImpl::GetRuns(std::vector<cv::Point3i> &runs) const
 {
     runs.resize(rgn_runs_.size());
     cv::Point3i *pRuns = runs.data();
@@ -265,12 +361,11 @@ int RegionImpl::GetRuns(std::vector<cv::Point3i> &runs) const
         pRuns->z = rl.cole;
         pRuns += 1;
     }
-    return MLR_SUCCESS;
 }
 
 cv::Ptr<Region> RegionImpl::Complement(const cv::Rect &universe) const
 {
-    const cv::Rect bbox = BoundingBox() - cv::Point(1, 1) + cv::Size(1, 2);
+    const cv::Rect bbox = BoundingBox() - cv::Point(1, 1) + cv::Size(1, 1);
     const cv::Rect rcUniv = bbox | universe;
 
     RegionComplementOp compOp;
@@ -338,7 +433,8 @@ cv::Ptr<Region> RegionImpl::Union2(const cv::Ptr<Region> &otherRgn) const
     if (otherRgnImpl)
     {
         RegionUnion2Op unionOp;
-        RunSequence resRuns = unionOp.Do(rgn_runs_, otherRgnImpl->rgn_runs_);
+        RunSequence resRuns;
+        unionOp.Do(rgn_runs_, otherRgnImpl->rgn_runs_, resRuns);
         if (!resRuns.empty())
         {
             return makePtr<RegionImpl>(&resRuns);
@@ -487,6 +583,94 @@ cv::Ptr<Region> RegionImpl::Zoom(const cv::Size2f &scale) const
     return makePtr<RegionImpl>();
 }
 
+cv::Ptr<Region> RegionImpl::Shrink(const cv::Size2f &ratio) const
+{
+    if (RegionImpl::Empty())
+    {
+        err_msg_ = "empty region";
+        return Region::GenEmpty();
+    }
+
+    if (ratio.width > 1.f || ratio.height > 1.f)
+    {
+        err_msg_ = "ratio must between 0 and 1";
+        return Region::GenEmpty();
+    }
+
+    if (ratio.width < std::numeric_limits<float>::epsilon() || ratio.height < std::numeric_limits<float>::epsilon())
+    {
+        err_msg_ = "ratio must between 0 and 1";
+        return Region::GenEmpty();
+    }
+
+    RunSequence shrinkRuns(rgn_runs_.size());
+    RunLength *lastAddedOut = shrinkRuns.data();
+    for (const RunLength &rl : rgn_runs_)
+    {
+        const int colb = cvRound(rl.colb * ratio.width);
+        const int cole = cvRound(rl.cole * ratio.width);
+        if (colb != cole)
+        {
+            lastAddedOut->row   = cvRound(rl.row * ratio.height);
+            lastAddedOut->colb  = colb;
+            lastAddedOut->cole  = cole;
+            lastAddedOut->label = rl.label;
+            lastAddedOut += 1;
+        }
+    }
+
+    const auto &compr = [](const RunLength &left, const RunLength &right) 
+    { 
+        return left.colb < right.colb || (left.colb == right.colb && left.cole < right.cole);
+    };
+    shrinkRuns.resize(std::distance(shrinkRuns.data(), lastAddedOut));
+
+    lastAddedOut = shrinkRuns.data();
+    RunLength *curIn = shrinkRuns.data() + 1;
+    const RunLength *endIn = shrinkRuns.data() + shrinkRuns.size();
+    while (curIn != endIn)
+    {
+        if (curIn->row != lastAddedOut->row)
+        {
+            std::sort(lastAddedOut, curIn, compr);
+            lastAddedOut = curIn;
+        }
+        curIn += 1;
+    }
+    std::sort(lastAddedOut, curIn, compr);
+
+    lastAddedOut = shrinkRuns.data();
+    curIn        = shrinkRuns.data() + 1;
+    endIn        = shrinkRuns.data() + shrinkRuns.size();
+    while (curIn != endIn)
+    {
+        if (curIn->row == lastAddedOut->row && curIn->colb <= lastAddedOut->cole)
+        {
+            lastAddedOut->cole = std::max(curIn->cole, lastAddedOut->cole);
+        }
+        else
+        {
+            lastAddedOut += 1;
+            lastAddedOut->row   = curIn->row;
+            lastAddedOut->colb  = curIn->colb;
+            lastAddedOut->cole  = curIn->cole;
+            lastAddedOut->label = curIn->label;
+        }
+
+        curIn += 1;
+    }
+
+    shrinkRuns.resize(std::distance(shrinkRuns.data(), lastAddedOut)+1);
+    if (1==shrinkRuns.size() && shrinkRuns[0].colb == shrinkRuns[1].cole)
+    {
+        return Region::GenEmpty();
+    }
+    else
+    {
+        return makePtr<RegionImpl>(&shrinkRuns);
+    }
+}
+
 cv::Ptr<Region> RegionImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
 {
     if (!Empty())
@@ -518,12 +702,12 @@ cv::Ptr<Region> RegionImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
     return makePtr<RegionImpl>();
 }
 
-int RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const
+cv::Ptr<Region> RegionImpl::Connect() const
 {
-    regions.clear();
+    std::vector<cv::Ptr<Region>> rgns;
     if (RegionImpl::Empty())
     {
-        return MLR_REGION_EMPTY;
+        return makePtr<RegionImpl>();
     }
 
     cv::String optVal;
@@ -542,12 +726,74 @@ int RegionImpl::Connect(std::vector<Ptr<Region>> &regions) const
     if (is_parallel)
     {
         ConnectWuParallel connectWuParallel;
-        connectWuParallel.Connect(this, connectivity, regions);
+        connectWuParallel.Connect(this, connectivity, rgns);
     }
     else
     {
         ConnectWuSerial connectWuSerial;
-        connectWuSerial.Connect(this, connectivity, regions);
+        connectWuSerial.Connect(this, connectivity, rgns);
+    }
+
+    return makePtr<RegionArrayImpl>(&rgns);
+}
+
+cv::Ptr<Region> RegionImpl::Clone() const
+{
+    RunSequence dstRuns = rgn_runs_;
+    return makePtr<RegionImpl>(&dstRuns);
+}
+
+cv::String RegionImpl::GetErrorStatus() const
+{
+    return err_msg_;
+}
+
+int RegionImpl::Save(const cv::String &fileName, const cv::Ptr<Dict> &opts) const
+{
+    return WriteToFile<RegionImpl>(*this, "region", fileName, opts, err_msg_);
+}
+
+int RegionImpl::Load(const cv::String &fileName, const cv::Ptr<Dict> &opts)
+{
+    return LoadFromFile<RegionImpl>(*this, "region", fileName, opts, err_msg_);
+}
+
+int RegionImpl::Serialize(const cv::String &name, H5Group *g) const
+{
+    err_msg_.resize(0);
+    std::ostringstream bytes;
+    H5GroupImpl *group = dynamic_cast<H5GroupImpl *>(g);
+    if (!group || !group->Valid())
+    {
+        err_msg_ = "invalid database";
+        return MLR_H5DB_INVALID;
+    }
+
+    try
+    {
+        {
+            boost::iostreams::filtering_ostream fout;
+            fout.push(boost::iostreams::lzma_compressor());
+            fout.push(bytes);
+            boost::archive::text_oarchive oa(fout);
+            oa << boost::serialization::make_nvp("region", *this);
+        }
+
+        H5::DataSet dataSet;
+        int r = group->SetDataSet(name, bytes.str(), dataSet);
+        if (MLR_SUCCESS != r)
+        {
+            err_msg_ = "save database failed";
+            return r;
+        }
+
+        group->SetAttribute(dataSet, cv::String("TypeGUID"), RegionImpl::TypeGUID());
+        group->SetAttribute(dataSet, cv::String("Version"), 0);
+    }
+    catch (const std::exception &e)
+    {
+        err_msg_ = e.what();
+        return MLR_IO_STREAM_EXCEPTION;
     }
 
     return MLR_SUCCESS;
@@ -631,11 +877,11 @@ void RegionImpl::DrawVerifiedRGBA(Mat &img, const Scalar& fillColor) const
 
         if (rgn_runs_.size() > 64)
         {
-            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+            tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())), filler);
         }
         else
         {
-            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+            filler(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())));
         }
     }
     else if (0 == A)
@@ -673,11 +919,11 @@ void RegionImpl::DrawVerifiedRGBA(Mat &img, const Scalar& fillColor) const
 
         if (rgn_runs_.size() > 64)
         {
-            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+            tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())), filler);
         }
         else
         {
-            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+            filler(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())));
         }
     }
 }
@@ -714,11 +960,11 @@ void RegionImpl::DrawVerifiedRGB(Mat &img, const Scalar& fillColor) const
 
         if (rgn_runs_.size() > 64)
         {
-            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+            tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())), filler);
         }
         else
         {
-            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+            filler(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())));
         }
     }
     else if (0 == A)
@@ -755,11 +1001,11 @@ void RegionImpl::DrawVerifiedRGB(Mat &img, const Scalar& fillColor) const
 
         if (rgn_runs_.size() > 64)
         {
-            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+            tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())), filler);
         }
         else
         {
-            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+            filler(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())));
         }
     }
 }
@@ -790,11 +1036,11 @@ void RegionImpl::DrawVerifiedGray(Mat &img, const Scalar& fillColor) const
 
         if (rgn_runs_.size()>64)
         {
-            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+            tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())), filler);
         }
         else
         {
-            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+            filler(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())));
         }
     }
     else if (0 == alpha)
@@ -827,11 +1073,11 @@ void RegionImpl::DrawVerifiedGray(Mat &img, const Scalar& fillColor) const
 
         if (rgn_runs_.size() > 64)
         {
-            tbb::parallel_for(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())), filler);
+            tbb::parallel_for(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())), filler);
         }
         else
         {
-            filler(tbb::blocked_range(0, static_cast<int>(rgn_runs_.size())));
+            filler(tbb::blocked_range<int>(0, static_cast<int>(rgn_runs_.size())));
         }
     }
 }
@@ -843,28 +1089,27 @@ void RegionImpl::TraceContour() const
         const auto &rowBegs = GetRowBeginSequence();
 
         const int nThreads = tbb::task_scheduler_init::default_num_threads();
-        const int numRows = static_cast<int>(rowBegs.size() - 1);
-        const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;
+        const bool is_parallel = nThreads > 1 && (rgn_runs_.size() / nThreads) >= 1024*10;
 
         if (is_parallel)
         {
             RunLengthRDParallelEncoder rdEncoder;
             rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), rowBegs);
             rdEncoder.Link();
-            std::vector<Ptr<Contour>> outers, holes;
+            ScalablePoint2fSequenceSequence outers, holes;
             rdEncoder.Track(outers, holes);
-            contour_ = makePtr<ContourArrayImpl>(&outers);
-            hole_ = makePtr<ContourArrayImpl>(&holes);
+            contour_ = makePtr<ContourImpl>(&outers, K_NO);
+            hole_ = makePtr<ContourImpl>(&holes, K_NO);
         }
         else
         {
             RunLengthRDSerialEncoder rdEncoder;
             rdEncoder.Encode(rgn_runs_.data(), rgn_runs_.data() + rgn_runs_.size(), rowBegs);
             rdEncoder.Link();
-            std::vector<Ptr<Contour>> outers, holes;
+            ScalablePoint2fSequenceSequence outers, holes;
             rdEncoder.Track(outers, holes);
-            contour_ = makePtr<ContourArrayImpl>(&outers);
-            hole_    = makePtr<ContourArrayImpl>(&holes);
+            contour_ = makePtr<ContourImpl>(&outers, K_NO);
+            hole_    = makePtr<ContourImpl>(&holes, K_NO);
         }
     }
 }
@@ -911,6 +1156,7 @@ void RegionImpl::GatherBasicFeatures() const
             centroid_.emplace(0, 0);
         }
 
+        maxPoint.y += 1;
         bbox_ = cv::Rect(minPoint, maxPoint);
     }
     else
@@ -923,18 +1169,15 @@ void RegionImpl::GatherBasicFeatures() const
 
 void RegionImpl::GetContourInfo(const cv::Ptr<Contour> &contour, int &numEdges, int &maxNumPoints) const
 {
-    if (contour)
+    if (contour && contour->TestClosed())
     {
-        cv::Ptr<ContourArrayImpl> contourArray = contour.dynamicCast<ContourArrayImpl>();
-        const std::vector<cv::Ptr<Contour>> &contours = contourArray->GetContours();
-        for (const cv::Ptr<Contour> &cont : contours)
+        cv::Ptr<ContourImpl> contourArray = contour.dynamicCast<ContourImpl>();
+        const ScalablePoint2fSequenceSequence &curves = contourArray->Curves();
+        for (const auto &crv : curves)
         {
-            if (cont)
-            {
-                const int numpoints = cont->CountPoints();
-                numEdges += (numpoints + 1);
-                maxNumPoints = std::max(maxNumPoints, numpoints);
-            }
+            const int numpoints = static_cast<int>(crv.size()-1);
+            numEdges += (numpoints + 1);
+            maxNumPoints = std::max(maxNumPoints, numpoints);
         }
     }
 }
@@ -944,29 +1187,22 @@ void RegionImpl::ZoomContourToEdges(const cv::Ptr<Contour> &contour,
     UScalablePointSequence &v,
     UScalablePolyEdgeSequence::pointer &pEdge) const
 {
-    if (contour)
+    if (contour && contour->TestClosed())
     {
-        cv::Ptr<ContourArrayImpl> contourArray = contour.dynamicCast<ContourArrayImpl>();
-        const std::vector<cv::Ptr<Contour>> &contours = contourArray->GetContours();
-        for (const cv::Ptr<Contour> &cont : contours)
+        cv::Ptr<ContourImpl> contourArray = contour.dynamicCast<ContourImpl>();
+        const auto &curves = contourArray->Curves();
+        for (const auto &crv : curves)
         {
-            if (cont)
+            const int numpoints = static_cast<int>(crv.size() - 1);
+            const UScalablePointSequence::pointer pvEnd = v.data() + numpoints;
+            auto vf = crv.data();
+            for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
             {
-                cv::Ptr<ContourImpl> contImpl = cont.dynamicCast<ContourImpl>();
-                if (contImpl && !contImpl->Empty())
-                {
-                    const int numpoints = contImpl->CountPoints();
-                    const UScalablePointSequence::pointer pvEnd = v.data() + numpoints;
-                    auto vf = contImpl->GetVertexes().data();
-                    for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
-                    {
-                        pv->x = cvRound(vf->x * F_XY_ONE * scale.width);
-                        pv->y = cvRound(vf->y * F_XY_ONE * scale.height);
-                    }
-
-                    CollectPolyEdges_(v.data(), numpoints, pEdge);
-                }
+                pv->x = cvRound(vf->x * F_XY_ONE * scale.width);
+                pv->y = cvRound(vf->y * F_XY_ONE * scale.height);
             }
+
+            CollectPolyEdges_(v.data(), numpoints, pEdge);
         }
     }
 }
@@ -976,28 +1212,21 @@ void RegionImpl::AffineContourToEdges(const cv::Ptr<Contour> &contour,
     UScalablePointSequence &v,
     UScalablePolyEdgeSequence::pointer &pEdge) const
 {
-    if (contour)
+    if (contour && contour->TestClosed())
     {
-        cv::Ptr<ContourArrayImpl> contourArray = contour.dynamicCast<ContourArrayImpl>();
-        const std::vector<cv::Ptr<Contour>> &contours = contourArray->GetContours();
-        for (const cv::Ptr<Contour> &cont : contours)
+        cv::Ptr<ContourImpl> contourArray = contour.dynamicCast<ContourImpl>();
+        const auto &curves = contourArray->Curves();
+        for (const auto &crv : curves)
         {
-            if (cont)
+            const int numpoints = static_cast<int>(crv.size() - 1);
+            const UScalablePointSequence::pointer pvEnd = v.data() + numpoints;
+            auto vf = crv.data();
+            for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
             {
-                cv::Ptr<ContourImpl> contImpl = cont.dynamicCast<ContourImpl>();
-                if (contImpl && !contImpl->Empty())
-                {
-                    const int numpoints = contImpl->CountPoints();
-                    const UScalablePointSequence::pointer pvEnd = v.data() + numpoints;
-                    auto vf = contImpl->GetVertexes().data();
-                    for (UScalablePointSequence::pointer pv = v.data(); pv != pvEnd; ++pv, ++vf)
-                    {
-                        pv->x = cvRound((m.val[0] * vf->x + m.val[1] * vf->y + m.val[2])*D_XY_ONE);
-                        pv->y = cvRound((m.val[3] * vf->x + m.val[4] * vf->y + m.val[5])*D_XY_ONE);
-                    }
-                    CollectPolyEdges_(v.data(), numpoints, pEdge);
-                }
+                pv->x = cvRound((m.val[0] * vf->x + m.val[1] * vf->y + m.val[2])*D_XY_ONE);
+                pv->y = cvRound((m.val[3] * vf->x + m.val[4] * vf->y + m.val[5])*D_XY_ONE);
             }
+            CollectPolyEdges_(v.data(), numpoints, pEdge);
         }
     }
 }
@@ -1119,7 +1348,7 @@ RunSequence FillEdgeCollection_(UScalablePolyEdgeSequence &edges)
                     x2 = (prelast->x + XY_DELTA) >> XY_SHIFT;
                 }
 
-                if (y == dstRuns.back().row && x1 <= dstRuns.back().cole)
+                if (!dstRuns.empty() && y == dstRuns.back().row && x1 <= dstRuns.back().cole)
                 {
                     dstRuns.back().cole = x2 + 1;
                 }

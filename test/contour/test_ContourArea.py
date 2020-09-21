@@ -104,5 +104,30 @@ class TestContourArea(unittest.TestCase):
         self.assertAlmostEqual(x, 150)
         self.assertAlmostEqual(y, 150)
 
+    def test_Star_Area(self):
+        plg = extradata.LoadTextPolygon('star_nodes.txt')
+        extradata.SaveContours(self.id(), [plg.Move((1, 1)).Zoom((50, 50))])
+        self.assertAlmostEqual(plg.Area(), 1.4694632515311241)
+
+    def test_Hand_Area(self):
+        plg = extradata.LoadTextPolygon('hand_nodes.txt')
+        extradata.SaveContours(self.id(), [plg.Move((1, 1)).Zoom((200, 200))])
+        self.assertAlmostEqual(plg.Area(), 0.1270042583346367)
+
+    def test_Comb_Area(self):
+        plg = extradata.LoadTextPolygon('comb_nodes.txt')
+        extradata.SaveContours(self.id(), [plg.Move((1, 5)).Zoom((50, 50))])
+        self.assertAlmostEqual(plg.Area(), 48)
+
+    def test_I18_Area(self):
+        plg = extradata.LoadTextPolygon('i18_nodes.txt')
+        extradata.SaveContours(self.id(), [plg.Move((5, 5)).Zoom((50, 50))])
+        self.assertAlmostEqual(plg.Area(), 142)
+
+    def test_Snake_Area(self):
+        plg = extradata.LoadTextPolygon('snake_nodes.txt')
+        extradata.SaveContours(self.id(), [plg.Move((1, 5)).Zoom((20, 20))])
+        self.assertAlmostEqual(plg.Area(), 500)
+
 if __name__ == '__main__':
     unittest.main()

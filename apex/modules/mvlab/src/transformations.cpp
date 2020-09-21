@@ -167,5 +167,10 @@ cv::Point2d HomoMat2d::AffineTransPoint2d(const cv::Matx33d &homoMat2D, const cv
     return cv::Point2d(homoMat2D.val[0] * point.x+homoMat2D.val[1]*point.y + homoMat2D.val[2], homoMat2D.val[3] * point.x + homoMat2D.val[4] * point.y + homoMat2D.val[5]);
 }
 
+int HomoMat2d::AffineTransImage(InputArray src, InputOutputArray dst, const cv::Matx33d &homoMat2D, const cv::Ptr<Dict> &opts)
+{
+    return MLR_SUCCESS;
+}
+
 }
 }

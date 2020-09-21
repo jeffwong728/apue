@@ -1,10 +1,32 @@
 #include "precomp.hpp"
 #include "contour_array_impl.hpp"
 #include "utility.hpp"
+#include <hdf5/h5group_impl.hpp>
 #include <opencv2/mvlab.hpp>
+
+BOOST_CLASS_EXPORT_IMPLEMENT(cv::mvlab::ContourArrayImpl)
 
 namespace cv {
 namespace mvlab {
+const cv::String ContourArrayImpl::type_guid_s{ "E1CCE12C-1CB9-4715-B347-32EAA5B0B47A" };
+
+ContourArrayImpl::ContourArrayImpl(const std::string &bytes)
+{
+    try
+    {
+        std::istringstream iss(bytes, std::ios_base::in | std::ios_base::binary);
+        boost::iostreams::filtering_istream fin;
+        fin.push(boost::iostreams::lzma_decompressor());
+        fin.push(iss);
+
+        boost::archive::text_iarchive ia(fin);
+        ia >> boost::serialization::make_nvp("contours", *this);
+    }
+    catch (const std::exception &e)
+    {
+        err_msg_ = e.what();
+    }
+}
 
 int ContourArrayImpl::Draw(Mat &img, const Scalar& color, const float thickness, const int style) const
 {
@@ -121,6 +143,12 @@ void ContourArrayImpl::GetSmallestCircle(std::vector< cv::Point3d> &miniCircles)
     tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { miniCircles[i] = contours_[i]->SmallestCircle(); });
 }
 
+void ContourArrayImpl::GetSmallestRectangle(std::vector< cv::RotatedRect> &miniRects) const
+{
+    miniRects.resize(contours_.size());
+    tbb::parallel_for(0, (int)contours_.size(), 1, [&](const int i) { miniRects[i] = contours_[i]->SmallestRectangle(); });
+}
+
 void ContourArrayImpl::GetCircularity(std::vector<double> &circularities) const
 {
     circularities.resize(contours_.size());
@@ -145,16 +173,27 @@ cv::Ptr<Contour> ContourArrayImpl::GetConvex() const
     return contours;
 }
 
-int ContourArrayImpl::GetPoints(std::vector<Point2f> &points) const
+void ContourArrayImpl::GetPoints(std::vector<Point2f> &points) const
 {
     if (contours_.empty())
     {
-        return MLR_CONTOUR_EMPTY;
+        points.clear();
     }
     else
     {
         contours_.front()->GetPoints(points);
-        return MLR_SUCCESS;
+    }
+}
+
+cv::Ptr<Contour> ContourArrayImpl::SelectObj(const int index) const
+{
+    if (index >= 0 && index < ContourArrayImpl::Count())
+    {
+        return contours_[index];
+    }
+    else
+    {
+        return cv::Ptr<ContourImpl>();
     }
 }
 
@@ -293,6 +332,30 @@ cv::Point2d ContourArrayImpl::PointsCenter() const
     }
 }
 
+cv::Point3d ContourArrayImpl::Moments() const
+{
+    if (contours_.empty())
+    {
+        return cv::Point3d();
+    }
+    else
+    {
+        return contours_.front()->Moments();
+    }
+}
+
+cv::Point3d ContourArrayImpl::PointsMoments() const
+{
+    if (contours_.empty())
+    {
+        return cv::Point3d();
+    }
+    else
+    {
+        return contours_.front()->PointsMoments();
+    }
+}
+
 cv::Rect ContourArrayImpl::BoundingBox() const
 {
     if (contours_.empty())
@@ -329,6 +392,18 @@ double ContourArrayImpl::Circularity() const
     }
 }
 
+double ContourArrayImpl::Convexity() const
+{
+    if (contours_.empty())
+    {
+        return 0.;
+    }
+    else
+    {
+        return contours_.front()->Convexity();
+    }
+}
+
 cv::Scalar ContourArrayImpl::Diameter() const
 {
     return cv::Scalar();
@@ -337,6 +412,54 @@ cv::Scalar ContourArrayImpl::Diameter() const
 cv::RotatedRect ContourArrayImpl::SmallestRectangle() const
 {
     return cv::RotatedRect();
+}
+
+cv::Point3d ContourArrayImpl::EllipticAxis() const
+{
+    if (contours_.empty())
+    {
+        return cv::Point3d();
+    }
+    else
+    {
+        return contours_.front()->EllipticAxis();
+    }
+}
+
+double ContourArrayImpl::Anisometry() const
+{
+    if (contours_.empty())
+    {
+        return 0.;
+    }
+    else
+    {
+        return contours_.front()->Anisometry();
+    }
+}
+
+double ContourArrayImpl::Bulkiness() const
+{
+    if (contours_.empty())
+    {
+        return 0.;
+    }
+    else
+    {
+        return contours_.front()->Bulkiness();
+    }
+}
+
+double ContourArrayImpl::StructureFactor() const
+{
+    if (contours_.empty())
+    {
+        return 0.;
+    }
+    else
+    {
+        return contours_.front()->StructureFactor();
+    }
 }
 
 bool ContourArrayImpl::TestClosed() const
@@ -392,6 +515,67 @@ bool ContourArrayImpl::TestSelfIntersection(const cv::String &closeContour) cons
     {
         return contours_.front()->TestSelfIntersection(closeContour);
     }
+}
+
+FitLineResults ContourArrayImpl::FitLine(const FitLineParameters &/*parameters*/) const
+{
+    return FitLineResults();
+}
+
+cv::String ContourArrayImpl::GetErrorStatus() const
+{
+    return err_msg_;
+}
+
+int ContourArrayImpl::Save(const cv::String &fileName, const cv::Ptr<Dict> &opts) const
+{
+    return WriteToFile<ContourArrayImpl>(*this, "contours", fileName, opts, err_msg_);
+}
+
+int ContourArrayImpl::Load(const cv::String &fileName, const cv::Ptr<Dict> &opts)
+{
+    return LoadFromFile<ContourArrayImpl>(*this, "contours", fileName, opts, err_msg_);
+}
+
+int ContourArrayImpl::Serialize(const cv::String &name, H5Group *g) const
+{
+    err_msg_.resize(0);
+    std::ostringstream bytes;
+    H5GroupImpl *group = dynamic_cast<H5GroupImpl *>(g);
+    if (!group || !group->Valid())
+    {
+        err_msg_ = "invalid database";
+        return MLR_H5DB_INVALID;
+    }
+
+    try
+    {
+        {
+            boost::iostreams::filtering_ostream fout;
+            fout.push(boost::iostreams::lzma_compressor());
+            fout.push(bytes);
+            boost::archive::text_oarchive oa(fout);
+            oa << boost::serialization::make_nvp("contours", *this);
+        }
+
+        H5::DataSet dataSet;
+        int r = group->SetDataSet(name, bytes.str(), dataSet);
+        if (MLR_SUCCESS != r)
+        {
+            err_msg_ = "save database failed";
+            return r;
+        }
+
+        group->SetAttribute(dataSet, cv::String("TypeGUID"), ContourArrayImpl::TypeGUID());
+        group->SetAttribute(dataSet, cv::String("Version"), 0);
+    }
+    catch (const std::exception &e)
+    {
+        err_msg_ = e.what();
+        return MLR_IO_STREAM_EXCEPTION;
+    }
+
+    return MLR_SUCCESS;
 }
 
 }

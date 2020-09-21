@@ -1,6 +1,6 @@
 #include "precomp.hpp"
-#include "utility.hpp"
-#include "region_impl.hpp"
+#include <utility.hpp>
+#include <region/region_impl.hpp>
 
 namespace cv {
 namespace mvlab {

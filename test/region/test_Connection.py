@@ -20,20 +20,20 @@ class TestRegionConnection(unittest.TestCase):
         image[10:15, 20:50] = 255
         image[20:25, 20:50] = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
-        self.assertEqual(len(rgns), 2, '2Box component number error')
-        self.assertAlmostEqual(rgn.Area(), rgns[0].Area()+rgns[1].Area())
+        self.assertEqual(rgns.Count(), 2, '2Box component number error')
+        self.assertAlmostEqual(rgn.Area(), rgns.Area())
 
     def test_2HBox_Connection(self):
         image = numpy.zeros((32, 64, 1), numpy.uint8)
         image[10:15, 1:31] = 255
         image[10:15, 33:63] = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
-        self.assertEqual(len(rgns), 2, '2Box component number error')
-        self.assertAlmostEqual(rgn.Area(), rgns[0].Area()+rgns[1].Area())
+        self.assertEqual(rgns.Count(), 2, '2Box component number error')
+        self.assertAlmostEqual(rgn.Area(), rgns.Area())
 
     def test_Scrach_Connection(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'scrach.png'))
@@ -41,12 +41,12 @@ class TestRegionConnection(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
 
         startTime = time.perf_counter()
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
-        extradata.SaveRegions(self.id(), rgns, image.shape)
+        extradata.SaveRegions(self.id(), [rgns.SelectObj(i) for i in range(0, rgns.Count())], image.shape)
 
-        self.assertEqual(len(rgns), 94, 'Scrach component number error')
+        self.assertEqual(rgns.Count(), 95, 'Scrach component number error')
 
     def test_Mista_Connection(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
@@ -54,12 +54,12 @@ class TestRegionConnection(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
 
         startTime = time.perf_counter()
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
-        extradata.SaveRegions(self.id(), rgns, image.shape)
+        extradata.SaveRegions(self.id(), [rgns.SelectObj(i) for i in range(0, rgns.Count())], image.shape)
 
-        self.assertEqual(len(rgns), 941, 'Mista component number error')
+        self.assertEqual(rgns.Count(), 941, 'Mista component number error')
 
     def test_Digits_Connection(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
@@ -67,24 +67,24 @@ class TestRegionConnection(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 151, 255)
 
         startTime = time.perf_counter()
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
-        extradata.SaveRegions(self.id(), rgns, image.shape)
+        extradata.SaveRegions(self.id(), [rgns.SelectObj(i) for i in range(0, rgns.Count())], image.shape)
 
-        self.assertEqual(len(rgns), 5584, 'Digits component number error')
+        self.assertEqual(rgns.Count(), 5584, 'Digits component number error')
 
     def test_PCB_Layout_Connection(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
         r, rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
-        extradata.SaveRegions(self.id(), rgns, image.shape)
+        extradata.SaveRegions(self.id(), [rgns.SelectObj(i) for i in range(0, rgns.Count())], image.shape)
 
-        self.assertEqual(len(rgns), 49, 'pcb_layout.png component number error')
+        self.assertEqual(rgns.Count(), 49, 'pcb_layout.png component number error')
 
 if __name__ == '__main__':
     unittest.main()

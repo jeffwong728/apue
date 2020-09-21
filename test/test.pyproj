@@ -29,10 +29,29 @@
     <Compile Include="contour\test_ContourDiameter.py" />
     <Compile Include="contour\test_ContourFeatures.py" />
     <Compile Include="contour\test_ContourMinAreaRect.py" />
+    <Compile Include="contour\test_ContourMoment.py" />
     <Compile Include="contour\test_ContourWkt.py" />
+    <Compile Include="contour\test_Persistence.py" />
     <Compile Include="contour\__init__.py" />
     <Compile Include="extradata.py" />
     <Compile Include="genperfplot.py" />
+    <Compile Include="matching\test_ContourTemplate.py" />
+    <Compile Include="matching\test_PixelTemplate.py" />
+    <Compile Include="matching\__init__.py" />
+    <Compile Include="vtune.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="morphology\test_Closing.py" />
+    <Compile Include="morphology\test_Dilation.py" />
+    <Compile Include="morphology\test_Erosion.py" />
+    <Compile Include="morphology\test_Opening.py" />
+    <Compile Include="morphology\__init__.py" />
+    <Compile Include="persistence\test_Mat.py" />
+    <Compile Include="persistence\test_Template.py" />
+    <Compile Include="persistence\__init__.py" />
+    <Compile Include="region\test_StructuringElement.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="region\test_Area.py" />
     <Compile Include="region\test_Complement.py" />
     <Compile Include="region\test_Connection.py">
@@ -42,6 +61,7 @@
     <Compile Include="region\test_CrossVerify.py" />
     <Compile Include="region\test_Difference.py" />
     <Compile Include="region\test_Intersection.py" />
+    <Compile Include="region\test_Persistence.py" />
     <Compile Include="region\test_RegionFeatures.py" />
     <Compile Include="region\test_SymmDifference.py" />
     <Compile Include="region\test_Test.py" />
@@ -57,6 +77,9 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="contour\" />
+    <Folder Include="matching\" />
+    <Folder Include="morphology\" />
+    <Folder Include="persistence\" />
     <Folder Include="threshold\" />
     <Folder Include="region" />
   </ItemGroup>

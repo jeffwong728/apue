@@ -1,6 +1,7 @@
 #include "precomp.hpp"
 #include "utility.hpp"
 #include "region_impl.hpp"
+#include "region_array_impl.hpp"
 
 namespace cv {
 namespace mvlab {
@@ -379,14 +380,31 @@ cv::Ptr<Region> Region::GenCircle(const cv::Point2f &center, const float radius)
         const float dy = static_cast<float>(y) - center.y;
         const float dx = cv::sqrt(r2 - dy * dy);
 
+        int bA = 0, eA = 0;
+        float fdx = cvRound(center.x + dx) - center.x;
+        if ((fdx*fdx + dy * dy) > r2)
+        {
+            eA = -1;
+        }
+
+        fdx = center.x - cvRound(center.x - dx);
+        if ((fdx*fdx + dy * dy) > r2)
+        {
+            bA = 1;
+        }
+
         pResRun->row = y;
-        pResRun->colb = cvRound(center.x - dx);
-        pResRun->cole = cvRound(center.x + dx) + 1;
+        pResRun->colb = cvRound(center.x - dx) + bA;
+        pResRun->cole = cvRound(center.x + dx) + eA + 1;
         pResRun->label = 0;
 
-        pResRun += 1;
+        if (pResRun->colb < pResRun->cole)
+        {
+            pResRun += 1;
+        }
     }
 
+    dstRuns.resize(std::distance(dstRuns.data(), pResRun));
     return makePtr<RegionImpl>(&dstRuns);
 }
 
@@ -398,9 +416,9 @@ cv::Ptr<Region> Region::GenCircleSector(const cv::Point2f &center, const float r
     const float angMid = angBeg + angExt / 2;
 
     const float r = radius + 5;
-    const cv::Point2f ptBeg{ center.x + r * std::cos(Util::rad(angBeg)), center.y - r * std::sin(Util::rad(angBeg)) };
-    const cv::Point2f ptEnd{ center.x + r * std::cos(Util::rad(angEnd)), center.y - r * std::sin(Util::rad(angEnd)) };
-    const cv::Point2f ptMid{ center.x + r * std::cos(Util::rad(angMid)), center.y - r * std::sin(Util::rad(angMid)) };
+    const cv::Point2f ptBeg{ center.x + r * std::cos(Util::rad(angBeg)), center.y + r * std::sin(Util::rad(angBeg)) };
+    const cv::Point2f ptEnd{ center.x + r * std::cos(Util::rad(angEnd)), center.y + r * std::sin(Util::rad(angEnd)) };
+    const cv::Point2f ptMid{ center.x + r * std::cos(Util::rad(angMid)), center.y + r * std::sin(Util::rad(angMid)) };
 
     const cv::Point2f p1 = getIntersection3(center, ptBeg, ptMid);
     const cv::Point2f p2 = getIntersection3(center, ptEnd, ptMid);
@@ -468,8 +486,8 @@ cv::Ptr<Region> Region::GenRotatedEllipse(const cv::Point2f &center, const cv::S
         return makePtr<RegionImpl>();
     }
 
-    float const u = std::cos(Util::rad(-phi));
-    float const v = std::sin(Util::rad(-phi));
+    float const u = std::cos(Util::rad(phi));
+    float const v = std::sin(Util::rad(phi));
     float const rmax = std::max(size.width, size.height);
     float const l1 = rmax * rmax / (size.width*size.width);
     float const l2 = rmax * rmax / (size.height*size.height);
@@ -515,9 +533,9 @@ cv::Ptr<Region> Region::GenEllipseSector(const cv::Point2f &center, const cv::Si
 
     const float radius = std::max(size.width, size.height);
     const float r = radius + 5;
-    const cv::Point2f ptBeg{ center.x + r * std::cos(Util::rad(angBeg)), center.y - r * std::sin(Util::rad(angBeg)) };
-    const cv::Point2f ptEnd{ center.x + r * std::cos(Util::rad(angEnd)), center.y - r * std::sin(Util::rad(angEnd)) };
-    const cv::Point2f ptMid{ center.x + r * std::cos(Util::rad(angMid)), center.y - r * std::sin(Util::rad(angMid)) };
+    const cv::Point2f ptBeg{ center.x + r * std::cos(Util::rad(angBeg)), center.y + r * std::sin(Util::rad(angBeg)) };
+    const cv::Point2f ptEnd{ center.x + r * std::cos(Util::rad(angEnd)), center.y + r * std::sin(Util::rad(angEnd)) };
+    const cv::Point2f ptMid{ center.x + r * std::cos(Util::rad(angMid)), center.y + r * std::sin(Util::rad(angMid)) };
 
     const cv::Point2f p1 = getIntersection3(center, ptBeg, ptMid);
     const cv::Point2f p2 = getIntersection3(center, ptEnd, ptMid);
@@ -540,6 +558,70 @@ cv::Ptr<Region> Region::GenPolygon(const std::vector<cv::Point2f> &vertexes)
     {
         return makePtr<RegionImpl>();
     }
+}
+
+cv::Ptr<Region> Region::GenStructuringElement(const cv::String &choice, const int sz)
+{
+    const int size = (sz <= 0) ? 2 : sz;
+    if (choice == "square")
+    {
+        return Region::GenRectangle(cv::Rect2f(-size, -size, 2 * size + 1, 2 * size + 1));
+    }
+    else if (choice == "circle")
+    {
+        return Region::GenCircle(cv::Point2f(0.f, 0.f), size + 0.5f);
+    }
+    else if (choice == "diamond")
+    {
+        RunSequence dstRuns;
+        dstRuns.reserve(2 * size + 1);
+        for (int i = -size; i <= 0; ++i)
+        {
+            dstRuns.emplace_back(i, -size - i, size + i + 1);
+        }
+        for (int i = 1; i <= size; ++i)
+        {
+            dstRuns.emplace_back(i, -size + i, size - i + 1);
+        }
+        return makePtr<RegionImpl>(&dstRuns);
+    }
+    else if (choice == "hline")
+    {
+        RunSequence dstRuns;
+        dstRuns.emplace_back(0, -size, size + 1);
+        return makePtr<RegionImpl>(&dstRuns);
+    }
+    else if (choice == "vline")
+    {
+        RunSequence dstRuns;
+        dstRuns.reserve(2 * size + 1);
+        for (int i = -size; i <= size; ++i)
+        {
+            dstRuns.emplace_back(i, 0, 1);
+        }
+        return makePtr<RegionImpl>(&dstRuns);
+    }
+    else
+    {
+        return makePtr<RegionImpl>();
+    }
+}
+
+cv::Ptr<Region> Region::Load(const cv::String &fileName, const cv::Ptr<Dict> &opts)
+{
+    cv::Ptr<RegionImpl> rgn = makePtr<RegionImpl>();
+    if (rgn && MLR_SUCCESS == rgn->Load(fileName, opts))
+    {
+        return rgn;
+    }
+
+    cv::Ptr<RegionArrayImpl> rgns = makePtr<RegionArrayImpl>();
+    if (rgns && MLR_SUCCESS == rgns->Load(fileName, opts))
+    {
+        return rgns;
+    }
+
+    return rgn;
 }
 
 }

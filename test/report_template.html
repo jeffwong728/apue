@@ -70,6 +70,11 @@
                                 {%- if test_case.stdout %}<p>{{ test_case.stdout }}</p>{% endif %}
                                 {%- if test_case.err %}<p style="color:maroon;">{{ test_case.err[0].__name__ }}: {{ test_case.err[1] }}</p>{% endif %}
                                 {%- if test_case.err %}<p style="color:maroon;">{{ test_case.test_exception_info }}</p>{% endif %}
+                                {%- if test_case.test_id in obj_paths -%}
+                                {%- for link_path in obj_paths[test_case.test_id] %}
+                                <a href={{ link_path }}>{{ link_path.split("/")[-1] }} </a>
+                                {% endfor %}
+                                {%- endif -%}
                             </td>
                         </tr>
                         {%- endif %}

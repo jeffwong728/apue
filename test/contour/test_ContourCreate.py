@@ -17,6 +17,14 @@ class TestContourCreate(unittest.TestCase):
                     filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
                     filemode='a')
 
+    def test_Create_Rotated_Rectangle(self):
+        startTime = time.perf_counter()
+        contr = mvlab.Contour_GenRotatedRectangle(((1000, 500), (500, 200), 10))
+        endTime = time.perf_counter()
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), [contr])
+
     def test_Create_Circle_Contour(self):
         startTime = time.perf_counter()
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 5, 'negative')

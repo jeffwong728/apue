@@ -84,8 +84,48 @@ class TestRegionCreate(unittest.TestCase):
         self.verifyRegionIntegrity(rgn)
 
         x, y = rgn.Centroid()
-        self.assertAlmostEqual(x, 1250)
-        self.assertAlmostEqual(y, 1250)
+        self.assertEqual(x, 1250)
+        self.assertEqual(y, 1250)
+
+        rgn = mvlab.Region_GenCircle((10, 10), 0.5)
+        self.verifyRegionIntegrity(rgn)
+        print('Circle((10, 10), 0.5): ')
+        self.dumpRegion(rgn)
+
+        rgn = mvlab.Region_GenCircle((10.5, 10.5), 0.5)
+        self.verifyRegionIntegrity(rgn)
+        print('Circle((10.5, 10.5), 0.5): ')
+        self.dumpRegion(rgn)
+
+        rgn = mvlab.Region_GenCircle((10.5, 10.5), 1.5)
+        self.verifyRegionIntegrity(rgn)
+        print('Circle((10.5, 10.5), 1.5): ')
+        self.dumpRegion(rgn)
+
+        rgn = mvlab.Region_GenCircle((10.5, 10.5), 2.5)
+        self.verifyRegionIntegrity(rgn)
+        print('Circle((10.5, 10.5), 2.5): ')
+        self.dumpRegion(rgn)
+
+        rgn = mvlab.Region_GenCircle((10.5, 10.5), 3.5)
+        self.verifyRegionIntegrity(rgn)
+        print('Circle((10.5, 10.5), 3.5): ')
+        self.dumpRegion(rgn)
+
+        rgn = mvlab.Region_GenCircle((10.25, 10.25), 0.5)
+        self.verifyRegionIntegrity(rgn)
+        print('Circle((10.25, 10.25), 0.5): ')
+        self.dumpRegion(rgn)
+
+    def test_Create_Random_Circle(self):
+        r = random.uniform(1, 640) / 2.0
+        x = random.uniform(-320, 320)
+        y = random.uniform(-320, 320)
+        rgn = mvlab.Region_GenCircle((x, y), r)
+
+        print("x={0}, y={1}, r={2}".format(x, y, r))
+        extradata.SaveRegion(self.id(), rgn.Move((int(-x+round(r))+5, int(-y+round(r))+5)))
+        self.verifyRegionIntegrity(rgn)
 
     def test_Create_CircleSector(self):
         startTime = time.perf_counter()
@@ -185,12 +225,12 @@ class TestRegionCreate(unittest.TestCase):
     def test_Create_Polygon_Zero(self):
         rgn = mvlab.Region_GenPolygon([(100, 50), (100, 50), (100, 50), (100, 50), (100, 50), (100, 50), (100, 50)])
         self.verifyRegionIntegrity(rgn)
-        self.assertEqual(0, rgn.Count())
+        self.assertEqual(0, rgn.CountRuns())
 
     def test_Create_Polygon_Line(self):
         rgn = mvlab.Region_GenPolygon([(100, 100), (90, 90), (80, 80), (10, 10), (1, 1)])
         self.verifyRegionIntegrity(rgn)
-        self.assertEqual(99, rgn.Count())
+        self.assertEqual(99, rgn.CountRuns())
         extradata.SaveRegion(self.id(), rgn)
 
     def test_Create_Polygon(self):
@@ -203,18 +243,19 @@ class TestRegionCreate(unittest.TestCase):
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
-        for rgn in rgns:
-           if rgn.Area() > 140000 and rgn.Area() < 150000:
-               break
+        for i in range(0, rgns.Count()):
+            rgn = rgns.SelectObj(i)
+            if rgn.Area() > 140000 and rgn.Area() < 150000:
+                break
 
         bbox = rgn.BoundingBox()
         srgn = rgn.Move((-bbox[0]+10, -bbox[1]+10))
         souter = srgn.GetContour()
         souter = souter.Simplify(1)
 
-        r, points = souter.GetPoints()
+        points = souter.GetPoints()
         points = [point for point in points]
 
         startTime = time.perf_counter()
@@ -229,8 +270,7 @@ class TestRegionCreate(unittest.TestCase):
         if not rgn:
             return
 
-        r, runs = rgn.GetRuns()
-        self.assertEqual(r, 0)
+        runs = rgn.GetRuns()
         if len(runs):
             self.assertLess(runs[0][0], runs[0][2])
             for i in range(1, len(runs)):
@@ -238,6 +278,13 @@ class TestRegionCreate(unittest.TestCase):
                 self.assertLess(runs[i][0], runs[i][2])
                 if runs[i-1][1] == runs[i][1]:
                     self.assertLess(runs[i-1][2], runs[i][0])
+
+    def dumpRegion(self, rgn):
+        if not rgn:
+            return
+        runs = rgn.GetRuns()
+        for run in runs:
+            print(run)
 
 if __name__ == '__main__':
     unittest.main()

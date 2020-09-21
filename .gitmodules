@@ -1,0 +1,6 @@
+[submodule "3rdparty/opencv"]
+	path = 3rdparty/opencv
+	url = https://github.com/jeffwong728/opencv.git
+[submodule "3rdparty/mimalloc"]
+	path = 3rdparty/mimalloc
+	url = https://github.com/jeffwong728/mimalloc.git

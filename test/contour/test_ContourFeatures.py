@@ -209,10 +209,11 @@ class TestContourFeatures(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 151, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
         roundDigits = []
-        for rgn in rgns:
+        for i in range(0, rgns.Count()):
+            rgn = rgns.SelectObj(i)
             c = rgn.GetContour()
             if c.Circularity() > 0.6 and c.Area() > 10:
                 roundDigits.append(c)

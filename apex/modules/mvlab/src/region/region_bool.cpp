@@ -353,19 +353,21 @@ RunSequence RegionIntersectionOp::Do(const RunSequence &srcRuns1, const RunSeque
     return dstRuns;
 }
 
-RunSequence RegionUnion2Op::Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2)
+void RegionUnion2Op::Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2, RunSequence &dstRuns)
 {
     if (srcRuns1.empty())
     {
-        return srcRuns2;
+        dstRuns = srcRuns2;
+        return;
     }
 
     if (srcRuns2.empty())
     {
-        return srcRuns1;
+        dstRuns = srcRuns1;
+        return;
     }
 
-    RunSequence dstRuns(srcRuns1.size()+ srcRuns2.size());
+    dstRuns.resize(srcRuns1.size()+ srcRuns2.size());
     RunSequence::const_pointer cur1 = srcRuns1.data();
     RunSequence::const_pointer cur2 = srcRuns2.data();
     const RunSequence::const_pointer end1 = srcRuns1.data() + srcRuns1.size();
@@ -455,8 +457,6 @@ RunSequence RegionUnion2Op::Do(const RunSequence &srcRuns1, const RunSequence &s
 
     assert(std::distance(dstRuns.data(), pResRun) <= (std::ptrdiff_t)dstRuns.size());
     dstRuns.resize(std::distance(dstRuns.data(), pResRun));
-
-    return dstRuns;
 }
 }
 }

@@ -24,6 +24,7 @@ public:
     static inline float rad(const float angle) { return angle * static_cast<float>(CV_PI) / 180.f; }
     static inline double rad(const double angle) { return angle * CV_PI / 180.; }
     static inline float deg(const float angle) { return angle * 180.f / static_cast<float>(CV_PI); }
+    static inline double deg(const double angle) { return angle * 180. / CV_PI; }
     static inline float dist(const cv::Point2f *p0, const cv::Point2f *p1);
     static inline float dist(const cv::Point2f &p0, const cv::Point2f &p1);
     static inline cv::Point2f midPoint(const cv::Point2f *p0, const cv::Point2f *p1);
@@ -39,6 +40,62 @@ public:
     static inline int isTolLeft(const cv::Point2f &P0, const cv::Point2f &P1, const cv::Point2f &P2, const float tol = G_F_TOL);
     static inline int isLeft(const int P0x, const int P0y, const int P1x, const int P1y, const int P2x, const int P2y);
     static inline vcl::Vec8f isLeft(const vcl::Vec8f &P0x, const vcl::Vec8f &P0y, const vcl::Vec8f &P1x, const vcl::Vec8f &P1y, const vcl::Vec8f &P2x, const vcl::Vec8f &P2y);
+    static int CheckSaveParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &errMsg);
+    static int CheckLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &formatHint, cv::String &errMsg);
+    static int CheckCompressLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &formatHint, cv::String &errMsg);
+    static void SIMDZeroMemory(void *dest, const int sz);
+};
+
+class WinP
+{
+public:
+    WinP() {}
+    WinP(cv::Point const &ul, cv::Point const &lr) : ul_(ul), lr_(lr) {}
+    WinP(int ulX, int ulY, int lrX, int lrY) : ul_(ulX, ulY), lr_(lrX, lrY) {}
+    WinP(const cv::Rect &rc) : ul_(rc.tl()), lr_(rc.br() + cv::Point(-1, -1)) {}
+
+    cv::Point const & upperLeft() const { return ul_; }
+    cv::Point const & lowerRight() const { return lr_; }
+
+    int width() const { return (lr_.x - ul_.x + 1); }
+    int height() const { return (lr_.y - ul_.y + 1); }
+    cv::Size size() const { return { width(), height() }; }
+    bool includes(cv::Point const & pt) const { return pt.x >= ul_.x && pt.x <= lr_.x && pt.y >= ul_.y && pt.y <= lr_.y; }
+    bool includes(WinP const & rhs) const { return this->includes(rhs.upperLeft()) && this->includes(rhs.lowerRight()); }
+
+    template<typename OutIt>
+    void corners(OutIt res) const
+    {
+        *res++ = this->upperLeft();
+        *res++ = cv::Point(this->lowerRight().x, this->upperLeft().y);
+        *res++ = this->lowerRight();
+        *res++ = cv::Point(this->upperLeft().x, this->lowerRight().y);
+    }
+
+    bool operator==(WinP const & rhs) const { return this->upperLeft() == rhs.upperLeft() && this->lowerRight() == rhs.lowerRight(); }
+    bool operator!=(WinP const & rhs) const { return !(*this == rhs); }
+
+    WinP &translate(cv::Point const & v) { ul_ += v; lr_ += v; return *this; }
+    WinP const getTranslate(cv::Point const & v) const { WinP r(*this); return r.translate(v); }
+    bool clip(WinP const & other)
+    {
+        cv::Point ul(std::max(this->ul_.x, other.ul_.x), std::max(this->ul_.y, other.ul_.y));
+        cv::Point lr(std::min(this->lr_.x, other.lr_.x), std::min(this->lr_.y, other.lr_.y));
+        if (ul.x <= lr.x && ul.y <= lr.y)
+        {
+            this->ul_ = ul;
+            this->lr_ = lr;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+private:
+    cv::Point ul_;
+    cv::Point lr_;
 };
 
 template<typename _Tp, size_t fixed_size = 1024 / sizeof(_Tp) + 8>
@@ -73,6 +130,13 @@ public:
     //! returns read-only pointer to the real buffer, stack-allocated or heap-allocated
     inline const _Tp* data() const { return ptr; }
 
+    inline _Tp* begin() noexcept { return ptr; }
+    inline const _Tp* begin() const noexcept { return ptr; }
+    inline _Tp* end() noexcept { return ptr + sz; }
+    inline const _Tp* end() const noexcept { return ptr + sz; }
+    inline const _Tp* cbegin() const noexcept { return ptr; }
+    inline const _Tp* cend() const noexcept { return ptr + sz; }
+
     //! returns a reference to the element at specified location. No bounds checking is performed in Release builds.
     inline _Tp& operator[] (size_t i) { CV_DbgCheckLT(i, sz, "out of range"); return ptr[i]; }
     //! returns a reference to the element at specified location. No bounds checking is performed in Release builds.
@@ -85,6 +149,86 @@ protected:
     size_t sz;
     //! pre-allocated buffer. At least 1 element to confirm C++ standard requirements
     _Tp buf[(fixed_size > 0) ? fixed_size : 1];
+};
+
+template<typename TAngle>
+struct AngleRange
+{
+    AngleRange(const TAngle s, const TAngle e)
+        : start(normalize(s)), end(normalize(e))
+    {
+    }
+
+    TAngle normalize(const TAngle a)
+    {
+        TAngle angle = a;
+        while (angle < -180) angle += 360;
+        while (angle > 180) angle -= 360;
+        return angle;
+    }
+
+    bool contains(const TAngle a)
+    {
+        TAngle na = normalize(a);
+        if (start < end) {
+            return !(na > end || na < start);
+        }
+        else {
+            return !(na > end && na < start);
+        }
+    }
+
+    bool between(const TAngle a)
+    {
+        TAngle na = normalize(a);
+        if (start < end) {
+            return na < end && na > start;
+        }
+        else {
+            return na < end || na > start;
+        }
+    }
+
+    TAngle start;
+    TAngle end;
+};
+
+struct OutsideImageBox
+{
+    OutsideImageBox(const int w, const int h) : width(w), height(h) {}
+    bool operator()(const cv::Point &point)
+    {
+        if (point.x < 0 || point.x >= width || point.y < 0 || point.y >= height)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    const int width;
+    const int height;
+};
+
+struct OutsideRectangle
+{
+    OutsideRectangle(const int l, const int r, const int t, const int b) : left(l), right(r), top(t), bottom(b) {}
+    bool operator()(const cv::Point &point)
+    {
+        if (point.x < left || point.x > right || point.y < top || point.y > bottom)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    const int left;
+    const int right;
+    const int top;
+    const int bottom;
 };
 
 /////////////////////////////// AdaptBuffer implementation ////////////////////////////////////////
@@ -287,6 +431,108 @@ inline vcl::Vec8f Util::isLeft(const vcl::Vec8f &P0x, const vcl::Vec8f &P0y,
     const vcl::Vec8f &P2x, const vcl::Vec8f &P2y)
 {
     return (P2x - P0x) * (P1y - P0y) - (P1x - P0x) * (P2y - P0y);
+}
+
+template <class T>
+int WriteToFile(const T &c, const char *label, const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &errMsg)
+{
+    try
+    {
+        errMsg.resize(0);
+        int r = Util::CheckSaveParameters(fileName, opts, errMsg);
+        if (MLR_SUCCESS != r)
+        {
+            return r;
+        }
+
+        std::experimental::filesystem::path filePath(fileName);
+        cv::String fileFormat = opts ? opts->GetString("FileFormat") : "text";
+        std::ofstream ofs(filePath, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+        if (ofs.fail())
+        {
+            errMsg = "open/create file error";
+            return MLR_FILESYSTEM_EXCEPTION;
+        }
+        else
+        {
+            boost::iostreams::filtering_ostream fout;
+            fout.push(boost::iostreams::lzma_compressor());
+            fout.push(ofs);
+            if (fileFormat == "binary")
+            {
+                boost::archive::binary_oarchive oa(fout);
+                oa << boost::serialization::make_nvp(label, c);
+            }
+            else if (fileFormat == "text")
+            {
+                boost::archive::text_oarchive oa(fout);
+                oa << boost::serialization::make_nvp(label, c);
+            }
+            else
+            {   // xml
+                boost::archive::xml_oarchive oa(fout);
+                oa << boost::serialization::make_nvp(label, c);
+            }
+        }
+    }
+    catch (const std::exception &e)
+    {
+        errMsg = e.what();
+        return MLR_IO_STREAM_EXCEPTION;
+    }
+
+    return MLR_SUCCESS;
+}
+
+template <class T>
+int LoadFromFile(T &c, const char *label, const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &errMsg)
+{
+    try
+    {
+        cv::String formatHint;
+        std::experimental::filesystem::path filePath(fileName);
+        int r = Util::CheckCompressLoadParameters(fileName, opts, formatHint, errMsg);
+        if (MLR_SUCCESS != r)
+        {
+            return r;
+        }
+
+        std::ifstream ifs(filePath, std::ifstream::in | std::ifstream::binary);
+        if (ifs.fail())
+        {
+            errMsg = "open file error";
+            return MLR_FILESYSTEM_EXCEPTION;
+        }
+        else
+        {
+            boost::iostreams::filtering_istream fin;
+            fin.push(boost::iostreams::lzma_decompressor());
+            fin.push(ifs);
+            if (formatHint == "binary")
+            {
+                boost::archive::binary_iarchive ia(fin);
+                ia >> boost::serialization::make_nvp(label, c);
+            }
+            else if (formatHint == "text")
+            {
+
+                boost::archive::text_iarchive ia(fin);
+                ia >> boost::serialization::make_nvp(label, c);
+            }
+            else
+            {   // xml
+                boost::archive::xml_iarchive ia(fin);
+                ia >> boost::serialization::make_nvp(label, c);
+            }
+        }
+    }
+    catch (const std::exception &e)
+    {
+        errMsg = e.what();
+        return MLR_IO_STREAM_EXCEPTION;
+    }
+
+    return MLR_SUCCESS;
 }
 
 }

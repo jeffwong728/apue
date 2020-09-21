@@ -21,10 +21,10 @@ class TestThreshold(unittest.TestCase):
         image[0, 0] = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
         self.assertEqual(r, 0, "Threshold single pixel image error")
-        self.assertEqual(rgn.Count(), 1)
+        self.assertEqual(rgn.CountRuns(), 1)
         self.assertEqual(rgn.CountRows(), 1)
         self.assertAlmostEqual(rgn.Area(), 1.0)
-        self.assertEqual(rgn.BoundingBox(), (0, 0, 1, 0))
+        self.assertEqual(rgn.BoundingBox(), (0, 0, 1, 1))
 
     def test_Threshold_Single_Row(self):
         for startCol in range(0, 65):
@@ -33,10 +33,10 @@ class TestThreshold(unittest.TestCase):
                 image[0, startCol:lastCol] = 255
                 r, rgn = mvlab.Threshold(image, 150, 255)
                 self.assertEqual(r, 0, "Threshold single pixel image error")
-                self.assertEqual(rgn.Count(), 1)
+                self.assertEqual(rgn.CountRuns(), 1)
                 self.assertEqual(rgn.CountRows(), 1)
                 self.assertAlmostEqual(rgn.Area(), lastCol-startCol)
-                self.assertEqual(rgn.BoundingBox(), (startCol, 0, lastCol-startCol, 0))
+                self.assertEqual(rgn.BoundingBox(), (startCol, 0, lastCol-startCol, 1))
 
     def test_Scrach_Threshold(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'scrach.png'))
@@ -61,7 +61,7 @@ class TestThreshold(unittest.TestCase):
         extradata.SaveRegion(self.id(), rgn, image.shape)
 
         self.assertEqual(r, 0, "Threshold 'mista.png' error")
-        self.assertEqual(rgn.Count(), 234794)
+        self.assertEqual(rgn.CountRuns(), 234794)
 
     def test_Digits_Threshold(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
@@ -76,7 +76,7 @@ class TestThreshold(unittest.TestCase):
         self.assertEqual(r, 0, "Threshold 'digits.png' error")
 
     def test_PCB_Layout_Threshold(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
 
         startTime = time.perf_counter()
         r, rgn = mvlab.Threshold(image, 0, 50)

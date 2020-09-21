@@ -31,7 +31,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         uRgn = rgn1.Union2(rgn2)
         iRgn = rgn1.Intersection(rgn2)
         dRgn = uRgn.Difference(iRgn)
-        self.assertEqual(symDiffRgn.Count(), dRgn.Count())
+        self.assertEqual(symDiffRgn.CountRuns(), dRgn.CountRuns())
         self.assertEqual(symDiffRgn.CountRows(), dRgn.CountRows())
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 
@@ -49,9 +49,9 @@ class TestRegionSymmDifference(unittest.TestCase):
         iRgn = rgn1.Intersection(rgn2)
         dRgn = uRgn.Difference(iRgn)
         self.assertEqual(symDiffRgn.CountRows(), 10)
-        self.assertEqual(symDiffRgn.Count(), 10)
-        self.assertEqual(uRgn.Count(), 10)
-        self.assertEqual(symDiffRgn.Count(), dRgn.Count())
+        self.assertEqual(symDiffRgn.CountRuns(), 10)
+        self.assertEqual(uRgn.CountRuns(), 10)
+        self.assertEqual(symDiffRgn.CountRuns(), dRgn.CountRuns())
         self.assertEqual(symDiffRgn.CountRows(), dRgn.CountRows())
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 
@@ -67,7 +67,7 @@ class TestRegionSymmDifference(unittest.TestCase):
 
         sRgn = rgn1.SymmDifference(rgn2)
         self.assertAlmostEqual(sRgn.Area(), rgn1.Area() + rgn2.Area())
-        self.assertEqual(sRgn.Count(), 10)
+        self.assertEqual(sRgn.CountRuns(), 10)
 
     def test_3HBox_Overlap_SymmDifference(self):
         image1 = numpy.zeros((48, 64, 1), numpy.uint8)
@@ -81,7 +81,7 @@ class TestRegionSymmDifference(unittest.TestCase):
 
         sRgn = rgn1.SymmDifference(rgn2)
         self.assertAlmostEqual(sRgn.Area(), 200)
-        self.assertEqual(sRgn.Count(), 30)
+        self.assertEqual(sRgn.CountRuns(), 30)
 
     def test_SameRegion_SymmDifference(self):
         rgn1 = mvlab.Region_GenCircle((1250, 1250), 750)
@@ -96,7 +96,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         uRgn = rgn1.Union2(rgn1)
         iRgn = rgn1.Intersection(rgn1)
         dRgn = uRgn.Difference(iRgn)
-        self.assertEqual(symDiffRgn.Count(), dRgn.Count())
+        self.assertEqual(symDiffRgn.CountRuns(), dRgn.CountRuns())
         self.assertEqual(symDiffRgn.CountRows(), dRgn.CountRows())
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 
@@ -115,14 +115,14 @@ class TestRegionSymmDifference(unittest.TestCase):
         dRgn1 = rgn1.Difference(rgn2)
         dRgn2 = rgn2.Difference(rgn1)
         uRgn = dRgn1.Union2(dRgn2)
-        self.assertEqual(symDiffRgn.Count(), uRgn.Count())
+        self.assertEqual(symDiffRgn.CountRuns(), uRgn.CountRuns())
         self.assertEqual(symDiffRgn.CountRows(), uRgn.CountRows())
         self.assertAlmostEqual(symDiffRgn.Area(), uRgn.Area())
 
         uRgn = rgn1.Union2(rgn2)
         iRgn = rgn1.Intersection(rgn2)
         dRgn = uRgn.Difference(iRgn)
-        self.assertEqual(symDiffRgn.Count(), dRgn.Count())
+        self.assertEqual(symDiffRgn.CountRuns(), dRgn.CountRuns())
         self.assertEqual(symDiffRgn.CountRows(), dRgn.CountRows())
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 
@@ -141,7 +141,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         uRgn = rgn1.Union2(rgn2)
         iRgn = rgn1.Intersection(rgn2)
         dRgn = uRgn.Difference(iRgn)
-        self.assertEqual(symDiffRgn.Count(), dRgn.Count())
+        self.assertEqual(symDiffRgn.CountRuns(), dRgn.CountRuns())
         self.assertEqual(symDiffRgn.CountRows(), dRgn.CountRows())
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 
@@ -160,7 +160,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         uRgn = rgn1.Union2(rgn2)
         iRgn = rgn1.Intersection(rgn2)
         dRgn = uRgn.Difference(iRgn)
-        self.assertEqual(symDiffRgn.Count(), dRgn.Count())
+        self.assertEqual(symDiffRgn.CountRuns(), dRgn.CountRuns())
         self.assertEqual(symDiffRgn.CountRows(), dRgn.CountRows())
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 

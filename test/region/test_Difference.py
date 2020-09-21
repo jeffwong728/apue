@@ -49,7 +49,7 @@ class TestRegionDifference(unittest.TestCase):
 
         dRgn = rgn1.Difference(rgn2)
         self.assertAlmostEqual(dRgn.Area(), rgn1.Area())
-        self.assertEqual(dRgn.Count(), rgn1.Count())
+        self.assertEqual(dRgn.CountRuns(), rgn1.CountRuns())
 
     def test_2Circle_Include_Difference(self):
         rgn1 = mvlab.Region_GenCircle((1250, 1250), 750)

@@ -55,5 +55,183 @@ cv::Mat Util::PathToMask(const Geom::PathVector &pv, const cv::Size &sz, UScalab
     return mask;
 }
 
+int Util::CheckSaveParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &errMsg)
+{
+    errMsg.resize(0);
+    std::experimental::filesystem::path filePath(fileName);
+    if (filePath.empty())
+    {
+        errMsg = "file name empty";
+        return MLR_PARAMETER_ERROR_FILE_PATH;
+    }
+
+    cv::String policy = opts ? opts->GetString("Policy") : "backup";
+    if (std::experimental::filesystem::exists(filePath)) {
+        if (std::experimental::filesystem::is_directory(filePath)) {
+            errMsg = "existing directory";
+            return MLR_PARAMETER_ERROR_EXISTING_DIRECTORY;
+        }
+        else {
+            if (policy == "raise_error") {
+                errMsg = "existing file";
+                return MLR_PARAMETER_ERROR_EXISTING_FILE;
+            }
+            else if (policy == "overwrite") {
+                std::experimental::filesystem::remove(filePath);
+            }
+            else {
+                std::experimental::filesystem::path backFilePath;
+                do {
+                    auto t = std::time(nullptr);
+                    auto tm = *std::localtime(&t);
+                    std::ostringstream oss;
+                    oss << std::put_time(&tm, "_%d-%m-%Y_%H-%M-%S_backup");
+                    backFilePath = filePath;
+                    backFilePath.replace_filename(filePath.stem().concat(oss.str())).concat(filePath.extension().string());
+                } while (std::experimental::filesystem::exists(backFilePath));
+
+                std::experimental::filesystem::copy_file(filePath, backFilePath);
+                std::experimental::filesystem::remove(filePath);
+            }
+        }
+    }
+
+    return MLR_SUCCESS;
+}
+
+int Util::CheckLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &formatHint, cv::String &errMsg)
+{
+    errMsg.resize(0);
+    std::experimental::filesystem::path filePath(fileName);
+    if (!std::experimental::filesystem::exists(filePath) || !std::experimental::filesystem::is_regular_file(filePath))
+    {
+        errMsg = "file path error";
+        return MLR_PARAMETER_ERROR_FILE_PATH;
+    }
+
+    cv::String sigXML("<?xml");
+    cv::String sigTxt("22 serialization::archive");
+    cv::String sigFirst(32, '\0');
+
+    std::ifstream fin(fileName, std::ofstream::in);
+    if (fin.fail())
+    {
+        errMsg = "open file error";
+        return MLR_FILESYSTEM_EXCEPTION;
+    }
+
+    int cChars = 0;
+    while (fin >> std::noskipws >> sigFirst[cChars] && cChars < 32)
+    {
+        cChars += 1;
+    }
+
+    fin.close();
+
+    if (sigFirst.rfind(sigXML, 0) == 0)
+    {
+        formatHint = "xml";
+    }
+    else if (sigFirst.rfind(sigTxt, 0) == 0)
+    {
+        formatHint = "text";
+    }
+    else
+    {
+        formatHint = opts ? opts->GetString("FormatHint") : "binary";
+    }
+
+    return MLR_SUCCESS;
+}
+
+int Util::CheckCompressLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &formatHint, cv::String &errMsg)
+{
+    errMsg.resize(0);
+    std::experimental::filesystem::path filePath(fileName);
+    if (!std::experimental::filesystem::exists(filePath) || !std::experimental::filesystem::is_regular_file(filePath))
+    {
+        errMsg = "file path error";
+        return MLR_PARAMETER_ERROR_FILE_PATH;
+    }
+
+    cv::String sigXML("<?xml");
+    cv::String sigTxt("22 serialization::archive");
+    cv::String sigFirst(32, '\0');
+
+    std::ifstream fin(fileName, std::ofstream::in | std::ofstream::binary);
+    if (fin.fail())
+    {
+        errMsg = "open file error";
+        return MLR_FILESYSTEM_EXCEPTION;
+    }
+
+    {
+        boost::iostreams::filtering_istream fiin;
+        fiin.push(boost::iostreams::lzma_decompressor());
+        fiin.push(fin);
+
+        int cChars = 0;
+        while (fiin >> std::noskipws >> sigFirst[cChars] && cChars < 32)
+        {
+            cChars += 1;
+        }
+    }
+
+    fin.close();
+
+    if (sigFirst.rfind(sigXML, 0) == 0)
+    {
+        formatHint = "xml";
+    }
+    else if (sigFirst.rfind(sigTxt, 0) == 0)
+    {
+        formatHint = "text";
+    }
+    else
+    {
+        formatHint = opts ? opts->GetString("FormatHint") : "binary";
+    }
+
+    return MLR_SUCCESS;
+}
+
+class MemZeroer
+{
+public:
+    MemZeroer(char *const dest)
+        : dest_(dest)
+    {}
+
+    void operator()(const tbb::blocked_range<int>& br) const
+    {
+        vcl::Vec32uc val(0);
+        constexpr int vectorsize = 32;
+        char *dstEnd = dest_ + br.end() * vectorsize;
+        for (char *dst = dest_ + br.begin() * vectorsize; dst != dstEnd; dst += vectorsize)
+        {
+            val.store(dst);
+        }
+    }
+
+private:
+    char *const dest_;
+};
+
+void Util::SIMDZeroMemory(void *dest, const int sz)
+{
+    char *const dst = (char *)dest;
+    constexpr int vectorsize = 32;
+    if (sz > vectorsize * 256 * 16)
+    {
+        const int regularpart = sz & (-vectorsize);
+        tbb::parallel_for(tbb::blocked_range<int>(0, regularpart / vectorsize), MemZeroer(dst));
+        std::memset(dst + regularpart, 0, sz - regularpart);
+    }
+    else
+    {
+        std::memset(dst, 0, sz);
+    }
+}
+
 }
 }

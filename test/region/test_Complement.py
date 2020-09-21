@@ -23,7 +23,7 @@ class TestRegionComplement(unittest.TestCase):
         compRgn = rgn.Complement((0, 0, 0, 0))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        self.assertEqual(compRgn.Count(), 22)
+        self.assertEqual(compRgn.CountRuns(), 22)
         self.assertEqual(compRgn.CountRows(), 12)
         self.assertAlmostEqual(compRgn.Area(), 44)
 
@@ -35,7 +35,7 @@ class TestRegionComplement(unittest.TestCase):
         compRgn = rgn.Complement((0, 0, 0, 0))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        self.assertEqual(compRgn.Count(), 52)
+        self.assertEqual(compRgn.CountRuns(), 52)
         self.assertEqual(compRgn.CountRows(), 32)
         self.assertAlmostEqual(compRgn.Area(), 184)
 
@@ -47,7 +47,7 @@ class TestRegionComplement(unittest.TestCase):
         compRgn = rgn.Complement((0, 0, 0, 0))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        self.assertEqual(compRgn.Count(), 32)
+        self.assertEqual(compRgn.CountRuns(), 32)
         self.assertEqual(compRgn.CountRows(), 12)
         self.assertAlmostEqual(compRgn.Area(), 184)
 
@@ -61,8 +61,8 @@ class TestRegionComplement(unittest.TestCase):
         compRgn = rgn.Complement((0, 0, 0, 0))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        r, rgns = compRgn.Connect()
-        self.assertEqual(len(rgns), 3)
+        rgns = compRgn.Connect()
+        self.assertEqual(rgns.Count(), 3)
 
     def test_Scrach_Complement(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'scrach.png'))
@@ -76,7 +76,7 @@ class TestRegionComplement(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        self.assertEqual(compRgn.Count(), 4348)
+        self.assertEqual(compRgn.CountRuns(), 4402)
 
     def test_Mista_Complement(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
@@ -90,8 +90,8 @@ class TestRegionComplement(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        r, rgns = compRgn.Connect()
-        self.assertEqual(len(rgns), 1072)
+        rgns = compRgn.Connect()
+        self.assertEqual(rgns.Count(), 1072)
 
     def test_Digits_Complement(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
@@ -105,7 +105,7 @@ class TestRegionComplement(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), compRgn, image.shape)
 
-        self.assertEqual(compRgn.Count(), 90084, 'Digits component number error')
+        self.assertEqual(compRgn.CountRuns(), 90084, 'Digits component number error')
 
 if __name__ == '__main__':
     unittest.main()

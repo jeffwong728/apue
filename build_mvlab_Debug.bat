@@ -9,6 +9,6 @@ if exist "%TEMP%\cv_build.log" (
 )
 
 devenv OpenCV.sln /build "Debug|x64" /Project INSTALL /Out "%TEMP%\cv_build.log"
-start "C:\Program Files\Notepad++\notepad++.exe" "%TEMP%\cv_build.log"
+start "" "%TEMP%\cv_build.log"
 
 @rem %comspec% /k

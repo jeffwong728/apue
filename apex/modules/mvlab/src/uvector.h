@@ -1018,7 +1018,10 @@ private:
 			_begin = newStorage;
 			_end = _begin + n;
 			_endOfStorage = _end;
-		}
+        }
+        else {
+            _end = _begin + n;
+        }
 		memcpy(_begin, other._begin, n * sizeof(Tp));
 		return *this;
 	}

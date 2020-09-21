@@ -108,7 +108,7 @@ class TestContourMinAreaRect(unittest.TestCase):
         self.assertAlmostEqual(minRect[0][1], 100, delta=0.001)
         self.assertAlmostEqual(minRect[1][0], 50, delta=0.001)
         self.assertAlmostEqual(minRect[1][1], 30, delta=0.001)
-        self.assertAlmostEqual(minRect[2], 210, delta=0.001)
+        self.assertAlmostEqual(minRect[2], -150.0, delta=0.001)
 
     def test_RotatedEllipse_MinAreaRect_CW(self):
         contr = mvlab.Contour_GenRotatedEllipse((1000, 1000), (500, 300), 30, 2, 'negative')
@@ -125,7 +125,7 @@ class TestContourMinAreaRect(unittest.TestCase):
         self.assertAlmostEqual(minRect[0][1], 1000, delta=0.1)
         self.assertAlmostEqual(minRect[1][0], 1000, delta=0.1)
         self.assertAlmostEqual(minRect[1][1], 600, delta=0.1)
-        self.assertAlmostEqual(minRect[2], 150, delta=0.1)
+        self.assertAlmostEqual(minRect[2], -150.0, delta=0.1)
 
     def test_RotatedEllipse_MinAreaRect_CCW(self):
         contr = mvlab.Contour_GenRotatedEllipse((1000, 1000), (500, 300), 30, 2, 'positive')
@@ -142,7 +142,7 @@ class TestContourMinAreaRect(unittest.TestCase):
         self.assertAlmostEqual(minRect[0][1], 1000, delta=0.1)
         self.assertAlmostEqual(minRect[1][0], 1000, delta=0.1)
         self.assertAlmostEqual(minRect[1][1], 600, delta=0.1)
-        self.assertAlmostEqual(minRect[2], 150, delta=0.1)
+        self.assertAlmostEqual(minRect[2], -150.0, delta=0.1)
 
     def test_Convex_Polygon_MinAreaRect(self):
         points = [(250.22852, 16.357777), (444.14212, 1.1392639), (622.03546, 38.92456)]
@@ -160,6 +160,66 @@ class TestContourMinAreaRect(unittest.TestCase):
         self.assertAlmostEqual(minRect[1][0], 606.7611083984375)
         self.assertAlmostEqual(minRect[1][1], 475.9751892089844)
         self.assertAlmostEqual(minRect[2], 11.991644859313965)
+
+    def test_Star_MinAreaRect(self):
+        plg = extradata.LoadTextPolygon('star_nodes.txt')
+        minRect = plg.SmallestRectangle()
+        extradata.SaveContours(self.id(), [plg.Move((2, 2)).Zoom((50, 50)), mvlab.Contour_GenRotatedRectangle(minRect).Move((2, 2)).Zoom((50, 50))])
+
+        print(minRect)
+        self.assertAlmostEqual(minRect[0][0], 0.056128501892089844)
+        self.assertAlmostEqual(minRect[0][1], -0.0772542953491211)
+        self.assertAlmostEqual(minRect[1][0], 1.9021129608154297)
+        self.assertAlmostEqual(minRect[1][1], 1.8090171813964844)
+        self.assertAlmostEqual(minRect[2], -144.0)
+
+    def test_Hand_MinAreaRect(self):
+        plg = extradata.LoadTextPolygon('hand_nodes.txt')
+        minRect = plg.SmallestRectangle()
+        extradata.SaveContours(self.id(), [plg.Move((1, 1)).Zoom((200, 200)), mvlab.Contour_GenRotatedRectangle(minRect).Move((1, 1)).Zoom((200, 200))])
+
+        print(minRect)
+        self.assertAlmostEqual(minRect[0][0], 0.4325481653213501)
+        self.assertAlmostEqual(minRect[0][1], 0.5498473644256592)
+        self.assertAlmostEqual(minRect[1][0], 0.688842236995697)
+        self.assertAlmostEqual(minRect[1][1], 0.3747103214263916)
+        self.assertAlmostEqual(minRect[2], -72.26773071289062)
+
+    def test_Comb_MinAreaRect(self):
+        plg = extradata.LoadTextPolygon('comb_nodes.txt')
+        minRect = plg.SmallestRectangle()
+        extradata.SaveContours(self.id(), [plg.Move((1, 5)).Zoom((50, 50)), mvlab.Contour_GenRotatedRectangle(minRect).Move((1, 5)).Zoom((50, 50))])
+
+        print(minRect)
+        self.assertAlmostEqual(minRect[0][0], 4.410891532897949)
+        self.assertAlmostEqual(minRect[0][1], 4.10891056060791)
+        self.assertAlmostEqual(minRect[1][0], 12.238957405090332)
+        self.assertAlmostEqual(minRect[1][1], 7.96029806137085)
+        self.assertAlmostEqual(minRect[2], -95.71058654785156)
+
+    def test_I18_MinAreaRect(self):
+        plg = extradata.LoadTextPolygon('i18_nodes.txt')
+        minRect = plg.SmallestRectangle()
+        extradata.SaveContours(self.id(), [plg.Move((5, 5)).Zoom((30, 30)), mvlab.Contour_GenRotatedRectangle(minRect).Move((5, 5)).Zoom((30, 30))])
+
+        print(minRect)
+        self.assertAlmostEqual(minRect[0][0], 8.441173553466797)
+        self.assertAlmostEqual(minRect[0][1], 10.235295295715332)
+        self.assertAlmostEqual(minRect[1][0], 21.343135833740234)
+        self.assertAlmostEqual(minRect[1][1], 15.764819145202637)
+        self.assertAlmostEqual(minRect[2], 14.036243438720703)
+
+    def test_Snake_MinAreaRect(self):
+        plg = extradata.LoadTextPolygon('snake_nodes.txt')
+        minRect = plg.SmallestRectangle()
+        extradata.SaveContours(self.id(), [plg.Move((1, 5)).Zoom((20, 20)), mvlab.Contour_GenRotatedRectangle(minRect).Move((1, 5)).Zoom((20, 20))])
+
+        print(minRect)
+        self.assertAlmostEqual(minRect[0][0], 25)
+        self.assertAlmostEqual(minRect[0][1], 10)
+        self.assertAlmostEqual(minRect[1][0], 50)
+        self.assertAlmostEqual(minRect[1][1], 20)
+        self.assertAlmostEqual(minRect[2], 0)
 
     def test_Random_Small_MinAreaRect(self):
         n = int(random.uniform(1, 30))
@@ -192,6 +252,59 @@ class TestContourMinAreaRect(unittest.TestCase):
             if not eMinRect.TestPoint(point):
                 print(points)
             self.assertTrue(eMinRect.TestPoint(point))
+
+    def test_Performance_Digits(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        blue, green, red = cv2.split(image)
+        r, rgn = mvlab.Threshold(blue, 50, 255)
+        rgns = rgn.Connect()
+
+        c = rgns.GetContour().GetConvex()
+        startTime = time.perf_counter()
+        miniRects = c.GetSmallestRectangle()
+        endTime = time.perf_counter()
+
+        conts = [c]
+        for miniRect in miniRects:
+            conts.append(mvlab.Contour_GenRotatedRectangle(miniRect))
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), conts)
+
+    def test_Performance_Mista(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        blue, green, red = cv2.split(image)
+        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgns = rgn.Connect()
+
+        c = rgns.GetContour().GetConvex()
+        startTime = time.perf_counter()
+        miniRects = c.GetSmallestRectangle()
+        endTime = time.perf_counter()
+
+        conts = [c]
+        for miniRect in miniRects:
+            conts.append(mvlab.Contour_GenRotatedRectangle(miniRect))
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), conts)
+
+    def test_Performance_PCB(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        r, rgn = mvlab.Threshold(image, 0, 50)
+        rgns = rgn.Connect()
+
+        c = rgns.GetContour()
+        startTime = time.perf_counter()
+        miniRects = c.GetSmallestRectangle()
+        endTime = time.perf_counter()
+
+        conts = [c]
+        for miniRect in miniRects:
+            conts.append(mvlab.Contour_GenRotatedRectangle(miniRect))
+
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveContours(self.id(), conts)
 
 if __name__ == '__main__':
     unittest.main()

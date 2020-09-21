@@ -156,13 +156,13 @@ cv::RotatedRect RotatingCaliper::minAreaRectBruteForce(const cv::Point2f *points
 
     if (width < height)
     {
-        const float ang = Util::constrainAngle(Util::deg(std::atan2(v.y, v.x)));
+        const float ang = Util::deg(std::atan2(v.y, v.x));
         cv::RotatedRect rr{ (pt + pr) / 2, Size2f(height, width),  ang };
         return rr;
     }
     else
     {
-        const float ang = Util::constrainAngle(Util::deg(std::atan2(w.y, w.x)));
+        const float ang = Util::deg(std::atan2(w.y, w.x));
         cv::RotatedRect rr{ (pt + pr) / 2, Size2f(width, height),  ang };
         return rr;
     }

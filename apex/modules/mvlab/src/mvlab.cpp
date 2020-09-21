@@ -9,6 +9,24 @@ namespace mvlab {
 
 static std::map<cv::String, cv::String> g_GlobalOptions;
 
+FitLineParameters::FitLineParameters() 
+    : algorithm("tukey")
+    , maxNumPoints(-1)
+    , clippingEndPoints(0)
+    , iterations(5)
+    , clippingFactor(2.0) 
+{}
+
+FitLineResults::FitLineResults() 
+    : xBegin(0)
+    , yBegin(0)
+    , xEnd(0)
+    , yEnd(0)
+    , nx(0)
+    , ny(0)
+    , dist(0) 
+{}
+
 int Initialize(const cv::String& /*fileName*/)
 {
     int inset = vcl::instrset_detect();

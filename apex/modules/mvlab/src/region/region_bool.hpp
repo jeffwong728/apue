@@ -33,7 +33,7 @@ struct RegionSymmDifferenceOp : public RegionBoolOp
 
 struct RegionUnion2Op : public RegionBoolOp
 {
-    RunSequence Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2);
+    void Do(const RunSequence &srcRuns1, const RunSequence &srcRuns2, RunSequence &dstRuns);
 };
 
 }

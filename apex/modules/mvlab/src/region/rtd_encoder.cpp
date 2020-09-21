@@ -1,6 +1,6 @@
 #include "precomp.hpp"
 #include "rtd_encoder.hpp"
-#include "contour_impl.hpp"
+#include <contour/contour_impl.hpp>
 
 namespace cv {
 namespace mvlab {
@@ -115,11 +115,54 @@ void RDEncoder::Track(std::vector<Ptr<Contour>> &outers, std::vector<Ptr<Contour
                     contour.push_back(contour.front());
                     if (1 == e.CODE)
                     {
-                        outers.push_back(cv::makePtr<ContourImpl>(&contour, K_YES));
+                        outers.push_back(cv::makePtr<ContourImpl>(&contour, K_NO));
                     }
                     else
                     {
-                        holes.push_back(cv::makePtr<ContourImpl>(&contour, K_YES));
+                        holes.push_back(cv::makePtr<ContourImpl>(&contour, K_NO));
+                    }
+                }
+            }
+        }
+    }
+}
+
+void RDEncoder::Track(ScalablePoint2fSequenceSequence &outers, ScalablePoint2fSequenceSequence &holes)
+{
+    const int count_g[11]{ 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1 };
+    for (RDEntry &e : rd_list_)
+    {
+        if (!e.FLAG)
+        {
+            e.FLAG = 1;
+            if (1 == e.CODE || 9 == e.CODE)
+            {
+                ScalablePoint2fSequence contour;
+                contour.reserve(64);
+                contour.emplace_back(e.X, e.Y);
+                int nextLink = e.LINK;
+                while (!rd_list_[nextLink].FLAG)
+                {
+                    rd_list_[nextLink].FLAG = 1;
+                    if (count_g[rd_list_[nextLink].CODE])
+                    {
+                        contour.emplace_back(contour.back().x, rd_list_[nextLink].Y);
+                        contour.emplace_back(rd_list_[nextLink].X, rd_list_[nextLink].Y);
+                    }
+                    nextLink = rd_list_[nextLink].LINK;
+                }
+
+                if (!contour.empty())
+                {
+                    contour.emplace_back(contour.back().x, contour.front().y);
+                    contour.push_back(contour.front());
+                    if (1 == e.CODE)
+                    {
+                        outers.push_back(std::move(contour));
+                    }
+                    else
+                    {
+                        holes.push_back(std::move(contour));
                     }
                 }
             }
@@ -155,7 +198,7 @@ void RDEncoder::Track(Ptr<Contour> &outer)
             {
                 contour.emplace_back(contour.back().x, contour.front().y);
                 contour.push_back(contour.front());
-                outer = cv::makePtr<ContourImpl>(&contour, K_YES);
+                outer = cv::makePtr<ContourImpl>(&contour, K_NO);
             }
             break;
         }
@@ -401,6 +444,11 @@ void RunLengthRDParallelEncoder::Track(std::vector<Ptr<Contour>> &outers, std::v
 void RunLengthRDParallelEncoder::Track(Ptr<Contour> &outer)
 {
     RDEncoder::Track(outer);
+}
+
+void RunLengthRDParallelEncoder::Track(ScalablePoint2fSequenceSequence &outers, ScalablePoint2fSequenceSequence &holes)
+{
+    RDEncoder::Track(outers, holes);
 }
 
 void RunLengthRDParallelEncoder::Encode(const RunSequence::const_pointer pRunBeg,

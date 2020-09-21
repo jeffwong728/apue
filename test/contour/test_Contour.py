@@ -42,7 +42,7 @@ class TestContour(unittest.TestCase):
         image[11:12, 5:60]  = 255
         r, rgn = mvlab.Threshold(image, 150, 255)
         outer = rgn.GetContour()
-        r, points = outer.GetPoints()
+        points = outer.GetPoints()
 
         for point in points:
             print('({0:.1f}, {1:.1f})'.format(point[0], point[1]))
@@ -68,8 +68,9 @@ class TestContour(unittest.TestCase):
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgns = rgn.Connect()
         startTime = time.perf_counter()
-        outer = rgn.GetContour()
+        outers = rgns.GetContour()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
@@ -78,10 +79,11 @@ class TestContour(unittest.TestCase):
     def test_Mista_Contour(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image)
-
         r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgns = rgn.Connect()
+
         startTime = time.perf_counter()
-        outer = rgn.GetContour()
+        outers = rgns.GetContour()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
@@ -92,8 +94,9 @@ class TestContour(unittest.TestCase):
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 151, 255)
+        rgns = rgn.Connect()
         startTime = time.perf_counter()
-        outer = rgn.GetContour()
+        outers = rgns.GetContour()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
@@ -104,9 +107,10 @@ class TestContour(unittest.TestCase):
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
-        for rgn in rgns:
+        for i in range(0, rgns.Count()):
+           rgn = rgns.SelectObj(i)
            if rgn.Area() > 100000 and rgn.Area() < 120000:
                break
 

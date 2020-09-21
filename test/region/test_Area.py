@@ -22,7 +22,11 @@ class TestRegionArea(unittest.TestCase):
 
     def test_Rectangle_Region(self):
         rgn = mvlab.Region_GenRectangle((0, 0, 10, 10))
-        self.assertAlmostEqual(rgn.Area(), 100.0, 'Rectangle region area {0:f} not 100.0'.format(rgn.Area()))
+        self.assertAlmostEqual(rgn.Area(), 100.0, msg='Rectangle region area {0:f} not 100.0'.format(rgn.Area()))
+
+    def test_Rectangle_BoundingBox(self):
+        rgn = mvlab.Region_GenRectangle((0, 0, 10, 10))
+        self.assertEqual(rgn.BoundingBox(), (0, 0, 10, 10), 'Rectangle bounding box error')
 
     def test_2Region_PointTouch(self):
         rgn1 = mvlab.Region_GenRectangle((10, 10, 10, 10))
@@ -55,15 +59,15 @@ class TestRegionArea(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
         startTime = time.perf_counter()
-        area = rgn.Area()
+        area = rgns.Area()
         endTime = time.perf_counter()
 
-        self.assertEqual(len(rgns), 941)
+        self.assertEqual(rgns.Count(), 941)
 
-        areaSum = numpy.sum([r.Area() for r in rgns])
+        areaSum = rgns.Area()
         self.assertAlmostEqual(rgn.Area(), areaSum, 'Region area {0:f} not equal sum of compoent areas {1:f}'.format(rgn.Area(), areaSum))
 
     def test_Mista_Hole_Area(self):

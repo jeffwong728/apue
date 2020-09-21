@@ -27,7 +27,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         iRgn = rgn1.Intersection(rgn2)
         uRgn = dRgn.Union2(iRgn)
 
-        self.assertEqual(uRgn.Count(), rgn1.Count())
+        self.assertEqual(uRgn.CountRuns(), rgn1.CountRuns())
         self.assertEqual(uRgn.CountRows(), rgn1.CountRows())
         self.assertAlmostEqual(uRgn.Area(), rgn1.Area())
 
@@ -47,7 +47,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         self.verifyRegionIntegrity(uRgn)
         self.verifyRegionIntegrity(sRgn)
 
-        self.assertEqual(sRgn.Count(), uRgn.Count())
+        self.assertEqual(sRgn.CountRuns(), uRgn.CountRuns())
         self.assertEqual(sRgn.CountRows(), uRgn.CountRows())
         self.assertAlmostEqual(sRgn.Area(), uRgn.Area())
 
@@ -68,7 +68,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         self.verifyRegionIntegrity(uRgn)
         self.verifyRegionIntegrity(iRgn)
         self.verifyRegionIntegrity(sRgn2)
-        self.assertEqual(sRgn1.Count(), sRgn2.Count())
+        self.assertEqual(sRgn1.CountRuns(), sRgn2.CountRuns())
         self.assertEqual(sRgn1.CountRows(), sRgn2.CountRows())
         self.assertAlmostEqual(sRgn1.Area(), sRgn2.Area())
 
@@ -82,7 +82,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         iRgn = rgn1.Intersection(rgn2)
         uRgn = dRgn.Union2(iRgn)
 
-        self.assertEqual(uRgn.Count(), rgn1.Count())
+        self.assertEqual(uRgn.CountRuns(), rgn1.CountRuns())
         self.assertEqual(uRgn.CountRows(), rgn1.CountRows())
         self.assertAlmostEqual(uRgn.Area(), rgn1.Area())
 
@@ -96,7 +96,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         iRgn = rgn1.Intersection(rgn2)
         uRgn = dRgn.Union2(iRgn)
 
-        self.assertEqual(uRgn.Count(), rgn1.Count())
+        self.assertEqual(uRgn.CountRuns(), rgn1.CountRuns())
         self.assertEqual(uRgn.CountRows(), rgn1.CountRows())
         self.assertAlmostEqual(uRgn.Area(), rgn1.Area())
 
@@ -109,7 +109,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         sRgn = rgn1.SymmDifference(rgn2)
         uRgn = dRgn1.Union2(dRgn2)
 
-        self.assertEqual(uRgn.Count(), sRgn.Count())
+        self.assertEqual(uRgn.CountRuns(), sRgn.CountRuns())
         self.assertEqual(uRgn.CountRows(), sRgn.CountRows())
         self.assertAlmostEqual(uRgn.Area(), sRgn.Area())
 
@@ -140,7 +140,7 @@ class TestRegionCrossVerify(unittest.TestCase):
 
         self.verifyRegionIntegrity(uRgn)
         self.verifyRegionIntegrity(sRgn1)
-        self.assertEqual(sRgn1.Count(), sRgn2.Count())
+        self.assertEqual(sRgn1.CountRuns(), sRgn2.CountRuns())
         self.assertEqual(sRgn1.CountRows(), sRgn2.CountRows())
         self.assertAlmostEqual(sRgn1.Area(), sRgn2.Area())
 
@@ -150,8 +150,7 @@ class TestRegionCrossVerify(unittest.TestCase):
         if not rgn:
             return
 
-        r, runs = rgn.GetRuns()
-        self.assertEqual(r, 0)
+        runs = rgn.GetRuns()
         if len(runs):
             self.assertLess(runs[0][0], runs[0][2])
             for i in range(1, len(runs)):

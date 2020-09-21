@@ -30,6 +30,7 @@ public:
     CV_WRAP static double Determinant(const cv::Matx33d &homoMat2D);
     CV_WRAP static cv::Point2d AffineTransPixel(const cv::Matx33d &homoMat2D, const cv::Point2d &pixel);
     CV_WRAP static cv::Point2d AffineTransPoint2d(const cv::Matx33d &homoMat2D, const cv::Point2d &point);
+    CV_WRAP static int AffineTransImage(InputArray src, InputOutputArray dst, const cv::Matx33d &homoMat2D, const cv::Ptr<Dict> &opts=nullptr);
 };
 
 }

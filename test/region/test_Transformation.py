@@ -22,11 +22,12 @@ class TestRegionTransformation(unittest.TestCase):
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
-        for rgn in rgns:
-           if rgn.Area() > 140000 and rgn.Area() < 150000:
-               break
+        for i in range(0, rgns.Count()):
+            rgn = rgns.SelectObj(i)
+            if rgn.Area() > 140000 and rgn.Area() < 150000:
+                break
 
         startTime = time.perf_counter()
         zrgn = rgn.Zoom((0.7, 0.7))
@@ -54,6 +55,22 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveRegion(self.id(), zrgn)
 
+    def test_Shrink_Mista(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        blue, green, red = cv2.split(image)
+
+        r, rgn = mvlab.Threshold(blue, 150, 255)
+
+        startTime = time.perf_counter()
+        zrgn = rgn.Shrink((0.2, 0.2))
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(zrgn)
+
+        bbox = zrgn.BoundingBox()
+        zrgn = zrgn.Move((-bbox[0]+10, -bbox[1]+10))
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), zrgn)
+
     def test_Zoom_Digits(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
         blue, green, red = cv2.split(image)
@@ -61,6 +78,21 @@ class TestRegionTransformation(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
         startTime = time.perf_counter()
         zrgn = rgn.Zoom((0.5, 0.5))
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(zrgn)
+
+        bbox = zrgn.BoundingBox()
+        zrgn = zrgn.Move((-bbox[0]+10, -bbox[1]+10))
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), zrgn)
+
+    def test_Shrink_Digits(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        blue, green, red = cv2.split(image)
+
+        r, rgn = mvlab.Threshold(blue, 150, 255)
+        startTime = time.perf_counter()
+        zrgn = rgn.Shrink((0.5, 0.5))
         endTime = time.perf_counter()
         self.verifyRegionIntegrity(zrgn)
 
@@ -83,16 +115,45 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), endTime-startTime)
         extradata.SaveRegion(self.id(), zrgn)
 
+    def test_Zoom_Out_PCB_Layout(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        r, rgn = mvlab.Threshold(image, 0, 50)
+
+        startTime = time.perf_counter()
+        zrgn = rgn.Zoom((0.5, 0.5))
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(zrgn)
+
+        bbox = zrgn.BoundingBox()
+        zrgn = zrgn.Move((-bbox[0]+10, -bbox[1]+10))
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), zrgn)
+
+    def test_Shrink_PCB_Layout(self):
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        r, rgn = mvlab.Threshold(image, 0, 50)
+
+        startTime = time.perf_counter()
+        zrgn = rgn.Shrink((0.5, 0.5))
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(zrgn)
+
+        bbox = zrgn.BoundingBox()
+        zrgn = zrgn.Move((-bbox[0]+10, -bbox[1]+10))
+        extradata.SavePerformanceData(self.id(), endTime-startTime)
+        extradata.SaveRegion(self.id(), zrgn)
+
     def test_Draw_Deer(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
-        for rgn in rgns:
-           if rgn.Area() > 140000 and rgn.Area() < 150000:
-               break
+        for i in range(0, rgns.Count()):
+            rgn = rgns.SelectObj(i)
+            if rgn.Area() > 140000 and rgn.Area() < 150000:
+                break
 
         startTime = time.perf_counter()
         r, image = rgn.Draw(image, (255, 0, 0, 64))
@@ -106,11 +167,12 @@ class TestRegionTransformation(unittest.TestCase):
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
-        r, rgns = rgn.Connect()
+        rgns = rgn.Connect()
 
-        for rgn in rgns:
-           if rgn.Area() > 140000 and rgn.Area() < 150000:
-               break
+        for i in range(0, rgns.Count()):
+            rgn = rgns.SelectObj(i)
+            if rgn.Area() > 140000 and rgn.Area() < 150000:
+                break
 
         affMat = mvlab.HomoMat2d_GenIdentity()
         affMat = mvlab.HomoMat2d_Rotate(affMat, 30, rgn.Centroid())
@@ -130,8 +192,7 @@ class TestRegionTransformation(unittest.TestCase):
         if not rgn:
             return
 
-        r, runs = rgn.GetRuns()
-        self.assertEqual(r, 0)
+        runs = rgn.GetRuns()
         if len(runs):
             self.assertLess(runs[0][0], runs[0][2])
             for i in range(1, len(runs)):

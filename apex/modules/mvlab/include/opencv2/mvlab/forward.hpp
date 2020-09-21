@@ -6,9 +6,14 @@
 namespace cv {
 namespace mvlab {
 
-class CV_EXPORTS_W Contour;
+class CV_EXPORTS_W Dict;
+class CV_EXPORTS_W H5DB;
+class CV_EXPORTS_W H5Group;
 class CV_EXPORTS_W Region;
-class CV_EXPORTS_W RegionCollection;
+class CV_EXPORTS_W Contour;
+class CV_EXPORTS_W PixelTemplate;
+class CV_EXPORTS_W ContourTemplate;
+class CV_EXPORTS_W MatchResult;
 
 }
 }

@@ -8,9 +8,11 @@ import urllib
 def init():
     global perfData
     global objPath
+    global objPaths
     global colors
     global nextcolor
     perfData = dict()
+    objPaths = dict()
     objPath = dict()
     colors = [(0xFF, 0x00, 0x00, 0xFF), (0x00, 0xFF, 0x00, 0xFF), (0x00, 0x00, 0xFF, 0xFF)]
     colors.extend([(0xFF, 0x00, 0xFF, 0xFF), (0xFF, 0xFF, 0x00, 0xFF), (0x00, 0xFF, 0xFF, 0xFF)])
@@ -53,15 +55,29 @@ def SavePerformanceData(testId, secs):
 def SaveImage(testId, img):
     baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
+    del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     os.makedirs(imgPath, exist_ok=True)
     cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', img)
     global objPath
     objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
 
+def AddImage(testId, img, name):
+    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    imgPathComps = testId.split(sep='.')
+    del imgPathComps[-2]
+    imgPath = os.path.join(baseDir, *imgPathComps[0:])
+    os.makedirs(imgPath, exist_ok=True)
+    cv2.imwrite(os.path.join(baseDir, *imgPathComps, name), img)
+    global objPaths
+    paths = objPaths.setdefault(testId, [])
+    imgPathComps.append(name)
+    paths.append('/'.join(imgPathComps))
+
 def SaveRegion(testId, rgn, sz=None):
     baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
+    del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     os.makedirs(imgPath, exist_ok=True)
     shape = None
@@ -82,6 +98,7 @@ def SaveRegion(testId, rgn, sz=None):
 def DrawRegion(testId, rgn, image):
     baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
+    del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     r, image = rgn.Draw(image, (255, 0, 0, 128))
 
@@ -93,6 +110,7 @@ def DrawRegion(testId, rgn, image):
 def SaveRegions(testId, rgns, sz=None):
     baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
+    del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     os.makedirs(imgPath, exist_ok=True)
 
@@ -117,6 +135,7 @@ def SaveRegions(testId, rgns, sz=None):
 def SaveContours(testId, cturs, sz=None):
     baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
+    del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
     os.makedirs(imgPath, exist_ok=True)
 
@@ -138,3 +157,18 @@ def SaveContours(testId, cturs, sz=None):
         cv2.imwrite(os.path.join(baseDir, *imgPathComps) + '.png', image)
         global objPath
         objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
+
+def LoadTextPolygon(fileName):
+    fullFileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'plg', fileName)
+    points = []
+    with open(fullFileName, 'rt') as f:
+        for ln in f:
+            wds = ln.split()
+            if 2==len(wds):
+                try:
+                    x = float(wds[0])
+                    y = float(wds[1])
+                    points.append((x, y))
+                except ValueError:
+                    pass
+    return mvlab.Contour_GenPolygon(points)
