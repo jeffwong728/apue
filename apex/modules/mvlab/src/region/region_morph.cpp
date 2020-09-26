@@ -1162,6 +1162,37 @@ cv::Ptr<Region> RegionImpl::rleDilation(const cv::Ptr<Region> &structElement) co
     return makePtr<RegionImpl>(&rleD.uRuns);
 }
 
+cv::Ptr<Region> RegionImpl::rleCompDilation(const cv::Ptr<Region> &structElement) const
+{
+    const cv::Ptr<RegionImpl> SE = structElement.dynamicCast<RegionImpl>();
+    if (!SE || SE->Empty() || RegionImpl::Empty())
+    {
+        return (cv::Ptr<RegionImpl>)const_cast<RegionImpl *>(this)->shared_from_this();
+    }
+
+    constexpr int negInf = std::numeric_limits<int>::min() / 4;
+    constexpr int posInf = std::numeric_limits<int>::max() / 4;
+    const int compHeight = structElement->BoundingBox().height + 8;
+    const cv::Point tlPt{ negInf, rgn_runs_.front().row - compHeight };
+    const cv::Point brPt{ posInf, rgn_runs_.back().row + compHeight };
+
+    RegionComplementOp compOp;
+    RunSequence runs1 = compOp.Do1(rgn_runs_, tlPt, brPt);
+
+    RLEErosion rleE(&runs1, &(SE->rgn_runs_));
+    if (SE->rgn_runs_.size() > 1)
+    {
+        tbb::parallel_reduce(tbb::blocked_range<int>(0, static_cast<int>(SE->rgn_runs_.size())), rleE);
+    }
+    else
+    {
+        rleE(tbb::blocked_range<int>(0, 1));
+    }
+
+    RunSequence runs2 = compOp.Do2(rleE.uRuns);
+    return makePtr<RegionImpl>(&runs2);
+}
+
 cv::Ptr<Region> RegionImpl::Dilation(const cv::Ptr<Region> &structElement, const cv::Ptr<Dict> &opts) const
 {
     if (opts)
@@ -1175,13 +1206,17 @@ cv::Ptr<Region> RegionImpl::Dilation(const cv::Ptr<Region> &structElement, const
         {
             return dilatecut(structElement);
         }
-        else
+        else if ("RLE" == method)
         {
             return rleDilation(structElement);
         }
+        else
+        {
+            return rleCompDilation(structElement);
+        }
     }
 
-    return rleDilation(structElement);
+    return rleCompDilation(structElement);
 }
 
 cv::Ptr<Region> RegionImpl::Erosion(const cv::Ptr<Region> &structElement, const cv::Ptr<Dict> &opts) const

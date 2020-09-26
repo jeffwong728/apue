@@ -69,6 +69,13 @@ class TestDilation(unittest.TestCase):
         self.verifyRegionIntegrity(dcutrgn)
         print('dilatecut: {0:.3f}ms<br />'.format((endTime-startTime)*1000))
 
+        opts.SetString("Method", "RLEComp")
+        startTime = time.perf_counter()
+        comprgn = rgn.Dilation(se, opts)
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(comprgn)
+        print('comprgn: {0:.3f}ms<br />'.format((endTime-startTime)*1000))
+
         opts.SetString("Method", "RLEDilation")
         startTime = time.perf_counter()
         rlergn = rgn.Dilation(se, opts)
@@ -77,10 +84,11 @@ class TestDilation(unittest.TestCase):
         print('RLEDilation: {0:.3f}ms'.format((endTime-startTime)*1000))
 
         self.assertTrue(drgn.TestEqual(dcutrgn))
-        self.assertTrue(dcutrgn.TestEqual(rlergn))
+        self.assertTrue(dcutrgn.TestEqual(comprgn))
+        self.assertTrue(comprgn.TestEqual(rlergn))
 
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
-        extradata.SaveRegion(self.id(), drgn)
+        extradata.SaveRegion(self.id(), comprgn)
 
     def test_Mista_Square(self):
         se = mvlab.Region_GenStructuringElement('square', 5)
@@ -91,20 +99,30 @@ class TestDilation(unittest.TestCase):
 
         opts.SetString("Method", "dilate")
         startTime = time.perf_counter()
-        drgn = rgn.Dilation(se, opts)
+        rgn1 = rgn.Dilation(se, opts)
         endTime = time.perf_counter()
-        self.verifyRegionIntegrity(drgn)
+        self.verifyRegionIntegrity(rgn1)
         print('dilate: {0:.3f}ms<br />'.format((endTime-startTime)*1000))
+
+        opts.SetString("Method", "RLEComp")
+        startTime = time.perf_counter()
+        rgn2 = rgn.Dilation(se, opts)
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(rgn2)
+        print('comprgn: {0:.3f}ms<br />'.format((endTime-startTime)*1000))
 
         opts.SetString("Method", "dilatecut")
         startTime = time.perf_counter()
-        drgn = rgn.Dilation(se, opts)
+        rgn3 = rgn.Dilation(se, opts)
         endTime = time.perf_counter()
-        self.verifyRegionIntegrity(drgn)
+        self.verifyRegionIntegrity(rgn3)
         print('dilatecut: {0:.3f}ms'.format((endTime-startTime)*1000))
 
+        self.assertTrue(rgn1.TestEqual(rgn2))
+        self.assertTrue(rgn2.TestEqual(rgn3))
+
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
-        extradata.SaveRegion(self.id(), drgn)
+        extradata.SaveRegion(self.id(), rgn1)
 
     def test_Mista_Outer_Boundary(self):
         se = mvlab.Region_GenStructuringElement('square', 1)
@@ -113,7 +131,7 @@ class TestDilation(unittest.TestCase):
         r, rgn = mvlab.Threshold(blue, 150, 255)
         opts = mvlab.Dict_GenEmpty()
 
-        opts.SetString("Method", "RLEDilation")
+        opts.SetString("Method", "RLEComp")
         startTime = time.perf_counter()
         drgn = rgn.Dilation(se, opts)
         drgn = drgn.Difference(rgn)
@@ -160,15 +178,23 @@ class TestDilation(unittest.TestCase):
         self.verifyRegionIntegrity(rgn2)
         print('RLEDilation: {0:.3f}ms<br />'.format((endTime-startTime)*1000))
 
-        opts.SetString("Method", "dilatecut")
+        opts.SetString("Method", "RLEComp")
         startTime = time.perf_counter()
         rgn3 = rgn.Dilation(se, opts)
         endTime = time.perf_counter()
         self.verifyRegionIntegrity(rgn3)
+        print('RLEComp: {0:.3f}ms<br />'.format((endTime-startTime)*1000))
+
+        opts.SetString("Method", "dilatecut")
+        startTime = time.perf_counter()
+        rgn4 = rgn.Dilation(se, opts)
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(rgn4)
         print('dilatecut: {0:.3f}ms'.format((endTime-startTime)*1000))
 
         self.assertTrue(rgn1.TestEqual(rgn2))
         self.assertTrue(rgn2.TestEqual(rgn3))
+        self.assertTrue(rgn3.TestEqual(rgn4))
 
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), rgn3)
@@ -193,15 +219,23 @@ class TestDilation(unittest.TestCase):
         self.verifyRegionIntegrity(rgn2)
         print('RLEDilation: {0:.3f}ms<br />'.format((endTime-startTime)*1000))
 
-        opts.SetString("Method", "dilatecut")
+        opts.SetString("Method", "RLEComp")
         startTime = time.perf_counter()
         rgn3 = rgn.Dilation(se, opts)
         endTime = time.perf_counter()
         self.verifyRegionIntegrity(rgn3)
+        print('RLEComp: {0:.3f}ms<br />'.format((endTime-startTime)*1000))
+
+        opts.SetString("Method", "dilatecut")
+        startTime = time.perf_counter()
+        rgn4 = rgn.Dilation(se, opts)
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(rgn4)
         print('dilatecut: {0:.3f}ms'.format((endTime-startTime)*1000))
 
         self.assertTrue(rgn1.TestEqual(rgn2))
         self.assertTrue(rgn2.TestEqual(rgn3))
+        self.assertTrue(rgn3.TestEqual(rgn4))
 
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), rgn2)

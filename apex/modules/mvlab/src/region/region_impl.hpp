@@ -175,6 +175,7 @@ private:
     cv::Ptr<Region> dilatecut(const cv::Ptr<Region> &structElement) const;
     cv::Ptr<Region> rleErosion(const cv::Ptr<Region> &structElement) const;
     cv::Ptr<Region> rleDilation(const cv::Ptr<Region> &structElement) const;
+    cv::Ptr<Region> rleCompDilation(const cv::Ptr<Region> &structElement) const;
 
 private:
     const RunSequence                    rgn_runs_;

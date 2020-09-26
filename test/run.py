@@ -8,7 +8,10 @@ import argparse
 extradata.init()
 testLoader = unittest.TestLoader()
 cases = []
-cases.append('morphology.test_Dilation.TestDilation')
+cases.append('morphology.test_Dilation')
+cases.append('morphology.test_Erosion')
+cases.append('morphology.test_Opening')
+cases.append('morphology.test_Closing')
 tests = testLoader.loadTestsFromNames(cases)
 #tests = testLoader.discover(start_dir='.', pattern='test_*.py')
 tmplPath = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'report_template.html')

@@ -14,6 +14,8 @@ struct RegionBoolOp
 struct RegionComplementOp : public RegionBoolOp
 {
     RunSequence Do(const RunSequence &srcRuns, const cv::Rect &rcUniverse);
+    RunSequence Do1(const RunSequence &srcRuns, const cv::Point &tlPoint, const cv::Point &brPoint);
+    RunSequence Do2(const RunSequence &srcRuns);
 };
 
 struct RegionDifferenceOp : public RegionBoolOp

@@ -54,15 +54,21 @@ int RegionBoolOp::IntersectRows(UScalableIntSequence &rows1, UScalableIntSequenc
 
 RunSequence RegionComplementOp::Do(const RunSequence &srcRuns, const cv::Rect &rcUniverse)
 {
-    RunSequence dstRuns(srcRuns.size() + rcUniverse.height + 1);
+    return RegionComplementOp::Do1(srcRuns, rcUniverse.tl(), rcUniverse.br());
+}
+
+RunSequence RegionComplementOp::Do1(const RunSequence &srcRuns, const cv::Point &tlPoint, const cv::Point &brPoint)
+{
+    const int height = brPoint.y - tlPoint.y + 1;
+    RunSequence dstRuns(srcRuns.size() + height + 1);
     RunSequence::const_pointer cur2 = srcRuns.data();
     const RunSequence::const_pointer end2 = srcRuns.data() + srcRuns.size();
 
-    int cur1 = rcUniverse.y;
-    const int end1 = rcUniverse.y + rcUniverse.height + 1;
+    int cur1 = tlPoint.y;
+    const int end1 = brPoint.y + 1;
 
-    const int colMin = rcUniverse.x;
-    const int colMax = rcUniverse.x + rcUniverse.width + 1;
+    const int colMin = tlPoint.x;
+    const int colMax = brPoint.x;
 
     RunSequence::pointer pResRun = dstRuns.data();
     while (cur1 != end1 && cur2 != end2)
@@ -113,7 +119,35 @@ RunSequence RegionComplementOp::Do(const RunSequence &srcRuns, const cv::Rect &r
         pResRun->row = cur1; pResRun->colb = colMin; pResRun->cole = colMax; pResRun->label = 0;
     }
 
-    assert(std::distance(dstRuns.data(), pResRun) == (std::ptrdiff_t)dstRuns.size());
+    assert(std::distance(dstRuns.data(), pResRun) <= (std::ptrdiff_t)dstRuns.size());
+    dstRuns.resize(std::distance(dstRuns.data(), pResRun));
+    return dstRuns;
+}
+
+RunSequence RegionComplementOp::Do2(const RunSequence &srcRuns)
+{
+    RunSequence dstRuns(srcRuns.size());
+    RunSequence::pointer pResRun = dstRuns.data();
+
+    constexpr int negInf = std::numeric_limits<int>::min();
+    RunLength negInfRun{ negInf, negInf, negInf, 0 };
+    RunSequence::const_pointer pPreRun = &negInfRun;
+
+    for (const RunLength &r : srcRuns)
+    {
+        if (r.row == pPreRun->row)
+        {
+            pResRun->row = r.row;
+            pResRun->colb = pPreRun->cole;
+            pResRun->cole = r.colb;
+            pResRun->label = 0;
+            pResRun += 1;
+        }
+
+        pPreRun = &r;
+    }
+
+    dstRuns.resize(std::distance(dstRuns.data(), pResRun));
     return dstRuns;
 }
 

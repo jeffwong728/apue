@@ -42,6 +42,32 @@ class TestClosing(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
         extradata.SaveRegion(self.id(), ergn)
 
+    def test_Closing_Circle_Mista(self):
+        se = mvlab.Region_GenStructuringElement('circle', 5)
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        blue, green, red = cv2.split(image)
+        r, rgn = mvlab.Threshold(blue, 0, 50)
+
+        startTime = time.perf_counter()
+        ergn = rgn.Closing(se)
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(ergn)
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SaveRegion(self.id(), ergn)
+
+    def test_Closing_Square_Mista(self):
+        se = mvlab.Region_GenStructuringElement('square', 5)
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        blue, green, red = cv2.split(image)
+        r, rgn = mvlab.Threshold(blue, 128, 255)
+
+        startTime = time.perf_counter()
+        ergn = rgn.Closing(se)
+        endTime = time.perf_counter()
+        self.verifyRegionIntegrity(ergn)
+        extradata.SavePerformanceData(self.id(), (endTime-startTime))
+        extradata.SaveRegion(self.id(), ergn)
+
     def verifyRegionIntegrity (self, rgn):
         if not rgn:
             return
