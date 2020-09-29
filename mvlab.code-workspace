@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "apex/modules/mvlab"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"iosfwd": "cpp"
+		}
+	}
+}

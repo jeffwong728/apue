@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "3rdparty/opencv"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"thread": "cpp"
+		}
+	}
+}
