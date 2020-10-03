@@ -287,7 +287,7 @@ bool H5DBHelper::Load(const H5::Group &g, const std::string &n, std::array<T, Di
             if (H5S_SIMPLE == s.getSimpleExtentType() &&
                 1 == s.getSimpleExtentNdims())
             {
-                hsize_t dims[1] = { 0 };
+                dims[0] = 0;
                 s.getSimpleExtentDims(dims);
                 if (Dim == dims[0])
                 {

@@ -90,11 +90,11 @@ struct ShapeCandidateScaner
         return (pixelVals[i1] - pixelVals[i0]) + 2 * (pixelVals[j1] - pixelVals[j0]) + (pixelVals[k1] - pixelVals[k0]);
     }
 
-    void normalize(const vcl::Vec8i &X, const vcl::Vec8i &Y, const vcl::Vec8i &minContrast, float *xNorm, float *yNorm) const
+    void normalize(const vcl::Vec8i &X, const vcl::Vec8i &Y, const vcl::Vec8i &minContra, float *xNorm, float *yNorm) const
     {
         vcl::Vec8i sqrSum = X * X + Y * Y;
         vcl::Vec8i normSqrSum = vcl::select(sqrSum == 0, ones8i, sqrSum);
-        vcl::Vec8i supress = sqrSum < minContrast;
+        vcl::Vec8ib supress = sqrSum < minContra;
         vcl::Vec8i supressX = vcl::select(supress, zeros8i, X);
         vcl::Vec8i supressY = vcl::select(supress, zeros8i, Y);
         vcl::Vec8f rSqrt = vcl::approx_rsqrt(vcl::to_float(normSqrSum));
@@ -686,7 +686,7 @@ float ShapeCandidateScaner<false>::getScore(const int row, const int col, const 
     const auto &tmplDatas = ltd.tmplDatas;
     vcl::Vec8i vecMinContrast(minContrast*minContrast * 64);
 
-    if (ang<0 || ang>=tmplDatas.size())
+    if (ang<0 || ang>=static_cast<int>(tmplDatas.size()))
     {
         return -1.f;
     }
@@ -744,7 +744,7 @@ float ShapeCandidateScaner<true>::getScore(const int row, const int col, const i
     const auto &tmplDatas = ltd.tmplDatas;
     vcl::Vec8i vecMinContrast(minContrast*minContrast * 64);
 
-    if (ang < 0 || ang >= tmplDatas.size())
+    if (ang < 0 || ang >= static_cast<int>(tmplDatas.size()))
     {
         return -1.f;
     }
@@ -1521,7 +1521,6 @@ int ShapeTemplate::createShapeTemplate(const ShapeTmplCreateData &createData)
             const int numPoints = static_cast<int>(pointSetTmpl.size());
             for (int n = 0; n < numPoints; ++n)
             {
-                uint8_t minMaxDiff = 0;
                 const cv::Point &tmplPt = pointSetTmpl[n];
                 if (edges.at<uint8_t>(tmplPt))
                 {
@@ -1546,17 +1545,17 @@ int ShapeTemplate::createShapeTemplate(const ShapeTmplCreateData &createData)
                 constexpr int simdSize = 8;
                 ScalableFloatSequence gRegNXVals(((static_cast<int>(ptd.gNXVals.size()) + simdSize - 1) & (-simdSize)), 0.f);
                 float *pRegXVals = gRegNXVals.data();
-                for (float dx : ptd.gNXVals)
+                for (float dnx : ptd.gNXVals)
                 {
-                    *pRegXVals = dx; pRegXVals += 1;
+                    *pRegXVals = dnx; pRegXVals += 1;
                 }
                 ptd.gNXVals.swap(gRegNXVals);
 
                 ScalableFloatSequence gRegNYVals(((static_cast<int>(ptd.gNYVals.size()) + simdSize - 1) & (-simdSize)), 0.f);
                 float *pRegYVals = gRegNYVals.data();
-                for (float dy : ptd.gNYVals)
+                for (float dny : ptd.gNYVals)
                 {
-                    *pRegYVals = dy; pRegYVals += 1;
+                    *pRegYVals = dny; pRegYVals += 1;
                 }
                 ptd.gNYVals.swap(gRegNYVals);
             }
@@ -1588,7 +1587,7 @@ void ShapeTemplate::linkTemplatesBetweenLayers()
         for (ShapeTemplData &ptd : tmplDatas)
         {
             AngleRange<float> angleRange(ptd.angle - ltd.angleStep, ptd.angle + ltd.angleStep);
-            for (int t = 0; t < belowTmplDatas.size(); ++t)
+            for (int t = 0; t < static_cast<int>(belowTmplDatas.size()); ++t)
             {
                 if (angleRange.contains(belowTmplDatas[t].angle))
                 {

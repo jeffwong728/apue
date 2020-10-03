@@ -622,7 +622,6 @@ void ConnectWuParallel::ConnectCommon(const Region *rgn,
     RunSequence &allRuns = const_cast<RunSequence &>(rgnImpl->GetAllRuns());
     const RowBeginSequence &rowRunBegs = rgnImpl->GetRowBeginSequence();
     const cv::Rect bbox = rgnImpl->BoundingBox();
-    const int maxWidth = bbox.width + 3;
 
     const auto Plength = allRuns.size();
     ScalableIntSequence  vecP(Plength);
@@ -632,7 +631,7 @@ void ConnectWuParallel::ConnectCommon(const Region *rgn,
     int *chunksSizeAndLabels = vecChunksSizeAndLabels.data();
     const int numRows = static_cast<int>(rowRunBegs.size() - 1);
 
-    const int nThreads = tbb::task_scheduler_init::default_num_threads();
+    const int nThreads = static_cast<int>(tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism));
     tbb::blocked_range<int> range(0, numRows, std::max(2, std::min(numRows / 2, nThreads * 4)));
 
     if (8 == connectivity)

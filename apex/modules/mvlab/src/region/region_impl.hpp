@@ -33,6 +33,15 @@ public:
     RunLength(const int ll, const int bb, const int ee) : row(ll), colb(bb), cole(ee), label(0) {}
     RunLength(const int ll, const int bb, const int ee, const int lab) : row(ll), colb(bb), cole(ee), label(lab) {}
     RunLength(const cv::Point &start, const int len) : row(start.y), colb(start.x), cole(start.x+len), label(0) {}
+    RunLength& operator=(const RunLength& r)
+    {
+        row = r.row;
+        colb = r.colb;
+        cole = r.cole;
+        label = r.label;
+
+        return *this;
+    }
     int len() const { return cole - colb; }
     cv::Point start() const { return { colb, row }; }
     cv::Point end() const { return { cole-1, row }; }

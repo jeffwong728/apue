@@ -507,14 +507,14 @@ inline vcl::Vec16s SobelNormGradient::kernel(const vcl::Vec16uc(&pixelVals)[9],
 inline void SobelNormGradient::normalize(const vcl::Vec8i &X, const vcl::Vec8i &Y,
     const vcl::Vec8i &minContrast, float *xNorm, float *yNorm)
 {
-    vcl::Vec8i sqrSum = X * X + Y * Y;
-    vcl::Vec8i normSqrSum = vcl::select(sqrSum == 0, ones8i, sqrSum);
-    vcl::Vec8i supress = sqrSum < minContrast;
-    vcl::Vec8i supressX = vcl::select(supress, zeros8i, X);
-    vcl::Vec8i supressY = vcl::select(supress, zeros8i, Y);
-    vcl::Vec8f rSqrt = vcl::approx_rsqrt(vcl::to_float(normSqrSum));
-    vcl::Vec8f NX = vcl::to_float(supressX) * rSqrt;
-    vcl::Vec8f NY = vcl::to_float(supressY) * rSqrt;
+    vcl::Vec8i  sqrSum = X * X + Y * Y;
+    vcl::Vec8i  normSqrSum = vcl::select(sqrSum == 0, ones8i, sqrSum);
+    vcl::Vec8ib supress = sqrSum < minContrast;
+    vcl::Vec8i  supressX = vcl::select(supress, zeros8i, X);
+    vcl::Vec8i  supressY = vcl::select(supress, zeros8i, Y);
+    vcl::Vec8f  rSqrt = vcl::approx_rsqrt(vcl::to_float(normSqrSum));
+    vcl::Vec8f  NX = vcl::to_float(supressX) * rSqrt;
+    vcl::Vec8f  NY = vcl::to_float(supressY) * rSqrt;
     NX.store(xNorm);
     NY.store(yNorm);
 }
@@ -522,14 +522,14 @@ inline void SobelNormGradient::normalize(const vcl::Vec8i &X, const vcl::Vec8i &
 inline void SobelNormGradient::normalizePartial(const vcl::Vec8i &X, const vcl::Vec8i &Y,
     const vcl::Vec8i &minContrast, const int lastCols, float *xNorm, float *yNorm)
 {
-    vcl::Vec8i sqrSum = X * X + Y * Y;
-    vcl::Vec8i normSqrSum = vcl::select(sqrSum == 0, ones8i, sqrSum);
-    vcl::Vec8i supress = sqrSum < minContrast;
-    vcl::Vec8i supressX = vcl::select(supress, zeros8i, X);
-    vcl::Vec8i supressY = vcl::select(supress, zeros8i, Y);
-    vcl::Vec8f rSqrt = vcl::approx_rsqrt(vcl::to_float(normSqrSum));
-    vcl::Vec8f NX = vcl::to_float(supressX) * rSqrt;
-    vcl::Vec8f NY = vcl::to_float(supressY) * rSqrt;
+    vcl::Vec8i  sqrSum = X * X + Y * Y;
+    vcl::Vec8i  normSqrSum = vcl::select(sqrSum == 0, ones8i, sqrSum);
+    vcl::Vec8ib supress = sqrSum < minContrast;
+    vcl::Vec8i  supressX = vcl::select(supress, zeros8i, X);
+    vcl::Vec8i  supressY = vcl::select(supress, zeros8i, Y);
+    vcl::Vec8f  rSqrt = vcl::approx_rsqrt(vcl::to_float(normSqrSum));
+    vcl::Vec8f  NX = vcl::to_float(supressX) * rSqrt;
+    vcl::Vec8f  NY = vcl::to_float(supressY) * rSqrt;
     NX.store_partial(lastCols, xNorm);
     NY.store_partial(lastCols, yNorm);
 }

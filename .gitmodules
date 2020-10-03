@@ -4,3 +4,6 @@
 [submodule "3rdparty/mimalloc"]
 	path = 3rdparty/mimalloc
 	url = https://github.com/jeffwong728/mimalloc.git
+[submodule "3rdparty/lib2geom"]
+	path = 3rdparty/lib2geom
+	url = https://gitlab.com/inkscape/lib2geom.git

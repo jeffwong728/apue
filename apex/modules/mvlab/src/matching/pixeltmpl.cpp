@@ -142,10 +142,10 @@ void SADTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
                     pPixlLocs += 1;
                 }
 
-                int32_t sad = partialSum / numPoints;
-                if (sad < minSAD)
+                int32_t sadl = partialSum / numPoints;
+                if (sadl < minSAD)
                 {
-                    minSAD = sad;
+                    minSAD = sadl;
                     bestTmplIndex = t;
                 }
             }
@@ -222,7 +222,6 @@ void NCCTopLayerScaner::operator()(const tbb::blocked_range<int>& br)
         const int64_t numPartB   = static_cast<int64_t>(ntd.partBVals.size());
         const int64_t numPoints  = numPartA + numPartB;
         const int64_t tmplSum    = ntd.partASum + ntd.partBSum;
-        const int64_t tmplSqrSum = ntd.partASqrSum + ntd.partBSqrSum;
         tmplAVals.resize((static_cast<int>(ntd.partAVals.size()) + simdSize - 1) & (-simdSize), 0);
         tmplBVals.resize((static_cast<int>(ntd.partBVals.size()) + simdSize - 1) & (-simdSize), 0);
 
@@ -537,10 +536,10 @@ void SADCandidateScaner::operator()(const tbb::blocked_range<int>& r) const
                 pPixlLocs += 1;
             }
 
-            int32_t sad = partialSum / numPoints;
-            if (sad < minSAD)
+            int32_t sadl = partialSum / numPoints;
+            if (sadl < minSAD)
             {
-                minSAD = sad;
+                minSAD = sadl;
                 bestTmplIndex = tmplIndex;
             }
         }
@@ -1200,7 +1199,7 @@ void PixelTmpl::linkTemplatesBetweenLayers()
         for (PixelTemplData &ptd : tmplDatas)
         {
             AngleRange<float> angleRange(ptd.angle - ltd.angleStep, ptd.angle + ltd.angleStep);
-            for (int t=0; t< belowTmplDatas.size(); ++t)
+            for (int t=0; t<static_cast<int>(belowTmplDatas.size()); ++t)
             {
                 if (angleRange.contains(belowTmplDatas[t].angle))
                 {

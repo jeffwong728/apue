@@ -134,13 +134,13 @@ void BasicImgProc::TrackCurves(const ScalablePointSequence &points,
     const int height = maxPoint.y - minPoint.y + 1;
     cv::Mat tmplMat = cv::Mat::zeros(height, width, CV_8UC1);
 
-    int i = 0;
+    int ii = 0;
     std::map<cv::Point, int, CVPointLesser> pointIndicesDict;
     for (const cv::Point &pt : points)
     {
         const cv::Point tPt = pt - minPoint;
         tmplMat.at<uint8_t>(tPt) = 0xFF;
-        pointIndicesDict[tPt] = i++ ;
+        pointIndicesDict[tPt] = ii++ ;
     }
 
     std::vector<std::vector<cv::Point>> contours;
@@ -287,9 +287,9 @@ void BasicImgProc::SplitCurvesToSegments(const std::vector<bool> &closed, std::v
         {
             segments.emplace_back();
             segments.back().reserve(simdSize);
-            for (int i = 0; i < simdSize; ++i)
+            for (int ii = 0; ii < simdSize; ++ii)
             {
-                segments.back().push_back(curve[e+i]);
+                segments.back().push_back(curve[e+ii]);
             }
         }
 
@@ -403,11 +403,11 @@ int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &pt
 
     cv::Mat matInputNew;
 
-    auto interp2 = [matI, matT](cv::Mat &matOutput, const cv::Mat &matD) {
+    auto interp2 = [matI, matT](cv::Mat &matOutput, const cv::Mat &matDD) {
         cv::Mat map_x, map_y;
         map_x.create(matT.size(), CV_32FC1);
         map_y.create(matT.size(), CV_32FC1);
-        cv::Point2f ptStart(matD.at<float>(0, 0), matD.at<float>(1, 0));
+        cv::Point2f ptStart(matDD.at<float>(0, 0), matDD.at<float>(1, 0));
         for (int row = 0; row < matT.rows; ++row)
             for (int col = 0; col < matT.cols; ++col)
             {
@@ -450,7 +450,7 @@ int _refineWithLMIteration(const cv::Mat &mat, cv::Mat &matTmpl, cv::Point2f &pt
     double min, max;
     cv::minMaxLoc(A, &min, &max);
     double mu = 1. * max;
-    double err1 = 1e-4, err2 = 1e-4;
+    double err2 = 1e-4;
     auto Nmax = 100;
     while (cv::norm(matDr) > err2 && N < Nmax) {
         ++N;

@@ -145,12 +145,14 @@ int MatchResultImpl::Draw(cv::InputOutputArray img, const cv::Ptr<Dict> &opts) c
     {
         if (contour_template_ && !contour_template_->Empty())
         {
-            contour_template_->DrawInstance(img.getMat(), positions_[n], angles_[n], dopts);
+            cv::Mat m = img.getMat();
+            contour_template_->DrawInstance(m, positions_[n], angles_[n], dopts);
         }
 
         if (pixel_template_)
         {
-            pixel_template_->DrawInstance(img.getMat(), positions_[n], angles_[n], dopts);
+            cv::Mat m = img.getMat();
+            pixel_template_->DrawInstance(m, positions_[n], angles_[n], dopts);
         }
     }
 

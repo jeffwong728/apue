@@ -344,12 +344,20 @@ inline float Util::constrainAngle(float x)
 
 inline float Util::dist(const cv::Point2f *p0, const cv::Point2f *p1)
 {
+#ifdef _MSC_VER
     return std::sqrtf(square(p1->x-p0->x) + square(p1->y - p0->y));
+#else
+    return std::sqrt(square(p1->x-p0->x) + square(p1->y - p0->y));
+#endif
 }
 
 inline float Util::dist(const cv::Point2f &p0, const cv::Point2f &p1)
 {
+#ifdef _MSC_VER
     return std::sqrtf(square(p1.x - p0.x) + square(p1.y - p0.y));
+#else
+    return std::sqrt(square(p1.x - p0.x) + square(p1.y - p0.y));
+#endif
 }
 
 inline cv::Point2f Util::midPoint(const cv::Point2f *p0, const cv::Point2f *p1)
@@ -445,7 +453,7 @@ int WriteToFile(const T &c, const char *label, const cv::String &fileName, const
             return r;
         }
 
-        std::experimental::filesystem::path filePath(fileName);
+        boost::filesystem::path filePath(fileName);
         cv::String fileFormat = opts ? opts->GetString("FileFormat") : "text";
         std::ofstream ofs(filePath, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
         if (ofs.fail())
@@ -490,7 +498,7 @@ int LoadFromFile(T &c, const char *label, const cv::String &fileName, const cv::
     try
     {
         cv::String formatHint;
-        std::experimental::filesystem::path filePath(fileName);
+        boost::filesystem::path filePath(fileName);
         int r = Util::CheckCompressLoadParameters(fileName, opts, formatHint, errMsg);
         if (MLR_SUCCESS != r)
         {
