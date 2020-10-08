@@ -188,9 +188,10 @@ void Thresholder::operator()(const tbb::blocked_range<int>& br) const
     }
 }
 
+extern RunSequence RunLengthEncode(const cv::Mat &imgMat, const int minGray, const int maxGray);
 RunSequence RunLengthEncode(const cv::Mat &imgMat, const int minGray, const int maxGray)
 {
-    const int nThreads = tbb::task_scheduler_init::default_num_threads();
+    const int nThreads = static_cast<int>(tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism));
     const int numRows = imgMat.rows;
 
     const bool is_parallel = nThreads > 1 && (numRows / nThreads) >= 2;

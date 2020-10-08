@@ -99,7 +99,7 @@ cv::Ptr<MatchResult> ContourTemplateImpl::Search(cv::InputArray img, const cv::P
         return mr;
     }
 
-    ShapeTmplMatchOption stmo{0.8f, 0.5f, 10, false};
+    ShapeTmplMatchOption stmo{0.8f, 0.5f, 10, false, nullptr};
     if (opts)
     {
         stmo.minScore    = opts->GetReal32("MinScore", stmo.minScore);
@@ -142,8 +142,8 @@ int ContourTemplateImpl::Draw(cv::InputOutputArray img, const cv::Ptr<Dict> &opt
         };
 
         cv::String dfp = opts->GetString("DebugFullPath");
-        std::experimental::filesystem::path dDir(dfp);
-        if (std::experimental::filesystem::exists(dDir) && std::experimental::filesystem::is_directory(dDir))
+        boost::filesystem::path dDir(dfp);
+        if (boost::filesystem::exists(dDir) && boost::filesystem::is_directory(dDir))
         {
             for (int l = 0; l < static_cast<int>(pyramid_tmpl_datas_.size()); ++l)
             {
@@ -161,7 +161,7 @@ int ContourTemplateImpl::Draw(cv::InputOutputArray img, const cv::Ptr<Dict> &opt
                     {
                         int label = 0;
                         const int partIdx = i / 8;
-                        if (partIdx < std.clusters.size())
+                        if (partIdx < static_cast<int>(std.clusters.size()))
                         {
                             label = std.clusters[partIdx].label;
                         }
@@ -171,7 +171,7 @@ int ContourTemplateImpl::Draw(cv::InputOutputArray img, const cv::Ptr<Dict> &opt
                     }
 
                     std::string fileName = std::string("tmpl_layer_") + std::to_string(l) + std::string("_number_") + std::to_string(t) + ".png";
-                    std::experimental::filesystem::path tmplFull = dDir;
+                    boost::filesystem::path tmplFull = dDir;
                     tmplFull.append(fileName);
                     cv::imwrite(cv::String(tmplFull.string().c_str()), tmplMat);
                 }

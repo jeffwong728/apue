@@ -123,7 +123,6 @@ void BaseTemplate::CandidateGroup::RLEncodeCandidates(CandidateList &candidates)
 
     if (!candidates.empty())
     {
-        constexpr int negInf = std::numeric_limits<int>::min();
         int colb = candidates.front().col;
         int preRow = candidates.front().row;
         int preCol = candidates.front().col - 1;

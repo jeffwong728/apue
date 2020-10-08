@@ -293,7 +293,14 @@ cv::Ptr<Contour> RegionImpl::GetContour() const
             return contour_;
         } else {
             TraceContour();
-            return contour_ ? contour_ : cv::makePtr<ContourImpl>();
+            if (contour_)
+            {
+                return contour_;
+            }
+            else
+            {
+                return cv::makePtr<ContourImpl>();
+            }
         }
     }
 }
@@ -309,7 +316,14 @@ cv::Ptr<Contour> RegionImpl::GetHole() const
         }
         else {
             TraceContour();
-            return hole_ ? hole_ : cv::makePtr<ContourImpl>();
+            if (hole_)
+            {
+                return hole_;
+            }
+            else
+            {
+                return cv::makePtr<ContourImpl>();
+            }
         }
     }
 }
@@ -718,7 +732,7 @@ cv::Ptr<Region> RegionImpl::Connect() const
         connectivity = 4;
     }
 
-    const int nThreads = tbb::task_scheduler_init::default_num_threads();
+    const int nThreads = static_cast<int>(tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism));
     const RowBeginSequence &rowRanges = GetRowBeginSequence();
     const int numRows = static_cast<int>(rowRanges.size() - 1);
 
@@ -1088,7 +1102,7 @@ void RegionImpl::TraceContour() const
     {
         const auto &rowBegs = GetRowBeginSequence();
 
-        const int nThreads = tbb::task_scheduler_init::default_num_threads();
+        const int nThreads = static_cast<int>(tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism));
         const bool is_parallel = nThreads > 1 && (rgn_runs_.size() / nThreads) >= 1024*10;
 
         if (is_parallel)

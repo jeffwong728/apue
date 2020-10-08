@@ -158,6 +158,7 @@ int PixelTemplateImpl::Draw(cv::InputOutputArray img, const cv::Ptr<Dict> &opts)
             cv::Vec4b(255, 128, 0, 255),
             cv::Vec4b(128, 255, 0,   255)
         };
+        CV_UNUSED(colorTab);
     }
 
     return MLR_SUCCESS;

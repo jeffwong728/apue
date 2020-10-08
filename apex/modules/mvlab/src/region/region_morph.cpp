@@ -525,7 +525,7 @@ cv::Ptr<Region> RegionImpl::erode1(const cv::Ptr<Region> &structElement) const
         while (xcoord <= xend)
         {
             bool breakl = false;
-            std::vector<ErosTransPoint>::const_iterator iterSkelB = skeletonB.cbegin();
+            std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkelB = skeletonB.cbegin();
             while ((!breakl) && iterSkelB != skeletonB.cend())
             {
                 short *pRow = erosTransX.erosTransXlmin.ptr<short>(iterSkelB->point.y + r.start().y);
@@ -589,7 +589,7 @@ cv::Ptr<Region> RegionImpl::erode2(const cv::Ptr<Region> &structElement) const
         int xend = r.start().x + r.len() - 1;
         while (xcoord <= xend) {
             bool breakl = false;
-            std::vector<ErosTransPoint>::const_iterator iterSkelB = skeletonB.begin();
+            std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkelB = skeletonB.begin();
             while ((!breakl) && iterSkelB != skeletonB.end()) {
                 short *pRow = erosTransX.erosTransXlmin.ptr<short>(iterSkelB->point.y + r.start().y);
                 while ((xcoord <= xend) && ((Diff = iterSkelB->erosTrans - pRow[(iterSkelB->point.x + xcoord) << 1]) > 0)) {
@@ -601,7 +601,7 @@ cv::Ptr<Region> RegionImpl::erode2(const cv::Ptr<Region> &structElement) const
 
             if (!breakl) {
                 short minDist = std::numeric_limits<short>::max();
-                for (std::vector<ErosTransPoint>::const_iterator iterSkel = skeletonB.begin(); iterSkel != skeletonB.end(); ++iterSkel) {
+                for (std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkel = skeletonB.begin(); iterSkel != skeletonB.end(); ++iterSkel) {
                     short *pRow = erosTransX.erosTransXlmin.ptr<short>(iterSkel->point.y + r.start().y);
                     minDist = std::min(minDist, pRow[((iterSkel->point.x + xcoord) << 1) + 1]);
                 }
@@ -656,7 +656,7 @@ cv::Ptr<Region> RegionImpl::erode2cut(const cv::Ptr<Region> &structElement) cons
         int xend = r.start().x + r.len() - 1;
         while (xcoord <= xend) {
             bool breakl = false;
-            std::vector<ErosTransPoint>::const_iterator iterSkelB = skeletonB.begin();
+            std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkelB = skeletonB.begin();
             while ((!breakl) && iterSkelB != skeletonB.end()) {
                 short *pRow = erosTransX.erosTransXlmin.ptr<short>(iterSkelB->point.y + r.start().y);
                 while ((xcoord <= xend) && ((Diff = iterSkelB->erosTrans - pRow[(iterSkelB->point.x + xcoord) << 1]) > 0)) {
@@ -668,7 +668,7 @@ cv::Ptr<Region> RegionImpl::erode2cut(const cv::Ptr<Region> &structElement) cons
 
             if (!breakl) {
                 short minDist = std::numeric_limits<short>::max();
-                for (std::vector<ErosTransPoint>::const_iterator iterSkel = skeletonB.begin(); iterSkel != skeletonB.end(); ++iterSkel) {
+                for (std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkel = skeletonB.begin(); iterSkel != skeletonB.end(); ++iterSkel) {
                     short *pRow = erosTransX.erosTransXlmin.ptr<short>(iterSkel->point.y + r.start().y);
                     minDist = std::min(minDist, pRow[((iterSkel->point.x + xcoord) << 1) + 1]);
                 }
@@ -714,7 +714,7 @@ cv::Ptr<Region> RegionImpl::erode3(const cv::Ptr<Region> &structElement) const
         int xend = r.start().x + r.len() - 1;
         while (xcoord <= xend) {
             bool breakl = false;
-            std::vector<ErosTransPoint>::const_iterator iterSkelB = skeletonB.begin();
+            std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkelB = skeletonB.begin();
             while ((!breakl) && iterSkelB != skeletonB.end()) {
                 short *pRow = erosTransX.erosTransXlmin.ptr<short>(iterSkelB->point.y + r.start().y);
                 int Diff = iterSkelB->erosTrans - pRow[(iterSkelB->point.x + xcoord) << 1];
@@ -727,7 +727,7 @@ cv::Ptr<Region> RegionImpl::erode3(const cv::Ptr<Region> &structElement) const
 
             if (!breakl) {
                 short minDist = std::numeric_limits<short>::max();
-                for (std::vector<ErosTransPoint>::const_iterator iterSkel = skeletonB.begin(); iterSkel != skeletonB.end(); ++iterSkel) {
+                for (std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkel = skeletonB.begin(); iterSkel != skeletonB.end(); ++iterSkel) {
                     short *pRow = erosTransX.erosTransXlmin.ptr<short>(iterSkel->point.y + r.start().y);
                     minDist = std::min(minDist, pRow[((iterSkel->point.x + xcoord) << 1) + 1]);
                 }
@@ -780,7 +780,7 @@ cv::Ptr<Region> RegionImpl::dilate(const cv::Ptr<Region> &structElement) const
         }
         while (xcoord <= xend) {
             bool breakl = false;
-            std::vector<ErosTransPoint>::const_iterator iterSkelB = skeletonBtrans.begin();
+            std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkelB = skeletonBtrans.begin();
             while ((!breakl) && iterSkelB != skeletonBtrans.end()) {
                 int Diff = 0;
                 short *pRow = erosTransXc.erosTransXlmin.ptr<short>(iterSkelB->point.y + r.start().y);
@@ -793,7 +793,7 @@ cv::Ptr<Region> RegionImpl::dilate(const cv::Ptr<Region> &structElement) const
 
             if (!breakl) {
                 short minDist = std::numeric_limits<short>::max();
-                for (std::vector<ErosTransPoint>::const_iterator iterSkel = skeletonBtrans.begin(); iterSkel != skeletonBtrans.end(); ++iterSkel) {
+                for (std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkel = skeletonBtrans.begin(); iterSkel != skeletonBtrans.end(); ++iterSkel) {
                     short *pRow = erosTransXc.erosTransXlmin.ptr<short>(iterSkel->point.y + r.start().y);
                     minDist = std::min(minDist, pRow[((iterSkel->point.x + xcoord) << 1) + 1]);
                 }
@@ -858,7 +858,7 @@ cv::Ptr<Region> RegionImpl::dilatecut(const cv::Ptr<Region> &structElement) cons
         }
         while (xcoord <= xend) {
             bool breakl = false;
-            std::vector<ErosTransPoint>::const_iterator iterSkelB = skeletonBtrans.begin();
+            std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkelB = skeletonBtrans.begin();
             while ((!breakl) && iterSkelB != skeletonBtrans.end()) {
                 int Diff = 0;
                 short *pRow = erosTransXc.erosTransXlmin.ptr<short>(iterSkelB->point.y + r.start().y);
@@ -871,7 +871,7 @@ cv::Ptr<Region> RegionImpl::dilatecut(const cv::Ptr<Region> &structElement) cons
 
             if (!breakl) {
                 short minDist = std::numeric_limits<short>::max();
-                for (std::vector<ErosTransPoint>::const_iterator iterSkel = skeletonBtrans.begin(); iterSkel != skeletonBtrans.end(); ++iterSkel) {
+                for (std::vector<ErosTransPoint, MyAlloc<ErosTransPoint>>::const_iterator iterSkel = skeletonBtrans.begin(); iterSkel != skeletonBtrans.end(); ++iterSkel) {
                     short *pRow = erosTransXc.erosTransXlmin.ptr<short>(iterSkel->point.y + r.start().y);
                     minDist = min(minDist, pRow[((iterSkel->point.x + xcoord) << 1) + 1]);
                 }
@@ -923,7 +923,8 @@ public:
             if (uRuns.empty())
             {
                 uRuns.swap(dstRuns);
-                dstRuns.swap(RunSequence(Z_->size()));
+                RunSequence t(Z_->size());
+                dstRuns.swap(t);
             }
             else
             {
@@ -958,7 +959,7 @@ public:
     RunSequence uRuns;
 
 public:
-    void operator()(const tbb::blocked_range<int>& r)
+    void operator()(const tbb::blocked_range<int>& br)
     {
         RunSequence dstRuns(Z_->size());
         constexpr int simdSize = 8;
@@ -966,7 +967,7 @@ public:
         const int regularNumRuns = numRuns & (-simdSize);
         vcl::Vec8i label(0);
 
-        for (int i = r.begin(); i != r.end(); ++i)
+        for (int i = br.begin(); i != br.end(); ++i)
         {
             const RunLength &s = (*SE_)[i];
             vcl::Vec8i sRow(s.row), sColb(s.colb), sCole(s.cole-1);
@@ -992,7 +993,6 @@ public:
 
                 vcl::Vec8i rRow = sRow + zRow;
                 vcl::Vec8i rColb = sColb + zColb;
-                vcl::Vec8i rCole = sCole + zCole;
 
                 r0 = vcl::blend8<0, 1, 2, 3, 8, 9, 10, 11>(rRow, rColb);
                 r1 = vcl::blend8<0, 1, 2, 3, 8, 9, 10, 11>(zCole, label);
@@ -1026,7 +1026,8 @@ public:
             if (uRuns.empty())
             {
                 uRuns.swap(dstRuns);
-                dstRuns.swap(RunSequence(Z_->size()));
+                RunSequence t(Z_->size());
+                dstRuns.swap(t);
             }
             else
             {
@@ -1088,7 +1089,8 @@ public:
             {
                 first_ = false;
                 uRuns.swap(lRuns);
-                lRuns.swap(RunSequence(Z_->size()));
+                RunSequence t(Z_->size());
+                lRuns.swap(t);
             }
             else
             {

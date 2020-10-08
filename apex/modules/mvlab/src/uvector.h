@@ -77,12 +77,6 @@ template<typename Tp, typename Alloc = std::allocator<Tp> >
 class uvector : private Alloc
 {
 	static_assert(std::is_standard_layout<Tp>(), "A uvector can only hold classes with standard layout");
-private:
-#if __cplusplus > 201402L
-	typedef std::allocator_traits<allocator_type>::is_always_equal allocator_is_always_equal;
-#else
-	typedef std::false_type allocator_is_always_equal;
-#endif
 public:
 	/// Element type
 	typedef Tp value_type;
@@ -110,6 +104,13 @@ public:
 	typedef std::size_t size_t;
 	/// Type used for indexing elements
 	typedef std::size_t size_type;
+
+private:
+#if __cplusplus > 201402L
+	typedef typename std::allocator_traits<allocator_type>::is_always_equal allocator_is_always_equal;
+#else
+	typedef std::false_type allocator_is_always_equal;
+#endif
 	
 private:
 	pointer _begin, _end, _endOfStorage;

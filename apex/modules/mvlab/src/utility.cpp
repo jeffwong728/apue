@@ -58,7 +58,7 @@ cv::Mat Util::PathToMask(const Geom::PathVector &pv, const cv::Size &sz, UScalab
 int Util::CheckSaveParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &errMsg)
 {
     errMsg.resize(0);
-    std::experimental::filesystem::path filePath(fileName);
+    boost::filesystem::path filePath(fileName);
     if (filePath.empty())
     {
         errMsg = "file name empty";
@@ -66,8 +66,8 @@ int Util::CheckSaveParameters(const cv::String &fileName, const cv::Ptr<Dict> &o
     }
 
     cv::String policy = opts ? opts->GetString("Policy") : "backup";
-    if (std::experimental::filesystem::exists(filePath)) {
-        if (std::experimental::filesystem::is_directory(filePath)) {
+    if (boost::filesystem::exists(filePath)) {
+        if (boost::filesystem::is_directory(filePath)) {
             errMsg = "existing directory";
             return MLR_PARAMETER_ERROR_EXISTING_DIRECTORY;
         }
@@ -77,21 +77,21 @@ int Util::CheckSaveParameters(const cv::String &fileName, const cv::Ptr<Dict> &o
                 return MLR_PARAMETER_ERROR_EXISTING_FILE;
             }
             else if (policy == "overwrite") {
-                std::experimental::filesystem::remove(filePath);
+                boost::filesystem::remove(filePath);
             }
             else {
-                std::experimental::filesystem::path backFilePath;
+                boost::filesystem::path backFilePath;
                 do {
                     auto t = std::time(nullptr);
                     auto tm = *std::localtime(&t);
                     std::ostringstream oss;
                     oss << std::put_time(&tm, "_%d-%m-%Y_%H-%M-%S_backup");
-                    backFilePath = filePath;
-                    backFilePath.replace_filename(filePath.stem().concat(oss.str())).concat(filePath.extension().string());
-                } while (std::experimental::filesystem::exists(backFilePath));
+                    backFilePath = filePath.parent_path() / (filePath.stem().concat(oss.str()).concat(filePath.extension().string()));
 
-                std::experimental::filesystem::copy_file(filePath, backFilePath);
-                std::experimental::filesystem::remove(filePath);
+                } while (boost::filesystem::exists(backFilePath));
+
+                boost::filesystem::copy_file(filePath, backFilePath);
+                boost::filesystem::remove(filePath);
             }
         }
     }
@@ -102,8 +102,8 @@ int Util::CheckSaveParameters(const cv::String &fileName, const cv::Ptr<Dict> &o
 int Util::CheckLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &formatHint, cv::String &errMsg)
 {
     errMsg.resize(0);
-    std::experimental::filesystem::path filePath(fileName);
-    if (!std::experimental::filesystem::exists(filePath) || !std::experimental::filesystem::is_regular_file(filePath))
+    boost::filesystem::path filePath(fileName);
+    if (!boost::filesystem::exists(filePath) || !boost::filesystem::is_regular_file(filePath))
     {
         errMsg = "file path error";
         return MLR_PARAMETER_ERROR_FILE_PATH;
@@ -147,8 +147,8 @@ int Util::CheckLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &o
 int Util::CheckCompressLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &formatHint, cv::String &errMsg)
 {
     errMsg.resize(0);
-    std::experimental::filesystem::path filePath(fileName);
-    if (!std::experimental::filesystem::exists(filePath) || !std::experimental::filesystem::is_regular_file(filePath))
+    boost::filesystem::path filePath(fileName);
+    if (!boost::filesystem::exists(filePath) || !boost::filesystem::is_regular_file(filePath))
     {
         errMsg = "file path error";
         return MLR_PARAMETER_ERROR_FILE_PATH;

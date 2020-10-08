@@ -612,7 +612,7 @@ cv::Ptr<Region> RegionArrayImpl::Closing(const cv::Ptr<Region> &structElement, c
 
 bool RegionArrayImpl::IsNeedDoParallel() const
 {
-    const int nThreads = tbb::task_scheduler_init::default_num_threads();
+    const int nThreads = static_cast<int>(tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism));
     const int numRgns = static_cast<int>(rgns_.size());
     return nThreads > 1 && (numRgns / nThreads) >= 2;
 }

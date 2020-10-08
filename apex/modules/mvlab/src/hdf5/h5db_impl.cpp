@@ -12,12 +12,12 @@ cv::Ptr<H5DB> H5DB::Open(const cv::String &HDF5Filename)
     {
         H5::Exception::dontPrint();
 
-        std::error_code ec;
+        boost::system::error_code ec;
         unsigned int flags = 0;
-        std::experimental::filesystem::path p(HDF5Filename);
-        if (std::experimental::filesystem::exists(p, ec))
+        boost::filesystem::path p(HDF5Filename);
+        if (boost::filesystem::exists(p, ec))
         {
-            if (std::experimental::filesystem::is_regular_file(p, ec)
+            if (boost::filesystem::is_regular_file(p, ec)
                 && H5::H5File::isHdf5(HDF5Filename))
             {
                 flags = H5F_ACC_RDWR;

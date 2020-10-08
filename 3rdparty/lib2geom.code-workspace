@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "lib2geom"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"thread": "cpp",
+			"memory": "cpp"
+		}
+	}
+}

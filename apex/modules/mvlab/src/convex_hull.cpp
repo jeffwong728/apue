@@ -203,7 +203,14 @@ ScalablePoint2fSequence ConvexHull::AndrewMonotoneChain(const cv::Point2f *point
     }
 
     AdaptBuffer<cv::Point2f> pointPtrs(cPoints);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(pointPtrs.data(), points, cPoints*sizeof(cv::Point2f));
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     std::sort(pointPtrs.data(), pointPtrs.data() + cPoints, CHullCmpPoints<float>());
 
     ScalablePoint2fSequence hull(cPoints+2);

@@ -59,19 +59,28 @@
 #include <fstream>
 #include <variant>
 #include <H5Cpp.h>
+#ifdef _MSC_VER
 #pragma warning( push )
 #pragma warning( disable : 4389 4310 )
+#endif
 #include <vectorclass.h>
+#ifdef _MSC_VER
 #pragma warning( pop )
+#endif
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
 #include <opencv2/imgcodecs.hpp>
-#include <tbb/tbb.h>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
 #include <tbb/parallel_invoke.h>
 #include <tbb/scalable_allocator.h>
+#include <tbb/task.h>
+#include <tbb/global_control.h>
+#include <tbb/task_scheduler_observer.h>
 #include <cairomm/cairomm.h>
 #include <boost/optional.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/variant2/variant.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
@@ -93,22 +102,28 @@
 #include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filter/lzma.hpp>
 #include <boost/iostreams/device/back_inserter.hpp>
+#ifdef _MSC_VER
 #pragma warning( push )
 #pragma warning( disable : 4100 4702)
+#endif
 #include <boost/geometry.hpp>
 #include <boost/geometry/core/exception.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
 #include <boost/geometry/geometries/register/ring.hpp>
+#ifdef _MSC_VER
 #pragma warning( pop )
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267 4244 )
+#endif
 #include <2geom/2geom.h>
 #include <2geom/circle.h>
 #include <2geom/ellipse.h>
 #include <2geom/path-sink.h>
 #include <2geom/path-intersection.h>
 #include <2geom/cairo-path-sink.h>
+#ifdef _MSC_VER
 #pragma warning( pop )
+#endif
 
 constexpr int XY_SHIFT = 10;
 constexpr int XY_DELTA = 1 << XY_SHIFT >> 1;

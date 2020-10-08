@@ -458,7 +458,7 @@ namespace Miniball {
   typename Miniball<d, CoordAccessor>::NT 
   Miniball<d, CoordAccessor>::suboptimality () const
   {
-    NT l = NT[d+1];
+    NT l[d+1]={0};
     NT min_l = nt0;
     l[0] = NT(1);
     for (int i=ssize-1; i>0; --i) {
