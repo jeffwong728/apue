@@ -11,10 +11,11 @@ import extradata
 class TestDilation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        if sys.platform == 'win32':
+            logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                        filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
+                        filemode='a')
 
     def test_Bumps(self):
         se = mvlab.Region_GenStructuringElement('circle', 11)
