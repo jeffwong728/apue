@@ -455,7 +455,7 @@ int WriteToFile(const T &c, const char *label, const cv::String &fileName, const
 
         boost::filesystem::path filePath(fileName);
         cv::String fileFormat = opts ? opts->GetString("FileFormat") : "text";
-        std::ofstream ofs(filePath, std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+        std::ofstream ofs(filePath.string(), std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
         if (ofs.fail())
         {
             errMsg = "open/create file error";
@@ -505,7 +505,7 @@ int LoadFromFile(T &c, const char *label, const cv::String &fileName, const cv::
             return r;
         }
 
-        std::ifstream ifs(filePath, std::ifstream::in | std::ifstream::binary);
+        std::ifstream ifs(filePath.string(), std::ifstream::in | std::ifstream::binary);
         if (ifs.fail())
         {
             errMsg = "open file error";
