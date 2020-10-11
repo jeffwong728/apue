@@ -7,7 +7,7 @@
       "CMAKE_VERBOSE_MAKEFILE" : true,
       "CMAKE_SKIP_RPATH" : false,
       "CMAKE_SKIP_INSTALL_RPATH" : false,
-      "CMAKE_DEBUG_POSTFIX": "_d",
+      //"CMAKE_DEBUG_POSTFIX": "_d",
       "CMAKE_MINSIZEREL_POSTFIX" : "_minsize",
       "CMAKE_RELWITHDEBINFO_POSTFIX" : "_debinfo",
       "MIN_VER_CMAKE" : "3.15",
