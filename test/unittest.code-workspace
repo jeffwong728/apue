@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "unittest"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"thread": "cpp",
+			"chrono": "cpp"
+		}
+	}
+}

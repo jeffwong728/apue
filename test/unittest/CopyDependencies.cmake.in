@@ -1,0 +1,14 @@
+set(MY_DEPENDENCY_PATHS "$ENV{SPAM_ROOT_DIR}/install/opencv/bin")
+list(APPEND MY_DEPENDENCY_PATHS $<$<CONFIG:Debug>:"$ENV{VCPKG_ROOT_DIR}/installed/x64-windows/debug/bin">)
+list(APPEND MY_DEPENDENCY_PATHS $<$<NOT:$<CONFIG:Debug>>:"$ENV{VCPKG_ROOT_DIR}/installed/x64-windows/bin">)
+
+file(GET_RUNTIME_DEPENDENCIES
+    EXECUTABLES "$<TARGET_FILE:test_Region>"
+    RESOLVED_DEPENDENCIES_VAR _r_deps
+    UNRESOLVED_DEPENDENCIES_VAR _u_deps
+    DIRECTORIES ${MY_DEPENDENCY_PATHS}
+)
+
+foreach(_file ${_r_deps})
+  file(COPY "${_file}" DESTINATION "${CMAKE_BINARY_DIR}/bin")
+endforeach()

@@ -1,0 +1,45 @@
+project(unittest)
+cmake_minimum_required(VERSION 3.18)
+enable_testing()
+include(GoogleTest)
+
+set(OpenCV_DIR "$ENV{SPAM_ROOT_DIR}/install/opencv")
+find_package(GTest CONFIG REQUIRED)
+find_package(OpenCV REQUIRED core imgproc imgcodecs features2d flann mvlab)
+add_executable(test_Region region_gtest.cpp)
+
+set(gtesttargets)
+list(APPEND gtesttargets test_Region)
+
+foreach(t ${gtesttargets})
+    target_link_libraries(${t} PRIVATE GTest::gtest GTest::gtest_main)
+endforeach()
+
+set(libs)
+list(APPEND libs opencv_core)
+list(APPEND libs opencv_imgcodecs)
+list(APPEND libs opencv_flann opencv_features2d opencv_mvlab)
+
+foreach(t ${gtesttargets})
+    target_link_libraries(${t} PRIVATE ${libs})
+    set_target_properties (${t} PROPERTIES FOLDER unittest)
+    set_target_properties (${t} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    if(MSVC)
+        target_compile_definitions(${t} PRIVATE __AVX2__ _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS NOMINMAX VCL_NAMESPACE=vcl)
+    endif()
+    target_compile_definitions(${t} PRIVATE ARMA_DONT_USE_WRAPPER)
+    target_compile_options(${t} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
+    target_compile_options(${t} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>)
+endforeach()
+
+file(GENERATE OUTPUT CopyDependencies.cmake INPUT CopyDependencies.cmake.in)
+add_custom_command(TARGET test_Region POST_BUILD COMMAND ${CMAKE_COMMAND} -P "${CMAKE_BINARY_DIR}/CopyDependencies.cmake")
+
+set(CV_BIN_PATH "$ENV{SPAM_ROOT_DIR}/install/opencv/bin")
+set(VCPKG_BIN_DEBUG "$ENV{VCPKG_ROOT_DIR}/installed/x64-windows/debug/bin")
+set(VCPKG_BIN_RELEASE "$ENV{VCPKG_ROOT_DIR}/installed/x64-windows/bin")
+
+foreach(t ${gtesttargets})
+    gtest_add_tests(TARGET ${t} TEST_LIST allTests)
+    set_tests_properties(${allTests} PROPERTIES ENVIRONMENT "PATH=$<IF:$<CONFIG:Debug>,${VCPKG_BIN_DEBUG},${VCPKG_BIN_RELEASE}>;${CV_BIN_PATH};$ENV{PATH}")
+endforeach()

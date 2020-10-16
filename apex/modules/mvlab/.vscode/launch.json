@@ -5,6 +5,19 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "(Windows) Launch",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "python.exe",
+      "args": ["${env:SPAM_ROOT_DIR}/test/run.py", "--${command:cmake.buildType}"],
+      "stopAtEntry": false,
+      "cwd": "${env:SPAM_ROOT_DIR}",
+      "environment": [],
+      "externalConsole": false,
+      "windows": {},
+      "internalConsoleOptions" : "openOnSessionStart"
+    },
+    {
       "name": "(gdb) Launch",
       "type": "cppdbg",
       "request": "launch",
