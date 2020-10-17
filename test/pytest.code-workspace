@@ -8,6 +8,7 @@
 		"files.associations": {
 			"thread": "cpp",
 			"chrono": "cpp"
-		}
+		},
+		"python.pythonPath": "C:\\Python38\\python.exe"
 	}
 }
