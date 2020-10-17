@@ -1,0 +1,7 @@
+{
+  "files.exclude": {
+    "unittest": true,
+    "Camera": true,
+    "demo": true
+  }
+}

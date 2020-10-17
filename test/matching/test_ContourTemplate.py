@@ -19,7 +19,7 @@ class TestContourTemplate(unittest.TestCase):
 
     @unittest.skip("This is a debug case")
     def test_Draw_Mista_ContourTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenRectangle((272, 110, 100,50))

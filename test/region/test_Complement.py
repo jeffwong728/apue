@@ -11,10 +11,7 @@ import extradata
 class TestRegionComplement(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_Box_Complement(self):
         image = numpy.zeros((48, 64, 1), numpy.uint8)
@@ -65,7 +62,7 @@ class TestRegionComplement(unittest.TestCase):
         self.assertEqual(rgns.Count(), 3)
 
     def test_Scrach_Complement(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
         rgn.Area()
@@ -79,7 +76,7 @@ class TestRegionComplement(unittest.TestCase):
         self.assertEqual(compRgn.CountRuns(), 4402)
 
     def test_Mista_Complement(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
         rgn.Area()
@@ -94,7 +91,7 @@ class TestRegionComplement(unittest.TestCase):
         self.assertEqual(rgns.Count(), 1072)
 
     def test_Digits_Complement(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 151, 255)
         rgn.Area()

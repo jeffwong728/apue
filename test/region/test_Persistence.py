@@ -11,10 +11,7 @@ import extradata
 class TestRegionPersistence(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_Save_Empty_Region(self):
         opts = mvlab.Dict_GenEmpty()
@@ -59,7 +56,7 @@ class TestRegionPersistence(unittest.TestCase):
         opts.SetString('Policy', 'overwrite')
         opts.SetString('FileFormat', "text")
         fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "mista_region.txt.xz")
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
         r = rgn.Save(fileName, opts)

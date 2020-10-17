@@ -11,10 +11,7 @@ import extradata
 class TestRegionSymmDifference(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_2VBox_SymmDifference(self):
         image1 = numpy.zeros((48, 64, 1), numpy.uint8)
@@ -101,7 +98,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 
     def test_Mista_Box_SymmDifference(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRectangle((1000, 1000, 1000, 1000))
@@ -127,7 +124,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 
     def test_Mista_Circle_SymmDifference(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenCircle((1250, 1250), 750)
@@ -146,7 +143,7 @@ class TestRegionSymmDifference(unittest.TestCase):
         self.assertAlmostEqual(symDiffRgn.Area(), dRgn.Area())
 
     def test_Mista_RotatedEllipse_SymmDifference(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRotatedEllipse((1250, 1250), (750, 500), 30)

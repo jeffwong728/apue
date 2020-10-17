@@ -12,13 +12,10 @@ import random
 class TestRegionTransformation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_Zoom_Deer(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
@@ -40,7 +37,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Zoom_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
@@ -56,7 +53,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Shrink_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
@@ -72,7 +69,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Zoom_Digits(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
@@ -87,7 +84,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Shrink_Digits(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
@@ -144,7 +141,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Draw_Deer(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)
@@ -163,7 +160,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveImage(self.id(), image)
 
     def test_Affine_Deer(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         r, rgn = mvlab.Threshold(blue, 150, 255)

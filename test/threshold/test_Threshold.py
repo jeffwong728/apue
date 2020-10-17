@@ -11,10 +11,11 @@ import extradata
 class TestThreshold(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        if sys.platform == 'win32':
+            logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                        filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
+                        filemode='a')
 
     def test_Threshold_Single_Pixel(self):
         image = numpy.zeros((1, 1, 1), numpy.uint8)
@@ -39,7 +40,7 @@ class TestThreshold(unittest.TestCase):
                 self.assertEqual(rgn.BoundingBox(), (startCol, 0, lastCol-startCol, 1))
 
     def test_Scrach_Threshold(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
         startTime = time.perf_counter()
@@ -51,7 +52,7 @@ class TestThreshold(unittest.TestCase):
         self.assertEqual(r, 0, "Threshold 'scrach.png' error")
 
     def test_Mista_Threshold(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         startTime = time.perf_counter()
@@ -64,7 +65,7 @@ class TestThreshold(unittest.TestCase):
         self.assertEqual(rgn.CountRuns(), 234794)
 
     def test_Digits_Threshold(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
         startTime = time.perf_counter()

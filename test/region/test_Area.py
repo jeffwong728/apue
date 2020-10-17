@@ -11,10 +11,7 @@ import extradata
 class TestRegionArea(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_Empty_Region(self):
         rgn = mvlab.Region_GenEmpty()
@@ -56,7 +53,7 @@ class TestRegionArea(unittest.TestCase):
         extradata.SaveRegion(self.id(), rgn)
 
     def test_Mista_Area(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
@@ -71,7 +68,7 @@ class TestRegionArea(unittest.TestCase):
         self.assertAlmostEqual(rgn.Area(), areaSum, 'Region area {0:f} not equal sum of compoent areas {1:f}'.format(rgn.Area(), areaSum))
 
     def test_Mista_Hole_Area(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         r, rgn = mvlab.Threshold(blue, 150, 255)
 

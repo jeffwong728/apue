@@ -11,10 +11,7 @@ import extradata
 class TestRegionUnion(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_SameRegion_Union(self):
         image1 = numpy.zeros((48, 64, 1), numpy.uint8)
@@ -91,7 +88,7 @@ class TestRegionUnion(unittest.TestCase):
         self.assertAlmostEqual(rgn1.Area()+rgn2.Area()-interRgn.Area(), uRgn.Area())
 
     def test_Mista_Box_Union(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRectangle((1000, 1000, 1000, 1000))
@@ -103,7 +100,7 @@ class TestRegionUnion(unittest.TestCase):
         extradata.SaveRegion(self.id(), interRgn, image1.shape)
 
     def test_Mista_Circle_Union(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenCircle((1250, 1250), 750)
@@ -115,7 +112,7 @@ class TestRegionUnion(unittest.TestCase):
         extradata.SaveRegion(self.id(), interRgn, image1.shape)
 
     def test_Mista_RotatedEllipse_Union(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'spam', 'unittest', 'idata', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         r, rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRotatedEllipse((1250, 1250), (750, 500), 30)
