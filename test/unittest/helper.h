@@ -10,6 +10,7 @@
 #include <opencv2/highgui.hpp>
 #include <boost/core/noncopyable.hpp>
 
+#define GTEST_TIME_COUT std::cout << "[          ] [ Time ] "
 class UnitTestHelper : private boost::noncopyable
 {
 public:

@@ -27,12 +27,15 @@ else()
     endforeach()
 endif()
 
+
+find_package(TBB CONFIG REQUIRED tbb)
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
 set(libs)
 list(APPEND libs opencv_core)
 list(APPEND libs opencv_imgcodecs)
 list(APPEND libs opencv_flann opencv_features2d opencv_mvlab)
+list(APPEND libs TBB::tbb)
 list(APPEND libs Boost::filesystem)
 
 foreach(t ${gtesttargets})
