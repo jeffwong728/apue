@@ -9,6 +9,6 @@
 			"thread": "cpp",
 			"chrono": "cpp"
 		},
-		"python.pythonPath": "C:\\Python38\\python.exe"
+		"python.pythonPath": "${env:PYTHON_INSTALL_LOC}"
 	}
 }
