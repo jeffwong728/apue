@@ -3,15 +3,18 @@ import sys
 import unittest
 import HtmlTestRunner
 import argparse
+import platform
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--Debug', action='store_true', help='Enable debug mode')
 parser.add_argument('-r', '--Release', action='store_true', help='Enable release mode')
 args = parser.parse_args()
-if args.Debug:
-    os.add_dll_directory(os.path.join(os.environ["VCPKG_ROOT_DIR"], 'installed', 'x64-windows', 'debug', 'bin'))
-else:
-    os.add_dll_directory(os.path.join(os.environ["VCPKG_ROOT_DIR"], 'installed', 'x64-windows', 'bin'))
+if platform.system() == "Windows":
+    if args.Debug:
+        os.add_dll_directory(os.path.join(os.environ["VCPKG_ROOT_DIR"], 'installed', 'x64-windows', 'debug', 'bin'))
+    else:
+        os.add_dll_directory(os.path.join(os.environ["VCPKG_ROOT_DIR"], 'installed', 'x64-windows', 'bin'))
 import extradata
 
 extradata.init()
@@ -34,4 +37,8 @@ teml_args = {
 runner = HtmlTestRunner.HTMLTestRunner(combine_reports=True, report_name="mvlab", add_timestamp=False, template=tmplPath, template_args=teml_args)
 runner.run(tests)
 
-os.startfile(os.path.join(os.environ["SPAM_ROOT_DIR"], 'reports', 'mvlab.html'))
+if platform.system() == "Windows":
+    os.startfile(os.path.join(os.environ["SPAM_ROOT_DIR"], 'reports', 'mvlab.html'))
+else:
+    opener ="open" if sys.platform == "darwin" else "xdg-open"
+    subprocess.call([opener, os.path.join(os.environ["SPAM_ROOT_DIR"], 'reports', 'mvlab.html')])
