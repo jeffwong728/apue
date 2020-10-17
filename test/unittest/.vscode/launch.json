@@ -19,7 +19,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/${command:cmake.buildType}/apue",
+            "program": "${env:SPAM_ROOT_DIR}/build/unittest/${command:cmake.buildType}/bin/test_Region_Morph",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

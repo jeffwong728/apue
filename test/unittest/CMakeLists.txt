@@ -4,8 +4,10 @@ enable_testing()
 include(GoogleTest)
 
 add_executable(test_Region region_gtest.cpp)
+add_executable(test_Region_Morph region_morph_gtest.cpp helper.h helper.cpp)
 set(gtesttargets)
 list(APPEND gtesttargets test_Region)
+list(APPEND gtesttargets test_Region_Morph)
 
 if (WIN32)
     set(OpenCV_DIR "$ENV{SPAM_ROOT_DIR}/install/opencv")
@@ -25,10 +27,13 @@ else()
     endforeach()
 endif()
 
+find_package(Boost REQUIRED COMPONENTS filesystem)
+
 set(libs)
 list(APPEND libs opencv_core)
 list(APPEND libs opencv_imgcodecs)
 list(APPEND libs opencv_flann opencv_features2d opencv_mvlab)
+list(APPEND libs Boost::filesystem)
 
 foreach(t ${gtesttargets})
     target_link_libraries(${t} PRIVATE ${libs})
