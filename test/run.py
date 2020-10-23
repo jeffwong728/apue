@@ -8,7 +8,7 @@ import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-D', '--Debug', action='store_true', help='Enable debug mode')
-parser.add_argument('-r', '--Release', action='store_true', help='Enable release mode')
+parser.add_argument('-R', '--Release', action='store_true', help='Enable release mode')
 parser.add_argument('-c', '--Case', help='Run test from name')
 parser.add_argument('-f', '--File', help='Run test list from file')
 parser.add_argument('-d', '--Directory', help='Run test directory')

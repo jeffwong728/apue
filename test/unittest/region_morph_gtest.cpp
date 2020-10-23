@@ -12,8 +12,7 @@ namespace
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage(UnitTestHelper::GetFullPath(std::string("mista.png")));
     EXPECT_FALSE(grayImg.empty());
 
-    cv::Ptr<cv::mvlab::Region> rgn;
-    cv::mvlab::Threshold(grayImg, 128, 255, rgn);
+    cv::Ptr<cv::mvlab::Region> rgn = cv::mvlab::Threshold(grayImg, 128, 255);
     EXPECT_DOUBLE_EQ(rgn->Area(), 1932245.);
 
     cv::Ptr<cv::mvlab::Region> se = cv::mvlab::Region::GenStructuringElement("circle", 5);
@@ -32,8 +31,7 @@ namespace
     std::tie(grayImg, colorImg) = UnitTestHelper::GetGrayScaleImage(UnitTestHelper::GetFullPath(std::string("mista.png")));
     EXPECT_FALSE(grayImg.empty());
 
-    cv::Ptr<cv::mvlab::Region> rgn;
-    cv::mvlab::Threshold(grayImg, 128, 255, rgn);
+    cv::Ptr<cv::mvlab::Region> rgn = cv::mvlab::Threshold(grayImg, 128, 255);
     EXPECT_DOUBLE_EQ(rgn->Area(), 1932245.);
 
     cv::Ptr<cv::mvlab::Region> se = cv::mvlab::Region::GenStructuringElement("circle", 5);

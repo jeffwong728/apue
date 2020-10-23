@@ -11,5 +11,5 @@
     "cmake.testEnvironment": {
       "PATH" : "${env:SPAM_ROOT_DIR}/installed/x64-windows/debug/bin;${env:SPAM_ROOT_DIR}/install/opencv/bin;${env:PATH}"
     },
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": true
 }

@@ -5,9 +5,12 @@ include(GoogleTest)
 
 add_executable(test_Region region_gtest.cpp)
 add_executable(test_Region_Morph region_morph_gtest.cpp helper.h helper.cpp)
+add_executable(test_Region_Misc region_misc_gtest.cpp helper.h helper.cpp)
+
 set(gtesttargets)
 list(APPEND gtesttargets test_Region)
 list(APPEND gtesttargets test_Region_Morph)
+list(APPEND gtesttargets test_Region_Misc)
 
 if (WIN32)
     set(OpenCV_DIR "$ENV{SPAM_ROOT_DIR}/install/opencv")

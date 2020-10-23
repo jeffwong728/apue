@@ -21,7 +21,7 @@ class TestErosion(unittest.TestCase):
         se = mvlab.Region_GenStructuringElement('circle', 5)
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 0, 50)
+        rgn = mvlab.Threshold(blue, 0, 50)
 
         startTime = time.perf_counter()
         ergn = rgn.Erosion(se)
@@ -34,7 +34,7 @@ class TestErosion(unittest.TestCase):
         se = mvlab.Region_GenStructuringElement('circle', 5)
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 0, 50)
+        rgn = mvlab.Threshold(blue, 0, 50)
 
         opts = mvlab.Dict_GenEmpty()
         opts.SetString("Method", "RLEErosion")
@@ -54,7 +54,7 @@ class TestErosion(unittest.TestCase):
         se = mvlab.Region_GenStructuringElement('circle', 5)
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         opts = mvlab.Dict_GenEmpty()
 
         opts.SetString("Method", "erode1")

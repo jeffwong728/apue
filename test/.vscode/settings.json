@@ -3,5 +3,6 @@
     "unittest": true,
     "Camera": true,
     "demo": true
-  }
+  },
+  "python.formatting.provider": "black"
 }

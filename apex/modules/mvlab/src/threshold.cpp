@@ -233,47 +233,38 @@ RunSequence RunLengthEncode(const cv::Mat &imgMat, const int minGray, const int 
     }
 }
 
-int Threshold(cv::InputArray src, const int minGray, const int maxGray, cv::Ptr<Region> &region)
+cv::Ptr<Region> Threshold(cv::InputArray src, const int minGray, const int maxGray)
 {
-    region = cv::makePtr<RegionImpl>();
-    cv::Ptr<RegionImpl> rgnImpl = region.dynamicCast<RegionImpl>();
-    if (!rgnImpl)
-    {
-        return MLR_MEMORY_ERROR;
-    }
-
     cv::Mat imgMat = src.getMat();
     if (imgMat.empty())
     {
-        return MLR_IMAGE_EMPTY;
+        return cv::makePtr<RegionImpl>();
     }
 
     if (minGray < 0 || minGray > 255)
     {
-        return MLR_PARAMETER_ERROR + 1;
+        return cv::makePtr<RegionImpl>();
     }
 
     if (maxGray < 0 || maxGray > 255)
     {
-        return MLR_PARAMETER_ERROR + 2;
+        return cv::makePtr<RegionImpl>();
     }
 
     if (minGray >= maxGray)
     {
-        return MLR_PARAMETER_ERROR + 1;
+        return cv::makePtr<RegionImpl>();
     }
 
     int dph = imgMat.depth();
     int cnl = imgMat.channels();
     if (CV_8U != dph || 1 != cnl)
     {
-        return MLR_IMAGE_FORMAT_ERROR;
+        return cv::makePtr<RegionImpl>();
     }
 
     RunSequence allRuns = RunLengthEncode(imgMat, minGray, maxGray);
-    region = cv::makePtr<RegionImpl>(&allRuns);
-
-    return MLR_SUCCESS;
+    return cv::makePtr<RegionImpl>(&allRuns);
 }
 
 }
