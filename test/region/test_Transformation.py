@@ -18,7 +18,7 @@ class TestRegionTransformation(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         for i in range(0, rgns.Count()):
@@ -40,7 +40,7 @@ class TestRegionTransformation(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
 
         startTime = time.perf_counter()
         zrgn = rgn.Zoom((0.2, 0.2))
@@ -56,7 +56,7 @@ class TestRegionTransformation(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
 
         startTime = time.perf_counter()
         zrgn = rgn.Shrink((0.2, 0.2))
@@ -72,7 +72,7 @@ class TestRegionTransformation(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         startTime = time.perf_counter()
         zrgn = rgn.Zoom((0.5, 0.5))
         endTime = time.perf_counter()
@@ -87,7 +87,7 @@ class TestRegionTransformation(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         startTime = time.perf_counter()
         zrgn = rgn.Shrink((0.5, 0.5))
         endTime = time.perf_counter()
@@ -100,7 +100,7 @@ class TestRegionTransformation(unittest.TestCase):
 
     def test_Zoom_PCB_Layout(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
-        r, rgn = mvlab.Threshold(image, 0, 50)
+        rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()
         zrgn = rgn.Zoom((1.2, 1.2))
@@ -114,7 +114,7 @@ class TestRegionTransformation(unittest.TestCase):
 
     def test_Zoom_Out_PCB_Layout(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
-        r, rgn = mvlab.Threshold(image, 0, 50)
+        rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()
         zrgn = rgn.Zoom((0.5, 0.5))
@@ -128,7 +128,7 @@ class TestRegionTransformation(unittest.TestCase):
 
     def test_Shrink_PCB_Layout(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
-        r, rgn = mvlab.Threshold(image, 0, 50)
+        rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()
         zrgn = rgn.Shrink((0.5, 0.5))
@@ -144,7 +144,7 @@ class TestRegionTransformation(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         for i in range(0, rgns.Count()):
@@ -163,7 +163,7 @@ class TestRegionTransformation(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         for i in range(0, rgns.Count()):

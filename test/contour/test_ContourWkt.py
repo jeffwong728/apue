@@ -12,10 +12,7 @@ import random
 class TestContourWkt(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_WKT_Ring(self):
         contr = mvlab.Contour_ReadWkt("POLYGON((0 0,0 7,4 2,2 0,0 0))")

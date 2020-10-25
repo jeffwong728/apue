@@ -12,10 +12,7 @@ import math
 class TestContourFeatures(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_Contour_BoundingBox(self):
         contr = mvlab.Contour_GenCircle((1000, 1000), 500, 1, 'negative')

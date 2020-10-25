@@ -13,10 +13,7 @@ import random
 class TestContourDiameter(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
     @staticmethod
     def diameter(d):
         return math.sqrt((d[0]-d[2])*(d[0]-d[2])+(d[1]-d[3])*(d[1]-d[3]))

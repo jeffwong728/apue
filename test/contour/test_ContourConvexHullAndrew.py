@@ -13,11 +13,7 @@ import random
 class TestContourConvexHullAndrew(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mvlab.SetGlobalOption('convex_hull_method', 'Andrew')
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_Simple_Convex(self):
         points = [(100, 100), (100, 200), (150, 150), (200, 200), (200, 100)]

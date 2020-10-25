@@ -55,7 +55,7 @@ class TestRegionArea(unittest.TestCase):
     def test_Mista_Area(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         startTime = time.perf_counter()
@@ -69,8 +69,9 @@ class TestRegionArea(unittest.TestCase):
 
     def test_Mista_Hole_Area(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
 
         self.assertAlmostEqual(rgn.GetHole().Area(), rgn.AreaHoles())
 

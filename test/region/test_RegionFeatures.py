@@ -17,7 +17,7 @@ class TestRegionFeatures(unittest.TestCase):
     def test_Digits_ConvexHull(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 50, 255)
+        rgn = mvlab.Threshold(blue, 50, 255)
         rgns = rgn.Connect()
 
         c = rgns.GetContour()
@@ -31,7 +31,7 @@ class TestRegionFeatures(unittest.TestCase):
     def test_Mista_ConvexHull(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         c = rgns.GetContour()
@@ -45,7 +45,7 @@ class TestRegionFeatures(unittest.TestCase):
     def test_Digits_MiniCircle(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 50, 255)
+        rgn = mvlab.Threshold(blue, 50, 255)
         rgns = rgn.Connect()
 
         c = rgns.GetContour()
@@ -63,7 +63,7 @@ class TestRegionFeatures(unittest.TestCase):
     def test_Mista_MiniCircle(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         c = rgns.GetContour()

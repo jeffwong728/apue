@@ -239,7 +239,7 @@ class TestRegionCreate(unittest.TestCase):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         for i in range(0, rgns.Count()):

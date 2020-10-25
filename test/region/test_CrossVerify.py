@@ -17,7 +17,7 @@ class TestRegionCrossVerify(unittest.TestCase):
     def test_Mista_Box_Diff_Plus_Inter(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
-        r, rgn1 = mvlab.Threshold(blue, 150, 255)
+        rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRectangle((1000, 1000, 1000, 1000))
 
         dRgn = rgn1.Difference(rgn2)
@@ -31,7 +31,7 @@ class TestRegionCrossVerify(unittest.TestCase):
     def test_Mista_Box_Diff_Plus_Diff(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
-        r, rgn1 = mvlab.Threshold(blue, 150, 255)
+        rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRectangle((1000, 1000, 1000, 1000))
 
         dRgn1 = rgn1.Difference(rgn2)
@@ -51,7 +51,7 @@ class TestRegionCrossVerify(unittest.TestCase):
     def test_Mista_Box_Union_Minus_Inter(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
-        r, rgn1 = mvlab.Threshold(blue, 150, 255)
+        rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRectangle((1000, 1000, 1000, 1000))
 
         dRgn1 = rgn1.Difference(rgn2)
@@ -72,7 +72,7 @@ class TestRegionCrossVerify(unittest.TestCase):
     def test_Mista_Circle_Diff_Plus_Inter(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
-        r, rgn1 = mvlab.Threshold(blue, 150, 255)
+        rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenCircle((1250, 1250), 750)
 
         dRgn = rgn1.Difference(rgn2)
@@ -86,7 +86,7 @@ class TestRegionCrossVerify(unittest.TestCase):
     def test_Mista_RotatedEllipse_Diff_Plus_Inter(self):
         image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
-        r, rgn1 = mvlab.Threshold(blue, 150, 255)
+        rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRotatedEllipse((1250, 1250), (750, 500), 30)
 
         dRgn = rgn1.Difference(rgn2)
@@ -128,8 +128,8 @@ class TestRegionCrossVerify(unittest.TestCase):
             h = int(random.uniform(0, 30))
             cv2.rectangle(image2, (x, y), (x+w, y+h), (255, 255, 255), -1)
 
-        r, rgn1 = mvlab.Threshold(image1, 150, 255)
-        r, rgn2 = mvlab.Threshold(image2, 150, 255)
+        rgn1 = mvlab.Threshold(image1, 150, 255)
+        rgn2 = mvlab.Threshold(image2, 150, 255)
         sRgn1 = rgn1.SymmDifference(rgn2)
         uRgn = rgn1.Union2(rgn2)
         iRgn = rgn1.Intersection(rgn2)

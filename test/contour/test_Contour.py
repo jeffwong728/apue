@@ -11,36 +11,31 @@ import extradata
 class TestContour(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_2VBox_Contour(self):
         image = numpy.zeros((32, 64, 1), numpy.uint8)
         image[10:15, 20:50] = 255
         image[20:25, 20:50] = 255
-        r, rgn = mvlab.Threshold(image, 150, 255)
+        rgn = mvlab.Threshold(image, 150, 255)
         outer = rgn.GetContour()
 
-        self.assertEqual(r, 0, '2Box contour number error')
         self.assertAlmostEqual(outer.Simplify(1.0).Area(), rgn.Area())
 
     def test_2HBox_Contour(self):
         image = numpy.zeros((32, 64, 1), numpy.uint8)
         image[10:15, 1:31] = 255
         image[10:15, 33:63] = 255
-        r, rgn = mvlab.Threshold(image, 150, 255)
+        rgn = mvlab.Threshold(image, 150, 255)
         outer = rgn.GetContour()
 
-        self.assertEqual(r, 0, '2Box contour number error')
         self.assertAlmostEqual(outer.Simplify(1.0).Area(), rgn.Area())
 
     def test_Contour_Points(self):
         image = numpy.zeros((48, 64, 1), numpy.uint8)
         image[10:11, 30:35] = 255
         image[11:12, 5:60]  = 255
-        r, rgn = mvlab.Threshold(image, 150, 255)
+        rgn = mvlab.Threshold(image, 150, 255)
         outer = rgn.GetContour()
         points = outer.GetPoints()
 
@@ -58,55 +53,47 @@ class TestContour(unittest.TestCase):
         image[30:31, 1:30] = 255
         image[31:32, 5:10] = 255
         image[31:32, 20:50] = 255
-        r, rgn = mvlab.Threshold(image, 150, 255)
+        rgn = mvlab.Threshold(image, 150, 255)
         outer = rgn.GetContour()
-
-        self.assertEqual(r, 0, 'Simple contour number error')
 
     def test_Scrach_Contour(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
         startTime = time.perf_counter()
         outers = rgns.GetContour()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
-
-        self.assertEqual(r, 0, "Contour 'scrach.png' error")
 
     def test_Mista_Contour(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         startTime = time.perf_counter()
         outers = rgns.GetContour()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
-
-        self.assertEqual(r, 0, "Contour 'mista.png' error")
 
     def test_Digits_Contour(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 151, 255)
+        rgn = mvlab.Threshold(blue, 151, 255)
         rgns = rgn.Connect()
         startTime = time.perf_counter()
         outers = rgns.GetContour()
         endTime = time.perf_counter()
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
-        self.assertEqual(r, 0, "Contour 'digits.png' error")
-
     def test_Contour_Simplify(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         for i in range(0, rgns.Count()):

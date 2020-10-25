@@ -61,7 +61,7 @@ class TestRegionTest(unittest.TestCase):
     def test_Point_Inside_Mista(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 151, 255)
+        rgn = mvlab.Threshold(blue, 151, 255)
 
         startTime = time.perf_counter()
         r = rgn.TestPoint((1311, 1939))
@@ -72,7 +72,7 @@ class TestRegionTest(unittest.TestCase):
     def test_Point_Outside_Mista(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 151, 255)
+        rgn = mvlab.Threshold(blue, 151, 255)
 
         startTime = time.perf_counter()
         r = rgn.TestPoint((733, 1660))
@@ -93,11 +93,11 @@ class TestRegionTest(unittest.TestCase):
         image[10:20, 10:15] = 255
         image[10:20, 20:25] = 255
         image[10:20, 30:35] = 255
-        r, rgn1 = mvlab.Threshold(image, 150, 255)
+        rgn1 = mvlab.Threshold(image, 150, 255)
 
         image[:, :] = 0
         image[10:20, 10:35] = 255
-        r, rgn2 = mvlab.Threshold(image, 150, 255)
+        rgn2 = mvlab.Threshold(image, 150, 255)
         self.assertTrue(rgn2.TestSubset(rgn1))
 
     def test_Region_Outside_Region(self):
@@ -105,17 +105,17 @@ class TestRegionTest(unittest.TestCase):
         image[10:20, 10:15] = 255
         image[10:20, 20:25] = 255
         image[10:20, 30:35] = 255
-        r, rgn1 = mvlab.Threshold(image, 150, 255)
+        rgn1 = mvlab.Threshold(image, 150, 255)
 
         image[:, :] = 0
         image[10:20, 11:35] = 255
-        r, rgn2 = mvlab.Threshold(image, 150, 255)
+        rgn2 = mvlab.Threshold(image, 150, 255)
         self.assertFalse(rgn2.TestSubset(rgn1))
 
     def test_Region_Inside_Mista(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 151, 255)
+        rgn = mvlab.Threshold(blue, 151, 255)
         rgn2 = mvlab.Region_GenCircle((1311, 1939), 25)
 
         startTime = time.perf_counter()
@@ -127,7 +127,7 @@ class TestRegionTest(unittest.TestCase):
     def test_Region_Outside_Mista(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 151, 255)
+        rgn = mvlab.Threshold(blue, 151, 255)
         rgn2 = mvlab.Region_GenCircle((733, 1660), 10)
 
         startTime = time.perf_counter()

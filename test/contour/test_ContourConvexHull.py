@@ -13,10 +13,7 @@ import random
 class TestContourConvexHull(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_Simple_Convex(self):
         contr = mvlab.Contour_GenPolygon([(100, 100), (100, 200), (150, 150), (200, 200), (200, 100)])

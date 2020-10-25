@@ -58,7 +58,7 @@ class TestRegionPersistence(unittest.TestCase):
         fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "mista_region.txt.xz")
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
@@ -141,7 +141,7 @@ class TestRegionPersistence(unittest.TestCase):
         outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach")
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         db = mvlab.H5DB_Open(os.path.join(outputRoot, 'database.h5'))

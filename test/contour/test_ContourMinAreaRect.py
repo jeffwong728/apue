@@ -13,11 +13,7 @@ import random
 class TestContourMinAreaRect(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mvlab.SetGlobalOption('convex_hull_method', 'Andrew')
-        logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    filename=os.path.join(os.environ['TEMP'], 'mvlab.log'),
-                    filemode='a')
+        pass
 
     def test_All_Points_Coincidence_MinAreaRect(self):
         points = [(300, 300)]*10
