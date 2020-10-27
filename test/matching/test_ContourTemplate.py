@@ -90,7 +90,7 @@ class TestContourTemplate(unittest.TestCase):
         self.assertEqual(0, r, tmpl.GetErrorStatus())
 
     def test_Save_Gear_ContourTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template1.jpg'))
+        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template.jpg'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenCircle((300, 310), 100)

@@ -13,7 +13,7 @@ import random
 class TestContourMinAreaRect(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        pass
+        mvlab.SetGlobalOption('convex_hull_method', 'Andrew')
 
     def test_All_Points_Coincidence_MinAreaRect(self):
         points = [(300, 300)]*10
@@ -252,7 +252,7 @@ class TestContourMinAreaRect(unittest.TestCase):
     def test_Performance_Digits(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 50, 255)
+        rgn = mvlab.Threshold(blue, 50, 255)
         rgns = rgn.Connect()
 
         c = rgns.GetContour().GetConvex()
@@ -270,7 +270,7 @@ class TestContourMinAreaRect(unittest.TestCase):
     def test_Performance_Mista(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         c = rgns.GetContour().GetConvex()
@@ -287,7 +287,7 @@ class TestContourMinAreaRect(unittest.TestCase):
 
     def test_Performance_PCB(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
-        r, rgn = mvlab.Threshold(image, 0, 50)
+        rgn = mvlab.Threshold(image, 0, 50)
         rgns = rgn.Connect()
 
         c = rgns.GetContour()

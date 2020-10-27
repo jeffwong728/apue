@@ -13,7 +13,7 @@ import random
 class TestContourConvexHullSklansky(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        pass
+        mvlab.SetGlobalOption('convex_hull_method', 'Sklansky')
 
     def test_Simple_Convex(self):
         points = [(100, 100), (100, 200), (150, 150), (200, 200), (200, 100)]

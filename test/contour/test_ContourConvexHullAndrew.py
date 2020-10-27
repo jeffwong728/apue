@@ -13,7 +13,7 @@ import random
 class TestContourConvexHullAndrew(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        pass
+        mvlab.SetGlobalOption('convex_hull_method', 'Andrew')
 
     def test_Simple_Convex(self):
         points = [(100, 100), (100, 200), (150, 150), (200, 200), (200, 100)]
@@ -107,7 +107,7 @@ class TestContourConvexHullAndrew(unittest.TestCase):
     def test_Performance_Mista(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 150, 255)
+        rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
 
         c = rgns.GetContour()
@@ -120,7 +120,7 @@ class TestContourConvexHullAndrew(unittest.TestCase):
     def test_Performance_Digits(self):
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 50, 255)
+        rgn = mvlab.Threshold(blue, 50, 255)
         rgns = rgn.Connect()
 
         c = rgns.GetContour()

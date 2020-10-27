@@ -205,7 +205,7 @@ class TestContourFeatures(unittest.TestCase):
 
         image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
-        r, rgn = mvlab.Threshold(blue, 151, 255)
+        rgn = mvlab.Threshold(blue, 151, 255)
         rgns = rgn.Connect()
 
         roundDigits = []
