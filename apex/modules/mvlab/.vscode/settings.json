@@ -42,7 +42,6 @@
       "WITH_Eigen3": true,
       "WITH_VTK" : false,
       "WITH_GTK" : false,
-      "WITH_IPP" : true,
       "WITH_PROTOBUF" : true,
       "WITH_OPENJPEG" : false,
       "WITH_LAPACK" : false,
