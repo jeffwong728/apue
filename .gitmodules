@@ -10,3 +10,6 @@
 [submodule "3rdparty/wxWidgets"]
 	path = 3rdparty/wxWidgets
 	url = https://github.com/jeffwong728/wxWidgets.git
+[submodule "3rdparty/wxSVG"]
+	path = 3rdparty/wxSVG
+	url = https://github.com/jeffwong728/wxSVG.git

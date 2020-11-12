@@ -1,0 +1,24 @@
+{
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "cmake.configureSettings": {
+      "CMAKE_TOOLCHAIN_FILE": "${env:VCPKG_ROOT_DIR}/scripts/buildsystems/vcpkg.cmake",
+      "CMAKE_VERBOSE_MAKEFILE" : false,
+      "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+      "CMAKE_SKIP_RPATH" : false,
+      "CMAKE_SKIP_INSTALL_RPATH" : false,
+      "CMAKE_DEBUG_POSTFIX": "_d",
+      "CMAKE_MINSIZEREL_POSTFIX" : "_minsize",
+      "CMAKE_RELWITHDEBINFO_POSTFIX" : "_debinfo",
+      "CMAKE_CXX_STANDARD": 17,
+      "CMAKE_CXX_STANDARD_REQUIRED": true,
+      "CMAKE_CXX_EXTENSIONS": false
+    },
+    "cmake.preferredGenerators": ["Ninja"],
+    "cmake.platform": "x64",
+    "cmake.buildDirectory" : "${env:SPAM_ROOT_DIR}/build/spam/${buildType}",
+    "cmake.installPrefix" : "${env:SPAM_ROOT_DIR}/install/spam",
+    "cmake.configureOnOpen": false,
+    "cmake.configureEnvironment": {
+      "VCPKG_DIR" : "${env:VCPKG_ROOT_DIR}/installed/x64-windows"
+    }
+}

@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "wxSVG"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"thread": "cpp",
+			"memory": "cpp"
+		}
+	}
+}

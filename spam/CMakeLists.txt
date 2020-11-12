@@ -1,10 +1,32 @@
-include_directories(${CMAKE_CURRENT_LIST_DIR})
+cmake_minimum_required(VERSION 3.18)
+project(apue)
+
+set(CMAKE_CXX_STANDARD 17)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+set(OpenCV_DIR "$ENV{SPAM_ROOT_DIR}/install/opencv")
+set(2Geom_DIR "$ENV{SPAM_ROOT_DIR}/install/lib2geom/lib/cmake/2Geom")
+
+list(APPEND CMAKE_MODULE_PATH "$ENV{SPAM_ROOT_DIR}/cmake")
+find_package(wxGTK3 REQUIRED COMPONENTS mono)
+find_package(wxSVG REQUIRED COMPONENTS wxSVG)
+find_package(VCPKG REQUIRED COMPONENTS gtk3 gdk3 gio pangocairo gdk_pixbuf pango gobject gthread glib glibmm gmodule cairo cairomm)
+list(POP_BACK CMAKE_MODULE_PATH)
+
+find_package(ICU REQUIRED i18n data io uc)
+find_package(Boost REQUIRED locale system thread python38 chrono filesystem unit_test_framework)
+find_package(Python3 REQUIRED Development)
+find_package(OpenCV REQUIRED core imgproc imgcodecs mvlab)
+find_package(2Geom REQUIRED)
+find_package(TBB CONFIG REQUIRED tbb tbbmalloc)
+find_package(hdf5 CONFIG REQUIRED)
+
 if(MSVC)
     add_compile_definitions($<$<CONFIG:Debug>:_DEBUG>)
+    add_definitions(-DUNICODE -D_UNICODE -U_MBCS)
 endif()
 
-file(COPY ${CMAKE_CURRENT_LIST_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
+include_directories(${CMAKE_CURRENT_LIST_DIR})
 add_subdirectory(cv_hdf)
 add_subdirectory(helper)
 add_subdirectory(svg)
@@ -12,19 +34,14 @@ add_subdirectory(util)
 add_subdirectory(livarot)
 add_subdirectory(stub)
 add_subdirectory(ui)
-add_subdirectory(unittest)
 
 add_executable(spam WIN32 init.cpp msvc_recommended_pragmas.h)
 set_target_properties (spam PROPERTIES FOLDER spam)
-target_link_libraries(spam PRIVATE ui_core helper svg util livarot stub cv_hdf unofficial::glib::gobject EXPAT::EXPAT EXIF::EXIF)
+target_link_libraries(spam PRIVATE ui_core helper svg util livarot stub cv_hdf)
 
 if(MSVC)
   target_compile_definitions(spam PRIVATE _CRTDBG_MAP_ALLOC)
 endif()
-
-set_target_properties(spam PROPERTIES DEBUG_POSTFIX "_debug")
-set_target_properties(spam PROPERTIES RELWITHDEBINFO_POSTFIX "_relwithdebinfo")
-set_target_properties(spam PROPERTIES MINSIZEREL_POSTFIX "_minsizerel")
 
 include(GNUInstallDirs)
 install(TARGETS spam DESTINATION ${CMAKE_INSTALL_BINDIR})
@@ -36,3 +53,4 @@ endif()
 include (InstallRequiredSystemLibraries)
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/FixBundle.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/FixBundle.cmake @ONLY)
 install (SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/FixBundle.cmake)
+file(COPY ${CMAKE_CURRENT_LIST_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

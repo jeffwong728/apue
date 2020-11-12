@@ -1,0 +1,40 @@
+set(name_libs)
+set(d_libs)
+set(r_libs)
+set(d_bins)
+set(r_bins)
+
+list(APPEND name_libs mono)
+list(APPEND d_libs wxgtk331ud)
+list(APPEND r_libs wxgtk331u)
+list(APPEND d_bins wxgtk3315ud_vc.dll)
+list(APPEND r_bins wxgtk3315u_vc.dll)
+
+include(SpamCommon)
+include(FindPackageHandleStandardArgs)
+include(SelectLibraryConfigurations)
+set(wxgtk_lib_dir "$ENV{SPAM_ROOT_DIR}/install/wxWidgets/lib/vc_x64_dll")
+foreach(name_lib d_lib r_lib d_bin r_bin IN ZIP_LISTS name_libs d_libs r_libs d_bins r_bins)
+    find_library(wxGTK3_${name_lib}_LIBRARY_DEBUG NAMES ${d_lib} PATHS "${wxgtk_lib_dir}" NO_DEFAULT_PATH NO_PACKAGE_ROOT_PATH NO_CMAKE_PATH)
+    find_library(wxGTK3_${name_lib}_LIBRARY_RELEASE NAMES ${r_lib} PATHS "${wxgtk_lib_dir}" NO_DEFAULT_PATH NO_PACKAGE_ROOT_PATH NO_CMAKE_PATH)
+    find_program(wxGTK3_${name_lib}_RUNTIME_LIBRARY_DEBUG ${d_bin} PATHS "${wxgtk_lib_dir}" NO_DEFAULT_PATH NO_PACKAGE_ROOT_PATH NO_CMAKE_PATH)
+    find_program(wxGTK3_${name_lib}_RUNTIME_LIBRARY_RELEASE ${r_bin} PATHS "${wxgtk_lib_dir}" NO_DEFAULT_PATH NO_PACKAGE_ROOT_PATH NO_CMAKE_PATH)
+
+    select_library_configurations(wxGTK3_${name_lib})
+    select_library_configurations(wxGTK3_${name_lib}_RUNTIME)
+    find_package_handle_standard_args(wxGTK3::${name_lib} REQUIRED_VARS wxGTK3_${name_lib}_LIBRARY wxGTK3_${name_lib}_RUNTIME_LIBRARY HANDLE_COMPONENTS NAME_MISMATCHED)
+
+    if(wxGTK3::${name_lib}_FOUND)
+      spam_export_shared_pack_component(wxGTK3 ${name_lib})
+    endif()
+endforeach()
+
+set(wxGTK3_INCLUDE_DIRS_DEBUG "$ENV{SPAM_ROOT_DIR}/install/wxWidgets/include")
+list(APPEND wxGTK3_INCLUDE_DIRS_DEBUG "$ENV{SPAM_ROOT_DIR}/install/wxWidgets/lib/vc_x64_dll/gtk3ud")
+
+set(wxGTK3_INCLUDE_DIRS_RELEASE "$ENV{SPAM_ROOT_DIR}/install/wxWidgets/include")
+list(APPEND wxGTK3_INCLUDE_DIRS_RELEASE "$ENV{SPAM_ROOT_DIR}/install/wxWidgets/lib/vc_x64_dll/gtk3u")
+
+set_target_properties(wxGTK3::mono PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "$<IF:$<CONFIG:Debug>,${wxGTK3_INCLUDE_DIRS_DEBUG},${wxGTK3_INCLUDE_DIRS_RELEASE}>")
+set_target_properties(wxGTK3::mono PROPERTIES INTERFACE_COMPILE_DEFINITIONS "NOPCH;UNICODE;WXUSINGDLL;_UNICODE;__WXGTK3__;__WXGTK__")
+#set_target_properties(wxGTK3::mono PROPERTIES INTERFACE_COMPILE_DEFINITIONS "$<$<CONFIG:Debug>:__WXDEBUG__>")
