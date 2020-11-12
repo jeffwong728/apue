@@ -1,6 +1,6 @@
 set(the_description "Machine Vision Package")
 
-IF (WIN32)
+IF (WIN32 AND MSVC)
   add_compile_options("/utf-8")
 ENDIF()
 
@@ -27,7 +27,13 @@ IF(NOT TARGET Boost::iostreams)
   find_package(Boost REQUIRED COMPONENTS iostreams)
 ENDIF()
 
-IF (WIN32)
+IF (MINGW)
+  set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}")
+  set(vectorclass_DIR "$ENV{VCPKG_ROOT_DIR}/installed/$ENV{VCPKG_DEFAULT_TRIPLET}/share/vectorclass")
+  set(mimalloc_DIR "$ENV{VCPKG_ROOT_DIR}/installed/$ENV{VCPKG_DEFAULT_TRIPLET}/share/mimalloc")
+ENDIF()
+
+IF (MSVC)
   list(APPEND CMAKE_MODULE_PATH "$ENV{SPAM_ROOT_DIR}/cmake")
   set(2Geom_DIR "$ENV{SPAM_ROOT_DIR}/install/lib2geom/lib/cmake/2Geom")
   set(mimalloc_DIR "$ENV{SPAM_ROOT_DIR}/install/mimalloc/lib/mimalloc-1.6/cmake")
@@ -66,7 +72,7 @@ cmake_policy(POP)
 
 ocv_define_module(mvlab opencv_core opencv_imgcodecs opencv_imgproc opencv_calib3d WRAP python)
 ocv_target_link_libraries(${the_module} LINK_PRIVATE TBB::tbb TBB::tbbmalloc Boost::filesystem Boost::serialization Boost::iostreams mimalloc-static)
-IF (WIN32)
+IF (WIN32 AND MSVC)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE unofficial::cairo::cairo unofficial::glib::glib GLIBMM::glibmm CAIROMM::CAIROMM)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE 2Geom::2geom sigc-3.0 GSL::gsl double-conversion::double-conversion vectorclass::vectorclass)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE hdf5::hdf5-shared hdf5::hdf5_hl-shared hdf5::hdf5_cpp-shared hdf5::hdf5_hl_cpp-shared)
@@ -92,3 +98,4 @@ target_compile_options(${the_module} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX
 target_compile_options(${the_module} PRIVATE $<$<CXX_COMPILER_ID:Clang>:-mavx2>)
 target_compile_options(${the_module} PRIVATE $<$<CXX_COMPILER_ID:GNU>:-mavx2 -mfma>)
 target_compile_options(${the_module} PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-class-memaccess -Wno-unused-parameter -Wno-reorder -Wno-missing-declarations>)
+target_compile_options(${the_module} PRIVATE $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Debug>>:-Wa,-mbig-obj -Og>)

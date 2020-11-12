@@ -5,6 +5,7 @@ import HtmlTestRunner
 import argparse
 import platform
 import subprocess
+import sysconfig
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-D', '--Debug', action='store_true', help='Enable debug mode')
@@ -13,7 +14,7 @@ parser.add_argument('-c', '--Case', help='Run test from name')
 parser.add_argument('-f', '--File', help='Run test list from file')
 parser.add_argument('-d', '--Directory', help='Run test directory')
 args = parser.parse_args()
-if platform.system() == "Windows":
+if platform.system() == "Windows" and not sysconfig.get_platform() == "mingw":
     if args.Debug:
         os.add_dll_directory(os.path.join(os.environ["VCPKG_ROOT_DIR"], 'installed', 'x64-windows', 'debug', 'bin'))
     else:
