@@ -10,7 +10,7 @@
 #include <boost/signals2.hpp>
 class wxCollapsiblePaneEvent;
 class wxToggleButton;
-class wxGenericCollapsiblePane;
+class wxCollapsiblePane;
 namespace bs2 = boost::signals2;
 
 class ToolBox : public wxPanel
@@ -44,8 +44,8 @@ private:
 
 protected:
     const int startToolId_;
-    wxGenericCollapsiblePane *collToolPane_;
-    wxGenericCollapsiblePane *collOptPane_;
+    wxCollapsiblePane *collToolPane_;
+    wxCollapsiblePane *collOptPane_;
     std::vector<std::tuple<wxToggleButton*, wxPanel*, wxSizerItem*>> tools_;
     std::vector<wxSizer *> toolGroupSizers_;
 };

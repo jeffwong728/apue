@@ -6,6 +6,7 @@
 #include <ui/toplevel/rootframe.h>
 #include <ui/toplevel/projpanel.h>
 #include <boost/dll/runtime_symbol_info.hpp>
+#include <stack>
 #include <memory>
 #include <fstream>
 #pragma warning( push )

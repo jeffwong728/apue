@@ -45,10 +45,10 @@ if(MSVC)
 endif()
 
 target_include_directories(svg PRIVATE ${Boost_INCLUDE_DIR})
-target_include_directories(svg PRIVATE ${CMAKE_BINARY_DIR}/include ${CMAKE_SOURCE_DIR}/spam/stub)
+target_include_directories(svg PRIVATE ${CMAKE_BINARY_DIR}/include ${CMAKE_SOURCE_DIR}/stub)
 
 set(libs)
-list(APPEND libs VCPKG::glib)
+list(APPEND libs unofficial::glib::glib)
 list(APPEND libs VCPKG::glibmm)
 list(APPEND libs 2Geom::2geom)
 target_link_libraries(svg PRIVATE ${libs})

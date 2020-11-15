@@ -123,7 +123,7 @@ void RectTool::OnCanvasEnter(const EvCanvasEnter &e)
     {
         wxBitmap cursorImg;
         cursorImg.Create(32, 32);
-        cursorImg.UseAlpha();
+        //cursorImg.UseAlpha();
         wxMemoryDC memDC(cursorImg);
         wxGCDC dc(memDC);
         dc.SetBackground(*wxTRANSPARENT_BRUSH);

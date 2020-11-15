@@ -21,7 +21,7 @@ set_target_properties (helper PROPERTIES FOLDER spam)
 
 set(libs)
 list(APPEND libs hdf5::hdf5_cpp-shared)
-list(APPEND libs VCPKG::glib)
+list(APPEND libs unofficial::glib::glib)
 list(APPEND libs 2Geom::2geom)
 list(APPEND libs wxGTK3::mono)
 

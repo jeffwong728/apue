@@ -193,7 +193,8 @@ bool SVGLength::read(gchar const *str)
         return false;
     }
 
-    if (!IS_FINITE(v)) {
+    if (!std::isfinite(v))
+    {
         return false;
     }
 

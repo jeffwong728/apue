@@ -155,7 +155,7 @@ assign_source_group(${ui_core_SRCS})
 assign_source_group(${ui_core_HEADERS})
 
 set(libs)
-list(APPEND libs VCPKG::cairo)
+list(APPEND libs unofficial::cairo::cairo)
 list(APPEND libs VCPKG::cairomm)
 list(APPEND libs TBB::tbb TBB::tbbmalloc)
 list(APPEND libs hdf5::hdf5_cpp-shared)
@@ -174,7 +174,7 @@ target_link_libraries(ui_core PUBLIC ${libs})
 
 if(MSVC) 
   target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS NOMINMAX VCL_NAMESPACE=vcl)
-  target_compile_definitions(ui_core PRIVATE BOOST_PYTHON_NO_LIB BOOST_PYTHON_STATIC_LIB BOOST_PYTHON_STATIC_MODULE PY_MAJOR_VERSION=3 PY_MINOR_VERSION=8)
+  target_compile_definitions(ui_core PRIVATE BOOST_PYTHON_NO_LIB BOOST_DEBUG_PYTHON BOOST_PYTHON_STATIC_MODULE PY_MAJOR_VERSION=3 PY_MINOR_VERSION=8)
   target_compile_definitions(ui_core PRIVATE BOOST_UUID_FORCE_AUTO_LINK)
 endif()
 
@@ -183,4 +183,4 @@ target_compile_options(ui_core PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>)
 
 target_include_directories(ui_core PRIVATE ${Boost_INCLUDE_DIR})
 target_include_directories(ui_core PRIVATE ${CMAKE_BINARY_DIR}/include)
-target_link_libraries(ui_core PUBLIC wxGTK::mono)
+target_link_libraries(ui_core PUBLIC wxGTK3::mono)

@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <cairomm/win32_surface.h>
 #include <ui/misc/scopedtimer.h>
 #include <ui/evts.h>
 #include <2geom/cairo-path-sink.h>
@@ -264,12 +263,11 @@ void CairoCanvas::DrawDrawables(const SPDrawableNodeVector &des)
 {
     wxClientDC dc(this);
     PrepareDC(dc);
-    auto wxhdc = dc.GetHDC();
 
-    if (wxhdc)
+    auto cairoCtx = dc.GetImpl()->GetCairoContext();
+    if (cairoCtx)
     {
-        auto cairoDC = Cairo::Win32Surface::create(wxhdc);
-        auto cr = Cairo::Context::create(cairoDC);
+        Cairo::RefPtr<Cairo::Context> cr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
         cr->translate(anchorX_, anchorY_);
         cr->scale(GetMatScale(), GetMatScale());
 
@@ -287,9 +285,9 @@ void CairoCanvas::EraseDrawables(const SPDrawableNodeVector &des)
 {
     wxClientDC dc(this);
     PrepareDC(dc);
-    auto wxhdc = dc.GetHDC();
+    auto cairoCtx = dc.GetImpl()->GetCairoContext();
 
-    if (wxhdc)
+    if (cairoCtx)
     {
         Geom::OptRect boundRect;
         for (const auto &de : des)
@@ -327,8 +325,7 @@ void CairoCanvas::EraseDrawables(const SPDrawableNodeVector &des)
             cr->scale(GetMatScale(), GetMatScale());
             DrawEntities(cr);
 
-            auto cairoDC = Cairo::Win32Surface::create(wxhdc);
-            auto crScr = Cairo::Context::create(cairoDC);
+            auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
             crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
             crScr->paint();
         }
@@ -342,8 +339,8 @@ void CairoCanvas::HighlightDrawable(const SPDrawableNode &de)
         wxClientDC dc(this);
         PrepareDC(dc);
 
-        auto wxhdc = dc.GetHDC();
-        if (wxhdc)
+        auto cairoCtx = dc.GetImpl()->GetCairoContext();
+        if (cairoCtx)
         {
             Geom::OptRect boundRect = de->GetBoundingBox();
             if (!boundRect.empty())
@@ -373,8 +370,7 @@ void CairoCanvas::HighlightDrawable(const SPDrawableNode &de)
                 cr->scale(GetMatScale(), GetMatScale());
                 DrawEntities(cr, de);
 
-                auto cairoDC = Cairo::Win32Surface::create(wxhdc);
-                auto crScr = Cairo::Context::create(cairoDC);
+                auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
                 crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
                 crScr->paint();
             }
@@ -394,8 +390,8 @@ void CairoCanvas::DrawPathVector(const Geom::PathVector &pth, const Geom::OptRec
         wxClientDC dc(this);
         PrepareDC(dc);
 
-        auto wxhdc = dc.GetHDC();
-        if (wxhdc)
+        auto cairoCtx = dc.GetImpl()->GetCairoContext();
+        if (cairoCtx)
         {
             int x = wxRound(rect.get().left()*GetMatScale());
             int y = wxRound(rect.get().top()*GetMatScale());
@@ -449,8 +445,7 @@ void CairoCanvas::DrawPathVector(const Geom::PathVector &pth, const Geom::OptRec
                 cr->restore();
             }
 
-            auto cairoDC = Cairo::Win32Surface::create(wxhdc);
-            auto crScr = Cairo::Context::create(cairoDC);
+            auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
             crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
             crScr->paint();
         }
@@ -1249,8 +1244,8 @@ void CairoCanvas::OnTipTimer(wxTimerEvent &e)
 
 void CairoCanvas::Draw(wxDC &dc, const Geom::OptRect &rect)
 {
-    auto wxhdc = dc.GetHDC();
-    if (wxhdc)
+    auto cairoCtx = dc.GetImpl()->GetCairoContext();
+    if (cairoCtx)
     {
         if (!rect.empty())
         {
@@ -1284,8 +1279,7 @@ void CairoCanvas::Draw(wxDC &dc, const Geom::OptRect &rect)
             cr->scale(GetMatScale(), GetMatScale());
             DrawEntities(cr);
 
-            auto cairoDC = Cairo::Win32Surface::create(wxhdc);
-            auto crScr = Cairo::Context::create(cairoDC);
+            auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
             crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
             crScr->paint();
         }
@@ -1294,8 +1288,8 @@ void CairoCanvas::Draw(wxDC &dc, const Geom::OptRect &rect)
 
 void CairoCanvas::Draw(wxDC &dc, const Geom::Path &pth)
 {
-    auto wxhdc = dc.GetHDC();
-    if (wxhdc)
+    auto cairoCtx = dc.GetImpl()->GetCairoContext();
+    if (cairoCtx)
     {
         ::memcpy(scrMat_.data, disMat_.data, scrMat_.step1()*scrMat_.rows);
         auto imgSurf = Cairo::ImageSurface::create(scrMat_.data, Cairo::Format::FORMAT_RGB24, scrMat_.cols, scrMat_.rows, scrMat_.step1());
@@ -1325,8 +1319,7 @@ void CairoCanvas::Draw(wxDC &dc, const Geom::Path &pth)
         cr->stroke();
         cr->restore();
 
-        auto cairoDC = Cairo::Win32Surface::create(wxhdc);
-        auto crScr = Cairo::Context::create(cairoDC);
+        auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
         crScr->set_source(imgSurf, anchorX_, anchorY_);
         crScr->paint();
     }
@@ -1334,8 +1327,8 @@ void CairoCanvas::Draw(wxDC &dc, const Geom::Path &pth)
 
 void CairoCanvas::DrawBox(wxDC &dc, const Geom::Path &pth)
 {
-    auto wxhdc = dc.GetHDC();
-    if (wxhdc)
+    auto cairoCtx = dc.GetImpl()->GetCairoContext();
+    if (cairoCtx)
     {
         ::memcpy(scrMat_.data, disMat_.data, scrMat_.step1()*scrMat_.rows);
         auto imgSurf = Cairo::ImageSurface::create(scrMat_.data, Cairo::Format::FORMAT_RGB24, scrMat_.cols, scrMat_.rows, scrMat_.step1());
@@ -1359,8 +1352,7 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::Path &pth)
         cr->stroke();
         cr->restore();
 
-        auto cairoDC = Cairo::Win32Surface::create(wxhdc);
-        auto crScr = Cairo::Context::create(cairoDC);
+        auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
         crScr->set_source(imgSurf, anchorX_, anchorY_);
         crScr->paint();
     }
@@ -1368,8 +1360,8 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::Path &pth)
 
 void CairoCanvas::DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::OptRect &newRect)
 {
-    auto wxhdc = dc.GetHDC();
-    if (!wxhdc) {
+    auto cairoCtx = dc.GetImpl()->GetCairoContext();
+    if (!cairoCtx) {
         return;
     }
 
@@ -1423,8 +1415,7 @@ void CairoCanvas::DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::Op
         cr->restore();
     }
 
-    auto cairoDC = Cairo::Win32Surface::create(wxhdc);
-    auto crScr = Cairo::Context::create(cairoDC);
+    auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
     crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
     crScr->paint();
 }

@@ -87,6 +87,12 @@ list(APPEND r_libs glibmm)
 list(APPEND d_bins glibmm.dll)
 list(APPEND r_bins glibmm.dll)
 
+list(APPEND name_libs exif)
+list(APPEND d_libs libexif)
+list(APPEND r_libs libexif)
+list(APPEND d_bins libexif.dll)
+list(APPEND r_bins libexif.dll)
+
 include(SpamCommon)
 include(SelectLibraryConfigurations)
 include(FindPackageHandleStandardArgs)

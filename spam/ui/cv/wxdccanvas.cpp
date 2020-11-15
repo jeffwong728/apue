@@ -45,22 +45,30 @@ void WXDCCanvas::OnLeftMouseDown(wxMouseEvent &e)
     wxLogMessage(wxT("WXDCCanvas::OnLeftMouseDown (x=%d, y=%d)"), pt.x, pt.y);
 
     wxGraphicsRenderer *renders[] =
-    {
-        wxGraphicsRenderer::GetDefaultRenderer(),
-        wxGraphicsRenderer::GetCairoRenderer(),
-        wxGraphicsRenderer::GetGDIPlusRenderer(),
-        wxGraphicsRenderer::GetDirect2DRenderer()
-    };
+        {
+            wxGraphicsRenderer::GetDefaultRenderer(),
+            wxGraphicsRenderer::GetCairoRenderer()
+#ifdef __WXMSW__
+            ,wxGraphicsRenderer::GetGDIPlusRenderer(),
+            wxGraphicsRenderer::GetDirect2DRenderer()
+#endif
+            };
 
     wxString::const_pointer strs[] =
-    {
-        wxT("DefaultRenderer"),
-        wxT("CairoRenderer"),
-        wxT("GDIPlusRenderer"),
-        wxT("Direct2DRenderer")
-    };
+        {
+            wxT("DefaultRenderer"),
+            wxT("CairoRenderer")
+#ifdef __WXMSW__
+            ,wxT("GDIPlusRenderer"),
+            wxT("Direct2DRenderer")
+#endif
+            };
 
+#ifdef __WXMSW__
     std::array<int, 4> indices = { 0,1,2,3 };
+#else
+    std::array<int, 2> indices = {0, 1};
+#endif
 
     for (auto i : indices)
     {
@@ -91,10 +99,12 @@ void WXDCCanvas::OnPaint(wxPaintEvent& e)
 void WXDCCanvas::Draw(wxDC &dc)
 {
     //tbb::tick_count t0 = tbb::tick_count::now();
+#ifdef __WXMSW__
     auto wxhdc = dc.GetHDC();
     if (wxhdc)
     {
     }
+#endif
     //tbb::tick_count t1 = tbb::tick_count::now();
     //wxLogMessage(wxT("Draw cost %fms"), (t1 - t0).seconds()*1000);
 }
