@@ -65,14 +65,19 @@ public:
     double GetMatScale() const;
     bool HasImage() const { return !srcMat_.empty() && !disMat_.empty(); }
     bool IsInImageRect(const wxPoint &pt) const;
-    wxRealPoint ScreenToDispImage(const wxPoint &pt);
+    wxPoint ScreenToDispImage(const wxPoint &pt) const;
+    wxPoint DispImageToScreen(const wxPoint &pt) const;
+    wxPoint DispImageToDevice(const wxPoint &pt) const;
+    wxRect DispImageToScreen(const wxRect &rc) const;
+    wxRect DispImageToDevice(const wxRect &rc) const;
     wxRealPoint ScreenToImage(const wxPoint &pt) const;
+    wxRect ImageToScreen(const Geom::OptRect &rc) const;
+    wxRect ImageToDevice(const Geom::OptRect &rc) const;
     void DrawDrawables(const SPDrawableNodeVector &des);
     void EraseDrawables(const SPDrawableNodeVector &des);
     void HighlightDrawable(const SPDrawableNode &de);
     void DimDrawable(const SPDrawableNode &de);
     void DrawPathVector(const Geom::PathVector &pth, const Geom::OptRect &rect);
-    void DrawBox(const Geom::Path &pth);
     void DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
     void AddRect(const RectData &rd);
     void AddLine(const LineData &ld);
@@ -86,7 +91,7 @@ public:
     void DoIntersection(const SPDrawableNodeVector &selEnts);
     void DoXOR(const SPDrawableNode &dn1, const SPDrawableNode &dn2);
     void DoDifference(const SPDrawableNode &dn1, const SPDrawableNode &dn2);
-    SPStationNode GetStation();
+    SPStationNode GetStation() const;
     SPDrawableNode FindDrawable(const Geom::Point &pt);
     SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
@@ -122,14 +127,13 @@ private:
     void OnPushToBack(wxCommandEvent &cmd);
     void OnBringToFront(wxCommandEvent &cmd);
     void OnTipTimer(wxTimerEvent &e);
-    void Draw(wxDC &dc, const Geom::OptRect &rect);
-    void Draw(wxDC &dc, const Geom::Path &pth);
-    void DrawBox(wxDC &dc, const Geom::Path &pth);
-    void DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
-    void DrawEntities(Cairo::RefPtr<Cairo::Context> &cr);
     void DrawRegions(Cairo::RefPtr<Cairo::Context> &cr);
-    void DrawEntities(Cairo::RefPtr<Cairo::Context> &cr, const SPDrawableNode &highlight);
     void ConpensateHandle(wxRect &invalidRect) const;
+    void InvalidateDrawable(const SPDrawableNodeVector &des);
+    void RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void RenderEntities(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const;
 
 private:
     void MoveAnchor(const wxSize &sViewport, const wxSize &disMatSize);
@@ -159,6 +163,8 @@ private:
     ImageBufferZone imgBufferZone_;
     RgnBufferZone   rgnBufferZone_;
     std::vector<std::string> rgnsVisiable_;
+    Geom::OptRect rubber_band_;
+    Geom::PathVector path_vector_;
 };
 
 class DnDImageFile : public wxFileDropTarget

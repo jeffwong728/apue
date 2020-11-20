@@ -1,4 +1,5 @@
 ﻿#include "projpanel.h"
+#include <wx/setup.h>
 #include <wx/artprov.h>
 #include <wx/wrapsizer.h>
 #include <ui/spam.h>

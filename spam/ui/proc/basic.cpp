@@ -9,7 +9,8 @@
 #include <2geom/cairo-path-sink.h>
 #pragma warning( pop )
 #include <cairomm/cairomm.h>
-#include <tbb/tbb.h>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
 #include <tbb/parallel_invoke.h>
 
 std::vector<SpamRunListPool> BasicImgProc::s_runList_pools_;

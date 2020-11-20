@@ -7,7 +7,8 @@
 #include <boost/optional.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/static_vector.hpp>
-#include <tbb/tbb.h>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
 #include <tbb/scalable_allocator.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 4267 4244)

@@ -13,11 +13,11 @@ void CanvasCursorManipulator::EnterCanvas(const EvCanvasEnter &e, const std::str
     if (curIcon.IsOk())
     {
         wxBitmap cursorImg;
-        cursorImg.Create(32, 32);
-        //cursorImg.UseAlpha();
+        cursorImg.Create(32, 32, 32);
         wxMemoryDC memDC(cursorImg);
         wxGCDC dc(memDC);
         dc.SetBackground(*wxTRANSPARENT_BRUSH);
+        dc.SetBackgroundMode(wxSOLID);
 
         dc.SetPen(*wxLIGHT_GREY_PEN);
         dc.SetBrush(*wxBLACK_BRUSH);

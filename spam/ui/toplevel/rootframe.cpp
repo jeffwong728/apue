@@ -73,7 +73,7 @@ RootFrame::RootFrame()
     , selFilter_(std::make_unique<SelectionFilter>())
     , cavDirtRects_(std::make_unique<std::map<std::string, Geom::OptRect>>())
 {
-    //SetIcon(wxIcon(wxT("res\\target_128.png"), wxBITMAP_TYPE_PNG));
+    SetIcon(wxICON(spam));
     CreateMenu();
     //CreateStatusBar();
     SetStatusBar(new MainStatus(this));
@@ -1251,12 +1251,12 @@ wxToolBar *RootFrame::MakeStationToolBar(wxWindow *parent)
     wxBitmap zoom11BM = Spam::GetBitmap(ip, bm_ZoomOriginal);
     wxBitmap zoom12BM = Spam::GetBitmap(ip, bm_ZoomHalf);
     wxBitmap zoom21BM = Spam::GetBitmap(ip, bm_ZoomDouble);
-    menu->AppendCheckItem(kSpamID_ZOOM_IN, wxT("Zoom In"))->SetBitmap(zoomInBM);
-    menu->AppendCheckItem(kSpamID_ZOOM_EXTENT, wxT("Zoom Extent"))->SetBitmap(zoomExBM);
+    menu->AppendCheckItem(kSpamID_ZOOM_IN, wxT("Zoom In"));
+    menu->AppendCheckItem(kSpamID_ZOOM_EXTENT, wxT("Zoom Extent"));
     menu->AppendSeparator();
-    menu->AppendCheckItem(kSpamID_ZOOM_ORIGINAL, wxT("Zoom 1:1"))->SetBitmap(zoom11BM);
-    menu->AppendCheckItem(kSpamID_ZOOM_HALF, wxT("Zoom Half"))->SetBitmap(zoom12BM);
-    menu->AppendCheckItem(kSpamID_ZOOM_DOUBLE, wxT("Zoom Double"))->SetBitmap(zoom21BM);
+    menu->AppendCheckItem(kSpamID_ZOOM_ORIGINAL, wxT("Zoom 1:1"));
+    menu->AppendCheckItem(kSpamID_ZOOM_HALF, wxT("Zoom Half"));
+    menu->AppendCheckItem(kSpamID_ZOOM_DOUBLE, wxT("Zoom Double"));
     tb->SetDropdownMenu(kSpamID_ZOOM_OUT, menu);
     tb->Realize();
 

@@ -16,6 +16,7 @@
 #include <ui/misc/scopedtimer.h>
 #include <ui/evts.h>
 #include <2geom/cairo-path-sink.h>
+#include <tbb/tick_count.h>
 
 class CairoRegionContourSink
 {
@@ -228,18 +229,40 @@ bool CairoCanvas::IsInImageRect(const wxPoint &pt) const
     return false;
 }
 
-wxRealPoint CairoCanvas::ScreenToDispImage(const wxPoint &pt)
+wxPoint CairoCanvas::ScreenToDispImage(const wxPoint &pt) const
 {
-    auto uspt = CalcUnscrolledPosition(pt) - wxSize(anchorX_, anchorY_);
-
     if (srcMat_.empty() || disMat_.empty())
     {
-        return wxRealPoint();
+        return wxPoint();
     }
     else
     {
-        return wxRealPoint(uspt.x, uspt.y);
+        return CalcUnscrolledPosition(pt) - wxSize(anchorX_, anchorY_);
     }
+}
+
+wxPoint CairoCanvas::DispImageToScreen(const wxPoint &pt) const
+{
+    return CalcScrolledPosition(pt + wxSize(anchorX_, anchorY_));
+}
+
+wxPoint CairoCanvas::DispImageToDevice(const wxPoint &pt) const
+{
+    return pt + wxSize(anchorX_, anchorY_);
+}
+
+wxRect CairoCanvas::DispImageToScreen(const wxRect &rc) const
+{
+    wxPoint tl = DispImageToScreen(rc.GetTopLeft());
+    wxPoint br = DispImageToScreen(rc.GetBottomRight());
+    return wxRect(tl, br);
+}
+
+wxRect CairoCanvas::DispImageToDevice(const wxRect &rc) const
+{
+    wxPoint tl = DispImageToDevice(rc.GetTopLeft());
+    wxPoint br = DispImageToDevice(rc.GetBottomRight());
+    return wxRect(tl, br);
 }
 
 wxRealPoint CairoCanvas::ScreenToImage(const wxPoint &pt) const
@@ -248,7 +271,7 @@ wxRealPoint CairoCanvas::ScreenToImage(const wxPoint &pt) const
 
     if (srcMat_.empty() || disMat_.empty())
     {
-        return wxRealPoint();
+        return wxRealPoint(uspt.x, uspt.y);
     }
     else
     {
@@ -259,211 +282,93 @@ wxRealPoint CairoCanvas::ScreenToImage(const wxPoint &pt) const
     }
 }
 
+wxRect CairoCanvas::ImageToScreen(const Geom::OptRect &rc) const
+{
+    if (rc)
+    {
+        int x = wxRound(rc->left()*GetMatScale());
+        int y = wxRound(rc->top()*GetMatScale());
+        int w = wxRound(rc->width()*GetMatScale());
+        int h = wxRound(rc->height()*GetMatScale());
+        return DispImageToScreen(wxRect(x, y, w, h));
+    }
+    else
+    {
+        return wxRect();
+    }
+}
+
+wxRect CairoCanvas::ImageToDevice(const Geom::OptRect &rc) const
+{
+    if (rc)
+    {
+        int x = wxRound(rc->left()*GetMatScale());
+        int y = wxRound(rc->top()*GetMatScale());
+        int w = wxRound(rc->width()*GetMatScale());
+        int h = wxRound(rc->height()*GetMatScale());
+        return DispImageToDevice(wxRect(x, y, w, h));
+    }
+    else
+    {
+        return wxRect();
+    }
+}
+
 void CairoCanvas::DrawDrawables(const SPDrawableNodeVector &des)
 {
-    wxClientDC dc(this);
-    PrepareDC(dc);
-
-    auto cairoCtx = dc.GetImpl()->GetCairoContext();
-    if (cairoCtx)
-    {
-        Cairo::RefPtr<Cairo::Context> cr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
-        cr->translate(anchorX_, anchorY_);
-        cr->scale(GetMatScale(), GetMatScale());
-
-        for (const auto &de : des)
-        {
-            if (de)
-            {
-                de->Draw(cr);
-            }
-        }
-    }
+    InvalidateDrawable(des);
 }
 
 void CairoCanvas::EraseDrawables(const SPDrawableNodeVector &des)
 {
-    wxClientDC dc(this);
-    PrepareDC(dc);
-    auto cairoCtx = dc.GetImpl()->GetCairoContext();
-
-    if (cairoCtx)
-    {
-        Geom::OptRect boundRect;
-        for (const auto &de : des)
-        {
-            if (de)
-            {
-                boundRect.unionWith(de->GetBoundingBox());
-            }
-        }
-
-        if (!boundRect.empty())
-        {
-            int x = wxRound(boundRect.get().left()*GetMatScale());
-            int y = wxRound(boundRect.get().top()*GetMatScale());
-            int w = wxRound(boundRect.get().width()*GetMatScale());
-            int h = wxRound(boundRect.get().height()*GetMatScale());
-            wxRect invalidRect(x, y, w, h);
-            ConpensateHandle(invalidRect);
-            invalidRect.Intersect(wxRect(0, 0, scrMat_.cols, scrMat_.rows));
-
-            auto dstPtr = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto srcPtr = disMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            for (int r = invalidRect.GetTop(); r<=invalidRect.GetBottom(); ++r)
-            {
-                ::memcpy(dstPtr, srcPtr, scrMat_.elemSize()*invalidRect.GetWidth());
-                dstPtr += scrMat_.step1();
-                srcPtr += disMat_.step1();
-            }
-
-            auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
-            auto cr = Cairo::Context::create(imgSurf);
-
-            cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
-            cr->scale(GetMatScale(), GetMatScale());
-            DrawEntities(cr);
-
-            auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
-            crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
-            crScr->paint();
-        }
-    }
+    InvalidateDrawable(des);
 }
 
 void CairoCanvas::HighlightDrawable(const SPDrawableNode &de)
 {
-    if (de)
-    {
-        wxClientDC dc(this);
-        PrepareDC(dc);
-
-        auto cairoCtx = dc.GetImpl()->GetCairoContext();
-        if (cairoCtx)
-        {
-            Geom::OptRect boundRect = de->GetBoundingBox();
-            if (!boundRect.empty())
-            {
-                int x = wxRound(boundRect.get().left()*GetMatScale());
-                int y = wxRound(boundRect.get().top()*GetMatScale());
-                int w = wxRound(boundRect.get().width()*GetMatScale());
-                int h = wxRound(boundRect.get().height()*GetMatScale());
-                wxRect invalidRect(x, y, w, h);
-                ConpensateHandle(invalidRect);
-                invalidRect.Intersect(wxRect(0, 0, scrMat_.cols, scrMat_.rows));
-
-                auto dstPtr = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-                auto srcPtr = disMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-                for (int r = invalidRect.GetTop(); r<invalidRect.GetBottom(); ++r)
-                {
-                    ::memcpy(dstPtr, srcPtr, scrMat_.elemSize()*invalidRect.GetWidth());
-                    dstPtr += scrMat_.step1();
-                    srcPtr += disMat_.step1();
-                }
-
-                auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-                auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
-                auto cr = Cairo::Context::create(imgSurf);
-
-                cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
-                cr->scale(GetMatScale(), GetMatScale());
-                DrawEntities(cr, de);
-
-                auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
-                crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
-                crScr->paint();
-            }
-        }
-    }
+    InvalidateDrawable(SPDrawableNodeVector(1, de));
 }
 
 void CairoCanvas::DimDrawable(const SPDrawableNode &de)
 {
-    EraseDrawables(SPDrawableNodeVector(1, de));
+    InvalidateDrawable(SPDrawableNodeVector(1, de));
 }
 
 void CairoCanvas::DrawPathVector(const Geom::PathVector &pth, const Geom::OptRect &rect)
 {
-    if (!rect.empty())
+    rubber_band_ = Geom::OptRect();
+    path_vector_ = pth;
+
+    if (rect) 
     {
-        wxClientDC dc(this);
-        PrepareDC(dc);
-
-        auto cairoCtx = dc.GetImpl()->GetCairoContext();
-        if (cairoCtx)
-        {
-            int x = wxRound(rect.get().left()*GetMatScale());
-            int y = wxRound(rect.get().top()*GetMatScale());
-            int w = wxRound(rect.get().width()*GetMatScale());
-            int h = wxRound(rect.get().height()*GetMatScale());
-            wxRect invalidRect(x, y, w, h);
-            ConpensateHandle(invalidRect);
-            invalidRect.Intersect(wxRect(0, 0, scrMat_.cols, scrMat_.rows));
-
-            auto dstPtr = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto srcPtr = disMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            for (int r = invalidRect.GetTop(); r <= invalidRect.GetBottom(); ++r)
-            {
-                ::memcpy(dstPtr, srcPtr, scrMat_.elemSize()*invalidRect.GetWidth());
-                dstPtr += scrMat_.step1();
-                srcPtr += disMat_.step1();
-            }
-
-            auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
-            auto cr = Cairo::Context::create(imgSurf);
-
-            cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
-            cr->scale(GetMatScale(), GetMatScale());
-            DrawEntities(cr);
-
-            if (!pth.empty())
-            {
-                wxColour strokeColor;
-                strokeColor.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
-
-                wxColour fillColor;
-                fillColor.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxBLUE->GetRGBA()));
-
-                double ux = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
-                double uy = ux;
-                cr->device_to_user_distance(ux, uy);
-                if (ux < uy) ux = uy;
-
-                Geom::Translate aff = Geom::Translate(0.5, 0.5);
-                Geom::PathVector paths = pth * aff;
-
-                cr->save();
-                Geom::CairoPathSink cairoPathSink(cr->cobj());
-                cairoPathSink.feed(paths);
-                cr->set_source_rgba(fillColor.Red() / 255.0, fillColor.Green() / 255.0, fillColor.Blue() / 255.0, fillColor.Alpha() / 255.0);
-                cr->fill_preserve();
-                cr->set_line_width(ux);
-                cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0);
-                cr->stroke();
-                cr->restore();
-            }
-
-            auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
-            crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
-            crScr->paint();
-        }
+        wxRect invalidRect = ImageToScreen(rect);
+        ConpensateHandle(invalidRect);
+        Refresh(false, &invalidRect);
     }
-}
-
-void CairoCanvas::DrawBox(const Geom::Path &pth)
-{
-    wxClientDC dc(this);
-    PrepareDC(dc);
-    DrawBox(dc, pth);
 }
 
 void CairoCanvas::DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &newRect)
 {
-    wxClientDC dc(this);
-    PrepareDC(dc);
-    DrawBox(dc, oldRect, newRect);
+    Geom::OptRect rect = oldRect;
+    rect.unionWith(newRect);
+
+    if (!rect) {
+        return;
+    }
+
+    rubber_band_ = newRect;
+    if (rubber_band_)
+    {
+        wxRect rcRubber = ImageToDevice(rubber_band_);
+        rubber_band_->setTop(rcRubber.GetTop());
+        rubber_band_->setBottom(rcRubber.GetBottom());
+        rubber_band_->setLeft(rcRubber.GetLeft());
+        rubber_band_->setRight(rcRubber.GetRight());
+    }
+
+    wxRect invalidRect = ImageToScreen(rect);
+    ConpensateHandle(invalidRect);
+    Refresh(false, &invalidRect);
 }
 
 void CairoCanvas::AddRect(const RectData &rd)
@@ -687,7 +592,7 @@ void CairoCanvas::DoDifference(const SPDrawableNode &dn1, const SPDrawableNode &
     }
 }
 
-SPStationNode CairoCanvas::GetStation()
+SPStationNode CairoCanvas::GetStation() const
 {
     auto model = Spam::GetModel();
     if (model)
@@ -1068,36 +973,14 @@ void CairoCanvas::OnPaint(wxPaintEvent& e)
     wxPaintDC dc(this);
     PrepareDC(dc);
 
-    dc.SetBrush(*wxBLACK_BRUSH);
-    dc.SetPen(wxNullPen);
-
-    auto cRect = GetClientRect();
-    wxRect tRect{0, 0, cRect.GetWidth(), anchorY_};
-    dc.DrawRectangle(tRect);
-
-    wxRect lRect{ 0, 0, anchorX_, cRect.GetHeight() };
-    dc.DrawRectangle(lRect);
-
-    int x = std::min(anchorX_ + disMat_.cols, cRect.GetRight());
-    int w = std::max(cRect.GetRight() - (anchorX_ + disMat_.cols) + 1, 0);
-    wxRect rRect{ x, 0, w, cRect.GetHeight() };
-    dc.DrawRectangle(rRect);
-
-    int y = std::min(anchorY_ + disMat_.rows, cRect.GetBottom());
-    int h = std::max(cRect.GetBottom() - (anchorY_ + disMat_.rows) + 1, 0);
-    wxRect bRect{ 0, y, cRect.GetWidth(), h };
-    dc.DrawRectangle(bRect);
-
-    wxRegionIterator upd(GetUpdateRegion());
-    while (upd)
+    auto cairoCtx = dc.GetImpl()->GetCairoContext();
+    if (cairoCtx)
     {
-        int vX = upd.GetX(), vY = upd.GetY(), vW = upd.GetW(), vH = upd.GetH();
-        auto tl = ScreenToImage(wxPoint(vX, vY));
-        auto br = ScreenToImage(wxPoint(vX + vW -1, vY + vH -1));
-        Geom::OptRect invalidRect(Geom::Point(tl.x, tl.y), Geom::Point(br.x, br.y));
-        Draw(dc, invalidRect);
-
-        upd++;
+        auto spCtx = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
+        RenderImage(spCtx);
+        RenderEntities(spCtx);
+        RenderPath(spCtx);
+        RenderRubberBand(spCtx);
     }
 }
 
@@ -1242,184 +1125,6 @@ void CairoCanvas::OnTipTimer(wxTimerEvent &e)
     }
 }
 
-void CairoCanvas::Draw(wxDC &dc, const Geom::OptRect &rect)
-{
-    auto cairoCtx = dc.GetImpl()->GetCairoContext();
-    if (cairoCtx)
-    {
-        if (!rect.empty())
-        {
-            int x = wxRound(rect.get().left()*GetMatScale());
-            int y = wxRound(rect.get().top()*GetMatScale());
-            int w = wxRound(rect.get().width()*GetMatScale());
-            int h = wxRound(rect.get().height()*GetMatScale());
-            wxRect invalidRect(x, y, w, h);
-            ConpensateHandle(invalidRect);
-            invalidRect.Intersect(wxRect(0, 0, scrMat_.cols, scrMat_.rows));
-
-            if (invalidRect.IsEmpty())
-            {
-                return;
-            }
-
-            auto dstPtr = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto srcPtr = disMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            for (int r = invalidRect.GetTop(); r <= invalidRect.GetBottom(); ++r)
-            {
-                ::memcpy(dstPtr, srcPtr, scrMat_.elemSize()*invalidRect.GetWidth());
-                dstPtr += scrMat_.step1();
-                srcPtr += disMat_.step1();
-            }
-
-            auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-            auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
-            auto cr = Cairo::Context::create(imgSurf);
-
-            cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
-            cr->scale(GetMatScale(), GetMatScale());
-            DrawEntities(cr);
-
-            auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
-            crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
-            crScr->paint();
-        }
-    }
-}
-
-void CairoCanvas::Draw(wxDC &dc, const Geom::Path &pth)
-{
-    auto cairoCtx = dc.GetImpl()->GetCairoContext();
-    if (cairoCtx)
-    {
-        ::memcpy(scrMat_.data, disMat_.data, scrMat_.step1()*scrMat_.rows);
-        auto imgSurf = Cairo::ImageSurface::create(scrMat_.data, Cairo::Format::FORMAT_RGB24, scrMat_.cols, scrMat_.rows, scrMat_.step1());
-        auto cr = Cairo::Context::create(imgSurf);
-
-        cr->scale(GetMatScale(), GetMatScale());
-        DrawEntities(cr);
-
-        wxColour strokeColor;
-        strokeColor.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
-
-        wxColour fillColor;
-        fillColor.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxBLUE->GetRGBA()));
-
-        double ux = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
-        double uy = ux;
-        cr->device_to_user_distance(ux, uy);
-        if (ux < uy) ux = uy;
-
-        cr->save();
-        Geom::CairoPathSink cairoPathSink(cr->cobj());
-        cairoPathSink.feed(pth);
-        cr->set_source_rgba(fillColor.Red() / 255.0, fillColor.Green() / 255.0, fillColor.Blue() / 255.0, fillColor.Alpha() / 255.0);
-        cr->fill_preserve();
-        cr->set_line_width(ux);
-        cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0);
-        cr->stroke();
-        cr->restore();
-
-        auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
-        crScr->set_source(imgSurf, anchorX_, anchorY_);
-        crScr->paint();
-    }
-}
-
-void CairoCanvas::DrawBox(wxDC &dc, const Geom::Path &pth)
-{
-    auto cairoCtx = dc.GetImpl()->GetCairoContext();
-    if (cairoCtx)
-    {
-        ::memcpy(scrMat_.data, disMat_.data, scrMat_.step1()*scrMat_.rows);
-        auto imgSurf = Cairo::ImageSurface::create(scrMat_.data, Cairo::Format::FORMAT_RGB24, scrMat_.cols, scrMat_.rows, scrMat_.step1());
-        auto cr = Cairo::Context::create(imgSurf);
-
-        cr->scale(GetMatScale(), GetMatScale());
-        DrawEntities(cr);
-
-        double ux = 1, uy = 1;
-        cr->device_to_user_distance(ux, uy);
-        if (ux < uy) ux = uy;
-
-        cr->save();
-        Geom::CairoPathSink cairoPathSink(cr->cobj());
-        Geom::Translate aff = Geom::Translate(0.5, 0.5);
-        Geom::Path path = pth*aff;
-        cairoPathSink.feed(path);
-        cr->set_line_width(ux);
-        cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
-        cr->set_source_rgba(1.0, 0.0, 1.0, 1.0);
-        cr->stroke();
-        cr->restore();
-
-        auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
-        crScr->set_source(imgSurf, anchorX_, anchorY_);
-        crScr->paint();
-    }
-}
-
-void CairoCanvas::DrawBox(wxDC &dc, const Geom::OptRect &oldRect, const Geom::OptRect &newRect)
-{
-    auto cairoCtx = dc.GetImpl()->GetCairoContext();
-    if (!cairoCtx) {
-        return;
-    }
-
-    Geom::OptRect rect = oldRect;
-    rect.unionWith(newRect);
-
-    if (rect.empty()) {
-        return;
-    }
-
-    int x = wxRound(rect.get().left()*GetMatScale());
-    int y = wxRound(rect.get().top()*GetMatScale());
-    int w = wxRound(rect.get().width()*GetMatScale());
-    int h = wxRound(rect.get().height()*GetMatScale());
-    wxRect invalidRect(x, y, w, h);
-    ConpensateHandle(invalidRect);
-    invalidRect.Intersect(wxRect(0, 0, scrMat_.cols, scrMat_.rows));
-
-    auto dstPtr = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-    auto srcPtr = disMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-    for (int r = invalidRect.GetTop(); r<=invalidRect.GetBottom(); ++r)
-    {
-        ::memcpy(dstPtr, srcPtr, scrMat_.elemSize()*invalidRect.GetWidth());
-        dstPtr += scrMat_.step1();
-        srcPtr += disMat_.step1();
-    }
-
-    auto data = scrMat_.ptr(invalidRect.GetY(), invalidRect.GetX());
-    auto imgSurf = Cairo::ImageSurface::create(data, Cairo::Format::FORMAT_RGB24, invalidRect.GetWidth(), invalidRect.GetHeight(), scrMat_.step1());
-    auto cr = Cairo::Context::create(imgSurf);
-
-    cr->translate(-invalidRect.GetX(), -invalidRect.GetY());
-    cr->scale(GetMatScale(), GetMatScale());
-    DrawEntities(cr);
-
-    if (!newRect.empty())
-    {
-        Geom::Path pth(newRect.get());
-        pth *= Geom::Translate(0.5, 0.5);
-        double ux = 1, uy = 1;
-        cr->device_to_user_distance(ux, uy);
-        if (ux < uy) ux = uy;
-
-        cr->save();
-        Geom::CairoPathSink cairoPathSink(cr->cobj());
-        cairoPathSink.feed(pth);
-        cr->set_line_width(ux);
-        cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
-        cr->set_source_rgba(1.0, 0.0, 1.0, 1.0);
-        cr->stroke();
-        cr->restore();
-    }
-
-    auto crScr = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
-    crScr->set_source(imgSurf, anchorX_ + invalidRect.GetX(), anchorY_ + invalidRect.GetY());
-    crScr->paint();
-}
-
 void CairoCanvas::DrawRegions(Cairo::RefPtr<Cairo::Context> &cr)
 {
     double ux = 1;
@@ -1448,12 +1153,89 @@ void CairoCanvas::DrawRegions(Cairo::RefPtr<Cairo::Context> &cr)
     }
 }
 
-void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr)
+void CairoCanvas::ConpensateHandle(wxRect &invalidRect) const
 {
-    DrawRegions(cr);
+    invalidRect.Inflate(32, 32);
+}
+
+void CairoCanvas::InvalidateDrawable(const SPDrawableNodeVector &des)
+{
+    Geom::OptRect boundRect;
+    for (const auto &de : des)
+    {
+        if (de)
+        {
+            boundRect.unionWith(de->GetBoundingBox());
+        }
+    }
+
+    if (boundRect && boundRect->area() > 0.)
+    {
+        wxRect invalidRect = ImageToScreen(boundRect);
+        ConpensateHandle(invalidRect);
+        Refresh(false, &invalidRect);
+    }
+}
+
+void CairoCanvas::RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const
+{
+    if (!disMat_.empty())
+    {
+        wxRegionIterator upd(GetUpdateRegion());
+        while (upd)
+        {
+            int vX = upd.GetX();
+            int vY = upd.GetY();
+            int vW = upd.GetW();
+            int vH = upd.GetH();
+
+            wxPoint tl = ScreenToDispImage(wxPoint(vX, vY));
+            wxPoint br = ScreenToDispImage(wxPoint(vX + vW, vY + vH));
+            wxRect rcInvalid = wxRect(tl, br).Intersect(wxRect(0, 0, scrMat_.cols, scrMat_.rows));
+
+            if (!rcInvalid.IsEmpty())
+            {
+                cv::Mat m(disMat_, cv::Range(rcInvalid.GetTop(), rcInvalid.GetBottom()), cv::Range(rcInvalid.GetLeft(), rcInvalid.GetRight()));
+
+                auto imgSurf = Cairo::ImageSurface::create(m.ptr(), Cairo::Format::FORMAT_RGB24, m.cols, m.rows, m.step1());
+                cr->set_source(imgSurf, anchorX_ + rcInvalid.GetX(), anchorY_ + rcInvalid.GetY());
+                cr->paint();
+            }
+
+            upd++;
+        }
+    }
+}
+
+void CairoCanvas::RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const
+{
+    if (!rubber_band_.empty())
+    {
+        Geom::Path pth(rubber_band_.get());
+        pth *= Geom::Translate(0.5, 0.5);
+        double ux = 1, uy = 1;
+        cr->device_to_user_distance(ux, uy);
+        if (ux < uy) ux = uy;
+
+        cr->save();
+        Geom::CairoPathSink cairoPathSink(cr->cobj());
+        cairoPathSink.feed(pth);
+        cr->set_line_width(ux);
+        cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
+        cr->set_source_rgba(1.0, 0.0, 1.0, 1.0);
+        cr->stroke();
+        cr->restore();
+    }
+}
+
+void CairoCanvas::RenderEntities(Cairo::RefPtr<Cairo::Context> &cr) const
+{
     auto station = GetStation();
     if (station)
     {
+        cr->save();
+        cr->translate(anchorX_, anchorY_);
+        cr->scale(GetMatScale(), GetMatScale());
         for (const auto &c : station->GetChildren())
         {
             auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
@@ -1462,31 +1244,40 @@ void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr)
                 drawable->Draw(cr);
             }
         }
+        cr->restore();
     }
 }
 
-void CairoCanvas::DrawEntities(Cairo::RefPtr<Cairo::Context> &cr, const SPDrawableNode &highlight)
+void CairoCanvas::RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const
 {
-    DrawRegions(cr);
-    auto station = GetStation();
-    if (station)
+    if (!path_vector_.empty())
     {
-        for (const auto &c : station->GetChildren())
-        {
-            auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
-            if (drawable != highlight)
-            {
-                drawable->Draw(cr);
-            }
-        }
+        cr->save();
+        cr->translate(anchorX_, anchorY_);
+        cr->scale(GetMatScale(), GetMatScale());
 
-        highlight->DrawHighlight(cr);
+        wxColour strokeColor;
+        strokeColor.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomStrokePaint, wxBLUE->GetRGBA()));
+
+        wxColour fillColor;
+        fillColor.SetRGBA(SpamConfig::Get<wxUint32>(cp_ToolGeomFillPaint, wxBLUE->GetRGBA()));
+
+        double ux = SpamConfig::Get<int>(cp_ToolGeomStrokeWidth, 1);
+        double uy = ux;
+        cr->device_to_user_distance(ux, uy);
+        if (ux < uy) ux = uy;
+
+        Geom::Translate aff = Geom::Translate(0.5, 0.5);
+        Geom::PathVector paths = path_vector_ * aff;
+
+        Geom::CairoPathSink cairoPathSink(cr->cobj());
+        cairoPathSink.feed(paths);
+        cr->set_source_rgba(fillColor.Red() / 255.0, fillColor.Green() / 255.0, fillColor.Blue() / 255.0, fillColor.Alpha() / 255.0);
+        cr->fill_preserve();
+        cr->set_line_width(ux);
+        cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0);
+        cr->stroke();
     }
-}
-
-void CairoCanvas::ConpensateHandle(wxRect &invalidRect) const
-{
-    invalidRect.Inflate(20, 20);
 }
 
 void CairoCanvas::MoveAnchor(const wxSize &sViewport, const wxSize &disMatSize)

@@ -6,6 +6,7 @@
 #include <ui/cv/cairocanvas.h>
 #include <ui/projs/drawablenode.h>
 #include <ui/projs/geomnode.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 
 NodeEditTool::NodeEditTool()
     : NodeEditToolImpl(*this)
@@ -48,11 +49,11 @@ void NodeEditTool::OnEnterCanvas(const EvCanvasEnter &e)
     if (curIcon.IsOk())
     {
         wxBitmap cursorImg;
-        cursorImg.Create(32, 32);
-        //cursorImg.UseAlpha();
+        cursorImg.Create(32, 32, 32);
         wxMemoryDC memDC(cursorImg);
         wxGCDC dc(memDC);
         dc.SetBackground(*wxTRANSPARENT_BRUSH);
+        dc.SetBackgroundMode(wxSOLID);
 
         dc.SetPen(*wxLIGHT_GREY_PEN);
         dc.SetBrush(*wxBLACK_BRUSH);

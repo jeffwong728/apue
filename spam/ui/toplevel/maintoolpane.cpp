@@ -104,12 +104,12 @@ wxToolBar *MainToolPane::MakeImageToolBar(wxFileHistory &fh)
     tb->AddTool(kSpamID_MAIN_ZOOM_OUT, wxT("Zoom Out"), Spam::GetBitmap(ip, bm_ZoomOut), wxNullBitmap, wxITEM_DROPDOWN);
 
     wxMenu* zoomMenu = new wxMenu;
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_IN, wxT("Zoom In"))->SetBitmap(zoomInBM);
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_EXTENT, wxT("Zoom Extent"))->SetBitmap(zoomExBM);
+    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_IN, wxT("Zoom In"));
+    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_EXTENT, wxT("Zoom Extent"));
     zoomMenu->AppendSeparator();
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_ORIGINAL, wxT("Zoom 1:1"))->SetBitmap(zoom11BM);
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_HALF, wxT("Zoom Half"))->SetBitmap(zoom12BM);
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_DOUBLE, wxT("Zoom Double"))->SetBitmap(zoom21BM);
+    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_ORIGINAL, wxT("Zoom 1:1"));
+    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_HALF, wxT("Zoom Half"));
+    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_DOUBLE, wxT("Zoom Double"));
     tb->SetDropdownMenu(kSpamID_MAIN_ZOOM_OUT, zoomMenu);
     tb->Realize();
 

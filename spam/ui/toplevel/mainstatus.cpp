@@ -120,8 +120,10 @@ void MainStatus::OnIdle(wxIdleEvent& event)
 {
     const char *numlockIndicators[]  = { "OFF", "NUM" };
     const char *capslockIndicators[] = { "", "CAPS" };
+#ifdef __WXMSW__
     SetStatusText(numlockIndicators[wxGetKeyState(WXK_NUMLOCK)], Field_NumLockIndicator);
     SetStatusText(capslockIndicators[wxGetKeyState(WXK_CAPITAL)], Field_CapsLockIndicator);
+#endif
     event.Skip();
 }
 

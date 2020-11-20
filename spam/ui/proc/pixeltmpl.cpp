@@ -12,7 +12,8 @@
 #ifdef free
 #undef free
 #endif
-#include <tbb/tbb.h>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
 #include <tbb/scalable_allocator.h>
 
 struct SADTopLayerScaner

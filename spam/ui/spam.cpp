@@ -25,6 +25,8 @@
 #include <ui/projs/drawablenode.h>
 #include <wxSVG/SVGDocument.h>
 #include <tbb/task_scheduler_init.h>
+#include <gmodule.h>
+#include <gtk/gtk.h>
 
 struct GUILogerTempSwitcher
 {
@@ -144,6 +146,9 @@ bool SpamApp::OnInit()
     bitmaps_[ipTBar][bm_ImageExport]    = wxBitmap(wxT("res/export_layer_16.png"),  bmt);
 
     BasicImgProc::Initialize(tbb::task_scheduler_init::default_num_threads());
+
+    GtkSettings *settings = gtk_settings_get_default();
+    g_object_set(G_OBJECT(settings), "gtk-application-prefer-dark-theme", 1, NULL);
 
     RootFrame *frame = new RootFrame();
     SetTopWindow(frame);

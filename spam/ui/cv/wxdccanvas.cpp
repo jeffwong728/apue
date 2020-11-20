@@ -1,7 +1,6 @@
 #include "wxdccanvas.h"
 #include <wx/graphics.h>
 #include <algorithm>
-//#include <tbb/tbb.h>
 
 WXDCCanvas::WXDCCanvas(wxWindow* parent, const std::string &cvWinName)
 : wxScrolledCanvas(parent, wxID_ANY, wxPoint(0, 0), wxDefaultSize)
