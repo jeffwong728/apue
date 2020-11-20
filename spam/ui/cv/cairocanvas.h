@@ -147,7 +147,6 @@ private:
     cv::Mat srcImg_;
     cv::Mat srcMat_;
     cv::Mat disMat_;
-    cv::Mat scrMat_;
     int anchorX_;
     int anchorY_;
     int cRect_{ 0 };

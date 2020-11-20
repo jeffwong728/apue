@@ -1191,7 +1191,7 @@ void CairoCanvas::RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const
 
             wxPoint tl = ScreenToDispImage(wxPoint(vX, vY));
             wxPoint br = ScreenToDispImage(wxPoint(vX + vW, vY + vH));
-            wxRect rcInvalid = wxRect(tl, br).Intersect(wxRect(0, 0, scrMat_.cols, scrMat_.rows));
+            wxRect rcInvalid = wxRect(tl, br).Intersect(wxRect(0, 0, disMat_.cols, disMat_.rows));
 
             if (!rcInvalid.IsEmpty())
             {
@@ -1301,7 +1301,6 @@ void CairoCanvas::ScaleShowImage(const wxSize &sToSize)
             ScopedTimer st(wxT("cv::resize"));
             cv::resize(srcMat_, disMat_, newSize, 0.0, 0.0, shrink ? cv::INTER_AREA : cv::INTER_NEAREST);
         }
-        scrMat_ = disMat_.clone();
         Refresh(false);
     }
 }
