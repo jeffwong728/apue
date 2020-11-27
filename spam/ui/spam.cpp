@@ -153,6 +153,7 @@ bool SpamApp::OnInit()
     RootFrame *frame = new RootFrame();
     SetTopWindow(frame);
     frame->Show(true);
+    gtk_widget_show_all(gtk_window_get_titlebar(GTK_WINDOW(frame->m_widget)));
     return true;
 }
 

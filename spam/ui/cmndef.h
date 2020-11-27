@@ -58,6 +58,7 @@ enum
     spamID_VIEW_STACK_LAYOUT,
 
     kSpamID_SCALE_CHOICE,
+    kSpamID_ZOOM,
     kSpamID_ZOOM_IN,
     kSpamID_ZOOM_OUT,
     kSpamID_ZOOM_EXTENT,
@@ -66,6 +67,7 @@ enum
     kSpamID_ZOOM_DOUBLE,
 
     kSpamID_MAIN_SCALE_CHOICE,
+    kSpamID_MAIN_ZOOM,
     kSpamID_MAIN_ZOOM_IN,
     kSpamID_MAIN_ZOOM_OUT,
     kSpamID_MAIN_ZOOM_EXTENT,

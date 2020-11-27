@@ -9,6 +9,8 @@
     #include <wx/wx.h>
 #endif
 #include <wx/popupwin.h>
+#include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 #include <ui/cmndef.h>
 #include <ui/projs/modelfwd.h>
 #include <string>
@@ -56,6 +58,7 @@ private:
 public:
     SelectionFilter *GetSelectionFilter() { return selFilter_.get(); }
     ProjPanel *GetProjPanel();
+    void SaveProject(const wxString &dbPath);
     wxAuiNotebook *GetStationNotebook() const;
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
@@ -72,7 +75,6 @@ private:
     void OnExit(wxCommandEvent& e);
     void OnClose(wxCloseEvent& e);
     void OnLoadImage(wxCommandEvent& e);
-    void OnAbout(wxCommandEvent& e);
     void OnAddStations(const SPModelNodeVector &stations);
     void OnDeleteStations(const SPModelNodeVector &stations);
     void OnAddGeoms(const SPModelNodeVector &geoms);
@@ -84,10 +86,6 @@ private:
     void OnLoadProject(ModelEvent& e);
     void OnViewMainTool(wxCommandEvent& e);
     void OnViewImage(wxCommandEvent& e);
-    void OnViewProject(wxCommandEvent& e);
-    void OnViewLog(wxCommandEvent& e);
-    void OnViewImagesZone(wxCommandEvent& e);
-    void OnViewToolboxBar(wxCommandEvent& e);
     void OnViewDefaultLayout(wxCommandEvent& e);
     void OnUpdateUI(wxUpdateUIEvent& e);
     void OnStationActivated(wxDataViewEvent &e);
@@ -98,6 +96,7 @@ private:
     void OnTabExtension(wxAuiNotebookEvent& e);
     void OnPageSelect(wxAuiNotebookEvent& e);
     void OnAuiPageClosed(wxAuiManagerEvent& e);
+    void OnZoom(wxCommandEvent &cmd);
     void OnZoomIn(wxCommandEvent &cmd);
     void OnZoomOut(wxCommandEvent &cmd);
     void OnZoomExtent(wxCommandEvent &cmd);
@@ -115,12 +114,25 @@ private:
     void OnImageBufferItemAdd(const ImageBufferItem &ibi);
     void OnImageBufferItemUpdate(const ImageBufferItem &ibi);
 
+public:
+    static void file_quit_cb(GtkWidget *menuitem, gpointer user_data);
+    static void file_save_cb(GtkWidget *menuitem, gpointer user_data);
+    static void file_save_as_cb(GtkWidget *menuitem, gpointer user_data);
+    static void undo_cb(GtkWidget *widget, gpointer user_data);
+    static void redo_cb(GtkWidget *widget, gpointer user_data);
+    static void help_about_cb(GtkWidget *widget, gpointer user_data);
+    static void view_project_cb(GtkWidget *widget, gpointer user_data);
+    static void view_entity_cb(GtkWidget *widget, gpointer user_data);
+    static void view_toolbox_cb(GtkWidget *widget, gpointer user_data);
+    static void view_log_cb(GtkWidget *widget, gpointer user_data);
+
 private:
+    void ReplaceTitleBar(void);
     wxAuiNotebook *CreateStationNotebook();
     std::string GetNextCVStationWinName();
     std::vector<std::string> GetAllTabPaneNames(const std::string &perspective);
     wxToolBar *MakeStationToolBar(wxWindow *parent);
-    void Zoom(double (CVImagePanel::*zoomFun)(bool), wxCommandEvent &cmd);
+    void Zoom(double (CVImagePanel::*zoomFun)(bool), wxCommandEvent &cmd, bool changeIcon = true);
     void UpdateGeoms(void (CairoCanvas::*updateFun)(const SPDrawableNodeVector &), const SPModelNodeVector &geoms);
     void SyncScale(wxControl *extCtrl);
     void EnablePageImageTool(wxControl *extCtrl, bool bEnable);
@@ -147,5 +159,8 @@ private:
     std::unique_ptr<Spamer> spamer_;
     std::unique_ptr<SelectionFilter> selFilter_;
     std::unique_ptr<std::map<std::string, Geom::OptRect>> cavDirtRects_;
+
+private:
+    std::vector<std::pair<int, GtkWidget *>> widgets_;
 };
 #endif //SPAM_UI_TOP_LEVEL_ROOT_FRAME_H

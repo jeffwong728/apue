@@ -1,7 +1,6 @@
 ﻿// wxWidgets "Hello World" Program
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "rootframe.h"
-#include "maintoolpane.h"
 #include "projpanel.h"
 #include "logpanel.h"
 #include "thumbnailpanel.h"
@@ -73,9 +72,8 @@ RootFrame::RootFrame()
     , selFilter_(std::make_unique<SelectionFilter>())
     , cavDirtRects_(std::make_unique<std::map<std::string, Geom::OptRect>>())
 {
+    ReplaceTitleBar();
     SetIcon(wxICON(spam));
-    CreateMenu();
-    //CreateStatusBar();
     SetStatusBar(new MainStatus(this));
     SetStatusText("Welcome to Spam!");
 
@@ -158,15 +156,10 @@ void RootFrame::CreateMenu()
     SetMenuBar(menuBar);
 
     Bind(wxEVT_MENU, &RootFrame::OnHello, this, ID_Hello);
-    Bind(wxEVT_MENU, &RootFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_MENU, &RootFrame::OnExit, this, wxID_EXIT);
     Bind(wxEVT_MENU, &RootFrame::OnLoadImage, this, spamID_LOAD_IMAGE);
     Bind(wxEVT_MENU, &RootFrame::OnViewMainTool, this, spamID_VIEW_MAIN_TOOL);
     Bind(wxEVT_MENU, &RootFrame::OnViewImage, this, spamID_VIEW_IMAGE);
-    Bind(wxEVT_MENU, &RootFrame::OnViewProject, this, spamID_VIEW_PROJECT);
-    Bind(wxEVT_MENU, &RootFrame::OnViewLog, this, spamID_VIEW_LOG);
-    Bind(wxEVT_MENU, &RootFrame::OnViewImagesZone, this, spamID_VIEW_IMAGES_ZONE);
-    Bind(wxEVT_MENU, &RootFrame::OnViewToolboxBar, this, spamID_VIEW_TOOLBOX_BAR);
     Bind(wxEVT_MENU, &RootFrame::OnViewDefaultLayout, this, spamID_VIEW_DEFAULT_LAYOUT);
     Bind(wxEVT_MENU, &RootFrame::OnSetTileLayout, this, spamID_VIEW_SET_TILE_LAYOUT);
     Bind(wxEVT_MENU, &RootFrame::OnTileLayout, this, spamID_VIEW_TILE_LAYOUT);
@@ -194,17 +187,6 @@ void RootFrame::CreateAuiPanes()
     tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxMatch, this, kSpamID_TOOLBOX_MATCH);
     tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxStyle, this, kSpamID_TOOLBOX_STYLE);
 
-    auto mainToolPane = new MainToolPane(this, imageFileHistory_);
-    auto &mainToolPaneInfo = wxAuiPaneInfo();
-    mainToolPaneInfo.Name(mainToolPanelName_);
-    mainToolPaneInfo.Top();
-    mainToolPaneInfo.Gripper(false);
-    mainToolPaneInfo.CloseButton(false);
-    mainToolPaneInfo.CaptionVisible(false);
-    mainToolPaneInfo.PaneBorder(false);
-    mainToolPaneInfo.MinSize(mainToolPane->GetSizer()->GetMinSize());
-    mainToolPaneInfo.DockFixed();
-    wxAuiMgr_.AddPane(mainToolPane, mainToolPaneInfo.Layer(999));
     wxAuiMgr_.AddPane(CreateStationNotebook(), wxAuiPaneInfo().Name(stationNotebookName_).Center().PaneBorder(false).CloseButton(false).CaptionVisible(false));
     wxAuiMgr_.AddPane(new ProjPanel(this), wxAuiPaneInfo().Name(projPanelName_).Left().Caption(wxT("Project Explorer")));
     wxAuiMgr_.AddPane(new LogPanel(this), wxAuiPaneInfo().Name(logPanelName_).Left().Bottom().Caption("Log"));
@@ -239,14 +221,12 @@ void RootFrame::CreateAuiPanes()
     toolBoxBarPaneInfo.Name(toolBoxBarName_).Caption(wxT("Toolbox Bar")).ToolbarPane().Right().Gripper(false);
     wxAuiMgr_.AddPane(tbBar, toolBoxBarPaneInfo);
 
-    auto mainToolPanePers = wxAuiMgr_.SavePaneInfo(mainToolPaneInfo);
     auto toolBoxBarPanePers = wxAuiMgr_.SavePaneInfo(toolBoxBarPaneInfo);
     initialPerspective_ = wxAuiMgr_.SavePerspective();
     const auto &projPerspective = SpamConfig::Get<wxString>(CommonDef::GetProjPanelCfgPath());
     if (!projPerspective.empty())
     {
         wxAuiMgr_.LoadPerspective(projPerspective);
-        wxAuiMgr_.LoadPaneInfo(mainToolPanePers, mainToolPaneInfo);
         wxAuiMgr_.LoadPaneInfo(toolBoxBarPanePers, toolBoxBarPaneInfo);
     }
 
@@ -265,6 +245,18 @@ void RootFrame::CreateAuiPanes()
 ProjPanel *RootFrame::GetProjPanel()
 {
     return dynamic_cast<ProjPanel *>(wxAuiMgr_.GetPane(projPanelName_).window);
+}
+
+void RootFrame::SaveProject(const wxString &dbPath)
+{
+    ProjPanel *projPanel = GetProjPanel();
+    if (projPanel)
+    {
+        projPanel->SaveProject(dbPath);
+        SpamConfig::Set(CommonDef::GetDBPathCfgPath(), dbPath);
+        SpamConfig::Set(CommonDef::GetProjCfgPath(), projPanel->GetProjectName());
+        SpamConfig::Save();
+    }
 }
 
 wxAuiNotebook *RootFrame::GetStationNotebook() const
@@ -410,33 +402,6 @@ void RootFrame::OnClose(wxCloseEvent& e)
     }
 
     spamer_->OnAppQuit();
-}
-
-void RootFrame::OnAbout(wxCommandEvent& event)
-{
-    wxAuiNotebook *stationNB = GetStationNotebook();
-    wxWindow *page = stationNB->GetCurrentPage();
-    CairoCanvas *canv = FindCanvasByUUID(page->GetName());
-    ProjTreeModel *model = Spam::GetModel();
-    SPStationNode station = model->FindStationByUUID(page->GetName());
-
-    SpamRgn rgn;
-    rgn.AddRun(0, 5, 8);
-    rgn.AddRun(1, 5, 8);
-    rgn.AddRun(1, 50, 81);
-    rgn.Connect();
-
-    boost::container::static_vector<int, 3> sVec;
-    sVec.push_back(1);
-    sVec.push_back(2);
-
-    bool bTest[4];
-    auto s = sizeof(bTest);
-    uchar *pTest = reinterpret_cast<uchar *>(&bTest[0]);
-    for (auto i=0; i<s; ++i)
-    {
-        pTest[i] = 204;
-    }
 }
 
 void RootFrame::OnHello(wxCommandEvent& event)
@@ -703,38 +668,6 @@ void RootFrame::OnViewImage(wxCommandEvent& e)
     wxAuiMgr_.Update();
 }
 
-void RootFrame::OnViewProject(wxCommandEvent& e)
-{
-    auto &pane = wxAuiMgr_.GetPane(projPanelName_);
-    bool v = pane.IsShown();
-    pane.Show(!v);
-    wxAuiMgr_.Update();
-}
-
-void RootFrame::OnViewLog(wxCommandEvent& e)
-{
-    auto &pane = wxAuiMgr_.GetPane(logPanelName_);
-    bool v = pane.IsShown();
-    pane.Show(!v);
-    wxAuiMgr_.Update();
-}
-
-void RootFrame::OnViewImagesZone(wxCommandEvent& e)
-{
-    auto &pane = wxAuiMgr_.GetPane(imagesZonePanelName_);
-    bool v = pane.IsShown();
-    pane.Show(!v);
-    wxAuiMgr_.Update();
-}
-
-void RootFrame::OnViewToolboxBar(wxCommandEvent& e)
-{
-    auto &pane = wxAuiMgr_.GetPane(toolBoxBarName_);
-    bool v = pane.IsShown();
-    pane.Show(!v);
-    wxAuiMgr_.Update();
-}
-
 void RootFrame::OnViewDefaultLayout(wxCommandEvent& e)
 {
     wxAuiMgr_.LoadPerspective(initialPerspective_);
@@ -743,17 +676,39 @@ void RootFrame::OnViewDefaultLayout(wxCommandEvent& e)
 
 void RootFrame::OnUpdateUI(wxUpdateUIEvent& e)
 {
-    switch (e.GetId())
+    for (const auto &wItem : widgets_)
     {
-    case spamID_VIEW_MAIN_TOOL:   e.Check(wxAuiMgr_.GetPane(mainToolPanelName_).IsShown());   break;
-    case spamID_VIEW_IMAGE:       e.Check(wxAuiMgr_.GetPane(stationNotebookName_).IsShown()); break;
-    case spamID_VIEW_PROJECT:     e.Check(wxAuiMgr_.GetPane(projPanelName_).IsShown());       break;
-    case spamID_VIEW_LOG:         e.Check(wxAuiMgr_.GetPane(logPanelName_).IsShown());        break;
-    case spamID_VIEW_IMAGES_ZONE: e.Check(wxAuiMgr_.GetPane(imagesZonePanelName_).IsShown()); break;
-    case spamID_VIEW_TOOLBOX_BAR: e.Check(wxAuiMgr_.GetPane(toolBoxBarName_).IsShown());      break;
-    case wxID_UNDO:               e.Enable(SpamUndoRedo::IsUndoable());                       break;
-    case wxID_REDO:               e.Enable(SpamUndoRedo::IsRedoable());                       break;
-    default: break;
+        switch (wItem.first)
+        {
+        case spamID_VIEW_PROJECT:
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(projPanelName_).IsShown());
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
+            break;
+        case spamID_VIEW_LOG:
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(logPanelName_).IsShown());
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
+            break;
+        case spamID_VIEW_IMAGES_ZONE:
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(imagesZonePanelName_).IsShown());
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
+            break;
+        case spamID_VIEW_TOOLBOX_BAR:
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(toolBoxBarName_).IsShown());
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
+            break;
+        case wxID_UNDO:
+            gtk_widget_set_sensitive(wItem.second, SpamUndoRedo::IsUndoable());
+            break;
+        case wxID_REDO:
+            gtk_widget_set_sensitive(wItem.second, SpamUndoRedo::IsRedoable());
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -924,8 +879,8 @@ void RootFrame::OnTabExtension(wxAuiNotebookEvent& e)
     {
         auto tbStation = MakeStationToolBar(extCtrl);
         wxSizer * const sizerRoot = new wxBoxSizer(wxHORIZONTAL);
-        sizerRoot->Add(tbStation, wxSizerFlags().Border(wxALL, 0).CenterVertical().Proportion(1))->SetId(kSpamImageToolBar);
-        sizerRoot->Add(new wxStaticLine(extCtrl, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL), wxSizerFlags().Border(wxALL, 0).Expand());
+        sizerRoot->Add(tbStation, wxSizerFlags().Border(wxUP | wxDOWN, -1).CenterVertical().Proportion(1))->SetId(kSpamImageToolBar);
+        sizerRoot->Add(new wxStaticLine(extCtrl, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL), wxSizerFlags().Border(wxUP | wxDOWN, -1).Expand());
         extCtrl->SetSize(tbStation->GetBestSize());
         extCtrl->SetSizer(sizerRoot);
         extCtrl->GetSizer()->SetSizeHints(extCtrl);
@@ -1013,6 +968,47 @@ void RootFrame::OnAuiPageClosed(wxAuiManagerEvent& e)
         {
             toolBox->QuitToolbox();
         }
+    }
+}
+
+void RootFrame::OnZoom(wxCommandEvent &cmd)
+{
+    wxVariant *var = dynamic_cast<wxVariant *>(cmd.GetEventUserData());
+    if (var)
+    {
+        wxControl *extCtrl = dynamic_cast<wxControl *>(var->GetWxObjectPtr());
+        wxSizerItem* sizerItem = extCtrl->GetSizer()->GetItemById(kSpamImageToolBar);
+        double (CVImagePanel::*zoomFun)(bool) = &CVImagePanel::ZoomIn;
+        if (sizerItem)
+        {
+            auto tb = dynamic_cast<wxToolBar *>(sizerItem->GetWindow());
+            if (tb)
+            {
+                int tPos = tb->GetToolPos(kSpamID_ZOOM);
+                if (wxNOT_FOUND != tPos)
+                {
+                    wxMenu *ddMenu = tb->GetToolByPos(tPos)->GetDropdownMenu();
+                    for (const wxMenuItem *mItem : ddMenu->GetMenuItems())
+                    {
+                        if (mItem->IsChecked()) {
+                            switch (mItem->GetId())
+                            {
+                            case kSpamID_ZOOM_OUT: zoomFun = &CVImagePanel::ZoomOut; break;
+                            case kSpamID_ZOOM_IN: zoomFun = &CVImagePanel::ZoomIn; break;
+                            case kSpamID_ZOOM_EXTENT: zoomFun = &CVImagePanel::ZoomExtent; break;
+                            case kSpamID_ZOOM_ORIGINAL: zoomFun = &CVImagePanel::ZoomOriginal; break;
+                            case kSpamID_ZOOM_HALF: zoomFun = &CVImagePanel::ZoomHalf; break;
+                            case kSpamID_ZOOM_DOUBLE: zoomFun = &CVImagePanel::ZoomDouble; break;
+                            default: break;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        Zoom(zoomFun, cmd, false);
     }
 }
 
@@ -1171,6 +1167,217 @@ void RootFrame::OnImageBufferItemUpdate(const ImageBufferItem &ibi)
     }
 }
 
+void RootFrame::file_quit_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    frame->Close(false);
+}
+
+void RootFrame::file_save_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    wxString dbPath = SpamConfig::Get<wxString>(CommonDef::GetDBPathCfgPath());
+    boost::filesystem::path p(dbPath.ToStdWstring());
+    boost::system::error_code ec;
+    if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
+    {
+        frame->SaveProject(dbPath);
+    }
+    else
+    {
+        file_save_as_cb(menuitem, user_data);
+    }
+}
+
+void RootFrame::file_save_as_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    wxString wildCard{ "Spam DB files (*.spam_db)|*.spam_db" };
+    wildCard.Append("|HDF5 files (*.h5)|*.h5");
+
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    wxFileDialog saveFileDialog(wxGetTopLevelParent(frame), _("Open Spam DB file"), "", "", wildCard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+    if (saveFileDialog.ShowModal() != wxID_CANCEL)
+    {
+        auto fullPath = saveFileDialog.GetPath();
+        frame->SaveProject(fullPath);
+    }
+}
+
+void RootFrame::undo_cb(GtkWidget *widget, gpointer user_data)
+{
+    SpamUndoRedo::Undo();
+}
+
+void RootFrame::redo_cb(GtkWidget *widget, gpointer user_data)
+{
+    SpamUndoRedo::Redo();
+}
+
+void RootFrame::help_about_cb(GtkWidget *widget, gpointer user_data)
+{
+#ifdef _DEBUG
+    gtk_window_set_interactive_debugging(1);
+#endif
+}
+
+void RootFrame::view_project_cb(GtkWidget *widget, gpointer user_data)
+{
+    if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    auto &pane = frame->wxAuiMgr_.GetPane(frame->projPanelName_);
+    bool v = pane.IsShown();
+    pane.Show(!v);
+    frame->wxAuiMgr_.Update();
+}
+
+void RootFrame::view_entity_cb(GtkWidget *widget, gpointer user_data)
+{
+    if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    auto &pane = frame->wxAuiMgr_.GetPane(frame->imagesZonePanelName_);
+    bool v = pane.IsShown();
+    pane.Show(!v);
+    frame->wxAuiMgr_.Update();
+}
+
+void RootFrame::view_toolbox_cb(GtkWidget *widget, gpointer user_data)
+{
+    if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    auto &pane = frame->wxAuiMgr_.GetPane(frame->toolBoxBarName_);
+    bool v = pane.IsShown();
+    pane.Show(!v);
+    frame->wxAuiMgr_.Update();
+}
+
+void RootFrame::view_log_cb(GtkWidget *widget, gpointer user_data)
+{
+    if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    auto &pane = frame->wxAuiMgr_.GetPane(frame->logPanelName_);
+    bool v = pane.IsShown();
+    pane.Show(!v);
+    frame->wxAuiMgr_.Update();
+}
+
+void RootFrame::ReplaceTitleBar(void)
+{
+    GtkWidget *header_bar = gtk_header_bar_new();
+    gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header_bar), TRUE);
+    gtk_header_bar_set_title(GTK_HEADER_BAR(header_bar), "Spam");
+    gtk_header_bar_set_has_subtitle(GTK_HEADER_BAR(header_bar), FALSE);
+
+    GtkWidget *menu = gtk_menu_button_new();
+    gtk_menu_button_set_direction(GTK_MENU_BUTTON(menu), GTK_ARROW_NONE);
+    GtkWidget *popover = gtk_popover_new(NULL);
+    gtk_container_set_border_width(GTK_CONTAINER(popover), 10);
+    GtkWidget *label = gtk_label_new("Popovers work too!");
+    gtk_container_add(GTK_CONTAINER(popover), label);
+    gtk_widget_show(label);
+    gtk_menu_button_set_popover(GTK_MENU_BUTTON(menu), popover);
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header_bar), menu);
+
+    GtkWidget *toolbar = gtk_toolbar_new();
+    gtk_toolbar_set_icon_size(GTK_TOOLBAR(toolbar), GTK_ICON_SIZE_BUTTON);
+    gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_ICONS);
+    GtkToolItem *udTb = gtk_tool_button_new_from_stock(GTK_STOCK_UNDO);
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), udTb, -1);
+    GtkToolItem *rdTb = gtk_tool_button_new_from_stock(GTK_STOCK_REDO);
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), rdTb, -1);
+    GtkToolItem *sep = gtk_separator_tool_item_new();
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), sep, -1);
+    GtkToolItem *newTb = gtk_tool_button_new_from_stock(GTK_STOCK_NEW);
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), newTb, -1);
+    GtkToolItem *openTb = gtk_tool_button_new_from_stock(GTK_STOCK_OPEN);
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), openTb, -1);
+    GtkToolItem *saveTb = gtk_tool_button_new_from_stock(GTK_STOCK_SAVE);
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), saveTb, -1);
+
+    gtk_widget_set_tooltip_text(GTK_WIDGET(newTb), "New a Project");
+    gtk_widget_set_tooltip_text(GTK_WIDGET(openTb), "Open Project");
+    gtk_widget_set_tooltip_text(GTK_WIDGET(saveTb), "Save Project");
+
+    GtkWidget *menubar = gtk_menu_bar_new();
+    GtkWidget *fileMenu = gtk_menu_new();
+    GtkWidget *viewMenu = gtk_menu_new();
+    GtkWidget *helpMenu = gtk_menu_new();
+    GtkAccelGroup *accel_group = gtk_accel_group_new();
+    gtk_window_add_accel_group(GTK_WINDOW(m_widget), accel_group);
+
+    GtkWidget *fileMi = gtk_menu_item_new_with_mnemonic("_File");
+    GtkWidget *newMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW, accel_group);
+    GtkWidget *openMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_OPEN, accel_group);
+    GtkWidget *saveMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE, accel_group);
+    GtkWidget *saveAsMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE_AS, nullptr);
+    GtkWidget *quitMi = quitMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
+    GtkWidget *viewMi = gtk_menu_item_new_with_label("View");
+    GtkWidget *projMi = gtk_check_menu_item_new_with_label("Show Project Browser");
+    GtkWidget *entZMi = gtk_check_menu_item_new_with_label("Show Entity Zone");
+    GtkWidget *toolMi = gtk_check_menu_item_new_with_label("Show Toolbox");
+    GtkWidget *logWMi = gtk_check_menu_item_new_with_label("Show Log Window");
+    GtkWidget *helpMi = gtk_menu_item_new_with_label("Help");
+    GtkWidget *abouMi = gtk_menu_item_new_with_label("About");
+
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(fileMi), fileMenu);
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(viewMi), viewMenu);
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(helpMi), helpMenu);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), newMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), openMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), saveMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), saveAsMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), quitMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), projMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), entZMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), toolMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), logWMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(helpMenu), abouMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menubar), fileMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menubar), viewMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menubar), helpMi);
+
+    gtk_widget_add_accelerator(newMi, "activate", accel_group, GDK_KEY_N, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator(openMi, "activate", accel_group, GDK_KEY_O, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator(saveMi, "activate", accel_group, GDK_KEY_S, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator(quitMi, "activate", accel_group, GDK_KEY_Q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
+    gtk_container_add(GTK_CONTAINER(box), menubar);
+    gtk_container_add(GTK_CONTAINER(box), toolbar);
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header_bar), box);
+
+    wxString tbCss(".TitleToolBar { background: alpha (@base_color, 0.0); border-color: transparent; }");
+    wxScopedCharBuffer uft8Buffer = tbCss.ToUTF8();
+    GtkCssProvider *css_provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(GTK_CSS_PROVIDER(css_provider), uft8Buffer.data(), uft8Buffer.length(), nullptr);
+    GtkStyleContext *context = gtk_widget_get_style_context(toolbar);
+    gtk_style_context_add_class(context, "TitleToolBar");
+    gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(css_provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+
+    gtk_window_set_titlebar(GTK_WINDOW(m_widget), header_bar);
+
+    g_signal_connect(G_OBJECT(quitMi), "activate", G_CALLBACK(file_quit_cb), this);
+    g_signal_connect(G_OBJECT(saveMi), "activate", G_CALLBACK(file_save_cb), this);
+    g_signal_connect(G_OBJECT(saveAsMi), "activate", G_CALLBACK(file_save_as_cb), this);
+    g_signal_connect(G_OBJECT(projMi), "toggled", G_CALLBACK(view_project_cb), this);
+    g_signal_connect(G_OBJECT(entZMi), "toggled", G_CALLBACK(view_entity_cb), this);
+    g_signal_connect(G_OBJECT(toolMi), "toggled", G_CALLBACK(view_toolbox_cb), this);
+    g_signal_connect(G_OBJECT(logWMi), "toggled", G_CALLBACK(view_log_cb), this);
+    g_signal_connect(G_OBJECT(abouMi), "activate", G_CALLBACK(help_about_cb), this);
+
+    g_signal_connect(G_OBJECT(udTb), "clicked", G_CALLBACK(undo_cb), this);
+    g_signal_connect(G_OBJECT(rdTb), "clicked", G_CALLBACK(redo_cb), this);
+
+    widgets_.reserve(64);
+    widgets_.emplace_back(wxID_UNDO, GTK_WIDGET(udTb));
+    widgets_.emplace_back(wxID_REDO, GTK_WIDGET(rdTb));
+    widgets_.emplace_back(spamID_VIEW_PROJECT, projMi);
+    widgets_.emplace_back(spamID_VIEW_LOG, logWMi);
+    widgets_.emplace_back(spamID_VIEW_IMAGES_ZONE, entZMi);
+    widgets_.emplace_back(spamID_VIEW_TOOLBOX_BAR, toolMi);
+}
+
 wxAuiNotebook *RootFrame::CreateStationNotebook()
 {
     long style = wxAUI_NB_BOTTOM | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_WINDOWLIST_BUTTON | wxNO_BORDER;
@@ -1214,7 +1421,7 @@ std::vector<std::string> RootFrame::GetAllTabPaneNames(const std::string &perspe
 
 wxToolBar *RootFrame::MakeStationToolBar(wxWindow *parent)
 {
-    constexpr int sz = 16;
+    constexpr int sz = 20;
     const SpamIconPurpose ip = kICON_PURPOSE_TOOLBAR;
     wxToolBar *tb = new wxToolBar(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_NODIVIDER | wxTB_FLAT);
     tb->SetMargins(wxSize(0, 0));
@@ -1237,30 +1444,26 @@ wxToolBar *RootFrame::MakeStationToolBar(wxWindow *parent)
     PercentValidator<double> val(3, &scale_, wxNUM_VAL_NO_TRAILING_ZEROES);
     val.SetRange(0.01, 10000);
 
-    auto choice = new wxComboBox(tb, kSpamID_SCALE_CHOICE, wxEmptyString, wxDefaultPosition, wxSize(72, 20), 10, choices, wxCB_DROPDOWN | wxTE_PROCESS_ENTER, val);
+    auto choice = new wxComboBox(tb, kSpamID_SCALE_CHOICE, wxEmptyString, wxDefaultPosition, wxSize(120, 20), 10, choices, wxCB_DROPDOWN | wxTE_PROCESS_ENTER, val);
     choice->SetMargins(0, 0);
     choice->SetSelection(5);
 
     tb->AddControl(choice, wxT("Scale Factor"));
     tb->AddSeparator();
-    tb->AddTool(kSpamID_ZOOM_OUT, wxT("Zoom Out"), Spam::GetBitmap(ip, bm_ZoomOut), wxNullBitmap, wxITEM_DROPDOWN);
+    tb->AddTool(kSpamID_ZOOM, wxT("Zoom Out"), Spam::GetBitmap(ip, bm_ZoomOut), wxNullBitmap, wxITEM_DROPDOWN);
 
     wxMenu* menu = new wxMenu;
-    wxBitmap zoomInBM = Spam::GetBitmap(ip, bm_ZoomIn);
-    wxBitmap zoomExBM = Spam::GetBitmap(ip, bm_ZoomExtent);
-    wxBitmap zoom11BM = Spam::GetBitmap(ip, bm_ZoomOriginal);
-    wxBitmap zoom12BM = Spam::GetBitmap(ip, bm_ZoomHalf);
-    wxBitmap zoom21BM = Spam::GetBitmap(ip, bm_ZoomDouble);
-    menu->AppendCheckItem(kSpamID_ZOOM_IN, wxT("Zoom In"));
-    menu->AppendCheckItem(kSpamID_ZOOM_EXTENT, wxT("Zoom Extent"));
-    menu->AppendSeparator();
-    menu->AppendCheckItem(kSpamID_ZOOM_ORIGINAL, wxT("Zoom 1:1"));
-    menu->AppendCheckItem(kSpamID_ZOOM_HALF, wxT("Zoom Half"));
-    menu->AppendCheckItem(kSpamID_ZOOM_DOUBLE, wxT("Zoom Double"));
-    tb->SetDropdownMenu(kSpamID_ZOOM_OUT, menu);
+    menu->AppendRadioItem(kSpamID_ZOOM_OUT, wxT("Zoom Out"))->Check(true);
+    menu->AppendRadioItem(kSpamID_ZOOM_IN, wxT("Zoom In"));
+    menu->AppendRadioItem(kSpamID_ZOOM_EXTENT, wxT("Zoom Extent"));
+    menu->AppendRadioItem(kSpamID_ZOOM_ORIGINAL, wxT("Zoom 1:1"));
+    menu->AppendRadioItem(kSpamID_ZOOM_HALF, wxT("Zoom Half"));
+    menu->AppendRadioItem(kSpamID_ZOOM_DOUBLE, wxT("Zoom Double"));
+    tb->SetDropdownMenu(kSpamID_ZOOM, menu);
     tb->Realize();
 
-    tb->Bind(wxEVT_TOOL,           &RootFrame::OnZoomOut,      this, kSpamID_ZOOM_OUT,      wxID_ANY, new wxVariant(parent, wxT("extCtrl")));
+    tb->Bind(wxEVT_TOOL,           &RootFrame::OnZoom,         this, kSpamID_ZOOM,          wxID_ANY, new wxVariant(parent, wxT("extCtrl")));
+    menu->Bind(wxEVT_TOOL,         &RootFrame::OnZoomOut,      this, kSpamID_ZOOM_OUT,      wxID_ANY, new wxVariant(parent, wxT("extCtrl")));
     menu->Bind(wxEVT_TOOL,         &RootFrame::OnZoomIn,       this, kSpamID_ZOOM_IN,       wxID_ANY, new wxVariant(parent, wxT("extCtrl")));
     menu->Bind(wxEVT_TOOL,         &RootFrame::OnZoomExtent,   this, kSpamID_ZOOM_EXTENT,   wxID_ANY, new wxVariant(parent, wxT("extCtrl")));
     menu->Bind(wxEVT_TOOL,         &RootFrame::OnZoomOriginal, this, kSpamID_ZOOM_ORIGINAL, wxID_ANY, new wxVariant(parent, wxT("extCtrl")));
@@ -1270,17 +1473,60 @@ wxToolBar *RootFrame::MakeStationToolBar(wxWindow *parent)
     choice->Bind(wxEVT_COMBOBOX,   &RootFrame::OnSelectScale,  this, kSpamID_SCALE_CHOICE,  wxID_ANY, new wxVariant(parent, wxT("extCtrl")));
 
     tb->EnableTool(kSpamID_SCALE_CHOICE, false);
-    tb->EnableTool(kSpamID_ZOOM_OUT, false);
+    tb->EnableTool(kSpamID_ZOOM, false);
 
     return tb;
 }
 
-void RootFrame::Zoom(double (CVImagePanel::*zoomFun)(bool), wxCommandEvent &cmd)
+void RootFrame::Zoom(double (CVImagePanel::*zoomFun)(bool), wxCommandEvent &cmd, bool changeIcon)
 {
     wxVariant *var = dynamic_cast<wxVariant *>(cmd.GetEventUserData());
     if (var)
     {
         wxControl *extCtrl = dynamic_cast<wxControl *>(var->GetWxObjectPtr());
+        wxSizerItem* sizerItem = extCtrl->GetSizer()->GetItemById(kSpamImageToolBar);
+        if (sizerItem && changeIcon)
+        {
+            auto tb = dynamic_cast<wxToolBar *>(sizerItem->GetWindow());
+            if (tb)
+            {
+                int tPos = tb->GetToolPos(kSpamID_ZOOM);
+                if (wxNOT_FOUND != tPos)
+                {
+                    const SpamIconPurpose ip = kICON_PURPOSE_TOOLBAR;
+                    wxMenu *ddMenu = tb->GetToolByPos(tPos)->GetDropdownMenu();
+                    for (const wxMenuItem *mItem : ddMenu->GetMenuItems())
+                    {
+                        if (mItem->IsChecked()) {
+                            switch (mItem->GetId())
+                            {
+                            case kSpamID_ZOOM_OUT:
+                                tb->SetToolNormalBitmap(kSpamID_ZOOM, Spam::GetBitmap(ip, bm_ZoomOut));
+                                break;
+                            case kSpamID_ZOOM_IN:
+                                tb->SetToolNormalBitmap(kSpamID_ZOOM, Spam::GetBitmap(ip, bm_ZoomIn));
+                                break;
+                            case kSpamID_ZOOM_EXTENT:
+                                tb->SetToolNormalBitmap(kSpamID_ZOOM, Spam::GetBitmap(ip, bm_ZoomExtent));
+                                break;
+                            case kSpamID_ZOOM_ORIGINAL:
+                                tb->SetToolNormalBitmap(kSpamID_ZOOM, Spam::GetBitmap(ip, bm_ZoomOriginal));
+                                break;
+                            case kSpamID_ZOOM_HALF:
+                                tb->SetToolNormalBitmap(kSpamID_ZOOM, Spam::GetBitmap(ip, bm_ZoomHalf));
+                                break;
+                            case kSpamID_ZOOM_DOUBLE:
+                                tb->SetToolNormalBitmap(kSpamID_ZOOM, Spam::GetBitmap(ip, bm_ZoomDouble));
+                                break;
+                            default: break;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         wxAuiNotebook *nb = GetStationNotebook();
         if (extCtrl && nb)
         {
@@ -1369,7 +1615,7 @@ void RootFrame::EnablePageImageTool(wxControl *extCtrl, bool bEnable)
             if (tb)
             {
                 tb->EnableTool(kSpamID_SCALE_CHOICE, bEnable);
-                tb->EnableTool(kSpamID_ZOOM_OUT, bEnable);
+                tb->EnableTool(kSpamID_ZOOM, bEnable);
             }
         }
     }

@@ -23,11 +23,8 @@ private:
 private:
     void OnNew(wxCommandEvent &cmd);
     void OnOpen(wxCommandEvent &cmd);
-    void OnSave(wxCommandEvent &cmd);
-    void OnSaveAs(wxCommandEvent &cmd);
-    void OnUndo(wxCommandEvent &cmd);
-    void OnRedo(wxCommandEvent &cmd);
 
+    void OnAllZoom(wxCommandEvent &e);
     void OnAllZoomIn(wxCommandEvent &e);
     void OnAllZoomOut(wxCommandEvent &e);
     void OnAllZoomExtent(wxCommandEvent &e);
@@ -42,7 +39,7 @@ private:
     wxString GetNextProjectName();
     bool AskSaveModifiedProjectFirst();
     void GetAllImgPanelPages(std::vector<CVImagePanel *> &imgPanelPages);
-    void ZoomAll(double (CVImagePanel::*zoomFun)(bool));
+    void ZoomAll(double (CVImagePanel::*zoomFun)(bool), bool changeIcon = true);
 
 private:
     wxSize toolImageSize_;

@@ -1277,6 +1277,7 @@ void CairoCanvas::RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const
         cr->set_line_width(ux);
         cr->set_source_rgba(strokeColor.Red() / 255.0, strokeColor.Green() / 255.0, strokeColor.Blue() / 255.0, strokeColor.Alpha() / 255.0);
         cr->stroke();
+        cr->restore();
     }
 }
 

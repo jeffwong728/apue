@@ -49,10 +49,6 @@ wxToolBar *MainToolPane::MakeMainToolBar()
 
     tb->Bind(wxEVT_TOOL, &MainToolPane::OnNew,    this, wxID_NEW);
     tb->Bind(wxEVT_TOOL, &MainToolPane::OnOpen,   this, wxID_OPEN);
-    tb->Bind(wxEVT_TOOL, &MainToolPane::OnSave,   this, wxID_SAVE);
-    tb->Bind(wxEVT_TOOL, &MainToolPane::OnSaveAs, this, wxID_SAVEAS);
-    tb->Bind(wxEVT_TOOL, &MainToolPane::OnUndo,   this, wxID_UNDO);
-    tb->Bind(wxEVT_TOOL, &MainToolPane::OnRedo,   this, wxID_REDO);
 
     return tb;
 }
@@ -63,11 +59,6 @@ wxToolBar *MainToolPane::MakeImageToolBar(wxFileHistory &fh)
     tb->SetToolBitmapSize(toolImageSize_);
 
     const SpamIconPurpose ip = kICON_PURPOSE_TOOLBAR;
-    wxBitmap zoomInBM = Spam::GetBitmap(ip, bm_ZoomIn);
-    wxBitmap zoomExBM = Spam::GetBitmap(ip, bm_ZoomExtent);
-    wxBitmap zoom11BM = Spam::GetBitmap(ip, bm_ZoomOriginal);
-    wxBitmap zoom12BM = Spam::GetBitmap(ip, bm_ZoomHalf);
-    wxBitmap zoom21BM = Spam::GetBitmap(ip, bm_ZoomDouble);
     wxBitmap importBM = Spam::GetBitmap(ip, bm_ImageImport);
     wxBitmap exportBM = Spam::GetBitmap(ip, bm_ImageExport);
 
@@ -95,26 +86,27 @@ wxToolBar *MainToolPane::MakeImageToolBar(wxFileHistory &fh)
     PercentValidator<double> val(3, &gScale_, wxNUM_VAL_NO_TRAILING_ZEROES);
     val.SetRange(0.01, 10000);
 
-    auto choice = new wxComboBox(tb, kSpamID_MAIN_SCALE_CHOICE, wxEmptyString, wxDefaultPosition, wxSize(72, 20), 10, choices, wxCB_DROPDOWN | wxTE_PROCESS_ENTER, val);
+    auto choice = new wxComboBox(tb, kSpamID_MAIN_SCALE_CHOICE, wxEmptyString, wxDefaultPosition, wxSize(120, 20), 10, choices, wxCB_DROPDOWN | wxTE_PROCESS_ENTER, val);
     choice->SetSelection(5);
     choice->SetMargins(0, 0);
 
     tb->AddControl(choice, wxT("Scale Factor"));
     tb->AddSeparator();
-    tb->AddTool(kSpamID_MAIN_ZOOM_OUT, wxT("Zoom Out"), Spam::GetBitmap(ip, bm_ZoomOut), wxNullBitmap, wxITEM_DROPDOWN);
+    tb->AddTool(kSpamID_MAIN_ZOOM, wxT("Zoom In"), Spam::GetBitmap(ip, bm_ZoomIn), wxNullBitmap, wxITEM_DROPDOWN);
 
     wxMenu* zoomMenu = new wxMenu;
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_IN, wxT("Zoom In"));
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_EXTENT, wxT("Zoom Extent"));
-    zoomMenu->AppendSeparator();
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_ORIGINAL, wxT("Zoom 1:1"));
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_HALF, wxT("Zoom Half"));
-    zoomMenu->AppendCheckItem(kSpamID_MAIN_ZOOM_DOUBLE, wxT("Zoom Double"));
-    tb->SetDropdownMenu(kSpamID_MAIN_ZOOM_OUT, zoomMenu);
+    zoomMenu->AppendRadioItem(kSpamID_MAIN_ZOOM_IN, wxT("Zoom In"))->Check(true);
+    zoomMenu->AppendRadioItem(kSpamID_MAIN_ZOOM_OUT, wxT("Zoom Out"));
+    zoomMenu->AppendRadioItem(kSpamID_MAIN_ZOOM_EXTENT, wxT("Zoom Extent"));
+    zoomMenu->AppendRadioItem(kSpamID_MAIN_ZOOM_ORIGINAL, wxT("Zoom 1:1"));
+    zoomMenu->AppendRadioItem(kSpamID_MAIN_ZOOM_HALF, wxT("Zoom Half"));
+    zoomMenu->AppendRadioItem(kSpamID_MAIN_ZOOM_DOUBLE, wxT("Zoom Double"));
+    tb->SetDropdownMenu(kSpamID_MAIN_ZOOM, zoomMenu);
     tb->Realize();
 
-    tb->Bind(wxEVT_TOOL,           &MainToolPane::OnAllZoomOut,      this, kSpamID_MAIN_ZOOM_OUT);
+    tb->Bind(wxEVT_TOOL,           &MainToolPane::OnAllZoom,         this, kSpamID_MAIN_ZOOM);
     zoomMenu->Bind(wxEVT_TOOL,     &MainToolPane::OnAllZoomIn,       this, kSpamID_MAIN_ZOOM_IN);
+    zoomMenu->Bind(wxEVT_TOOL,     &MainToolPane::OnAllZoomOut,      this, kSpamID_MAIN_ZOOM_OUT);
     zoomMenu->Bind(wxEVT_TOOL,     &MainToolPane::OnAllZoomExtent,   this, kSpamID_MAIN_ZOOM_EXTENT);
     zoomMenu->Bind(wxEVT_TOOL,     &MainToolPane::OnAllZoomOriginal, this, kSpamID_MAIN_ZOOM_ORIGINAL);
     zoomMenu->Bind(wxEVT_TOOL,     &MainToolPane::OnAllZoomHalf,     this, kSpamID_MAIN_ZOOM_HALF);
@@ -192,42 +184,39 @@ void MainToolPane::OnOpen(wxCommandEvent &cmd)
     }
 }
 
-void MainToolPane::OnSave(wxCommandEvent &cmd)
+void MainToolPane::OnAllZoom(wxCommandEvent &e)
 {
-    wxString dbPath = SpamConfig::Get<wxString>(CommonDef::GetDBPathCfgPath());
-    boost::filesystem::path p(dbPath.ToStdWstring());
-    boost::system::error_code ec;
-    if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
+    double (CVImagePanel::*zoomFun)(bool) = &CVImagePanel::ZoomIn;
+    wxSizerItem* sizerItem = GetSizer()->GetItemById(kSpamGlobalImageToolBar);
+    if (sizerItem)
     {
-        SaveProject(dbPath);
+        auto tb = dynamic_cast<wxToolBar *>(sizerItem->GetWindow());
+        if (tb)
+        {
+            int tPos = tb->GetToolPos(kSpamID_MAIN_ZOOM);
+            if (wxNOT_FOUND != tPos)
+            {
+                wxMenu *ddMenu = tb->GetToolByPos(tPos)->GetDropdownMenu();
+                for (const wxMenuItem *mItem : ddMenu->GetMenuItems())
+                {
+                    if (mItem->IsChecked()) {
+                        switch (mItem->GetId())
+                        {
+                        case kSpamID_MAIN_ZOOM_OUT: zoomFun = &CVImagePanel::ZoomOut; break;
+                        case kSpamID_MAIN_ZOOM_IN: zoomFun = &CVImagePanel::ZoomIn; break;
+                        case kSpamID_MAIN_ZOOM_EXTENT: zoomFun = &CVImagePanel::ZoomExtent; break;
+                        case kSpamID_MAIN_ZOOM_ORIGINAL: zoomFun = &CVImagePanel::ZoomOriginal; break;
+                        case kSpamID_MAIN_ZOOM_HALF: zoomFun = &CVImagePanel::ZoomHalf; break;
+                        case kSpamID_MAIN_ZOOM_DOUBLE: zoomFun = &CVImagePanel::ZoomDouble; break;
+                        default: break;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
     }
-    else
-    {
-        OnSaveAs(cmd);
-    }
-}
-
-void MainToolPane::OnSaveAs(wxCommandEvent &cmd)
-{
-    wxString wildCard{ "Spam DB files (*.spam_db)|*.spam_db" };
-    wildCard.Append("|HDF5 files (*.h5)|*.h5");
-
-    wxFileDialog saveFileDialog(wxGetTopLevelParent(this), _("Open Spam DB file"), "", "", wildCard, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-    if (saveFileDialog.ShowModal() != wxID_CANCEL)
-    {
-        auto fullPath = saveFileDialog.GetPath();
-        SaveProject(fullPath);
-    }
-}
-
-void MainToolPane::OnUndo(wxCommandEvent &cmd)
-{
-    SpamUndoRedo::Undo();
-}
-
-void MainToolPane::OnRedo(wxCommandEvent &cmd)
-{
-    SpamUndoRedo::Redo();
+    ZoomAll(zoomFun, false);
 }
 
 void MainToolPane::OnAllZoomIn(wxCommandEvent &e)
@@ -298,14 +287,6 @@ void MainToolPane::OnAllSelectScale(wxCommandEvent &e)
 
 void MainToolPane::SaveProject(const wxString &dbPath)
 {
-    ProjPanel *projPanel = GetProjPanel();
-    if (projPanel)
-    {
-        projPanel->SaveProject(dbPath);
-        SpamConfig::Set(CommonDef::GetDBPathCfgPath(), dbPath);
-        SpamConfig::Set(CommonDef::GetProjCfgPath(), projPanel->GetProjectName());
-        SpamConfig::Save();
-    }
 }
 
 wxString MainToolPane::GetNextProjectName()
@@ -325,7 +306,7 @@ bool MainToolPane::AskSaveModifiedProjectFirst()
         int r = dialog.ShowModal();
         if (wxID_YES == r)
         {
-            OnSave(wxCommandEvent());
+            //OnSave(wxCommandEvent());
             needProceed = true;
         }
         else if (wxID_NO == r)
@@ -360,8 +341,51 @@ void MainToolPane::GetAllImgPanelPages(std::vector<CVImagePanel *> &imgPanelPage
     }
 }
 
-void MainToolPane::ZoomAll(double (CVImagePanel::*zoomFun)(bool))
+void MainToolPane::ZoomAll(double (CVImagePanel::*zoomFun)(bool), bool changeIcon)
 {
+    wxSizerItem* sizerItem = GetSizer()->GetItemById(kSpamGlobalImageToolBar);
+    if (sizerItem && changeIcon)
+    {
+        auto tb = dynamic_cast<wxToolBar *>(sizerItem->GetWindow());
+        if (tb)
+        {
+            int tPos = tb->GetToolPos(kSpamID_MAIN_ZOOM);
+            if (wxNOT_FOUND != tPos)
+            {
+                const SpamIconPurpose ip = kICON_PURPOSE_TOOLBAR;
+                wxMenu *ddMenu = tb->GetToolByPos(tPos)->GetDropdownMenu();
+                for (const wxMenuItem *mItem : ddMenu->GetMenuItems())
+                {
+                    if (mItem->IsChecked()) {
+                        switch (mItem->GetId())
+                        {
+                        case kSpamID_MAIN_ZOOM_OUT:
+                            tb->SetToolNormalBitmap(kSpamID_MAIN_ZOOM, Spam::GetBitmap(ip, bm_ZoomOut));
+                            break;
+                        case kSpamID_MAIN_ZOOM_IN:
+                            tb->SetToolNormalBitmap(kSpamID_MAIN_ZOOM, Spam::GetBitmap(ip, bm_ZoomIn));
+                            break;
+                        case kSpamID_MAIN_ZOOM_EXTENT:
+                            tb->SetToolNormalBitmap(kSpamID_MAIN_ZOOM, Spam::GetBitmap(ip, bm_ZoomExtent));
+                            break;
+                        case kSpamID_MAIN_ZOOM_ORIGINAL:
+                            tb->SetToolNormalBitmap(kSpamID_MAIN_ZOOM, Spam::GetBitmap(ip, bm_ZoomOriginal));
+                            break;
+                        case kSpamID_MAIN_ZOOM_HALF:
+                            tb->SetToolNormalBitmap(kSpamID_MAIN_ZOOM, Spam::GetBitmap(ip, bm_ZoomHalf));
+                            break;
+                        case kSpamID_MAIN_ZOOM_DOUBLE:
+                            tb->SetToolNormalBitmap(kSpamID_MAIN_ZOOM, Spam::GetBitmap(ip, bm_ZoomDouble));
+                            break;
+                        default: break;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     std::vector<CVImagePanel *> imgPanelPages;
     GetAllImgPanelPages(imgPanelPages);
 

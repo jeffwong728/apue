@@ -257,6 +257,7 @@ wxDataViewCtrl *ProjPanel::MakeProjView()
     projModel->sig_GeomCreate.connect(std::bind(&ProjPanel::OnExpandNode, this, std::placeholders::_1));
     projModel->sig_GeomAdd.connect(std::bind(&ProjPanel::OnExpandNode, this, std::placeholders::_1));
     projView->SetAlternateRowColour(wxColour(135, 206, 235));
+    projView->SetRowHeight(26);
     return projView;
 }
 

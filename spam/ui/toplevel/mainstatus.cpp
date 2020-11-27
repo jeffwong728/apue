@@ -84,7 +84,9 @@ void MainStatus::SetBitmapStatus(const StatusIconType iconType, const wxString &
         break;
     }
 
-    dc.DrawText(text, wxPoint(iSize.GetWidth()+3, 0));
+    wxFontMetrics fm = dc.GetFontMetrics();
+    dc.SetTextForeground(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
+    dc.DrawText(text, wxPoint(iSize.GetWidth()+3, (statusRect.GetHeight()-fm.height)/2));
     memDC.SelectObject(wxNullBitmap);
     m_statbmp->SetBitmap(statusBitmap);
 
