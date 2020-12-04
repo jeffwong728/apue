@@ -3,6 +3,7 @@
 #include "rootframe.h"
 #include "projpanel.h"
 #include "logpanel.h"
+#include "pyeditor.h"
 #include "thumbnailpanel.h"
 #include "mainstatus.h"
 #include <ui/spam.h>
@@ -23,7 +24,6 @@
 #include <ui/toolbox/geombox.h>
 #include <ui/misc/percentvalidator.h>
 #include <ui/misc/thumbnailctrl.h>
-#include <ui/proc/rgn.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <wx/artprov.h>
@@ -64,6 +64,7 @@ RootFrame::RootFrame()
     , stationNotebookName_(wxT("station"))
     , projPanelName_(wxT("proj"))
     , logPanelName_(wxT("log"))
+    , pyEditorName_(wxT("pyEditor"))
     , imagesZonePanelName_(wxT("imagesZone"))
     , toolBoxBarName_(wxT("toolBoxBar"))
     , toolBoxLabels{wxT("toolBoxInfo"), wxT("toolBoxGeom"), wxT("toolBoxProc"), wxT("toolBoxMatch"), wxT("toolBoxStyle") }
@@ -189,6 +190,7 @@ void RootFrame::CreateAuiPanes()
 
     wxAuiMgr_.AddPane(CreateStationNotebook(), wxAuiPaneInfo().Name(stationNotebookName_).Center().PaneBorder(false).CloseButton(false).CaptionVisible(false));
     wxAuiMgr_.AddPane(new ProjPanel(this), wxAuiPaneInfo().Name(projPanelName_).Left().Caption(wxT("Project Explorer")));
+    wxAuiMgr_.AddPane(new PyEditor(this), wxAuiPaneInfo().Name(pyEditorName_).Right().Bottom().Caption("Script Editor"));
     wxAuiMgr_.AddPane(new LogPanel(this), wxAuiPaneInfo().Name(logPanelName_).Left().Bottom().Caption("Log"));
     wxAuiMgr_.AddPane(new ThumbnailPanel(this), wxAuiPaneInfo().Name(imagesZonePanelName_).Bottom().Bottom().Caption("Images Zone"));
 
@@ -470,6 +472,22 @@ void RootFrame::OnLoadImage(wxCommandEvent& event)
     }
 }
 
+void RootFrame::OnLoadPy3(wxCommandEvent& event)
+{
+    wxString wildCard{ "Python 3 files (*.py;*.pyw)|*.py;*.pyw" };
+    wildCard.Append("|All files (*.*)|*.*");
+
+    wxFileDialog openFileDialog(this, wxT("Open Python 3 file"), "", "", wildCard, wxFD_OPEN | wxFD_FILE_MUST_EXIST | wxFD_CHANGE_DIR);
+    if (openFileDialog.ShowModal() != wxID_CANCEL)
+    {
+        auto pyEditor = dynamic_cast<PyEditor *>(wxAuiMgr_.GetPane(pyEditorName_).window);
+        if (pyEditor)
+        {
+            pyEditor->LoadPyFile(openFileDialog.GetPath());
+        }
+    }
+}
+
 void RootFrame::OnAddStations(const SPModelNodeVector &stations)
 {
     auto stationNB = GetStationNotebook();
@@ -688,6 +706,11 @@ void RootFrame::OnUpdateUI(wxUpdateUIEvent& e)
         case spamID_VIEW_LOG:
             gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
             gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(logPanelName_).IsShown());
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
+            break;
+        case spamID_VIEW_PYEDITOR:
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(pyEditorName_).IsShown());
             gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
             break;
         case spamID_VIEW_IMAGES_ZONE:
@@ -1167,6 +1190,30 @@ void RootFrame::OnImageBufferItemUpdate(const ImageBufferItem &ibi)
     }
 }
 
+void RootFrame::file_import_image_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    wxCommandEvent e;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    frame->OnLoadImage(e);
+}
+
+void RootFrame::file_export_image_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+}
+
+void RootFrame::file_import_py3_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    wxCommandEvent e;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    frame->OnLoadPy3(e);
+}
+
+void RootFrame::file_export_py3_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+}
+
 void RootFrame::file_quit_cb(GtkWidget *menuitem, gpointer user_data)
 {
     RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
@@ -1260,6 +1307,16 @@ void RootFrame::view_log_cb(GtkWidget *widget, gpointer user_data)
     frame->wxAuiMgr_.Update();
 }
 
+void RootFrame::view_pyeditor_cb(GtkWidget *widget, gpointer user_data)
+{
+    if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    auto &pane = frame->wxAuiMgr_.GetPane(frame->pyEditorName_);
+    bool v = pane.IsShown();
+    pane.Show(!v);
+    frame->wxAuiMgr_.Update();
+}
+
 void RootFrame::ReplaceTitleBar(void)
 {
     GtkWidget *header_bar = gtk_header_bar_new();
@@ -1307,14 +1364,19 @@ void RootFrame::ReplaceTitleBar(void)
     GtkWidget *fileMi = gtk_menu_item_new_with_mnemonic("_File");
     GtkWidget *newMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_NEW, accel_group);
     GtkWidget *openMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_OPEN, accel_group);
+    GtkWidget *impoMi = gtk_image_menu_item_new_with_mnemonic("_Import Image...");
+    GtkWidget *expoMi = gtk_image_menu_item_new_with_mnemonic("_Export Image...");
+    GtkWidget *imPyMi = gtk_image_menu_item_new_with_mnemonic("_Open Python 3 Script...");
+    GtkWidget *exPyMi = gtk_image_menu_item_new_with_mnemonic("_Save Python 3 Script...");
     GtkWidget *saveMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE, accel_group);
     GtkWidget *saveAsMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE_AS, nullptr);
-    GtkWidget *quitMi = quitMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
+    GtkWidget *quitMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
     GtkWidget *viewMi = gtk_menu_item_new_with_label("View");
     GtkWidget *projMi = gtk_check_menu_item_new_with_label("Show Project Browser");
     GtkWidget *entZMi = gtk_check_menu_item_new_with_label("Show Entity Zone");
     GtkWidget *toolMi = gtk_check_menu_item_new_with_label("Show Toolbox");
     GtkWidget *logWMi = gtk_check_menu_item_new_with_label("Show Log Window");
+    GtkWidget *pyEiMi = gtk_check_menu_item_new_with_label("Script Editor");
     GtkWidget *helpMi = gtk_menu_item_new_with_label("Help");
     GtkWidget *abouMi = gtk_menu_item_new_with_label("About");
 
@@ -1323,6 +1385,11 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(helpMi), helpMenu);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), newMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), openMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), impoMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), expoMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), imPyMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), exPyMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), saveMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), saveAsMi);
@@ -1332,6 +1399,7 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), entZMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), toolMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), logWMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), pyEiMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(helpMenu), abouMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), fileMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), viewMi);
@@ -1339,8 +1407,16 @@ void RootFrame::ReplaceTitleBar(void)
 
     gtk_widget_add_accelerator(newMi, "activate", accel_group, GDK_KEY_N, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(openMi, "activate", accel_group, GDK_KEY_O, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator(impoMi, "activate", accel_group, GDK_KEY_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator(expoMi, "activate", accel_group, GDK_KEY_E, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(saveMi, "activate", accel_group, GDK_KEY_S, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(quitMi, "activate", accel_group, GDK_KEY_Q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+
+    gtk_image_menu_item_set_always_show_image(GTK_IMAGE_MENU_ITEM(newMi), TRUE);
+    gtk_image_menu_item_set_always_show_image(GTK_IMAGE_MENU_ITEM(openMi), TRUE);
+    gtk_image_menu_item_set_always_show_image(GTK_IMAGE_MENU_ITEM(saveMi), TRUE);
+    gtk_image_menu_item_set_always_show_image(GTK_IMAGE_MENU_ITEM(saveAsMi), TRUE);
+    gtk_image_menu_item_set_always_show_image(GTK_IMAGE_MENU_ITEM(quitMi), TRUE);
 
     GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
     gtk_container_add(GTK_CONTAINER(box), menubar);
@@ -1357,6 +1433,10 @@ void RootFrame::ReplaceTitleBar(void)
 
     gtk_window_set_titlebar(GTK_WINDOW(m_widget), header_bar);
 
+    g_signal_connect(G_OBJECT(impoMi), "activate", G_CALLBACK(file_import_image_cb), this);
+    g_signal_connect(G_OBJECT(expoMi), "activate", G_CALLBACK(file_export_image_cb), this);
+    g_signal_connect(G_OBJECT(imPyMi), "activate", G_CALLBACK(file_import_py3_cb), this);
+    g_signal_connect(G_OBJECT(exPyMi), "activate", G_CALLBACK(file_export_py3_cb), this);
     g_signal_connect(G_OBJECT(quitMi), "activate", G_CALLBACK(file_quit_cb), this);
     g_signal_connect(G_OBJECT(saveMi), "activate", G_CALLBACK(file_save_cb), this);
     g_signal_connect(G_OBJECT(saveAsMi), "activate", G_CALLBACK(file_save_as_cb), this);
@@ -1364,6 +1444,7 @@ void RootFrame::ReplaceTitleBar(void)
     g_signal_connect(G_OBJECT(entZMi), "toggled", G_CALLBACK(view_entity_cb), this);
     g_signal_connect(G_OBJECT(toolMi), "toggled", G_CALLBACK(view_toolbox_cb), this);
     g_signal_connect(G_OBJECT(logWMi), "toggled", G_CALLBACK(view_log_cb), this);
+    g_signal_connect(G_OBJECT(pyEiMi), "toggled", G_CALLBACK(view_pyeditor_cb), this);
     g_signal_connect(G_OBJECT(abouMi), "activate", G_CALLBACK(help_about_cb), this);
 
     g_signal_connect(G_OBJECT(udTb), "clicked", G_CALLBACK(undo_cb), this);
@@ -1374,6 +1455,7 @@ void RootFrame::ReplaceTitleBar(void)
     widgets_.emplace_back(wxID_REDO, GTK_WIDGET(rdTb));
     widgets_.emplace_back(spamID_VIEW_PROJECT, projMi);
     widgets_.emplace_back(spamID_VIEW_LOG, logWMi);
+    widgets_.emplace_back(spamID_VIEW_PYEDITOR, pyEiMi);
     widgets_.emplace_back(spamID_VIEW_IMAGES_ZONE, entZMi);
     widgets_.emplace_back(spamID_VIEW_TOOLBOX_BAR, toolMi);
 }

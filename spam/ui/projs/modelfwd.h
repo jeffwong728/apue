@@ -10,6 +10,7 @@
 #include <vector>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/mvlab.hpp>
 #include <boost/any.hpp>
 #include <ui/cmndef.h>
 namespace Geom {
@@ -185,5 +186,6 @@ struct ImageBufferItem
 using NodeIdVector    = std::vector<NodeId>;
 using CurveVector     = std::vector<std::unique_ptr<Geom::Curve>>;
 using ImageBufferZone = std::unordered_map<std::string, ImageBufferItem>;
+using RgnBufferZone = std::unordered_map<std::string, cv::Ptr<cv::mvlab::Region>>;
 
 #endif //SPAM_UI_PROJS_MODEL_FWD_H

@@ -3,7 +3,7 @@
 #include "modelfwd.h"
 #include "modelnode.h"
 #include "drawablenode.h"
-#include <ui/proc/rgn.h>
+#include <opencv2/mvlab.hpp>
 namespace Geom {
     class Point;
     class PathVector;
@@ -19,7 +19,7 @@ public:
 
 public:
     bool IsContainer() const wxOVERRIDE { return false; }
-    SPSpamRgn ToRegion() const;
+    cv::Ptr<cv::mvlab::Region> ToRegion() const;
 
 public:
     EntitySigType GetCreateSigType() const wxOVERRIDE;

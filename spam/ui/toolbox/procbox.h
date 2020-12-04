@@ -8,10 +8,10 @@
 #include "wx/choice.h"
 #include "wx/textctrl.h"
 #include <ui/cmndef.h>
-#include <ui/proc/rgn.h>
 #include <ui/misc/histwidget.h>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/mvlab.hpp>
 #include <boost/any.hpp>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
@@ -49,7 +49,7 @@ private:
     HistogramWidget *hist_;
     cv::Mat img_;
     cv::Mat mask_;
-    SpamRgn roi_;
+    cv::Ptr<cv::mvlab::Region> roi_;
     std::vector<cv::Mat> imgs_;
     std::string uuidStation_;
 

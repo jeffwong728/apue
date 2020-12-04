@@ -75,6 +75,7 @@ private:
     void OnExit(wxCommandEvent& e);
     void OnClose(wxCloseEvent& e);
     void OnLoadImage(wxCommandEvent& e);
+    void OnLoadPy3(wxCommandEvent& e);
     void OnAddStations(const SPModelNodeVector &stations);
     void OnDeleteStations(const SPModelNodeVector &stations);
     void OnAddGeoms(const SPModelNodeVector &geoms);
@@ -115,6 +116,10 @@ private:
     void OnImageBufferItemUpdate(const ImageBufferItem &ibi);
 
 public:
+    static void file_import_image_cb(GtkWidget *menuitem, gpointer user_data);
+    static void file_export_image_cb(GtkWidget *menuitem, gpointer user_data);
+    static void file_import_py3_cb(GtkWidget *menuitem, gpointer user_data);
+    static void file_export_py3_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_quit_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_save_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_save_as_cb(GtkWidget *menuitem, gpointer user_data);
@@ -125,6 +130,7 @@ public:
     static void view_entity_cb(GtkWidget *widget, gpointer user_data);
     static void view_toolbox_cb(GtkWidget *widget, gpointer user_data);
     static void view_log_cb(GtkWidget *widget, gpointer user_data);
+    static void view_pyeditor_cb(GtkWidget *widget, gpointer user_data);
 
 private:
     void ReplaceTitleBar(void);
@@ -148,6 +154,7 @@ private:
     const wxString mainToolPanelName_;
     const wxString stationNotebookName_;
     const wxString projPanelName_;
+    const wxString pyEditorName_;
     const wxString logPanelName_;
     const wxString imagesZonePanelName_;
     const wxString toolBoxBarName_;

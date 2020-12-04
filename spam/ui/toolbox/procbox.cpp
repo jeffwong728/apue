@@ -8,11 +8,6 @@
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
 #include <wx/wxhtml.h>
-#ifdef free
-#undef free
-#endif
-#include <tbb/parallel_for.h>
-#include <tbb/parallel_reduce.h>
 
 ProcBox::ProcBox(wxWindow* parent)
 : ToolBox(parent, kSpamID_TOOLPAGE_PROC, wxT("Process"), std::vector<wxString>(), kSpamID_TOOLBOX_PROC_GUARD - kSpamID_TOOLBOX_PROC_ENHANCEMENT, kSpamID_TOOLBOX_PROC_ENHANCEMENT)
@@ -75,8 +70,7 @@ void ProcBox::UpdateHistogram(const std::string &uuidTag, const cv::Mat &srcImg,
 
     img_ = srcImg;
     uuidStation_ = uuidTag;
-    roi_.clear();
-    roi_.AddRun(mask_);
+    roi_ = cv::mvlab::Region::GenEmpty();
     cv::split(srcImg, imgs_);
 
     RePopulateHistogramProfiles(imgs_, mask_);
@@ -245,18 +239,8 @@ void ProcBox::ReThreshold()
             int minGray = hist_->GetThumbs()[0];
             int maxGray = hist_->GetThumbs()[1];
 
-            cv::Mat labels;
-            cv::Mat binImg = BasicImgProc::Binarize(imgs_[selChannel], minGray, maxGray);
-            int numLabels = cv::connectedComponents(binImg, labels, 8, CV_32S, cv::CCL_GRANA);
-
-            SPSpamRgnVector rgns = BasicImgProc::Connect(labels, numLabels - 1);
-
-            tbb::parallel_for(tbb::blocked_range<size_t>(0, rgns->size()), [&rgns](const tbb::blocked_range<size_t>& r) {
-                for (size_t i = r.begin(); i != r.end(); ++i)
-                {
-                    (*rgns)[i].GetContours();
-                }
-            });
+            cv::Ptr<cv::mvlab::Region> rgns = cv::mvlab::Region::GenEmpty();
+            rgns->GetContour();
 
             cav->PushRegionsIntoBufferZone(nameText_->GetValue().ToStdString(), rgns);
             cav->ClearVisiableRegions();

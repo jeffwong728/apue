@@ -2,15 +2,6 @@
 #define SPAM_UI_PROJS_DRAWABLE_NODE_H
 #include "modelfwd.h"
 #include "modelnode.h"
-#ifdef IN
-#undef IN
-#endif
-#ifdef OUT
-#undef OUT
-#endif
-#ifdef WINDING
-#undef WINDING
-#endif
 #include <cairomm/cairomm.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )

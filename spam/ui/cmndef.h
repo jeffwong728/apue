@@ -33,6 +33,8 @@ enum
     kSpamLogToolBar,
     kSpamLogTextCtrl,
 
+    kSpamPyEditorCtrl,
+
     kStationThumbnailToolBar,
     kStationThumbnailCtrl,
     
@@ -50,6 +52,7 @@ enum
     spamID_VIEW_IMAGE,
     spamID_VIEW_PROJECT,
     spamID_VIEW_LOG,
+    spamID_VIEW_PYEDITOR,
     spamID_VIEW_IMAGES_ZONE,
     spamID_VIEW_TOOLBOX_BAR,
     spamID_VIEW_DEFAULT_LAYOUT,

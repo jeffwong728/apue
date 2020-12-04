@@ -16,48 +16,9 @@ GeomNode::~GeomNode()
 {
 }
 
-SPSpamRgn GeomNode::ToRegion() const
+cv::Ptr<cv::mvlab::Region> GeomNode::ToRegion() const
 {
-    SPSpamRgn rgn = std::make_shared<SpamRgn>();
-    Geom::OptRect bbox = GetBoundingBox();
-    Geom::PathVector pv;
-    BuildPath(pv);
-
-    if (bbox)
-    {
-        int t = wxRound(bbox.get().top());
-        int b = wxRound(bbox.get().bottom());
-        int l = wxRound(bbox.get().left());
-        int r = wxRound(bbox.get().right());
-        for (int l = t; l<b; ++l)
-        {
-            int cb = -1;
-            for (int c = l; c < r; ++c)
-            {
-                if (IsPointInside(pv, Geom::Point(c, l)))
-                {
-                    if (cb < 0)
-                    {
-                        cb = c;
-                    }
-                }
-                else
-                {
-                    if (cb > 0)
-                    {
-                        rgn->AddRun(l, cb, c);
-                        cb = -1;
-                    }
-                }
-            }
-
-            if (cb > 0)
-            {
-                rgn->AddRun(l, cb, r);
-            }
-        }
-    }
-
+    cv::Ptr<cv::mvlab::Region> rgn = cv::mvlab::Region::GenEmpty();
     return rgn;
 }
 

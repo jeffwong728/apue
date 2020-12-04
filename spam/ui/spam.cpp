@@ -23,8 +23,6 @@
 #pragma warning( pop )
 #include <boost/algorithm/string.hpp>
 #include <ui/projs/drawablenode.h>
-#include <wxSVG/SVGDocument.h>
-#include <tbb/task_scheduler_init.h>
 #include <gmodule.h>
 #include <gtk/gtk.h>
 
@@ -145,8 +143,6 @@ bool SpamApp::OnInit()
     bitmaps_[ipTBar][bm_ImageImport]    = wxBitmap(wxT("res/import_layer_16.png"),  bmt);
     bitmaps_[ipTBar][bm_ImageExport]    = wxBitmap(wxT("res/export_layer_16.png"),  bmt);
 
-    BasicImgProc::Initialize(tbb::task_scheduler_init::default_num_threads());
-
     GtkSettings *settings = gtk_settings_get_default();
     g_object_set(G_OBJECT(settings), "gtk-application-prefer-dark-theme", 1, NULL);
 
@@ -231,16 +227,12 @@ wxBitmap SpamApp::GetBitmap(const SpamIconPurpose ip, const std::string &bmName)
 
             if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
             {
-                auto svgDoc = std::make_unique<wxSVGDocument>();
-                svgDoc->Load(wxString(p.native()).ToUTF8());
-
-                const int iconSizes[kICON_PURPOSE_GUARD] = {22, 16, 24};
-                wxImage img = svgDoc->Render(iconSizes[ip], iconSizes[ip], 0, true, true);
-                if (img.IsOk())
+                const int iconSizes[kICON_PURPOSE_GUARD] = { 22, 16, 24 };
+                GdkPixbuf *pixBuf = gdk_pixbuf_new_from_file_at_size(wxString(p.native()).ToUTF8().data(), iconSizes[ip], iconSizes[ip], nullptr);
+                if (pixBuf)
                 {
-                    wxBitmap bmp = wxBitmap(img);
+                    wxBitmap bmp = wxBitmap(pixBuf);
                     bms[bmName] = bmp;
-
                     return bmp;
                 }
             }

@@ -18,37 +18,6 @@
 #include <2geom/cairo-path-sink.h>
 #include <tbb/tick_count.h>
 
-class CairoRegionContourSink
-{
-public:
-    CairoRegionContourSink(cairo_t *cr) : cr_(cr) {}
-    void feed(const RegionContourCollection &contoursCollection)
-    {
-        feedContours(contoursCollection.outers);
-        feedContours(contoursCollection.holes);
-    }
-
-    void feedContours(const ContourVector &contours)
-    {
-        for (const auto &outer : contours)
-        {
-            if (!outer.points.empty())
-            {
-                ::cairo_move_to(cr_, outer.start.x, outer.start.y);
-                for (const auto &pt : outer.points)
-                {
-                    ::cairo_line_to(cr_, pt.x, pt.y);
-                }
-
-                ::cairo_close_path(cr_);
-            }
-        }
-    }
-
-private:
-    cairo_t *cr_;
-};
-
 CairoCanvas::CairoCanvas(wxWindow* parent, const std::string &cvWinName, const wxString &uuidStation, const wxSize& size)
 : wxScrolledCanvas(parent, wxID_ANY, wxPoint(0, 0), size)
 , cvWndName_(cvWinName.c_str())
@@ -841,7 +810,7 @@ void CairoCanvas::PushImageIntoBufferZone(const std::string &name)
     }
 }
 
-void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const SPSpamRgnVector &rgns)
+void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const cv::Ptr<cv::mvlab::Region> &rgns)
 {
     wxSize thumbnailSize(80, 80);
     double scaleX = (thumbnailSize.x + 0.0) / srcMat_.cols;
@@ -867,10 +836,7 @@ void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const SPSpa
         thumbMat = cv::Mat::zeros(srcMat_.rows, srcMat_.cols, CV_8UC4);
     }
 
-    for (const SpamRgn &rgn : *rgns)
-    {
-        rgn.Draw(thumbMat, (thumbMat.cols + 0.0) / srcMat_.cols, (thumbMat.rows + 0.0) / srcMat_.rows);
-    }
+    rgns->Draw(thumbMat, cv::Scalar());
 
     wxImage thumbImg;
     thumbImg.Create(thumbMat.cols, thumbMat.rows, false);
@@ -1137,18 +1103,12 @@ void CairoCanvas::DrawRegions(Cairo::RefPtr<Cairo::Context> &cr)
         auto itf = rgnBufferZone_.find(rgnName);
         if (itf != rgnBufferZone_.end())
         {
-            for (const SpamRgn &rgn : *(itf->second))
-            {
-                cr->save();
-                const RegionContourCollection &contours = rgn.GetContours();
-                CairoRegionContourSink cairoContourSink(cr->cobj());
-                cairoContourSink.feed(contours);
-                wxColour clr(rgn.GetColor());
-                cr->set_source_rgba(clr.Red() / 255.0, clr.Green() / 255.0, clr.Blue() / 255.0, clr.Alpha() / 255.0);
-                cr->set_line_width(ux);
-                cr->stroke();
-                cr->restore();
-            }
+            cr->save();
+            wxColour clr;
+            cr->set_source_rgba(clr.Red() / 255.0, clr.Green() / 255.0, clr.Blue() / 255.0, clr.Alpha() / 255.0);
+            cr->set_line_width(ux);
+            cr->stroke();
+            cr->restore();
         }
     }
 }

@@ -1,17 +1,16 @@
 #ifndef SPAM_UI_PROC_BASIC_H
 #define SPAM_UI_PROC_BASIC_H
-#include "rgn.h"
 #include <vector>
 #include <forward_list>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
 #include <boost/core/noncopyable.hpp>
-#include <tbb/scalable_allocator.h>
-
-using SpamRunListTBB = std::vector<SpamRun, tbb::scalable_allocator<SpamRun>>;
-using SpamRunListPool = std::list<SpamRunListTBB, tbb::scalable_allocator<SpamRunListTBB>>;
-using UPSpamRunListTBB = std::unique_ptr<SpamRunListTBB>;
-using SpamRunListList = std::vector<std::unique_ptr<SpamRunListTBB>, tbb::scalable_allocator<std::unique_ptr<SpamRunListTBB>>>;
+#pragma warning( push )
+#pragma warning( disable : 4819 4003 4267 )
+#include <2geom/2geom.h>
+#include <2geom/path-intersection.h>
+#include <2geom/cairo-path-sink.h>
+#pragma warning( pop )
 
 class BasicImgProc : private boost::noncopyable
 {
@@ -19,16 +18,8 @@ public:
     BasicImgProc() = delete;
 
 public:
-    static void Initialize(const int numWorkerThread);
-    static void ReturnRegion(SpamRunList &&rgn);
-
-public:
     static cv::Mat AlignImageWidth(const cv::Mat &img);
     static cv::Mat Binarize(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
-    static int GetNumRunsOfBinaryImage(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
-    static SPSpamRgn Threshold(const cv::Mat &grayImage, const uchar lowerGray, const uchar upperGray);
-    static SPSpamRgnVector Connect(const cv::Mat &labels, const int numLabels);
-    static int GetNumWorkers() { return static_cast<int>(s_runList_pools_.size()); }
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz);
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz, std::vector<uint8_t> &buf);
     static void Transform(const cv::Mat &grayImage, cv::Mat &dst, const cv::Mat &transMat, const cv::Rect &mask);
@@ -37,10 +28,6 @@ public:
 
 public:
     static int16_t getGrayScaleSubpix(const cv::Mat& grayImage, const cv::Point2f &pt);
-
-private:
-    static std::vector<SpamRunListPool> s_runList_pools_;
-    static std::vector<SpamRunList> s_rgn_pool_;
 };
 
 inline int16_t BasicImgProc::getGrayScaleSubpix(const cv::Mat& img, const cv::Point2f &pt)

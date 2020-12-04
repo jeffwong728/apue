@@ -8,10 +8,10 @@
 #endif
 #include <ui/projs/modelfwd.h>
 #include <ui/misc/instructiontip.h>
-#include <ui/proc/rgn.h>
 #include <string>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/mvlab.hpp>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
 #include <2geom/2geom.h>
@@ -104,7 +104,7 @@ public:
     void ShowPixelValue(const wxPoint &pos);
     void PopupImageInfomation(const wxPoint &pos);
     void PushImageIntoBufferZone(const std::string &name);
-    void PushRegionsIntoBufferZone(const std::string &name, const SPSpamRgnVector &rgns);
+    void PushRegionsIntoBufferZone(const std::string &name, const cv::Ptr<cv::mvlab::Region> &rgns);
     void ClearVisiableRegions() { rgnsVisiable_.clear(); }
     void SetVisiableRegion(const std::string &rgnName) { rgnsVisiable_.push_back(rgnName); }
 

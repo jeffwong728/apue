@@ -11,7 +11,6 @@ set(2Geom_DIR "$ENV{SPAM_ROOT_DIR}/install/lib2geom/lib/cmake/2Geom")
 
 list(APPEND CMAKE_MODULE_PATH "$ENV{SPAM_ROOT_DIR}/cmake")
 find_package(wxGTK3 REQUIRED COMPONENTS mono)
-find_package(wxSVG REQUIRED COMPONENTS wxSVG)
 find_package(VCPKG REQUIRED COMPONENTS gtk3 gdk3 gio pangocairo gdk_pixbuf pango gobject gthread glib glibmm gmodule cairo cairomm exif)
 list(POP_BACK CMAKE_MODULE_PATH)
 

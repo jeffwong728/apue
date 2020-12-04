@@ -33,6 +33,7 @@ set(ui_core_SRCS
   projs/beziergonnode.cpp
   projs/stylecellrenderer.cpp
   toplevel/logpanel.cpp
+  toplevel/pyeditor.cpp
   toplevel/thumbnailpanel.cpp
   toplevel/mainstatus.cpp
   toplevel/maintoolpane.cpp
@@ -58,9 +59,7 @@ set(ui_core_SRCS
   fsm/nodeedittool.cpp
   fsm/polygontool.cpp
   fsm/beziergontool.cpp
-  proc/rgn.cpp
   proc/basic.cpp
-  proc/pixeltmpl.cpp
 )
 
 set(ui_core_HEADERS 
@@ -100,6 +99,7 @@ set(ui_core_HEADERS
   projs/geomnode.h
   projs/stylecellrenderer.h
   toplevel/logpanel.h
+  toplevel/pyeditor.h
   toplevel/thumbnailpanel.h
   toplevel/mainstatus.h
   toplevel/maintoolpane.h
@@ -126,9 +126,7 @@ set(ui_core_HEADERS
   fsm/beziergontool.h
   fsm/polygontool.h
   fsm/events.h
-  proc/rgn.h
   proc/basic.h
-  proc/pixeltmpl.h
 )
 
 if(MSVC)
@@ -173,11 +171,11 @@ list(APPEND libs hdf5::hdf5_cpp-shared)
 list(APPEND libs hdf5::hdf5_hl_cpp-shared)
 list(APPEND libs opencv_core)
 list(APPEND libs opencv_imgcodecs)
+list(APPEND libs opencv_mvlab)
 list(APPEND libs Boost::python38)
 list(APPEND libs Boost::filesystem)
 list(APPEND libs Boost::thread)
 list(APPEND libs Boost::locale)
-list(APPEND libs wxSVG::wxSVG)
 list(APPEND libs 2Geom::2geom)
 
 target_link_libraries(ui_core PUBLIC ${libs})
