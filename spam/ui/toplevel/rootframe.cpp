@@ -4,6 +4,7 @@
 #include "projpanel.h"
 #include "logpanel.h"
 #include "pyeditor.h"
+#include "preferencesdlg.h"
 #include "thumbnailpanel.h"
 #include "mainstatus.h"
 #include <ui/spam.h>
@@ -1317,6 +1318,22 @@ void RootFrame::view_pyeditor_cb(GtkWidget *widget, gpointer user_data)
     frame->wxAuiMgr_.Update();
 }
 
+void RootFrame::preferences_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
+{
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    PreferencesDlg dlg(frame);
+    if (dlg.ShowModal() == wxID_OK) {
+
+    }
+}
+
+static void
+activate_about(GSimpleAction *action,
+    GVariant      *parameter,
+    gpointer       user_data)
+{
+}
+
 void RootFrame::ReplaceTitleBar(void)
 {
     GtkWidget *header_bar = gtk_header_bar_new();
@@ -1324,15 +1341,33 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_header_bar_set_title(GTK_HEADER_BAR(header_bar), "Spam");
     gtk_header_bar_set_has_subtitle(GTK_HEADER_BAR(header_bar), FALSE);
 
-    GtkWidget *menu = gtk_menu_button_new();
-    gtk_menu_button_set_direction(GTK_MENU_BUTTON(menu), GTK_ARROW_NONE);
-    GtkWidget *popover = gtk_popover_new(NULL);
-    gtk_container_set_border_width(GTK_CONTAINER(popover), 10);
-    GtkWidget *label = gtk_label_new("Popovers work too!");
-    gtk_container_add(GTK_CONTAINER(popover), label);
-    gtk_widget_show(label);
-    gtk_menu_button_set_popover(GTK_MENU_BUTTON(menu), popover);
-    gtk_header_bar_pack_end(GTK_HEADER_BAR(header_bar), menu);
+    GActionEntry win_entries[] = {
+        { "about", activate_about, NULL, NULL, NULL },
+        { "main", NULL, "s", "'pizza'", NULL },
+        { "wine", NULL, NULL, "false", NULL },
+        { "beer", NULL, NULL, "false", NULL },
+        { "water", NULL, NULL, "true", NULL },
+        { "preferences", preferences_cb, NULL, NULL, NULL },
+        { "pay", NULL, "s", NULL, NULL }
+    };
+
+    GSimpleActionGroup *win_actions = g_simple_action_group_new();
+    g_action_map_add_action_entries(G_ACTION_MAP(win_actions), win_entries, G_N_ELEMENTS(win_entries), this);
+    gtk_widget_insert_action_group(m_widget, "RootFrame", G_ACTION_GROUP(win_actions));
+
+    GtkBuilder *builder = gtk_builder_new_from_resource("/org/mvlab/spam/menus.ui");
+    GMenuModel *titleBarGear = G_MENU_MODEL(gtk_builder_get_object(builder, "title_bar_gear_menu"));
+
+    GtkWidget *gearMenu = gtk_menu_button_new();
+    GtkWidget * gearIcon = gtk_image_new_from_icon_name("emblem-system-symbolic", GTK_ICON_SIZE_BUTTON);
+    gtk_menu_button_set_direction(GTK_MENU_BUTTON(gearMenu), GTK_ARROW_NONE);
+    gtk_menu_button_set_use_popover(GTK_MENU_BUTTON(gearMenu), TRUE);
+    gtk_button_set_image(GTK_BUTTON(gearMenu), gearIcon);
+    gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(gearMenu), titleBarGear);
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header_bar), gearMenu);
+
+    g_object_unref(win_actions);
+    g_object_unref(builder);
 
     GtkWidget *toolbar = gtk_toolbar_new();
     gtk_toolbar_set_icon_size(GTK_TOOLBAR(toolbar), GTK_ICON_SIZE_BUTTON);

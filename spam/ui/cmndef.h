@@ -34,6 +34,7 @@ enum
     kSpamLogTextCtrl,
 
     kSpamPyEditorCtrl,
+    kSpamPreferencesTreeBookCtrl,
 
     kStationThumbnailToolBar,
     kStationThumbnailCtrl,

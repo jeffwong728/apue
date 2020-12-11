@@ -93,6 +93,18 @@ list(APPEND r_libs libexif)
 list(APPEND d_bins libexif.dll)
 list(APPEND r_bins libexif.dll)
 
+list(APPEND name_libs atk)
+list(APPEND d_libs atk-1.0)
+list(APPEND r_libs atk-1.0)
+list(APPEND d_bins atk-1.dll)
+list(APPEND r_bins atk-1.dll)
+
+list(APPEND name_libs intl)
+list(APPEND d_libs libintl)
+list(APPEND r_libs libintl)
+list(APPEND d_bins libintl.dll)
+list(APPEND r_bins libintl.dll)
+
 include(SpamCommon)
 include(SelectLibraryConfigurations)
 include(FindPackageHandleStandardArgs)

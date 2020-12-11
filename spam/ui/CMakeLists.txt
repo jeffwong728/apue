@@ -1,4 +1,4 @@
-set(ui_core_SRCS 
+set(ui_core_SRCS
   cmndef.cpp
   evts.cpp
   spam.cpp
@@ -9,7 +9,6 @@ set(ui_core_SRCS
   cv/cairocanvas.cpp
   cv/cvimagepanel.cpp
   cv/cvtilepanel.cpp
-  #cv/cvwidget.cpp
   cv/wxdccanvas.cpp
   dlg/openprojdlg.cpp
   misc/percentvalidator.cpp
@@ -32,6 +31,7 @@ set(ui_core_SRCS
   projs/polygonnode.cpp
   projs/beziergonnode.cpp
   projs/stylecellrenderer.cpp
+  toplevel/preferencesdlg.cpp
   toplevel/logpanel.cpp
   toplevel/pyeditor.cpp
   toplevel/thumbnailpanel.cpp
@@ -98,6 +98,7 @@ set(ui_core_HEADERS
   projs/beziergonnode.h
   projs/geomnode.h
   projs/stylecellrenderer.h
+  toplevel/preferencesdlg.h
   toplevel/logpanel.h
   toplevel/pyeditor.h
   toplevel/thumbnailpanel.h

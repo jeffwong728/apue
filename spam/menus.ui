@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <menu id="title_bar_gear_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Steak</attribute>
+        <attribute name="action">RootFrame.main</attribute>
+        <attribute name="target">steak</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Pizza</attribute>
+        <attribute name="action">RootFrame.main</attribute>
+        <attribute name="target">pizza</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Wine</attribute>
+        <attribute name="action">RootFrame.wine</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Beer</attribute>
+        <attribute name="action">RootFrame.beer</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Water</attribute>
+        <attribute name="action">RootFrame.water</attribute>
+      </item>
+    </section>
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Preferences...</attribute>
+        <attribute name="action">RootFrame.preferences</attribute>
+      </item>
+      <section>
+        <attribute name="display-hint">horizontal-buttons</attribute>
+        <item>
+          <attribute name="label" translatable="yes">Cash</attribute>
+          <attribute name="action">RootFrame.pay</attribute>
+          <attribute name="target">cash</attribute>
+          <attribute name="verb-icon">document-save-symbolic</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Credit Card</attribute>
+          <attribute name="action">RootFrame.pay</attribute>
+          <attribute name="target">card</attribute>
+          <attribute name="verb-icon">document-send-symbolic</attribute>
+        </item>
+        <item>
+          <attribute name="label" translatable="yes">Cheque</attribute>
+          <attribute name="action">RootFrame.pay</attribute>
+          <attribute name="target">cheque</attribute>
+          <attribute name="verb-icon">document-save-as-symbolic</attribute>
+        </item>
+      </section>
+    </section>
+  </menu>
+</interface>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <object class="GtkDialog" id="preference_dialog">
+    <property name="transient-for">window</property>
+    <property name="modal">1</property>
+    <property name="resizable">0</property>
+    <property name="use-header-bar">1</property>
+    <property name="title" translatable="yes">Settings</property>
+    <signal name="delete-event" handler="gtk_widget_hide_on_delete"/>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <child>
+          <object class="GtkGrid">
+            <property name="visible">1</property>
+            <property name="row-spacing">10</property>
+            <property name="column-spacing">10</property>
+            <property name="margin">20</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">1</property>
+                <property name="halign">end</property>
+                <property name="valign">baseline</property>
+                <property name="label">_Details</property>
+                <property name="use-underline">1</property>
+                <property name="mnemonic-widget">details_entry</property>
+                <style>
+                  <class name="dim-label"/>
+                </style>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="details_entry">
+                <property name="visible">1</property>
+                <property name="valign">baseline</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">1</property>
+                <property name="halign">end</property>
+                <property name="valign">baseline</property>
+                <property name="label">More D_etails</property>
+                <property name="use-underline">1</property>
+                <property name="mnemonic-widget">more_details_entry</property>
+                <style>
+                  <class name="dim-label"/>
+                </style>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="more_details_entry">
+                <property name="visible">1</property>
+                <property name="valign">baseline</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">1</property>
+                <property name="halign">end</property>
+                <property name="valign">baseline</property>
+                <property name="label">_Level</property>
+                <property name="use-underline">1</property>
+                <property name="mnemonic-widget">level_scale</property>
+                <style>
+                  <class name="dim-label"/>
+                </style>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkScale" id="level_scale">
+                <property name="visible">1</property>
+                <property name="valign">baseline</property>
+                <property name="draw-value">0</property>
+                <property name="adjustment">adjustment1</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">1</property>
+                <property name="halign">end</property>
+                <property name="valign">baseline</property>
+                <property name="label">_Mode</property>
+                <property name="use-underline">1</property>
+                <property name="mnemonic-widget">mode_switch</property>
+                <style>
+                  <class name="dim-label"/>
+                </style>
+              </object>
+              <packing>
+                <property name="left-attach">0</property>
+                <property name="top-attach">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSwitch" id="mode_switch">
+                <property name="visible">1</property>
+                <property name="halign">start</property>
+                <property name="valign">baseline</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">3</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

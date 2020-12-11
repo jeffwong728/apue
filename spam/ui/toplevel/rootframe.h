@@ -131,6 +131,7 @@ public:
     static void view_toolbox_cb(GtkWidget *widget, gpointer user_data);
     static void view_log_cb(GtkWidget *widget, gpointer user_data);
     static void view_pyeditor_cb(GtkWidget *widget, gpointer user_data);
+    static void preferences_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data);
 
 private:
     void ReplaceTitleBar(void);

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
-project(apue LANGUAGES CXX VERSION 1.0.0)
+project(apue LANGUAGES C CXX VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -62,6 +62,28 @@ add_subdirectory(ui)
 add_executable(spam WIN32 init.cpp msvc_recommended_pragmas.h)
 set_target_properties (spam PROPERTIES FOLDER spam)
 target_link_libraries(spam PRIVATE ui_core helper svg util livarot stub cv_hdf sigc-3.0 expat::expat)
+
+# (re-)generate resources file with glib-compile-resources if it's available
+SET(GLIB_RESOURCES_XML "${CMAKE_CURRENT_SOURCE_DIR}/spam.gresource.xml")
+SET(GLIB_RESOURCES_CPP "${CMAKE_CURRENT_SOURCE_DIR}/spam_resources.c")
+find_program(GLIB_RESOURCES_COMPILER NAMES glib-compile-resources HINTS "$ENV{VCPKG_ROOT_DIR}/installed/x64-windows/tools/glib")
+if(GLIB_RESOURCES_COMPILER)
+    message(STATUS "Found glib-compile-resources in ${GLIB_RESOURCES_COMPILER}. ${GLIB_RESOURCES_CPP} will be recreated from ${GLIB_RESOURCES_XML}.")
+    add_custom_command(
+      OUTPUT
+        ${GLIB_RESOURCES_CPP}
+      COMMAND
+        ${GLIB_RESOURCES_COMPILER} --target=${GLIB_RESOURCES_CPP} --sourcedir=${CMAKE_CURRENT_SOURCE_DIR} --generate-source ${GLIB_RESOURCES_XML}
+      WORKING_DIRECTORY
+        ${CMAKE_CURRENT_SOURCE_DIR}
+      DEPENDS
+        menus.ui ${GLIB_RESOURCES_XML}
+      )
+else()
+    message(FATAL_ERROR "glib-compile-resources NOT found. Stop generate.")
+endif()
+
+target_sources(spam PRIVATE ${GLIB_RESOURCES_CPP} menus.ui ${GLIB_RESOURCES_XML})
 
 if(WIN32)
     target_sources(spam PRIVATE spam.rc)
