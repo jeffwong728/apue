@@ -23,6 +23,7 @@ class DropImageEvent;
 class CVImagePanel;
 class CairoCanvas;
 class SelectionFilter;
+struct Spamer;
 
 namespace cv
 {

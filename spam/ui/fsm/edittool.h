@@ -38,10 +38,10 @@ struct EditTool : public EditToolImpl
     EditTool(ToolT &t) : EditToolImpl(ToolId), tool(t) {}
     ~EditTool() { BoxToolImpl::QuitTool(EvToolQuit(ToolId)); }
 
-    void FireDeselectEntity(const SPDrawableNodeVector &ents) const override { tool.context<Spamer>().sig_EntityDesel(ents); }
-    void FireSelectEntity(const SPDrawableNodeVector &ents) const override { tool.context<Spamer>().sig_EntitySel(ents); }
-    void FireDimEntity(const SPDrawableNode &ent) const override { tool.context<Spamer>().sig_EntityDim(ent); }
-    void FireGlowEntity(const SPDrawableNode &ent) const override { tool.context<Spamer>().sig_EntityGlow(ent); }
+    void FireDeselectEntity(const SPDrawableNodeVector &ents) const override { tool.template context<Spamer>().sig_EntityDesel(ents); }
+    void FireSelectEntity(const SPDrawableNodeVector &ents) const override { tool.template context<Spamer>().sig_EntitySel(ents); }
+    void FireDimEntity(const SPDrawableNode &ent) const override { tool.template context<Spamer>().sig_EntityDim(ent); }
+    void FireGlowEntity(const SPDrawableNode &ent) const override { tool.template context<Spamer>().sig_EntityGlow(ent); }
 
     ToolT &tool;
 };
@@ -51,18 +51,18 @@ struct EditIdle : EditIdleImpl
 {
     EditIdle(IdleT &idl) : EditIdleImpl(ToolId), idle(idl) {}
 
-    void FireDeselectEntity(const SPDrawableNodeVector &ents) const override { idle.context<Spamer>().sig_EntityDesel(ents); }
-    void FireSelectEntity(const SPDrawableNodeVector &ents) const override { idle.context<Spamer>().sig_EntitySel(ents); }
-    EntitySelection &GetSelections(const std::string &uuid) override { return idle.context<ToolT>().selData[uuid]; }
-    void ClearSelections(const std::string &uuid) override { return idle.context<ToolT>().ClearSelection(uuid); }
+    void FireDeselectEntity(const SPDrawableNodeVector &ents) const override { idle.template context<Spamer>().sig_EntityDesel(ents); }
+    void FireSelectEntity(const SPDrawableNodeVector &ents) const override { idle.template context<Spamer>().sig_EntitySel(ents); }
+    EntitySelection &GetSelections(const std::string &uuid) override { return idle.template context<ToolT>().selData[uuid]; }
+    void ClearSelections(const std::string &uuid) override { return idle.template context<ToolT>().ClearSelection(uuid); }
 
     sc::result reactLMouseDown(const EvLMouseDown &e)
     {
         NextAction na = EditIdleImpl::GetNextAction(e);
         switch (na)
         {
-        case editing: return idle.transit<EditingT>(&ToolT::EditToolT::StartEditing, e);
-        case boxing: return idle.transit<BoxingT>(&ToolT::BoxToolT::StartBoxing, e);
+        case editing: return idle.template transit<EditingT>(&ToolT::EditToolT::StartEditing, e);
+        case boxing: return idle.template transit<BoxingT>(&ToolT::BoxToolT::StartBoxing, e);
         default: return idle.discard_event();
         }
     }

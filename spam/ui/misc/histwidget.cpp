@@ -140,15 +140,17 @@ void HistogramWidget::OnMouseMotion(wxMouseEvent &e)
 
     wxClientDC cdc(this);
     wxBufferedDC bdc(&cdc);
- 
-    DrawHistogram(wxGCDC(bdc), &mPos);
+
+    wxGCDC gcdc(bdc);
+    DrawHistogram(gcdc, &mPos);
 }
 
 void HistogramWidget::OnPaint(wxPaintEvent&)
 {
     wxAutoBufferedPaintDC dc(this);
     PrepareDC(dc);
-    DrawHistogram(wxGCDC(dc));
+    wxGCDC gcdc(dc);
+    DrawHistogram(gcdc);
 }
 
 void HistogramWidget::SmoothProfile(std::vector<wxPoint> &pts) const

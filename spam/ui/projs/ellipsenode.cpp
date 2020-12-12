@@ -408,7 +408,7 @@ void GenericEllipseArcNode::InitData(GenericEllipseArcData &data)
 
 void GenericEllipseArcNode::Save(const H5::Group &g) const
 {
-    std::string utf8Title = title_.ToUTF8();
+    std::string utf8Title(title_.ToUTF8().data());
     if (g.nameExists(utf8Title))
     {
         H5Ldelete(g.getId(), utf8Title.data(), H5P_DEFAULT);

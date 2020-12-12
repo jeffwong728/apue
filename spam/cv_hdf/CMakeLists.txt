@@ -15,7 +15,14 @@ add_library(cv_hdf STATIC "${cv_hdf_SRC}")
 set_target_properties (cv_hdf PROPERTIES FOLDER thirdparty)
 
 set(libs)
-list(APPEND libs hdf5::hdf5_cpp-shared)
+IF (WIN32 AND MSVC)
+  list(APPEND libs hdf5::hdf5_cpp-shared)
+ELSE()
+  target_include_directories(cv_hdf PUBLIC SYSTEM "${HDF5_INCLUDE_DIRS}")
+  target_link_libraries(cv_hdf PUBLIC "${HDF5_LIBRARIES}" "${HDF5_HL_LIBRARIES}")
+  target_compile_definitions(cv_hdf PUBLIC "${HDF5_DEFINITIONS}")
+ENDIF()
+
 list(APPEND libs opencv_core)
 list(APPEND libs opencv_imgcodecs)
 

@@ -75,7 +75,9 @@ RootFrame::RootFrame()
     , cavDirtRects_(std::make_unique<std::map<std::string, Geom::OptRect>>())
 {
     ReplaceTitleBar();
+#ifdef _MSC_VER
     SetIcon(wxICON(spam));
+#endif
     SetStatusBar(new MainStatus(this));
     SetStatusText("Welcome to Spam!");
 
@@ -220,7 +222,7 @@ void RootFrame::CreateAuiPanes()
     wxAuiMgr_.AddPane(matchBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_MATCH]).Right().Caption("Template Matching").Show(false));
     wxAuiMgr_.AddPane(styleBox, wxAuiPaneInfo().Name(toolBoxLabels[kSpam_TOOLBOX_STYLE]).Right().Caption("Style").Show(false));
 
-    auto &toolBoxBarPaneInfo = wxAuiPaneInfo();
+    wxAuiPaneInfo toolBoxBarPaneInfo;
     toolBoxBarPaneInfo.Name(toolBoxBarName_).Caption(wxT("Toolbox Bar")).ToolbarPane().Right().Gripper(false);
     wxAuiMgr_.AddPane(tbBar, toolBoxBarPaneInfo);
 

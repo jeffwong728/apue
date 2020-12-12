@@ -61,7 +61,8 @@ void NodeModifyCmd::Undo()
     SpamMany mementos;
     mementos.push_back(drawable_->CreateMemento());
 
-    model_->RestoreTransform(SPDrawableNodeVector(1, drawable_), SpamMany(1, memento_), true);
+    SPDrawableNodeVector drawables(1, drawable_);
+    model_->RestoreTransform(drawables, SpamMany(1, memento_), true);
     memento_ = mementos.front();
 }
 

@@ -311,7 +311,8 @@ void SelectionFilter::ReplacePassType(const SpamEntityType et)
 
 void SelectionFilter::ReplacePassType(const std::vector<SpamEntityType> &ets)
 {
-    passTypes_.swap(std::vector<SpamEntityType>(ets.cbegin(), ets.cend()));
+    std::vector<SpamEntityType> typs(ets.cbegin(), ets.cend());
+    passTypes_.swap(typs);
 }
 
 void SelectionFilter::AddAllPassType()

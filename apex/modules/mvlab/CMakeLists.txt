@@ -96,4 +96,6 @@ target_compile_options(${the_module} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX
 target_compile_options(${the_module} PRIVATE $<$<CXX_COMPILER_ID:Clang>:-mavx2>)
 target_compile_options(${the_module} PRIVATE $<$<CXX_COMPILER_ID:GNU>:-mavx2 -mfma>)
 target_compile_options(${the_module} PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-class-memaccess -Wno-unused-parameter -Wno-reorder -Wno-missing-declarations>)
-target_compile_options(${the_module} PRIVATE $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Debug>>:-Wa,-mbig-obj -Og>)
+IF (MINGW)
+  target_compile_options(${the_module} PRIVATE $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Debug>>:-Wa,-mbig-obj -Og>)
+ENDIF()

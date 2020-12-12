@@ -942,7 +942,11 @@ void CairoCanvas::OnPaint(wxPaintEvent& e)
     auto cairoCtx = dc.GetImpl()->GetCairoContext();
     if (cairoCtx)
     {
+#ifdef __linux__
+        auto spCtx = Cairo::RefPtr<Cairo::Context>(new Cairo::Context((cairo_t *) cairoCtx));
+#elif _WIN32
         auto spCtx = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
+#endif
         RenderImage(spCtx);
         RenderEntities(spCtx);
         RenderPath(spCtx);

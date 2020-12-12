@@ -1,5 +1,6 @@
 #include "stylecellrenderer.h"
 #include <wx/graphics.h>
+#include <memory>
 
 wxString StyleCellRenderer::GetDefaultType()
 {
