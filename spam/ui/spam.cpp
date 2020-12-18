@@ -63,8 +63,7 @@ class SpamApp : public wxApp
     friend class SpamConfig;
 public:
     SpamApp()
-        : locale_(wxLANGUAGE_CHINESE_SIMPLIFIED)
-        , configTree_(std::make_unique<boost::property_tree::ptree>())
+        : configTree_(std::make_unique<boost::property_tree::ptree>())
     {}
 
 public:
@@ -83,7 +82,7 @@ private:
     void SaveConfig();
 
 private:
-    wxLocale locale_;
+    //wxLocale locale_;
     std::unique_ptr<boost::property_tree::ptree> configTree_;
     std::stack<std::shared_ptr<SpamCmd>> undoStack_;
     std::stack<std::shared_ptr<SpamCmd>> redoStack_;

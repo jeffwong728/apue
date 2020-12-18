@@ -1334,6 +1334,9 @@ activate_about(GSimpleAction *action,
     GVariant      *parameter,
     gpointer       user_data)
 {
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    GtkWidget *fontDlg = gtk_font_chooser_dialog_new("Choose Font", GTK_WINDOW(frame->m_widget));
+    gtk_widget_show_all(fontDlg);
 }
 
 void RootFrame::ReplaceTitleBar(void)

@@ -10,7 +10,7 @@
 #include <string>
 #include <unordered_map>
 
-enum 
+enum
 {
     ID_Hello = 1,
 
@@ -29,12 +29,21 @@ enum
     kSpamOpenProjProjLabelCtrl,
     kSpamOpenProjProjListBoxCtrl,
     kSpamOpenProjStdBtnBox,
-    
+
     kSpamLogToolBar,
     kSpamLogTextCtrl,
 
     kSpamPyEditorCtrl,
     kSpamPreferencesTreeBookCtrl,
+
+    kPy3EditorStyleCategoryCtrl,
+    kPy3EditorStyleFontCtrl,
+    kPy3EditorStyleSampleCtrl,
+    kPy3EditorStyleBoldCtrl,
+    kPy3EditorStyleItalicCtrl,
+    kPy3EditorStyleUnderlineCtrl,
+    kPy3EditorStyleForegroundColorCtrl,
+    kPy3EditorStyleBackgroundColorCtrl,
 
     kStationThumbnailToolBar,
     kStationThumbnailCtrl,

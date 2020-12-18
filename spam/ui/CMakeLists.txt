@@ -17,6 +17,7 @@ set(ui_core_SRCS
   misc/histwidget.cpp
   misc/thumbnailctrl.cpp
   misc/spamutility.cpp
+  misc/switchbtn.cpp
   projs/drawstyle.cpp
   projs/modelnode.cpp
   projs/nodefactory.cpp
@@ -83,6 +84,7 @@ set(ui_core_HEADERS
   misc/histwidget.h
   misc/thumbnailctrl.h
   misc/spamutility.h
+  misc/switchbtn.h
   projs/drawstyle.h
   projs/modelfwd.h
   projs/modelnode.h
