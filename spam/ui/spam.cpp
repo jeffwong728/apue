@@ -143,7 +143,8 @@ bool SpamApp::OnInit()
     bitmaps_[ipTBar][bm_ImageExport]    = wxBitmap(wxT("res/export_layer_16.png"),  bmt);
 
     GtkSettings *settings = gtk_settings_get_default();
-    g_object_set(G_OBJECT(settings), "gtk-application-prefer-dark-theme", 1, NULL);
+    const int darkMode = SpamConfig::Get<bool>(cp_ThemeDarkMode, true);
+    g_object_set(G_OBJECT(settings), "gtk-application-prefer-dark-theme", darkMode, NULL);
 
     RootFrame *frame = new RootFrame();
     SetTopWindow(frame);
@@ -257,6 +258,22 @@ void SpamConfig::Set(const std::string &p, const wxString &v)
     tree->put(p, v.ToUTF8());
 }
 
+void SpamConfig::Set(const std::string &p, const wxColour &v)
+{
+    if (v.IsOk())
+    {
+        SpamConfig::Set(p, v.GetRGBA());
+    }
+}
+
+void SpamConfig::Set(const std::string &p, const wxFont &v)
+{
+    if (v.IsOk())
+    {
+        SpamConfig::Set(p, v.GetNativeFontInfoDesc());
+    }
+}
+
 template<>
 wxString SpamConfig::Get<wxString>(const std::string &p, const wxString &v)
 {
@@ -265,6 +282,36 @@ wxString SpamConfig::Get<wxString>(const std::string &p, const wxString &v)
     if (ov.is_initialized())
     {
         return wxString::FromUTF8(ov.get());
+    }
+    else
+    {
+        return v;
+    }
+}
+
+template<>
+wxColour SpamConfig::Get<wxColour>(const std::string &p, const wxColour &v)
+{
+    const auto &tree = wxGetApp().configTree_;
+    boost::optional<wxUint32> ov = tree->get_optional<wxUint32>(p);
+    if (ov.is_initialized())
+    {
+        return wxColour(ov.get());
+    }
+    else
+    {
+        return v;
+    }
+}
+
+template<>
+wxFont SpamConfig::Get<wxFont>(const std::string &p, const wxFont &v)
+{
+    const auto &tree = wxGetApp().configTree_;
+    boost::optional<std::string> ov = tree->get_optional<std::string>(p);
+    if (ov.is_initialized())
+    {
+        return wxFont(wxString::FromUTF8(ov.get()));
     }
     else
     {

@@ -10,6 +10,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <memory>
 #include <ui/cmds/spamcmd.h>
 #include <ui/projs/modelfwd.h>
@@ -24,6 +25,8 @@ public:
     static void Save();
     static std::unique_ptr<boost::property_tree::ptree> &GetPropertyTree();
     static void Set(const std::string &p, const wxString &v);
+    static void Set(const std::string &p, const wxColour &v);
+    static void Set(const std::string &p, const wxFont &v);
     template<typename T> static void Set(const std::string &p, const T &v);
     template<typename T> static T Get(const std::string &p, const T &v=T());
 };
@@ -35,8 +38,9 @@ void SpamConfig::Set(const std::string &p, const T &v)
     tree->put(p, v);
 }
 
-template<>
-wxString SpamConfig::Get<wxString>(const std::string &p, const wxString &v);
+template<> wxString SpamConfig::Get<wxString>(const std::string &p, const wxString &v);
+template<> wxColour SpamConfig::Get<wxColour>(const std::string &p, const wxColour &v);
+template<> wxFont SpamConfig::Get<wxFont>(const std::string &p, const wxFont &v);
 
 template<typename T>
 T SpamConfig::Get(const std::string &p, const T &v)

@@ -245,6 +245,16 @@ enum class StatusIconType
     kSIT_INFO
 };
 
+enum class Py3EditorStyle
+{
+    kPES_FONT,
+    kPES_BOLD,
+    kPES_ITALIC,
+    kPES_UNDERLINE,
+    kPES_BACKGROUND,
+    kPES_FOREGROUND
+};
+
 typedef boost::mpl::vector<int, long, double> OptTypes0;
 typedef boost::mpl::push_front<OptTypes0, std::string>::type OptTypes;
 using ToolOptions = std::unordered_map<std::string, boost::make_variant_over<OptTypes>::type>;
@@ -258,6 +268,10 @@ extern const std::string cp_ToolGeomStrokeJoin;
 extern const std::string cp_ToolGeomStrokeCap;
 extern const std::string cp_ToolGeomVertexEditMode;
 extern const std::string cp_ToolProbeMode;
+extern const std::string cp_ThemeDarkMode;
+extern const std::string cp_Py3EditorStyle;
+extern const std::string cp_Py3EditorRememberPath;
+extern const std::string cp_Py3EditorFullPath;
 
 extern const std::string bm_Pointer;
 extern const std::string bm_PointerEdit;
@@ -291,5 +305,11 @@ extern const std::string bm_PathCut;
 extern const std::string bm_PathSlice;
 extern const std::string bm_ImageImport;
 extern const std::string bm_ImageExport;
+
+extern const std::string config_GetPy3EditorStyleFullName(const Py3EditorStyle styleType, const int shortNameId);
+extern const bool config_GetPy3EditorBold(const int shortNameId);
+extern const wxColour config_GetPy3EditorForeground(const int shortNameId);
+extern const wxColour config_GetPy3EditorBackground(const int shortNameId);
+extern const wxFont config_GetPy3EditorFont(const int shortNameId);
 
 #endif //SPAM_UI_COMMON_DEFINE_H

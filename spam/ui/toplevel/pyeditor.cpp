@@ -2,6 +2,7 @@
 #include <wx/artprov.h>
 #include <wx/wrapsizer.h>
 #include <wx/stc/stc.h>
+#include <ui/spam.h>
 
 PyEditor::PyEditor(wxWindow* parent)
 : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
@@ -28,14 +29,17 @@ PyEditor::PyEditor(wxWindow* parent)
 
     for (int st = wxSTC_STYLE_DEFAULT; st <= wxSTC_STYLE_LASTPREDEFINED; ++st)
     {
-        stc->StyleSetForeground(st, wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-        stc->StyleSetBackground(st, wxSystemSettings::GetColour(wxSYS_COLOUR_DESKTOP));
+        stc->StyleSetForeground(st, config_GetPy3EditorForeground(st));
+        stc->StyleSetBackground(st, config_GetPy3EditorBackground(st));
+        stc->StyleSetFont(st, config_GetPy3EditorFont(st));
     }
 
     for (int st = wxSTC_P_DEFAULT; st <= wxSTC_P_DECORATOR; ++st)
     {
-        stc->StyleSetForeground(st, wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-        stc->StyleSetBackground(st, wxSystemSettings::GetColour(wxSYS_COLOUR_DESKTOP));
+        stc->StyleSetForeground(st, config_GetPy3EditorForeground(st));
+        stc->StyleSetBackground(st, config_GetPy3EditorBackground(st));
+        stc->StyleSetBold(st, config_GetPy3EditorBold(st));
+        stc->StyleSetFont(st, config_GetPy3EditorFont(st));
     }
 
     const char* PythonWordlist1 =
@@ -54,25 +58,6 @@ PyEditor::PyEditor(wxWindow* parent)
     stc->SetKeyWords(0, PythonWordlist1);
     stc->SetKeyWords(1, PythonWordlist2);
 
-    stc->StyleSetBold(wxSTC_P_WORD, true);
-    stc->StyleSetBold(wxSTC_P_WORD2, true);
-    stc->StyleSetBold(wxSTC_P_DEFNAME, true);
-
-    stc->StyleSetForeground(wxSTC_STYLE_INDENTGUIDE, wxColour("GREY"));
-    stc->StyleSetForeground(wxSTC_P_COMMENTLINE, wxColour("MEDIUM GREY"));
-    stc->StyleSetForeground(wxSTC_P_NUMBER, wxColour("RED"));
-    stc->StyleSetForeground(wxSTC_P_STRING, wxColour(214, 157, 133));
-    stc->StyleSetForeground(wxSTC_P_CHARACTER, wxColour(214, 157, 133));
-    stc->StyleSetForeground(wxSTC_P_WORD, wxColour("YELLOW"));
-    stc->StyleSetForeground(wxSTC_P_TRIPLE, wxColour(214, 157, 133));
-    stc->StyleSetForeground(wxSTC_P_TRIPLEDOUBLE, wxColour(214, 157, 133));
-    stc->StyleSetForeground(wxSTC_P_CLASSNAME, wxColour("TURQUOISE"));
-    stc->StyleSetForeground(wxSTC_P_DEFNAME, wxColour(78, 201, 176));
-    stc->StyleSetForeground(wxSTC_P_OPERATOR, wxColour(128, 255, 255));
-    stc->StyleSetForeground(wxSTC_P_IDENTIFIER, wxColour("LIGHT GREY"));
-    stc->StyleSetForeground(wxSTC_P_COMMENTBLOCK, wxColour("MEDIUM GREY"));
-    stc->StyleSetForeground(wxSTC_P_WORD2, wxColour("YELLOW"));
-
     // Set sizer for the panel
     SetSizer(sizerRoot);
     GetSizer()->SetSizeHints(this);
@@ -90,5 +75,29 @@ void PyEditor::LoadPyFile(const wxString &fullPath)
     {
         stc->LoadFile(fullPath);
         stc->EmptyUndoBuffer();
+    }
+}
+
+void PyEditor::ApplyStyleChange()
+{
+    auto stc = dynamic_cast<wxStyledTextCtrl *>(GetSizer()->GetItemById(kSpamPyEditorCtrl)->GetWindow());
+    if (stc)
+    {
+        stc->Freeze();
+        for (int st = wxSTC_STYLE_DEFAULT; st <= wxSTC_STYLE_LASTPREDEFINED; ++st)
+        {
+            stc->StyleSetForeground(st, config_GetPy3EditorForeground(st));
+            stc->StyleSetBackground(st, config_GetPy3EditorBackground(st));
+            stc->StyleSetFont(st, config_GetPy3EditorFont(st));
+        }
+
+        for (int st = wxSTC_P_DEFAULT; st <= wxSTC_P_DECORATOR; ++st)
+        {
+            stc->StyleSetForeground(st, config_GetPy3EditorForeground(st));
+            stc->StyleSetBackground(st, config_GetPy3EditorBackground(st));
+            stc->StyleSetBold(st, config_GetPy3EditorBold(st));
+            stc->StyleSetFont(st, config_GetPy3EditorFont(st));
+        }
+        stc->Thaw();
     }
 }

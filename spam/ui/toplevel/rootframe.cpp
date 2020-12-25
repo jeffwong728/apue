@@ -48,6 +48,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/static_vector.hpp>
+#include <boost/property_tree/ptree.hpp>
 #pragma warning( push )
 #pragma warning( disable : 5033 )
 #ifdef pid_t
@@ -1324,8 +1325,20 @@ void RootFrame::preferences_cb(GSimpleAction *action, GVariant *parameter, gpoin
 {
     RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
     PreferencesDlg dlg(frame);
-    if (dlg.ShowModal() == wxID_OK) {
 
+    boost::property_tree::ptree configTreeBackup(*SpamConfig::GetPropertyTree());
+    if (dlg.ShowModal() == wxID_OK)
+    {
+        auto &pane = frame->wxAuiMgr_.GetPane(frame->pyEditorName_);
+        PyEditor *pyEditor = dynamic_cast<PyEditor *>(pane.window);
+        if (pyEditor)
+        {
+            pyEditor->ApplyStyleChange();
+        }
+    }
+    else
+    {
+        SpamConfig::GetPropertyTree()->swap(configTreeBackup);
     }
 }
 

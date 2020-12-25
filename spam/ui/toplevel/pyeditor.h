@@ -14,5 +14,6 @@ public:
 
 public:
     void LoadPyFile(const wxString &fullPath);
+    void ApplyStyleChange();
 };
 #endif //SPAM_UI_TOP_LEVEL_PYTHON_EDITOR_PANEL_H
