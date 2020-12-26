@@ -2,19 +2,19 @@
 #include "spam.h"
 #include <wx/stc/stc.h>
 
-const std::string cp_ToolId                 = std::string("spam.tool.id");
-const std::string cp_ToolRectMode           = std::string("spam.tool.geom.rect.mode");
-const std::string cp_ToolGeomFillPaint      = std::string("spam.tool.geom.fill.paint");
-const std::string cp_ToolGeomStrokePaint    = std::string("spam.tool.geom.stroke.paint");
-const std::string cp_ToolGeomStrokeWidth    = std::string("spam.tool.geom.stroke.width");
-const std::string cp_ToolGeomStrokeJoin     = std::string("spam.tool.geom.stroke.join");
-const std::string cp_ToolGeomStrokeCap      = std::string("spam.tool.geom.stroke.cap");
-const std::string cp_ToolGeomVertexEditMode = std::string("spam.tool.geom.vertex.editmode");
-const std::string cp_ToolProbeMode          = std::string("spam.tool.probe.mode");
-const std::string cp_Py3EditorStyle         = std::string("spam.py3editor.style");
-const std::string cp_Py3EditorRememberPath  = std::string("spam.py3editor.rememberpath");
-const std::string cp_Py3EditorFullPath      = std::string("spam.py3editor.fullpath");
-const std::string cp_ThemeDarkMode          = std::string("spam.theme.darkmode");
+const std::string cp_ToolId                         = std::string("spam.tool.id");
+const std::string cp_ToolRectMode                   = std::string("spam.tool.geom.rect.mode");
+const std::string cp_ToolGeomFillPaint              = std::string("spam.tool.geom.fill.paint");
+const std::string cp_ToolGeomStrokePaint            = std::string("spam.tool.geom.stroke.paint");
+const std::string cp_ToolGeomStrokeWidth            = std::string("spam.tool.geom.stroke.width");
+const std::string cp_ToolGeomStrokeJoin             = std::string("spam.tool.geom.stroke.join");
+const std::string cp_ToolGeomStrokeCap              = std::string("spam.tool.geom.stroke.cap");
+const std::string cp_ToolGeomVertexEditMode         = std::string("spam.tool.geom.vertex.editmode");
+const std::string cp_ToolProbeMode                  = std::string("spam.tool.probe.mode");
+const std::string cp_Py3EditorStyle                 = std::string("spam.py3editor.style");
+const std::string cp_Py3EditorRememberScriptPath    = std::string("spam.py3editor.scriptpath.remember");
+const std::string cp_Py3EditorScriptFullPath        = std::string("spam.py3editor.scriptpath.fullpath");
+const std::string cp_ThemeDarkMode                  = std::string("spam.theme.darkmode");
 
 const std::string bm_Pointer                = std::string("tool.pointer");
 const std::string bm_PointerEdit            = std::string("tool.node.editor");

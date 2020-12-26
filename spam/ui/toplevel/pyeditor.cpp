@@ -61,6 +61,19 @@ PyEditor::PyEditor(wxWindow* parent)
     // Set sizer for the panel
     SetSizer(sizerRoot);
     GetSizer()->SetSizeHints(this);
+
+    if (SpamConfig::Get<bool>(cp_Py3EditorRememberScriptPath, true))
+    {
+        const wxString fullPath = SpamConfig::Get<wxString>(cp_Py3EditorScriptFullPath, wxT(""));
+        const std::wstring ansiFilePath = fullPath.ToStdWstring();
+        boost::system::error_code ec;
+        boost::filesystem::path p(ansiFilePath);
+        if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
+        {
+            LoadPyFile(fullPath);
+        }
+    }
+
     Show();
 }
 
@@ -75,6 +88,11 @@ void PyEditor::LoadPyFile(const wxString &fullPath)
     {
         stc->LoadFile(fullPath);
         stc->EmptyUndoBuffer();
+
+        if (SpamConfig::Get<bool>(cp_Py3EditorRememberScriptPath, true))
+        {
+            SpamConfig::Set(cp_Py3EditorScriptFullPath, fullPath);
+        }
     }
 }
 

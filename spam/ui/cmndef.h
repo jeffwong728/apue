@@ -270,8 +270,8 @@ extern const std::string cp_ToolGeomVertexEditMode;
 extern const std::string cp_ToolProbeMode;
 extern const std::string cp_ThemeDarkMode;
 extern const std::string cp_Py3EditorStyle;
-extern const std::string cp_Py3EditorRememberPath;
-extern const std::string cp_Py3EditorFullPath;
+extern const std::string cp_Py3EditorRememberScriptPath;
+extern const std::string cp_Py3EditorScriptFullPath;
 
 extern const std::string bm_Pointer;
 extern const std::string bm_PointerEdit;

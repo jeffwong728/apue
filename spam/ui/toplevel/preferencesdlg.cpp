@@ -58,15 +58,28 @@ public:
         : wxPanel(parent)
     {
         wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+        rememberPy3Ctrl = new wxCheckBox(this, wxID_ANY, wxT("Remember Last Python 3 Script Path"));
         sizerRoot->Add(new wxCheckBox(this, wxID_ANY, wxT("View Lines Number")), wxSizerFlags().DoubleBorder(wxTOP | wxLEFT | wxRIGHT));
         sizerRoot->Add(new wxCheckBox(this, wxID_ANY, wxT("View White Space")), wxSizerFlags().DoubleBorder(wxLEFT | wxRIGHT));
         sizerRoot->Add(new wxCheckBox(this, wxID_ANY, wxT("View Indentation Guides")), wxSizerFlags().DoubleBorder(wxBOTTOM | wxLEFT | wxRIGHT));
-        sizerRoot->Add(new wxCheckBox(this, wxID_ANY, wxT("Remember Last Python 3 Script Path")), wxSizerFlags().DoubleBorder(wxTOP | wxLEFT | wxRIGHT));
+        sizerRoot->Add(rememberPy3Ctrl, wxSizerFlags().DoubleBorder(wxTOP | wxLEFT | wxRIGHT));
+
+        rememberPy3Ctrl->SetValue(SpamConfig::Get<bool>(cp_Py3EditorRememberScriptPath, true));
+        rememberPy3Ctrl->Bind(wxEVT_CHECKBOX, &P3EditorGeneralPage::OnRememberPy3Ctrl, this, wxID_ANY);
 
         SetSizer(sizerRoot);
         GetSizer()->SetSizeHints(this);
     }
     ~P3EditorGeneralPage() {}
+
+private:
+    void OnRememberPy3Ctrl(wxCommandEvent &evt)
+    {
+        SpamConfig::Set<bool>(cp_Py3EditorRememberScriptPath, evt.GetInt());
+    }
+
+private:
+    wxCheckBox *rememberPy3Ctrl = nullptr;
 };
 
 class P3EditorStylePage : public wxPanel

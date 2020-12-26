@@ -1354,6 +1354,7 @@ activate_about(GSimpleAction *action,
 
 void RootFrame::ReplaceTitleBar(void)
 {
+    wxGCC_WARNING_SUPPRESS(deprecated-declarations)
     GtkWidget *header_bar = gtk_header_bar_new();
     gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header_bar), TRUE);
     gtk_header_bar_set_title(GTK_HEADER_BAR(header_bar), "Spam");
@@ -1511,6 +1512,7 @@ void RootFrame::ReplaceTitleBar(void)
     widgets_.emplace_back(spamID_VIEW_PYEDITOR, pyEiMi);
     widgets_.emplace_back(spamID_VIEW_IMAGES_ZONE, entZMi);
     widgets_.emplace_back(spamID_VIEW_TOOLBOX_BAR, toolMi);
+    wxGCC_WARNING_RESTORE()
 }
 
 wxAuiNotebook *RootFrame::CreateStationNotebook()
