@@ -86,7 +86,7 @@ struct PyStation
 
 void PyExportRect(pybind11::module_ &m)
 {
-    auto &c = pybind11::class_<PyRect>(m, "Rect");
+    auto c = pybind11::class_<PyRect>(m, "Rect");
     c.def(pybind11::init<const double, const double, const double, const double>());
     c.def_property("X", &PyRect::GetX, &PyRect::SetX);
     c.def_property("Y", &PyRect::GetY, &PyRect::SetY);
@@ -97,7 +97,7 @@ void PyExportRect(pybind11::module_ &m)
 
 void PyExportStation(pybind11::module_ &m)
 {
-    auto &c = pybind11::class_<PyStation>(m, "Station");
+    auto c = pybind11::class_<PyStation>(m, "Station");
     c.def("GetName", &PyStation::GetName);
     c.def("NewRect", &PyStation::NewRect);
     c.def_property_readonly("Name", &PyStation::GetName);
