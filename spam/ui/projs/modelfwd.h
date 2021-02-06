@@ -48,6 +48,7 @@ typedef std::shared_ptr<GeomNode>              SPGeomNode;
 typedef std::weak_ptr<ModelNode>               WPModelNode;
 typedef std::weak_ptr<ProjNode>                WPProjNode;
 typedef std::weak_ptr<StationNode>             WPStationNode;
+typedef std::weak_ptr<RectNode>                WPRectNode;
 typedef std::vector<SPModelNode>               SPModelNodeVector;
 typedef std::vector<SPProjNode>                SPProjNodeVector;
 typedef std::vector<SPStationNode>             SPStationNodeVector;

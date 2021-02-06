@@ -500,6 +500,24 @@ SPStationNode ProjTreeModel::FindStationByUUID(const std::string &uuidTag) const
     return SPStationNode();
 }
 
+SPStationNode ProjTreeModel::FindStationByName(const std::string &strName) const
+{
+    if (root_)
+    {
+        const auto& children = root_->GetChildren();
+        for (const auto &c : children)
+        {
+            auto station = std::dynamic_pointer_cast<StationNode>(c);
+            if (station && (strName == station->GetTitle()))
+            {
+                return station;
+            }
+        }
+    }
+
+    return SPStationNode();
+}
+
 void ProjTreeModel::RestoreTransform(SPDrawableNodeVector &drawables, const SpamMany &mementos, const bool fireEvent)
 {
     if (drawables.size() == mementos.size())

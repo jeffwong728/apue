@@ -49,23 +49,14 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/property_tree/ptree.hpp>
-#pragma warning( push )
-#pragma warning( disable : 5033 )
-#ifdef pid_t
-#undef pid_t
-#endif
-#ifdef HAVE_SSIZE_T
-#undef HAVE_SSIZE_T
-#endif
-#include <boost/python.hpp>
-#pragma warning( pop )
+extern std::pair<std::string, bool> PyRunFile(const std::string &strFullPath);
 
 RootFrame::RootFrame()
     : wxFrame(NULL, wxID_ANY, wxT("Spam"))
     , mainToolPanelName_(wxT("maintool"))
     , stationNotebookName_(wxT("station"))
     , projPanelName_(wxT("proj"))
-    , logPanelName_(wxT("log"))
+    , consolePanelName_(wxT("consolePanel"))
     , pyEditorName_(wxT("pyEditor"))
     , imagesZonePanelName_(wxT("imagesZone"))
     , toolBoxBarName_(wxT("toolBoxBar"))
@@ -195,7 +186,7 @@ void RootFrame::CreateAuiPanes()
     wxAuiMgr_.AddPane(CreateStationNotebook(), wxAuiPaneInfo().Name(stationNotebookName_).Center().PaneBorder(false).CloseButton(false).CaptionVisible(false));
     wxAuiMgr_.AddPane(new ProjPanel(this), wxAuiPaneInfo().Name(projPanelName_).Left().Caption(wxT("Project Explorer")));
     wxAuiMgr_.AddPane(new PyEditor(this), wxAuiPaneInfo().Name(pyEditorName_).Right().Bottom().Caption("Script Editor"));
-    wxAuiMgr_.AddPane(new LogPanel(this), wxAuiPaneInfo().Name(logPanelName_).Left().Bottom().Caption("Log"));
+    wxAuiMgr_.AddPane(new ConsolePanel(this), wxAuiPaneInfo().Name(consolePanelName_).Left().Bottom().Caption("Log"));
     wxAuiMgr_.AddPane(new ThumbnailPanel(this), wxAuiPaneInfo().Name(imagesZonePanelName_).Bottom().Bottom().Caption("Images Zone"));
 
     auto infoBox  = new ProbeBox(this);
@@ -418,17 +409,14 @@ void RootFrame::OnHello(wxCommandEvent& event)
     if (openFileDialog.ShowModal() != wxID_CANCEL)
     {
         auto fullPath = openFileDialog.GetPath();
-        try
+        std::pair<std::string, bool> res = PyRunFile(fullPath.ToStdString());
+        if (res.second)
         {
-            boost::python::object mainModule = boost::python::import("__main__");
-            boost::python::object mainNamespace = mainModule.attr("__dict__");
-            Spam::ClearPyOutput();
-            boost::python::exec_file(fullPath.ToStdString().c_str(), mainNamespace);
             Spam::LogPyOutput();
         }
-        catch (const boost::python::error_already_set&)
+        else
         {
-            Spam::PopupPyError();
+            Spam::PopupPyError(res.first);
         }
     }
 }
@@ -709,7 +697,7 @@ void RootFrame::OnUpdateUI(wxUpdateUIEvent& e)
             break;
         case spamID_VIEW_LOG:
             gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
-            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(logPanelName_).IsShown());
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(consolePanelName_).IsShown());
             gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
             break;
         case spamID_VIEW_PYEDITOR:
@@ -1305,7 +1293,7 @@ void RootFrame::view_log_cb(GtkWidget *widget, gpointer user_data)
 {
     if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
     RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
-    auto &pane = frame->wxAuiMgr_.GetPane(frame->logPanelName_);
+    auto &pane = frame->wxAuiMgr_.GetPane(frame->consolePanelName_);
     bool v = pane.IsShown();
     pane.Show(!v);
     frame->wxAuiMgr_.Update();
@@ -1512,7 +1500,7 @@ void RootFrame::ReplaceTitleBar(void)
     widgets_.emplace_back(spamID_VIEW_PYEDITOR, pyEiMi);
     widgets_.emplace_back(spamID_VIEW_IMAGES_ZONE, entZMi);
     widgets_.emplace_back(spamID_VIEW_TOOLBOX_BAR, toolMi);
-    wxGCC_WARNING_RESTORE()
+    wxGCC_WARNING_RESTORE(deprecated-declarations)
 }
 
 wxAuiNotebook *RootFrame::CreateStationNotebook()

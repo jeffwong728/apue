@@ -21,6 +21,7 @@ public:
 
 public:
     wxString GetDescription() const wxOVERRIDE;
+    WPStationNode GetStation() const { return station_; }
 
 private:
     ProjTreeModel *model_;

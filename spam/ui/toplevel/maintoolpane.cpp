@@ -13,7 +13,6 @@
 #include <wx/filepicker.h>
 #include <helper/commondef.h>
 #include <boost/thread.hpp>
-#include <boost/locale.hpp>
 #include <helper/h5db.h>
 
 MainToolPane::MainToolPane(wxWindow* parent, wxFileHistory &fh)

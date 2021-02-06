@@ -2,6 +2,7 @@ set(ui_core_SRCS
   cmndef.cpp
   evts.cpp
   spam.cpp
+  pymain.cpp
   cmds/spamcmd.cpp
   cmds/stationcmd.cpp
   cmds/geomcmd.cpp
@@ -186,13 +187,12 @@ ENDIF()
 list(APPEND libs opencv_core)
 list(APPEND libs opencv_imgcodecs)
 list(APPEND libs opencv_mvlab)
-list(APPEND libs Boost::python38)
 list(APPEND libs Boost::filesystem)
 list(APPEND libs Boost::thread)
-list(APPEND libs Boost::locale)
 list(APPEND libs 2Geom::2geom)
 
 target_link_libraries(ui_core PUBLIC ${libs})
+target_link_libraries(ui_core PRIVATE pybind11::embed)
 target_link_libraries(ui_core PUBLIC ${Python3_LIBRARY_RELEASE})
 target_include_directories(ui_core PUBLIC ${Python3_INCLUDE_DIRS})
 target_link_options(ui_core PUBLIC ${Python3_LINK_OPTIONS})

@@ -83,9 +83,10 @@ public:
 public:
     static ProjTreeModel *GetModel(void);
     static SelectionFilter *GetSelectionFilter(void);
-    static void PopupPyError();
+    static void PopupPyError(const std::string &strErr);
     static void ClearPyOutput();
     static void LogPyOutput();
+    static std::string GetPyOutput();
     static SPDrawableNodeVector Difference(const SPDrawableNodeVector& lseq, const SPDrawableNodeVector& rseq);
     static SPDrawableNodeVector Intersection(const SPDrawableNodeVector& lseq, const SPDrawableNodeVector& rseq);
     static wxBitmap GetBitmap(const SpamIconPurpose ip, const std::string &bmName);

@@ -13,3 +13,9 @@
 [submodule "3rdparty/wxSVG"]
 	path = 3rdparty/wxSVG
 	url = https://github.com/jeffwong728/wxSVG.git
+[submodule "3rdparty/pybind11"]
+	path = 3rdparty/pybind11
+	url = ../../pybind/pybind11
+[submodule "spam/pybind11"]
+	path = spam/pybind11
+	url = https://github.com/pybind/pybind11.git

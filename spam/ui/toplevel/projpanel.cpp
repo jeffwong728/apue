@@ -111,7 +111,7 @@ bool ProjPanel::IsProjectModified() const
     return projModel? projModel->IsModified() : false;
 }
 
-void ProjPanel::CreateStation()
+WPStationNode ProjPanel::CreateStation()
 {
     auto projModel = GetProjTreeModel();
     if (projModel)
@@ -122,7 +122,10 @@ void ProjPanel::CreateStation()
         cmd->Do();
         SpamUndoRedo::AddCommand(cmd);
         Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+        return cmd->GetStation();
     }
+
+    return WPStationNode();
 }
 
 void ProjPanel::GlowEntity(const SPDrawableNode &de)

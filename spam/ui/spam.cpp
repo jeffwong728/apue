@@ -4,27 +4,19 @@
 #include <wx/snglinst.h>
 #include <ui/proc/basic.h>
 #include <ui/toplevel/rootframe.h>
-#include <ui/toplevel/projpanel.h>
+#include <ui/projs/drawablenode.h>
 #include <boost/dll/runtime_symbol_info.hpp>
+#include <boost/algorithm/string.hpp>
 #include <stack>
 #include <memory>
 #include <fstream>
-#pragma warning( push )
-#pragma warning( disable : 5033 )
-#ifdef pid_t
-#undef pid_t
-#endif
-#ifdef HAVE_SSIZE_T
-#undef HAVE_SSIZE_T
-#endif
-#include <boost/python.hpp>
-#include <boost/python/module.hpp>
-#include <boost/python/def.hpp>
-#pragma warning( pop )
-#include <boost/algorithm/string.hpp>
-#include <ui/projs/drawablenode.h>
 #include <gmodule.h>
 #include <gtk/gtk.h>
+
+extern std::string InitializePython();
+extern void FinalizePython();
+extern void PyClearOutput();
+extern std::string PyGetOutput();
 
 struct GUILogerTempSwitcher
 {
@@ -41,22 +33,6 @@ struct GUILogerTempSwitcher
     std::unique_ptr<wxLogGui> GUILogger_;
     wxLog *oldLogger_;
 };
-
-struct World
-{
-    void set(std::string msg) { this->msg = msg; }
-    std::string greet() { return msg; }
-    std::string msg;
-};
-
-extern void spamNewStation();
-
-/// Staticly linking a Python extension for embedded Python.
-BOOST_PYTHON_MODULE(spam)
-{
-    boost::python::def("CreateStation", spamNewStation);
-    boost::python::class_<World>("World").def("greet", &World::greet).def("set", &World::set);
-}
 
 class SpamApp : public wxApp
 {
@@ -97,22 +73,9 @@ bool SpamApp::OnInit()
     uniqueApp_.reset(new wxSingleInstanceChecker());
     uniqueApp_->Create(GetAppName(), wxGetHomeDir());
 
-    PyImport_AppendInittab("spam", &PyInit_spam);
-    Py_Initialize();
-
-    try
-    {
-        boost::python::object mainModule = boost::python::import("__main__");
-        boost::python::object mainNamespace = mainModule.attr("__dict__");
-        boost::python::exec("import sys", mainNamespace);
-        boost::python::exec("import io", mainNamespace);
-        boost::python::exec("spam_output = io.StringIO()", mainNamespace);
-        boost::python::exec("sys.stdout = spam_output", mainNamespace);
-    }
-    catch (const boost::python::error_already_set&)
-    {
-        Spam::PopupPyError();
-    }
+    std::string strErr = InitializePython();
+    Spam::PopupPyError(strErr);
+    ::setlocale(LC_ALL, "C");
 
     boost::system::error_code ec;
     boost::filesystem::path p = boost::dll::program_location(ec);
@@ -156,6 +119,7 @@ bool SpamApp::OnInit()
 int SpamApp::OnExit()
 {
     SaveConfig();
+    FinalizePython();
     return 0;
 }
 
@@ -398,45 +362,24 @@ SelectionFilter *Spam::GetSelectionFilter(void)
     }
 }
 
-void Spam::PopupPyError()
+void Spam::PopupPyError(const std::string &strErr)
 {
-    if (PyErr_Occurred())
+    if (!strErr.empty())
     {
-        PyObject *exc, *val, *tb;
-        PyErr_Fetch(&exc, &val, &tb);
-        PyErr_NormalizeException(&exc, &val, &tb);
-
-        boost::python::handle<> hexc(boost::python::allow_null(exc));
-        boost::python::handle<> hval(boost::python::allow_null(val));
-        boost::python::handle<> htb(boost::python::allow_null(tb));
-
-        boost::python::object traceback(boost::python::import("traceback"));
-        boost::python::object formatException(traceback.attr("format_exception"));
-        boost::python::object formattedList = formatException(hexc, hval, htb);
-
-        boost::python::object formatted = boost::python::str("").join(formattedList);
-        std::string estrs = boost::python::extract<std::string>(formatted);
         GUILogerTempSwitcher logSwitcher;
-        wxLogError(wxString(estrs));
-        PyErr_Clear();
+        wxLogError(wxString(strErr));
     }
 }
 
 void Spam::ClearPyOutput()
 {
-    boost::python::object mainModule = boost::python::import("__main__");
-    boost::python::object mainNamespace = mainModule.attr("__dict__");
-    boost::python::exec("spam_output.reset()", mainNamespace);
+    PyClearOutput();
 }
 
 void Spam::LogPyOutput()
 {
-    boost::python::object mainModule = boost::python::import("__main__");
-    boost::python::object mainNamespace = mainModule.attr("__dict__");
-    boost::python::exec("spamOut = spam_output.getvalue()", mainNamespace);
-    std::string stdOut = boost::python::extract<std::string>(mainNamespace["spamOut"]);
     std::vector<std::string> strLines;
-    boost::split(strLines, stdOut, boost::is_any_of("\n"), boost::token_compress_on);
+    boost::split(strLines, GetPyOutput(), boost::is_any_of("\n"), boost::token_compress_on);
     for (const auto &l : strLines)
     {
         if (!l.empty())
@@ -444,6 +387,11 @@ void Spam::LogPyOutput()
             wxLogMessage(wxString(l));
         }
     }
+}
+
+std::string Spam::GetPyOutput()
+{
+    return PyGetOutput();
 }
 
 SPDrawableNodeVector Spam::Difference(const SPDrawableNodeVector& lseq, const SPDrawableNodeVector& rseq)
@@ -562,10 +510,4 @@ bool SpamUndoRedo::IsUndoable(void)
 bool SpamUndoRedo::IsRedoable(void)
 {
     return wxGetApp().IsRedoable();
-}
-
-void spamNewStation()
-{
-    auto rf = dynamic_cast<RootFrame *>(wxGetApp().GetTopWindow());
-    rf->GetProjPanel()->CreateStation();
 }

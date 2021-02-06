@@ -31,7 +31,7 @@ public:
     void LoadProject(const wxString& dbPath, const wxString &projName);
     void SetProjectModified(bool modified=true);
     bool IsProjectModified() const;
-    void CreateStation();
+    WPStationNode CreateStation();
     void GlowEntity(const SPDrawableNode &de);
     void DimEntity(const SPDrawableNode &de);
     void SelectEntity(const SPDrawableNodeVector &des);

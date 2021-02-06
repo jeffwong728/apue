@@ -157,7 +157,7 @@ private:
     const wxString stationNotebookName_;
     const wxString projPanelName_;
     const wxString pyEditorName_;
-    const wxString logPanelName_;
+    const wxString consolePanelName_;
     const wxString imagesZonePanelName_;
     const wxString toolBoxBarName_;
     wxFileHistory  imageFileHistory_;

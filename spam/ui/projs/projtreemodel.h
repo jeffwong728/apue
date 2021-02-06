@@ -71,6 +71,7 @@ public:
     bool IsModified() const { return modified_; }
     SPStationNodeVector GetAllStations() const;
     SPStationNode FindStationByUUID(const std::string &uuidTag) const;
+    SPStationNode FindStationByName(const std::string &uuidTag) const;
 
     void RestoreTransform(SPDrawableNodeVector &drawables, const SpamMany &mementos, const bool fireEvent);
 
