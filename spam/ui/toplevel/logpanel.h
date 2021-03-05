@@ -5,6 +5,8 @@
     #include <wx/wx.h>
 #endif
 #include <ui/cmndef.h>
+#include <stack>
+#include <list>
 
 class ConsolePanel : public wxPanel
 {
@@ -23,5 +25,9 @@ private:
     void OnUpdateUI(wxUpdateUIEvent& evt);
     void OnEnter(wxCommandEvent& evt);
     void OnKey(wxKeyEvent &evt);
+
+private:
+    std::list<wxString> cmds_;
+    std::list<wxString>::const_iterator cursor_;
 };
 #endif //SPAM_UI_TOP_LEVEL_LOG_PANEL_H

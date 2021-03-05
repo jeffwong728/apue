@@ -75,11 +75,12 @@ public:
     wxRect ImageToDevice(const Geom::OptRect &rc) const;
     void DrawDrawables(const SPDrawableNodeVector &des);
     void EraseDrawables(const SPDrawableNodeVector &des);
+    void RefreshDrawable(const SPDrawableNode &de);
     void HighlightDrawable(const SPDrawableNode &de);
     void DimDrawable(const SPDrawableNode &de);
     void DrawPathVector(const Geom::PathVector &pth, const Geom::OptRect &rect);
     void DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
-    void AddRect(const RectData &rd);
+    WPRectNode AddRect(const RectData &rd);
     void AddLine(const LineData &ld);
     void AddEllipse(const GenericEllipseArcData &ed);
     void AddPolygon(const PolygonData &pd);

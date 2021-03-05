@@ -293,6 +293,11 @@ void CairoCanvas::EraseDrawables(const SPDrawableNodeVector &des)
     InvalidateDrawable(des);
 }
 
+void CairoCanvas::RefreshDrawable(const SPDrawableNode &de)
+{
+    InvalidateDrawable(SPDrawableNodeVector(1, de));
+}
+
 void CairoCanvas::HighlightDrawable(const SPDrawableNode &de)
 {
     InvalidateDrawable(SPDrawableNodeVector(1, de));
@@ -340,7 +345,7 @@ void CairoCanvas::DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &new
     Refresh(false, &invalidRect);
 }
 
-void CairoCanvas::AddRect(const RectData &rd)
+WPRectNode CairoCanvas::AddRect(const RectData &rd)
 {
     auto model = Spam::GetModel();
     if (model)
@@ -353,8 +358,12 @@ void CairoCanvas::AddRect(const RectData &rd)
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
             Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+
+            return cmd->GetRect();
         }
     }
+
+    return WPRectNode();
 }
 
 void CairoCanvas::AddLine(const LineData &ld)

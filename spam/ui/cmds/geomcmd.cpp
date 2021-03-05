@@ -2,6 +2,7 @@
 #include <ui/spam.h>
 #include <ui/projs/stationnode.h>
 #include <ui/projs/geomnode.h>
+#include <ui/projs/rectnode.h>
 #include <ui/projs/beziergonnode.h>
 #include <ui/projs/projtreemodel.h>
 #include <helper/splivarot.h>
@@ -115,6 +116,11 @@ void CreateRectCmd::Redo()
     {
         model_->AddToStation(station_, geom_, true);
     }
+}
+
+WPRectNode CreateRectCmd::GetRect() const 
+{ 
+    return std::dynamic_pointer_cast<RectNode>(geom_);
 }
 
 wxString CreateRectCmd::GetDescription() const

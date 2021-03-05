@@ -357,6 +357,22 @@ void RectNode::InitData(RectData &data)
     data.radii.fill({ 0, 0 });
 }
 
+void RectNode::PyDoTransform(const Geom::Affine &aff)
+{
+    if (!aff.isIdentity())
+    {
+        for (int i = 0; i < static_cast<int>(data_.points.size()); ++i)
+        {
+            Geom::Point pt2{ data_.points[i][0], data_.points[i][1] };
+            pt2 *= aff;
+            data_.points[i][0] = pt2.x();
+            data_.points[i][1] = pt2.y();
+        }
+
+        ConstrainRadii();
+    }
+}
+
 void RectNode::Save(const H5::Group &g) const
 {
     std::string utf8Title(title_.ToUTF8().data());

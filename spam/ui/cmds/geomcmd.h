@@ -51,6 +51,9 @@ public:
     void Redo() wxOVERRIDE;
 
 public:
+    WPRectNode GetRect() const;
+
+public:
     wxString GetDescription() const wxOVERRIDE;
 
 private:

@@ -3,6 +3,7 @@
 #include <wx/wrapsizer.h>
 #include <wx/stc/stc.h>
 #include <ui/spam.h>
+extern void PyAddImportPath(const std::string &strDir);
 
 PyEditor::PyEditor(wxWindow* parent)
 : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
@@ -71,6 +72,7 @@ PyEditor::PyEditor(wxWindow* parent)
         if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
         {
             LoadPyFile(fullPath);
+            PyAddImportPath(p.remove_filename().string());
         }
     }
 

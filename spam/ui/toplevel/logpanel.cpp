@@ -105,6 +105,8 @@ ConsolePanel::ConsolePanel(wxWindow* parent)
     GetSizer()->SetSizeHints(this);
     Show();
 
+    cursor_ = cmds_.cend();
+
     delete wxLog::SetActiveTarget(new wxLogTextCtrl(consoleCtrl));
 }
 
@@ -193,18 +195,17 @@ void ConsolePanel::OnEnter(wxCommandEvent& evt)
         wxString strLine = consoleCtrl->GetLineText(consoleCtrl->GetNumberOfLines() - 1);
         if (strLine.StartsWith(wxT(">>> ")))
         {
+            consoleCtrl->AppendText(wxT("\n"));
             wxString strCmd = strLine.SubString(4, strLine.Length()-1);
             if (!strCmd.IsEmpty())
             {
                 std::pair<std::string, bool> res = PyRunCommand(strCmd.ToStdString());
                 if (res.second)
                 {
+                    cursor_ = cmds_.insert(cursor_, strCmd);
                     if (!res.first.empty())
                     {
-                        consoleCtrl->AppendText(wxT("\n"));
                         consoleCtrl->AppendText(res.first);
-                        consoleCtrl->AppendText(wxT(">>> "));
-                        return;
                     }
                 }
                 else
@@ -212,8 +213,12 @@ void ConsolePanel::OnEnter(wxCommandEvent& evt)
                     Spam::PopupPyError(res.first);
                 }
             }
+            consoleCtrl->AppendText(wxT(">>> "));
         }
-        consoleCtrl->AppendText(wxT("\n>>> "));
+        else
+        {
+            consoleCtrl->AppendText(wxT("\n>>> "));
+        }
     }
 }
 
@@ -239,6 +244,41 @@ void ConsolePanel::OnKey(wxKeyEvent &evt)
                     consoleCtrl->GetLineText(consoleCtrl->GetNumberOfLines() - 1).StartsWith(wxT(">>> ")))
                 {
                     return;
+                }
+
+                if (!cmds_.empty())
+                {
+                    if (WXK_UP == evt.GetKeyCode() && consoleCtrl->GetLineText(consoleCtrl->GetNumberOfLines() - 1).StartsWith(wxT(">>> ")))
+                    {
+                        if (cursor_ != cmds_.cend())
+                        {
+                            consoleCtrl->Replace(consoleCtrl->XYToPosition(4, consoleCtrl->GetNumberOfLines() - 1), consoleCtrl->GetLastPosition(), *cursor_);
+                            cursor_ = std::next(cursor_);
+                        }
+
+                        return;
+                    }
+
+                    if (WXK_DOWN == evt.GetKeyCode() && consoleCtrl->GetLineText(consoleCtrl->GetNumberOfLines() - 1).StartsWith(wxT(">>> ")))
+                    {
+                        if (cursor_ == cmds_.cend())
+                        {
+                            if (cursor_ != cmds_.cbegin()) cursor_ = std::prev(cursor_);
+                            if (cursor_ != cmds_.cbegin()) cursor_ = std::prev(cursor_);
+                            consoleCtrl->Replace(consoleCtrl->XYToPosition(4, consoleCtrl->GetNumberOfLines() - 1), consoleCtrl->GetLastPosition(), *cursor_);
+                        }
+                        else if (cursor_ == cmds_.cbegin())
+                        {
+                            consoleCtrl->Replace(consoleCtrl->XYToPosition(4, consoleCtrl->GetNumberOfLines() - 1), consoleCtrl->GetLastPosition(), *cursor_);
+                        }
+                        else
+                        {
+                            if (cursor_ != cmds_.cbegin()) cursor_ = std::prev(cursor_);
+                            consoleCtrl->Replace(consoleCtrl->XYToPosition(4, consoleCtrl->GetNumberOfLines() - 1), consoleCtrl->GetLastPosition(), *cursor_);
+                        }
+
+                        return;
+                    }
                 }
             }
         }

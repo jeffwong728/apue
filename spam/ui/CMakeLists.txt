@@ -62,6 +62,8 @@ set(ui_core_SRCS
   fsm/polygontool.cpp
   fsm/beziergontool.cpp
   proc/basic.cpp
+  scripting/pyrect.cpp
+  scripting/pystation.cpp
 )
 
 set(ui_core_HEADERS 
@@ -131,6 +133,8 @@ set(ui_core_HEADERS
   fsm/polygontool.h
   fsm/events.h
   proc/basic.h
+  scripting/pyrect.h
+  scripting/pystation.h
 )
 
 if(MSVC)

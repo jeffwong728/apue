@@ -44,6 +44,7 @@ public:
     void InitData(RectData &data);
     void SetData(const RectData &data) { data_ = data; }
     const RectData& GetData() const { return data_; }
+    void PyDoTransform(const Geom::Affine &aff);
 
 public:
     void Save(const H5::Group &g) const override;
