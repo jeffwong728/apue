@@ -10,6 +10,7 @@ struct PyStation
     std::string GetName() const;
     pybind11::object NewRect(const double center_x, const double center_y, const double width, const double height);
     pybind11::object FuncTest(pybind11::args args, pybind11::kwargs kwargs);
+    void DispRegion(const pybind11::object region);
     WPStationNode wpPyStation;
 };
 

@@ -254,6 +254,12 @@ void RootFrame::SaveProject(const wxString &dbPath)
         SpamConfig::Set(CommonDef::GetProjCfgPath(), projPanel->GetProjectName());
         SpamConfig::Save();
     }
+
+    auto pyEditor = dynamic_cast<PyEditor *>(wxAuiMgr_.GetPane(pyEditorName_).window);
+    if (pyEditor)
+    {
+        pyEditor->SavePyFile();
+    }
 }
 
 wxAuiNotebook *RootFrame::GetStationNotebook() const

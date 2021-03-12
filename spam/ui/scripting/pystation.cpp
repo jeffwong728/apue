@@ -6,6 +6,7 @@
 #include <ui/projs/stationnode.h>
 #include <ui/projs/projtreemodel.h>
 #include <ui/cv/cairocanvas.h>
+#include <opencv2/mvlab.hpp>
 
 std::string PyStation::GetName() const
 {
@@ -82,11 +83,35 @@ pybind11::object PyStation::FuncTest(pybind11::args args, pybind11::kwargs kwarg
     return pybind11::none();
 }
 
+void PyStation::DispRegion(const pybind11::object region)
+{
+    try
+    {
+        const auto typeObj = region.get_type();
+        const auto resultTypeStr = typeObj.str().cast<std::string>();
+
+        struct pyopencv_Region
+        {
+            PyObject_HEAD
+            cv::Ptr<cv::mvlab::Region> v;
+        }; 
+
+        cv::Ptr<cv::mvlab::Region> rgn = ((pyopencv_Region*)region.ptr())->v;
+        const double a = rgn->Area();
+        wxLogMessage(wxString(std::to_string(a)));
+    }
+    catch (const pybind11::error_already_set&e)
+    {
+        wxLogMessage(wxString(e.what()));
+    }
+}
+
 void PyExportStation(pybind11::module_ &m)
 {
     auto c = pybind11::class_<PyStation>(m, "Station");
     c.def("GetName", &PyStation::GetName);
     c.def("NewRect", &PyStation::NewRect, "Create a new rectangle", pybind11::arg("center_x"), pybind11::arg("center_y"), pybind11::arg("width"), pybind11::arg("height"));
+    c.def("DispRegion", &PyStation::DispRegion, "Display a region or regions", pybind11::arg("region"));
     c.def_property_readonly("Name", &PyStation::GetName);
 }
 

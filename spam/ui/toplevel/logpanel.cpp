@@ -80,9 +80,10 @@ protected:
         if (CanCut()) menu.Append(wxID_CUT, wxT("Cu&t"));
         menu.Append(wxID_COPY, wxT("&Copy"));
         if (CanPaste()) menu.Append(wxID_PASTE, wxT("&Paste"));
-        if (CanCut()) menu.Append(wxID_CLEAR, wxT("&Delete"));
+        if (CanCut()) menu.Append(wxID_DELETE, wxT("&Delete"));
         menu.AppendSeparator();
         menu.Append(wxID_SELECTALL, wxT("Select &All"));
+        menu.Append(wxID_CLEAR, wxT("Cl&ear"));
 
         PopupMenu(&menu);
     }
@@ -99,6 +100,7 @@ ConsolePanel::ConsolePanel(wxWindow* parent)
     consoleCtrl->Bind(wxEVT_TEXT, &ConsolePanel::OnText, this);
     consoleCtrl->Bind(wxEVT_TEXT_ENTER, &ConsolePanel::OnEnter, this);
     consoleCtrl->Bind(wxEVT_CHAR, &ConsolePanel::OnKey, this);
+    consoleCtrl->Bind(wxEVT_MENU, &ConsolePanel::OnClear, this, wxID_CLEAR);
 
     // Set sizer for the panel
     SetSizer(sizerRoot);
@@ -135,6 +137,7 @@ void ConsolePanel::OnClear(wxCommandEvent &cmd)
     if (consoleCtrl)
     {
         consoleCtrl->Clear();
+        consoleCtrl->AppendText(wxT(">>> "));
     }
 }
 
@@ -196,21 +199,29 @@ void ConsolePanel::OnEnter(wxCommandEvent& evt)
         if (strLine.StartsWith(wxT(">>> ")))
         {
             consoleCtrl->AppendText(wxT("\n"));
-            wxString strCmd = strLine.SubString(4, strLine.Length()-1);
+            wxString strCmd = strLine.SubString(4, strLine.Length()-1).Strip(wxString::both);
             if (!strCmd.IsEmpty())
             {
-                std::pair<std::string, bool> res = PyRunCommand(strCmd.ToStdString());
-                if (res.second)
+                if (wxString("clear") == strCmd)
                 {
-                    cursor_ = cmds_.insert(cursor_, strCmd);
-                    if (!res.first.empty())
-                    {
-                        consoleCtrl->AppendText(res.first);
-                    }
+                    consoleCtrl->Clear();
                 }
                 else
                 {
-                    Spam::PopupPyError(res.first);
+                    wxBusyCursor wait;
+                    std::pair<std::string, bool> res = PyRunCommand(strCmd.ToStdString());
+                    if (res.second)
+                    {
+                        cursor_ = cmds_.insert(cursor_, strCmd);
+                        if (!res.first.empty())
+                        {
+                            consoleCtrl->AppendText(res.first);
+                        }
+                    }
+                    else
+                    {
+                        Spam::PopupPyError(res.first);
+                    }
                 }
             }
             consoleCtrl->AppendText(wxT(">>> "));

@@ -98,6 +98,16 @@ void PyEditor::LoadPyFile(const wxString &fullPath)
     }
 }
 
+void PyEditor::SavePyFile() const
+{
+    auto stc = dynamic_cast<wxStyledTextCtrl *>(GetSizer()->GetItemById(kSpamPyEditorCtrl)->GetWindow());
+    if (stc)
+    {
+        const wxString fullPath = SpamConfig::Get<wxString>(cp_Py3EditorScriptFullPath, wxT(""));
+        stc->SaveFile(fullPath);
+    }
+}
+
 void PyEditor::ApplyStyleChange()
 {
     auto stc = dynamic_cast<wxStyledTextCtrl *>(GetSizer()->GetItemById(kSpamPyEditorCtrl)->GetWindow());
