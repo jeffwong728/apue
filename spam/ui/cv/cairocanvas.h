@@ -75,6 +75,8 @@ public:
     wxRect ImageToDevice(const Geom::OptRect &rc) const;
     void DrawDrawables(const SPDrawableNodeVector &des);
     void EraseDrawables(const SPDrawableNodeVector &des);
+    void DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn);
+    void EraseRegion(const cv::Ptr<cv::mvlab::Region> &rgn);
     void RefreshDrawable(const SPDrawableNode &de);
     void HighlightDrawable(const SPDrawableNode &de);
     void DimDrawable(const SPDrawableNode &de);
@@ -132,6 +134,7 @@ private:
     void ConpensateHandle(wxRect &invalidRect) const;
     void InvalidateDrawable(const SPDrawableNodeVector &des);
     void RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void RenderRegions(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderEntities(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const;
@@ -165,6 +168,7 @@ private:
     std::vector<std::string> rgnsVisiable_;
     Geom::OptRect rubber_band_;
     Geom::PathVector path_vector_;
+    std::vector<cv::Ptr<cv::mvlab::Region>> rgns_;
 };
 
 class DnDImageFile : public wxFileDropTarget

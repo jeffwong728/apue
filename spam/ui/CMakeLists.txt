@@ -35,6 +35,7 @@ set(ui_core_SRCS
   projs/stylecellrenderer.cpp
   toplevel/preferencesdlg.cpp
   toplevel/logpanel.cpp
+  toplevel/consolepanel.cpp
   toplevel/pyeditor.cpp
   toplevel/thumbnailpanel.cpp
   toplevel/mainstatus.cpp
@@ -105,6 +106,7 @@ set(ui_core_HEADERS
   projs/stylecellrenderer.h
   toplevel/preferencesdlg.h
   toplevel/logpanel.h
+  toplevel/consolepanel.h
   toplevel/pyeditor.h
   toplevel/thumbnailpanel.h
   toplevel/mainstatus.h

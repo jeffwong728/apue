@@ -97,8 +97,49 @@ void PyStation::DispRegion(const pybind11::object region)
         }; 
 
         cv::Ptr<cv::mvlab::Region> rgn = ((pyopencv_Region*)region.ptr())->v;
-        const double a = rgn->Area();
-        wxLogMessage(wxString(std::to_string(a)));
+        SPStationNode spStation = wpPyStation.lock();
+        if (spStation && rgn)
+        {
+            auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+            CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
+            if (cavs)
+            {
+                cavs->DrawRegion(rgn);
+                ::wxYield();
+            }
+        }
+    }
+    catch (const pybind11::error_already_set&e)
+    {
+        wxLogMessage(wxString(e.what()));
+    }
+}
+
+void PyStation::EraseRegion(const pybind11::object region)
+{
+    try
+    {
+        const auto typeObj = region.get_type();
+        const auto resultTypeStr = typeObj.str().cast<std::string>();
+
+        struct pyopencv_Region
+        {
+            PyObject_HEAD
+            cv::Ptr<cv::mvlab::Region> v;
+        };
+
+        cv::Ptr<cv::mvlab::Region> rgn = ((pyopencv_Region*)region.ptr())->v;
+        SPStationNode spStation = wpPyStation.lock();
+        if (spStation && rgn)
+        {
+            auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+            CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
+            if (cavs)
+            {
+                cavs->EraseRegion(rgn);
+                ::wxYield();
+            }
+        }
     }
     catch (const pybind11::error_already_set&e)
     {
@@ -112,6 +153,7 @@ void PyExportStation(pybind11::module_ &m)
     c.def("GetName", &PyStation::GetName);
     c.def("NewRect", &PyStation::NewRect, "Create a new rectangle", pybind11::arg("center_x"), pybind11::arg("center_y"), pybind11::arg("width"), pybind11::arg("height"));
     c.def("DispRegion", &PyStation::DispRegion, "Display a region or regions", pybind11::arg("region"));
+    c.def("EraseRegion", &PyStation::EraseRegion, "Erase a region or regions from view", pybind11::arg("region"));
     c.def_property_readonly("Name", &PyStation::GetName);
 }
 
