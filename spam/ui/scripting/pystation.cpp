@@ -83,28 +83,18 @@ pybind11::object PyStation::FuncTest(pybind11::args args, pybind11::kwargs kwarg
     return pybind11::none();
 }
 
-void PyStation::DispRegion(const pybind11::object region)
+void PyStation::DispRegion(const cv::Ptr<cv::mvlab::Region> &region)
 {
     try
     {
-        const auto typeObj = region.get_type();
-        const auto resultTypeStr = typeObj.str().cast<std::string>();
-
-        struct pyopencv_Region
-        {
-            PyObject_HEAD
-            cv::Ptr<cv::mvlab::Region> v;
-        }; 
-
-        cv::Ptr<cv::mvlab::Region> rgn = ((pyopencv_Region*)region.ptr())->v;
         SPStationNode spStation = wpPyStation.lock();
-        if (spStation && rgn)
+        if (spStation && region)
         {
             auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
             CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
             if (cavs)
             {
-                cavs->DrawRegion(rgn);
+                cavs->DrawRegion(region);
                 ::wxYield();
             }
         }
@@ -115,28 +105,18 @@ void PyStation::DispRegion(const pybind11::object region)
     }
 }
 
-void PyStation::EraseRegion(const pybind11::object region)
+void PyStation::EraseRegion(const cv::Ptr<cv::mvlab::Region> &region)
 {
     try
     {
-        const auto typeObj = region.get_type();
-        const auto resultTypeStr = typeObj.str().cast<std::string>();
-
-        struct pyopencv_Region
-        {
-            PyObject_HEAD
-            cv::Ptr<cv::mvlab::Region> v;
-        };
-
-        cv::Ptr<cv::mvlab::Region> rgn = ((pyopencv_Region*)region.ptr())->v;
         SPStationNode spStation = wpPyStation.lock();
-        if (spStation && rgn)
+        if (spStation && region)
         {
             auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
             CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
             if (cavs)
             {
-                cavs->EraseRegion(rgn);
+                cavs->EraseRegion(region);
                 ::wxYield();
             }
         }
@@ -145,6 +125,51 @@ void PyStation::EraseRegion(const pybind11::object region)
     {
         wxLogMessage(wxString(e.what()));
     }
+}
+
+void PyStation::DispObj(const cv::Ptr<cv::mvlab::Region> &obj)
+{
+}
+
+void PyStation::DispObj(const cv::Ptr<cv::mvlab::Contour> &obj)
+{
+}
+
+void PyStation::SetDraw(const std::string &mode)
+{
+}
+
+std::string PyStation::GetDraw() const
+{
+    return std::string("margin");
+}
+
+void PyStation::SetColor(const std::string &color)
+{
+}
+
+void PyStation::SetColor(const RGBTuple &color)
+{
+}
+
+void PyStation::SetColor(const RGBATuple &color)
+{
+}
+
+void PyStation::SetColor(const std::vector<std::string> &colors)
+{
+}
+
+void PyStation::SetColor(const std::vector<RGBTuple> &colors)
+{
+}
+
+void PyStation::SetColor(const std::vector<RGBATuple> &colors)
+{
+}
+
+void PyStation::SetColored(const int number_of_colors)
+{
 }
 
 void PyExportStation(pybind11::module_ &m)
@@ -154,6 +179,17 @@ void PyExportStation(pybind11::module_ &m)
     c.def("NewRect", &PyStation::NewRect, "Create a new rectangle", pybind11::arg("center_x"), pybind11::arg("center_y"), pybind11::arg("width"), pybind11::arg("height"));
     c.def("DispRegion", &PyStation::DispRegion, "Display a region or regions", pybind11::arg("region"));
     c.def("EraseRegion", &PyStation::EraseRegion, "Erase a region or regions from view", pybind11::arg("region"));
+    c.def("DispObj", pybind11::overload_cast<const cv::Ptr<cv::mvlab::Region> &>(&PyStation::DispObj), "Display a region or regions", pybind11::arg("obj"));
+    c.def("DispObj", pybind11::overload_cast<const cv::Ptr<cv::mvlab::Contour> &>(&PyStation::DispObj), "Display a contour or contours", pybind11::arg("obj"));
+    c.def("SetColor", pybind11::overload_cast<const std::string &>(&PyStation::SetColor), "Set output color by color name", pybind11::arg("color"));
+    c.def("SetColor", pybind11::overload_cast<const RGBTuple &>(&PyStation::SetColor), "Set output color in RGB format", pybind11::arg("color"));
+    c.def("SetColor", pybind11::overload_cast<const RGBATuple &>(&PyStation::SetColor), "Set output color in RGBA format", pybind11::arg("color"));
+    c.def("SetColor", pybind11::overload_cast<const std::vector<std::string> &>(&PyStation::SetColor), "Set output colors by color names", pybind11::arg("colors"));
+    c.def("SetColor", pybind11::overload_cast<const std::vector<RGBTuple> &>(&PyStation::SetColor), "Set output colors in RGB format", pybind11::arg("colors"));
+    c.def("SetColor", pybind11::overload_cast<const std::vector<RGBATuple> &>(&PyStation::SetColor), "Set output colors in RGBA format", pybind11::arg("colors"));
+    c.def("SetColored", &PyStation::SetColored, "Set multiple output colors", pybind11::arg("number_of_colors") = 12);
+    c.def("SetDraw", &PyStation::SetDraw, "Define the region fill mode", pybind11::arg("mode"));
+    c.def("GetDraw", &PyStation::GetDraw, "Get the current region fill mode");
     c.def_property_readonly("Name", &PyStation::GetName);
 }
 

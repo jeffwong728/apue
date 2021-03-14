@@ -65,6 +65,7 @@ set(ui_core_SRCS
   proc/basic.cpp
   scripting/pyrect.cpp
   scripting/pystation.cpp
+  scripting/mvlabcaster.cpp
 )
 
 set(ui_core_HEADERS 
@@ -137,6 +138,7 @@ set(ui_core_HEADERS
   proc/basic.h
   scripting/pyrect.h
   scripting/pystation.h
+  scripting/mvlabcaster.h
 )
 
 if(MSVC)
