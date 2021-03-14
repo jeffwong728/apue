@@ -216,6 +216,7 @@ target_include_directories(ui_core PRIVATE ${CMAKE_BINARY_DIR}/include)
 
 IF (WIN32 AND MSVC)
   target_link_libraries(ui_core PUBLIC wxGTK3::mono)
+  set_target_properties(ui_core PROPERTIES COMPILE_FLAGS "/wd4828")
 ELSE()
   include(${wxWidgets_USE_FILE})
   target_link_libraries(ui_core PUBLIC ${wxWidgets_LIBRARIES})

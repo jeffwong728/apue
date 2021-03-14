@@ -125,6 +125,7 @@ endif()
 
 if(MSVC)
   target_compile_definitions(spam PRIVATE _CRTDBG_MAP_ALLOC)
+  set_target_properties(spam PROPERTIES COMPILE_FLAGS "/wd4828")
 endif()
 
 include(GNUInstallDirs)
@@ -136,6 +137,10 @@ if(MSVC)
     configure_file (${CMAKE_CURRENT_SOURCE_DIR}/FixBundle.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/FixBundle.cmake @ONLY)
     install (SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/FixBundle.cmake)
 endif()
+
+get_target_property(sys_inc ICU::i18n INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(spam SYSTEM INTERFACE ${sys_inc})
+message(STATUS "VCPKG include directories: ${sys_inc}")
 
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
