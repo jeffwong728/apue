@@ -3,6 +3,7 @@
 #include "rootframe.h"
 #include "projpanel.h"
 #include "logpanel.h"
+#include "consolepanel.h"
 #include "pyeditor.h"
 #include "preferencesdlg.h"
 #include "thumbnailpanel.h"
@@ -56,6 +57,7 @@ RootFrame::RootFrame()
     , mainToolPanelName_(wxT("maintool"))
     , stationNotebookName_(wxT("station"))
     , projPanelName_(wxT("proj"))
+    , logPanelName_(wxT("logPanel"))
     , consolePanelName_(wxT("consolePanel"))
     , pyEditorName_(wxT("pyEditor"))
     , imagesZonePanelName_(wxT("imagesZone"))
@@ -186,7 +188,8 @@ void RootFrame::CreateAuiPanes()
     wxAuiMgr_.AddPane(CreateStationNotebook(), wxAuiPaneInfo().Name(stationNotebookName_).Center().PaneBorder(false).CloseButton(false).CaptionVisible(false));
     wxAuiMgr_.AddPane(new ProjPanel(this), wxAuiPaneInfo().Name(projPanelName_).Left().Caption(wxT("Project Explorer")));
     wxAuiMgr_.AddPane(new PyEditor(this), wxAuiPaneInfo().Name(pyEditorName_).Right().Bottom().Caption("Script Editor"));
-    wxAuiMgr_.AddPane(new ConsolePanel(this), wxAuiPaneInfo().Name(consolePanelName_).Left().Bottom().Caption("Log"));
+    wxAuiMgr_.AddPane(new LogPanel(this), wxAuiPaneInfo().Name(logPanelName_).Left().Bottom().Caption("Log"));
+    wxAuiMgr_.AddPane(new ConsolePanel(this), wxAuiPaneInfo().Name(consolePanelName_).Right().Bottom().Caption("Console"));
     wxAuiMgr_.AddPane(new ThumbnailPanel(this), wxAuiPaneInfo().Name(imagesZonePanelName_).Bottom().Bottom().Caption("Images Zone"));
 
     auto infoBox  = new ProbeBox(this);
@@ -253,6 +256,12 @@ void RootFrame::SaveProject(const wxString &dbPath)
         SpamConfig::Set(CommonDef::GetDBPathCfgPath(), dbPath);
         SpamConfig::Set(CommonDef::GetProjCfgPath(), projPanel->GetProjectName());
         SpamConfig::Save();
+    }
+
+    auto pyEditor = dynamic_cast<PyEditor *>(wxAuiMgr_.GetPane(pyEditorName_).window);
+    if (pyEditor)
+    {
+        pyEditor->SavePyFile();
     }
 }
 
@@ -696,6 +705,11 @@ void RootFrame::OnUpdateUI(wxUpdateUIEvent& e)
             gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
             break;
         case spamID_VIEW_LOG:
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(logPanelName_).IsShown());
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
+            break;
+        case spamID_VIEW_CONSOLE:
             gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
             gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(consolePanelName_).IsShown());
             gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
@@ -1293,6 +1307,16 @@ void RootFrame::view_log_cb(GtkWidget *widget, gpointer user_data)
 {
     if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
     RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    auto &pane = frame->wxAuiMgr_.GetPane(frame->logPanelName_);
+    bool v = pane.IsShown();
+    pane.Show(!v);
+    frame->wxAuiMgr_.Update();
+}
+
+void RootFrame::view_console_cb(GtkWidget *widget, gpointer user_data)
+{
+    if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
     auto &pane = frame->wxAuiMgr_.GetPane(frame->consolePanelName_);
     bool v = pane.IsShown();
     pane.Show(!v);
@@ -1418,6 +1442,7 @@ void RootFrame::ReplaceTitleBar(void)
     GtkWidget *entZMi = gtk_check_menu_item_new_with_label("Show Entity Zone");
     GtkWidget *toolMi = gtk_check_menu_item_new_with_label("Show Toolbox");
     GtkWidget *logWMi = gtk_check_menu_item_new_with_label("Show Log Window");
+    GtkWidget *conWMi = gtk_check_menu_item_new_with_label("Show Console Window");
     GtkWidget *pyEiMi = gtk_check_menu_item_new_with_label("Script Editor");
     GtkWidget *helpMi = gtk_menu_item_new_with_label("Help");
     GtkWidget *abouMi = gtk_menu_item_new_with_label("About");
@@ -1441,6 +1466,7 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), entZMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), toolMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), logWMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), conWMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), pyEiMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(helpMenu), abouMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), fileMi);
@@ -1486,6 +1512,7 @@ void RootFrame::ReplaceTitleBar(void)
     g_signal_connect(G_OBJECT(entZMi), "toggled", G_CALLBACK(view_entity_cb), this);
     g_signal_connect(G_OBJECT(toolMi), "toggled", G_CALLBACK(view_toolbox_cb), this);
     g_signal_connect(G_OBJECT(logWMi), "toggled", G_CALLBACK(view_log_cb), this);
+    g_signal_connect(G_OBJECT(conWMi), "toggled", G_CALLBACK(view_console_cb), this);
     g_signal_connect(G_OBJECT(pyEiMi), "toggled", G_CALLBACK(view_pyeditor_cb), this);
     g_signal_connect(G_OBJECT(abouMi), "activate", G_CALLBACK(help_about_cb), this);
 
@@ -1497,6 +1524,7 @@ void RootFrame::ReplaceTitleBar(void)
     widgets_.emplace_back(wxID_REDO, GTK_WIDGET(rdTb));
     widgets_.emplace_back(spamID_VIEW_PROJECT, projMi);
     widgets_.emplace_back(spamID_VIEW_LOG, logWMi);
+    widgets_.emplace_back(spamID_VIEW_CONSOLE, conWMi);
     widgets_.emplace_back(spamID_VIEW_PYEDITOR, pyEiMi);
     widgets_.emplace_back(spamID_VIEW_IMAGES_ZONE, entZMi);
     widgets_.emplace_back(spamID_VIEW_TOOLBOX_BAR, toolMi);

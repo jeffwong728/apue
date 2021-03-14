@@ -131,6 +131,7 @@ public:
     static void view_entity_cb(GtkWidget *widget, gpointer user_data);
     static void view_toolbox_cb(GtkWidget *widget, gpointer user_data);
     static void view_log_cb(GtkWidget *widget, gpointer user_data);
+    static void view_console_cb(GtkWidget *widget, gpointer user_data);
     static void view_pyeditor_cb(GtkWidget *widget, gpointer user_data);
     static void preferences_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data);
 
@@ -157,6 +158,7 @@ private:
     const wxString stationNotebookName_;
     const wxString projPanelName_;
     const wxString pyEditorName_;
+    const wxString logPanelName_;
     const wxString consolePanelName_;
     const wxString imagesZonePanelName_;
     const wxString toolBoxBarName_;

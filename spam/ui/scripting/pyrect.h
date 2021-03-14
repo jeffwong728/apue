@@ -20,6 +20,7 @@ struct PyRect
     double GetWidth() const { return w; }
     double GetHeight() const { return h; }
     void Translate(const double delta_x, const double delta_y);
+    void Rotate(const double angle, const bool angle_as_degree=true);
 };
 
 #endif //SPAM_UI_SCRIPTING_PYRECT_H

@@ -4,7 +4,6 @@
 
 extern void PyExportRect(pybind11::module_ &m);
 extern void PyExportStation(pybind11::module_ &m);
-extern void PyExportStation(pybind11::module_ &m);
 extern pybind11::object PyNewStation();
 extern pybind11::object PyFindStation(const std::string &name);
 

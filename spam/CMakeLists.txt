@@ -75,6 +75,7 @@ if(MSVC)
     add_compile_options("/utf-8")
 endif()
 
+set(PYBIND11_NOPYTHON ON)
 include_directories(${CMAKE_CURRENT_LIST_DIR})
 add_subdirectory(pybind11)
 add_subdirectory(cv_hdf)

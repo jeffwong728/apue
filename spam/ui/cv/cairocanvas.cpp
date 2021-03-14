@@ -293,6 +293,45 @@ void CairoCanvas::EraseDrawables(const SPDrawableNodeVector &des)
     InvalidateDrawable(des);
 }
 
+void CairoCanvas::DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
+{
+    if (rgn)
+    {
+        cv::Rect bbox = rgn->BoundingBox();
+        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+        if (boundRect && boundRect->area() > 0.)
+        {
+            wxRect invalidRect = ImageToScreen(boundRect);
+            Refresh(false, &invalidRect);
+        }
+
+        if (std::none_of(rgns_.cbegin(), rgns_.cend(), [rgn](const cv::Ptr<cv::mvlab::Region> &item) { return rgn==item; }))
+        {
+            rgns_.push_back(rgn);
+        }
+    }
+}
+
+void CairoCanvas::EraseRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
+{
+    if (rgn)
+    {
+        cv::Rect bbox = rgn->BoundingBox();
+        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+        if (boundRect && boundRect->area() > 0.)
+        {
+            wxRect invalidRect = ImageToScreen(boundRect);
+            Refresh(false, &invalidRect);
+        }
+
+        auto it = std::find(rgns_.cbegin(), rgns_.cend(), rgn);
+        if (it != rgns_.cend())
+        {
+            rgns_.erase(it);
+        }
+    }
+}
+
 void CairoCanvas::RefreshDrawable(const SPDrawableNode &de)
 {
     InvalidateDrawable(SPDrawableNodeVector(1, de));
@@ -957,6 +996,7 @@ void CairoCanvas::OnPaint(wxPaintEvent& e)
         auto spCtx = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
 #endif
         RenderImage(spCtx);
+        RenderRegions(spCtx);
         RenderEntities(spCtx);
         RenderPath(spCtx);
         RenderRubberBand(spCtx);
@@ -1177,6 +1217,76 @@ void CairoCanvas::RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const
 
             upd++;
         }
+    }
+}
+
+void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr) const
+{
+    for (const cv::Ptr<cv::mvlab::Region> &rgn : rgns_)
+    {
+        if (!rgn)
+        {
+            continue;
+        }
+
+        const cv::Ptr<cv::mvlab::Contour> outer = rgn->GetContour();
+        const cv::Ptr<cv::mvlab::Contour> inner = rgn->GetHole();
+
+        Geom::PathVector pv;
+        Geom::PathBuilder pb(pv);
+
+        if (outer)
+        {
+            std::vector<cv::Point2f> vertexes;
+            outer->GetPoints(vertexes);
+            if (vertexes.size() > 2)
+            {
+                pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
+                for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                {
+                    pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                }
+                pb.closePath();
+            }
+        }
+
+        if (inner)
+        {
+            for (int cc = 0; cc < inner->Count(); ++cc)
+            {
+                const cv::Ptr<cv::mvlab::Contour> hole = inner->SelectObj(cc);
+                if (hole)
+                {
+                    std::vector<cv::Point2f> vertexes;
+                    hole->GetPoints(vertexes);
+                    if (vertexes.size() > 2)
+                    {
+                        pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
+                        for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                        {
+                            pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                        }
+                        pb.closePath();
+                    }
+                }
+            }
+        }
+
+        pv *= Geom::Translate(0.5, 0.5);
+        double ux = 1, uy = 1;
+        cr->device_to_user_distance(ux, uy);
+        if (ux < uy) ux = uy;
+
+        cr->save();
+        cr->translate(anchorX_, anchorY_);
+        cr->scale(GetMatScale(), GetMatScale());
+        Geom::CairoPathSink cairoPathSink(cr->cobj());
+        cairoPathSink.feed(pv);
+        cr->set_line_width(ux);
+        cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
+        cr->set_source_rgba(1.0, 0.0, 1.0, 1.0);
+        cr->fill();
+        cr->restore();
     }
 }
 
