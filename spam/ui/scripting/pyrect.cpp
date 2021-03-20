@@ -6,7 +6,14 @@
 #include <ui/cv/cairocanvas.h>
 
 PyRect::PyRect()
-    : x(0), y(0), w(0), h(0)
+{
+}
+
+void PyRect::SetX(const double x_)
+{
+}
+
+void PyRect::SetY(const double y_)
 {
 }
 
@@ -20,11 +27,32 @@ void PyRect::SetHeight(const double h_)
     throw std::invalid_argument("Height must be positive");
 }
 
+double PyRect::GetX() const
+{
+    return 0;
+}
+
+double PyRect::GetY() const
+{
+    return 0;
+}
+
+double PyRect::GetWidth() const
+{
+    return 0;
+}
+
+double PyRect::GetHeight() const
+{
+    return 0;
+}
+
 std::string PyRect::toString() const
 {
-    auto spRect = wpRect.lock();
-    if (spRect)
+    auto spObj = wpObj.lock();
+    if (spObj)
     {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
         std::ostringstream oss;
         const auto &rd = spRect->GetData();
         oss << spRect->GetTitle().ToStdString() << ": { points : [(";
@@ -42,9 +70,10 @@ std::string PyRect::toString() const
 
 void PyRect::Translate(const double delta_x, const double delta_y)
 {
-    auto spRect = wpRect.lock();
-    if (spRect)
+    auto spObj = wpObj.lock();
+    if (spObj)
     {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
         auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
         auto spStation = std::dynamic_pointer_cast<StationNode>(spRect->GetParent());
         if (spStation && frame)
@@ -65,9 +94,10 @@ void PyRect::Translate(const double delta_x, const double delta_y)
 
 void PyRect::Rotate(const double angle, const bool angle_as_degree)
 {
-    auto spRect = wpRect.lock();
-    if (spRect)
+    auto spObj = wpObj.lock();
+    if (spObj)
     {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
         const auto &rd = spRect->GetData();
         auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
         auto spStation = std::dynamic_pointer_cast<StationNode>(spRect->GetParent());
@@ -93,11 +123,11 @@ void PyRect::Rotate(const double angle, const bool angle_as_degree)
 
 void PyExportRect(pybind11::module_ &m)
 {
-    auto c = pybind11::class_<PyRect>(m, "Rect");
-    c.def_property("X", &PyRect::GetX, &PyRect::SetX);
-    c.def_property("Y", &PyRect::GetY, &PyRect::SetY);
-    c.def_property("Width", &PyRect::GetWidth, &PyRect::SetWidth);
-    c.def_property("Height", &PyRect::GetHeight, &PyRect::SetHeight);
+    auto c = pybind11::class_<PyRect, PyDrawable>(m, "Rect");
+    c.def_property("x", &PyRect::GetX, &PyRect::SetX);
+    c.def_property("y", &PyRect::GetY, &PyRect::SetY);
+    c.def_property("width", &PyRect::GetWidth, &PyRect::SetWidth);
+    c.def_property("height", &PyRect::GetHeight, &PyRect::SetHeight);
     c.def("Translate", &PyRect::Translate, "Translate this rectangle", pybind11::arg("delta_x"), pybind11::arg("delta_y"));
     c.def("Rotate", &PyRect::Rotate, "Rotate this rectangle", pybind11::arg("angle"), pybind11::arg("angle_as_degree")=true);
     c.def("__repr__", &PyRect::toString);

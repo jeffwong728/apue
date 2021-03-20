@@ -17,7 +17,7 @@ public:
 public:
     wxColour strokeColor_;
     wxColour fillColor_;
-    long     strokeWidth_;
+    double   strokeWidth_;
 
 private:
     wxDECLARE_DYNAMIC_CLASS(DrawStyle);

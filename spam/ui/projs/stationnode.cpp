@@ -8,7 +8,9 @@
 StationNode::StationNode(const SPModelNode &parent, const wxString &title)
     : ModelNode(parent, title)
     , current_(false)
+    , drawMode_("fill")
 {
+    SetColored();
 }
 
 StationNode::~StationNode()
@@ -132,6 +134,100 @@ void StationNode::SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &en
     }
 }
 
+void StationNode::SetColored(const int number_of_colors)
+{
+    std::vector<wxColour> multiColors;
+    multiColors.reserve(68);
+    multiColors.emplace_back(wxColour("RED"));
+    multiColors.emplace_back(wxColour("AQUAMARINE"));
+    multiColors.emplace_back(wxColour("BLUE"));
+    multiColors.emplace_back(wxColour("BLUE VIOLET"));
+    multiColors.emplace_back(wxColour("BROWN"));
+    multiColors.emplace_back(wxColour("CADET BLUE"));
+    multiColors.emplace_back(wxColour("YELLOW"));
+    multiColors.emplace_back(wxColour("CORAL"));
+    multiColors.emplace_back(wxColour("CORNFLOWER BLUE"));
+    multiColors.emplace_back(wxColour("CYAN"));
+    multiColors.emplace_back(wxColour("ORANGE"));
+    multiColors.emplace_back(wxColour("PINK"));
+    multiColors.emplace_back(wxColour("DARK GREEN"));
+    multiColors.emplace_back(wxColour("DARK OLIVE GREEN"));
+    multiColors.emplace_back(wxColour("DARK ORCHID"));
+    multiColors.emplace_back(wxColour("DARK SLATE BLUE"));
+    multiColors.emplace_back(wxColour("DARK TURQUOISE"));
+    multiColors.emplace_back(wxColour("FIREBRICK"));
+    multiColors.emplace_back(wxColour("FOREST GREEN"));
+    multiColors.emplace_back(wxColour("GOLD"));
+    multiColors.emplace_back(wxColour("GOLDENROD"));
+    multiColors.emplace_back(wxColour("GREEN"));
+    multiColors.emplace_back(wxColour("GREEN YELLOW"));
+    multiColors.emplace_back(wxColour("INDIAN RED"));
+    multiColors.emplace_back(wxColour("KHAKI"));
+    multiColors.emplace_back(wxColour("LIGHT BLUE"));
+    multiColors.emplace_back(wxColour("LIGHT STEEL BLUE"));
+    multiColors.emplace_back(wxColour("LIME GREEN"));
+    multiColors.emplace_back(wxColour("MAGENTA"));
+    multiColors.emplace_back(wxColour("MAROON"));
+    multiColors.emplace_back(wxColour("MEDIUM AQUAMARINE"));
+    multiColors.emplace_back(wxColour("MEDIUM BLUE"));
+    multiColors.emplace_back(wxColour("GREY"));
+    multiColors.emplace_back(wxColour("MEDIUM FOREST GREEN"));
+    multiColors.emplace_back(wxColour("MEDIUM GOLDENROD"));
+    multiColors.emplace_back(wxColour("MEDIUM ORCHID"));
+    multiColors.emplace_back(wxColour("MEDIUM SEA GREEN"));
+    multiColors.emplace_back(wxColour("MEDIUM SLATE BLUE"));
+    multiColors.emplace_back(wxColour("MEDIUM SPRING GREEN"));
+    multiColors.emplace_back(wxColour("DARK SLATE GREY"));
+    multiColors.emplace_back(wxColour("MEDIUM TURQUOISE"));
+    multiColors.emplace_back(wxColour("MEDIUM VIOLET RED"));
+    multiColors.emplace_back(wxColour("MIDNIGHT BLUE"));
+    multiColors.emplace_back(wxColour("NAVY"));
+    multiColors.emplace_back(wxColour("ORANGE RED"));
+    multiColors.emplace_back(wxColour("ORCHID"));
+    multiColors.emplace_back(wxColour("DARK GREY"));
+    multiColors.emplace_back(wxColour("PALE GREEN"));
+    multiColors.emplace_back(wxColour("PLUM"));
+    multiColors.emplace_back(wxColour("PURPLE"));
+    multiColors.emplace_back(wxColour("DIM GREY"));
+    multiColors.emplace_back(wxColour("SALMON"));
+    multiColors.emplace_back(wxColour("SEA GREEN"));
+    multiColors.emplace_back(wxColour("SIENNA"));
+    multiColors.emplace_back(wxColour("SKY BLUE"));
+    multiColors.emplace_back(wxColour("SLATE BLUE"));
+    multiColors.emplace_back(wxColour("SPRING GREEN"));
+    multiColors.emplace_back(wxColour("STEEL BLUE"));
+    multiColors.emplace_back(wxColour("TAN"));
+    multiColors.emplace_back(wxColour("THISTLE"));
+    multiColors.emplace_back(wxColour("TURQUOISE"));
+    multiColors.emplace_back(wxColour("VIOLET"));
+    multiColors.emplace_back(wxColour("VIOLET RED"));
+    multiColors.emplace_back(wxColour("WHEAT"));
+    multiColors.emplace_back(wxColour("LIGHT GREY"));
+    multiColors.emplace_back(wxColour("WHITE"));
+    multiColors.emplace_back(wxColour("YELLOW GREEN"));
+    multiColors.emplace_back(wxColour("BLACK"));
+
+    const int numColors = (number_of_colors < static_cast<int>(multiColors.size())) ? number_of_colors : static_cast<int>(multiColors.size());
+    multiColors_.assign(multiColors.cbegin(), multiColors.cbegin() + numColors);
+}
+
+wxColour StationNode::GetNextColor() const
+{
+    if (currentColorIndex_ >= static_cast<int>(multiColors_.size()))
+    {
+        currentColorIndex_ = 0;
+    }
+
+    if (multiColors_.empty())
+    {
+        return drawStyle_.strokeColor_;
+    }
+    else
+    {
+        return multiColors_[currentColorIndex_++];
+    }
+}
+
 void StationNode::Save(const H5::Group &g) const
 {
     std::string utf8Title(title_.ToUTF8().data());
@@ -148,6 +244,8 @@ void StationNode::Save(const H5::Group &g) const
         H5DB::SetAttribute(cwg, CommonDef::GetSpamDBNodeTypeAttrName(), GetTypeName());
         H5DB::SetAttribute(cwg, std::string("Current"), current_);
         H5DB::SetAttribute(cwg, CommonDef::GetStationTabAttrName(), tabContainerName_);
+        H5DB::SetAttribute(cwg, std::string("DrawMode"), drawMode_);
+        H5DB::Save(cwg, std::string("MultiColors"), multiColors_);
         SaveImage(cwg);
         ModelNode::Save(cwg);
     }
@@ -157,6 +255,8 @@ void StationNode::Load(const H5::Group &g, const NodeFactory &nf, const SPModelN
 {
     current_          = H5DB::GetAttribute<bool>(g, std::string("Current"));
     tabContainerName_ = H5DB::GetAttribute<std::string>(g, CommonDef::GetStationTabAttrName());
+    drawMode_         = H5DB::GetAttribute<std::string>(g, std::string("DrawMode"));
+    H5DB::Load(g, std::string("MultiColors"), multiColors_);
     ImportImage(g);
     ModelNode::Load(g, nf, me);
 }

@@ -86,7 +86,7 @@ void ModelNode::Load(const H5::Group &g, const NodeFactory &nf, const SPModelNod
 
     drawStyle_.strokeColor_ = H5DB::GetAttribute<wxColor>(g,     std::string("StrokeColor"));
     drawStyle_.fillColor_   = H5DB::GetAttribute<wxColor>(g,     std::string("FillColor"));
-    drawStyle_.strokeWidth_ = H5DB::GetAttribute<long>(g,        std::string("StrokeWidth"));
+    drawStyle_.strokeWidth_ = H5DB::GetAttribute<double>(g,        std::string("StrokeWidth"));
     visible_                = H5DB::GetAttribute<bool>(g,        std::string("Visible"));
     locked_                 = H5DB::GetAttribute<bool>(g,        std::string("Locked"));
     rank_                   = H5DB::GetAttribute<long>(g,        std::string("Rank"));

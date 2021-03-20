@@ -10,6 +10,12 @@ H5::PredType H5DB::NativeType<bool>()
     return H5::PredType::NATIVE_HBOOL;
 }
 
+template <>
+H5::PredType H5DB::NativeType<unsigned char>()
+{
+    return H5::PredType::NATIVE_UCHAR;
+}
+
 template <> 
 H5::PredType H5DB::NativeType<int>()
 { 
@@ -75,6 +81,19 @@ void H5DB::Save(const H5::Group &g, const std::string &n, const wxColour &c)
         std::array<unsigned char, 4> d = { c.Red(), c.Green(), c.Blue(), c.Alpha() };
         dataSet.write(d.data(), arrType);
     }
+}
+
+void H5DB::Save(const H5::Group &g, const std::string &n, const std::vector<wxColour> &cs)
+{
+    std::vector<std::array<unsigned char, 4>> points;
+    points.reserve(cs.size());
+    for (const auto &c : cs)
+    {
+        std::array<unsigned char, 4> point{c.Red(), c.Green(), c.Blue(), c.Alpha()};
+        points.push_back(point);
+    }
+
+    Save<unsigned char, 4>(g, n, points);
 }
 
 void H5DB::SetAttribute(const H5::H5Object &o, const std::string &n, const wxColour &c)
@@ -197,4 +216,18 @@ std::vector<wxString> H5DB::GetSpamProjects(const wxString &dbPath)
     }
 
     return projs;
+}
+
+void H5DB::Load(const H5::Group &g, const std::string &n, std::vector<wxColour> &cs)
+{
+    std::vector<std::array<unsigned char, 4>> points;
+    if (Load<unsigned char, 4>(g, n, points))
+    {
+        cs.resize(0);
+        cs.reserve(points.size());
+        for (const auto &point : points)
+        {
+            cs.emplace_back(point[0], point[1], point[2], point[3]);
+        }
+    }
 }

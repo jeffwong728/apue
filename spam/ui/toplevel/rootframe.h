@@ -63,6 +63,7 @@ public:
     wxAuiNotebook *GetStationNotebook() const;
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
+    int FindImagePanelIndexByUUID(const std::string &uuidTag) const;
     void RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi);
     void RequestUpdateThreshold(const std::string &uuidTag, const boost::any &roi);
     void AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect);
@@ -70,6 +71,7 @@ public:
     void SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page);
     void SetStatusText(const wxString &text, int number = 0) wxOVERRIDE;
     void SetBitmapStatus(const StatusIconType iconType, const wxString &text);
+    void SetImage(const int pageIndex, const cv::Mat &image);
 
 private:
     void OnHello(wxCommandEvent& e);

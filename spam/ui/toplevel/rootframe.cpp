@@ -304,6 +304,25 @@ CairoCanvas *RootFrame::FindCanvasByUUID(const std::string &uuidTag) const
     return nullptr;
 }
 
+int RootFrame::FindImagePanelIndexByUUID(const std::string &uuidTag) const
+{
+    auto stationNB = GetStationNotebook();
+    if (stationNB)
+    {
+        int cPages = static_cast<int>(stationNB->GetPageCount());
+        for (int i = 0; i < cPages; ++i)
+        {
+            wxWindow *page = stationNB->GetPage(i);
+            if (page && (page->GetName() == uuidTag))
+            {
+                return i;
+            }
+        }
+    }
+
+    return -1;
+}
+
 void RootFrame::RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi)
 {
     CairoCanvas *canv = FindCanvasByUUID(uuidTag);
@@ -377,6 +396,30 @@ void RootFrame::SetBitmapStatus(const StatusIconType iconType, const wxString &t
 {
     auto mainStatus = dynamic_cast<MainStatus *>(GetStatusBar());
     mainStatus->SetBitmapStatus(iconType, text);
+}
+
+void RootFrame::SetImage(const int pageIndex, const cv::Mat &image)
+{
+    auto stationNB = GetStationNotebook();
+    if (stationNB && pageIndex >=0 && pageIndex < static_cast<int>(stationNB->GetPageCount()))
+    {
+        auto imgPanelPage = dynamic_cast<CVImagePanel *>(stationNB->GetPage(pageIndex));
+        if (imgPanelPage)
+        {
+            scale_ = imgPanelPage->SetImage(image);
+            auto extCtrl = stationNB->FindExtensionCtrlByPage(imgPanelPage);
+            if (imgPanelPage->HasImage())
+            {
+                SetStationImage(imgPanelPage->GetName(), imgPanelPage->GetImage());
+                EnablePageImageTool(extCtrl, true);
+                SyncScale(extCtrl);
+            }
+            else
+            {
+                EnablePageImageTool(extCtrl, false);
+            }
+        }
+    }
 }
 
 void RootFrame::OnExit(wxCommandEvent& e)

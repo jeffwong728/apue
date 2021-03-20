@@ -1,24 +1,21 @@
 #ifndef SPAM_UI_SCRIPTING_PYRECT_H
 #define SPAM_UI_SCRIPTING_PYRECT_H
 
-#include <pybind11/embed.h>
-#include <pybind11/stl.h>
+#include "pydrawable.h"
 #include <ui/projs/modelfwd.h>
 
-struct PyRect
+struct PyRect : public PyDrawable
 {
-    double x, y, w, h;
-    WPRectNode wpRect;
     PyRect();
-    void SetX(const double x_) { x = x_; }
-    void SetY(const double y_) { y = y_; }
+    void SetX(const double x_);
+    void SetY(const double y_);
     void SetWidth(const double w_);
     void SetHeight(const double h_);
     std::string toString() const;
-    double GetX() const { return x; }
-    double GetY() const { return y; }
-    double GetWidth() const { return w; }
-    double GetHeight() const { return h; }
+    double GetX() const;
+    double GetY() const;
+    double GetWidth() const;
+    double GetHeight() const;
     void Translate(const double delta_x, const double delta_y);
     void Rotate(const double angle, const bool angle_as_degree=true);
 };

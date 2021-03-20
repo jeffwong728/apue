@@ -104,6 +104,22 @@ ConsolePanel::ConsolePanel(wxWindow* parent)
     consoleCtrl->Bind(wxEVT_TEXT_ENTER, &ConsolePanel::OnEnter, this);
     consoleCtrl->Bind(wxEVT_CHAR, &ConsolePanel::OnKey, this);
     consoleCtrl->Bind(wxEVT_MENU, &ConsolePanel::OnClear, this, wxID_CLEAR);
+    consoleCtrl->Bind(wxEVT_SCROLLWIN_TOP, &ConsolePanel::OnConsoleScroll, this);
+    consoleCtrl->Bind(wxEVT_SCROLLWIN_BOTTOM, &ConsolePanel::OnConsoleScroll, this);
+    consoleCtrl->Bind(wxEVT_SCROLLWIN_LINEUP, &ConsolePanel::OnConsoleScroll, this);
+    consoleCtrl->Bind(wxEVT_SCROLLWIN_LINEDOWN, &ConsolePanel::OnConsoleScroll, this);
+    consoleCtrl->Bind(wxEVT_SCROLLWIN_PAGEUP, &ConsolePanel::OnConsoleScroll, this);
+    consoleCtrl->Bind(wxEVT_SCROLLWIN_PAGEDOWN, &ConsolePanel::OnConsoleScroll, this);
+    consoleCtrl->Bind(wxEVT_SCROLLWIN_THUMBTRACK, &ConsolePanel::OnConsoleScroll, this);
+    consoleCtrl->Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &ConsolePanel::OnConsoleScroll, this);
+    timeCtrl->Bind(wxEVT_SCROLLWIN_TOP, &ConsolePanel::OnConsoleScroll, this);
+    timeCtrl->Bind(wxEVT_SCROLLWIN_BOTTOM, &ConsolePanel::OnConsoleScroll, this);
+    timeCtrl->Bind(wxEVT_SCROLLWIN_LINEUP, &ConsolePanel::OnConsoleScroll, this);
+    timeCtrl->Bind(wxEVT_SCROLLWIN_LINEDOWN, &ConsolePanel::OnConsoleScroll, this);
+    timeCtrl->Bind(wxEVT_SCROLLWIN_PAGEUP, &ConsolePanel::OnConsoleScroll, this);
+    timeCtrl->Bind(wxEVT_SCROLLWIN_PAGEDOWN, &ConsolePanel::OnConsoleScroll, this);
+    timeCtrl->Bind(wxEVT_SCROLLWIN_THUMBTRACK, &ConsolePanel::OnConsoleScroll, this);
+    timeCtrl->Bind(wxEVT_SCROLLWIN_THUMBRELEASE, &ConsolePanel::OnConsoleScroll, this);
 
     // Set sizer for the panel
     SetSizer(sizerRoot);
@@ -120,8 +136,8 @@ ConsolePanel::~ConsolePanel()
 
 void ConsolePanel::OnClear(wxCommandEvent &cmd)
 {
-    auto consoleCtrl = dynamic_cast<wxTextCtrl *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
-    auto timeCtrl = dynamic_cast<wxTextCtrl *>(GetSizer()->GetItemById(kSpamConsoleTimeCtrl)->GetWindow());
+    auto consoleCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
+    auto timeCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTimeCtrl)->GetWindow());
     if (consoleCtrl && timeCtrl)
     {
         consoleCtrl->Clear();
@@ -137,7 +153,7 @@ void ConsolePanel::OnSave(wxCommandEvent &cmd)
 
 void ConsolePanel::OnText(wxCommandEvent& evt)
 {
-    auto consoleCtrl = dynamic_cast<wxTextCtrl *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
+    auto consoleCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
     if (consoleCtrl)
     {
         //consoleCtrl->SetInsertionPointEnd();
@@ -146,7 +162,7 @@ void ConsolePanel::OnText(wxCommandEvent& evt)
 
 void ConsolePanel::OnAction(wxCommandEvent& evt)
 {
-    auto consoleCtrl = dynamic_cast<wxTextCtrl *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
+    auto consoleCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
     if (consoleCtrl)
     {
         const auto itemID = evt.GetEventType();
@@ -181,8 +197,8 @@ void ConsolePanel::OnUpdateUI(wxUpdateUIEvent& evt)
 
 void ConsolePanel::OnEnter(wxCommandEvent& evt)
 {
-    auto consoleCtrl = dynamic_cast<wxTextCtrl *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
-    auto timeCtrl = dynamic_cast<wxTextCtrl *>(GetSizer()->GetItemById(kSpamConsoleTimeCtrl)->GetWindow());
+    auto consoleCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
+    auto timeCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTimeCtrl)->GetWindow());
     if (consoleCtrl && timeCtrl)
     {
         double timeMS = 0;
@@ -252,7 +268,7 @@ void ConsolePanel::OnEnter(wxCommandEvent& evt)
 
 void ConsolePanel::OnKey(wxKeyEvent &evt)
 {
-    auto consoleCtrl = dynamic_cast<wxTextCtrl *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
+    auto consoleCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
     if (consoleCtrl)
     {
         const auto insPos = consoleCtrl->GetInsertionPoint();
@@ -311,5 +327,31 @@ void ConsolePanel::OnKey(wxKeyEvent &evt)
             }
         }
         consoleCtrl->OnChar(evt);
+    }
+}
+
+void ConsolePanel::OnConsoleScroll(wxScrollWinEvent & evt)
+{
+    if (wxVERTICAL == evt.GetOrientation())
+    {
+        auto consoleCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
+        auto timeCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTimeCtrl)->GetWindow());
+        if (consoleCtrl && timeCtrl)
+        {
+            timeCtrl->SetScrollPos(wxVERTICAL, evt.GetPosition());
+        }
+    }
+}
+
+void ConsolePanel::OnTimingScroll(wxScrollWinEvent & evt)
+{
+    if (wxVERTICAL == evt.GetOrientation())
+    {
+        auto consoleCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTextCtrl)->GetWindow());
+        auto timeCtrl = dynamic_cast<wxTextCtrl  *>(GetSizer()->GetItemById(kSpamConsoleTimeCtrl)->GetWindow());
+        if (consoleCtrl && timeCtrl)
+        {
+            consoleCtrl->SetScrollPos(wxVERTICAL, evt.GetPosition());
+        }
     }
 }

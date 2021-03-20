@@ -71,6 +71,8 @@ public:
     void Select(int toolId);
     void SwitchSelectionState(int toolId);
     void SetSelectionData(const SelectionData &selData);
+    void SetColor(const wxColour &color) { drawStyle_.strokeColor_ = color; }
+    wxColour GetColor() const { return drawStyle_.strokeColor_; }
     const SelectionData &GetSelectionData() const { return selData_; }
     static HighlightData MapSelectionToHighlight(const SelectionData &sd);
     static bool IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr);

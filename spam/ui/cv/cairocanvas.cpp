@@ -332,6 +332,56 @@ void CairoCanvas::EraseRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
     }
 }
 
+void CairoCanvas::DrawContour(const cv::Ptr<cv::mvlab::Contour> &contr)
+{
+    if (contr)
+    {
+        cv::Rect bbox = contr->BoundingBox();
+        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+        if (boundRect && boundRect->area() > 0.)
+        {
+            wxRect invalidRect = ImageToScreen(boundRect);
+            Refresh(false, &invalidRect);
+        }
+
+        if (std::none_of(contrs_.cbegin(), contrs_.cend(), [contr](const cv::Ptr<cv::mvlab::Contour> &item) { return contr == item; }))
+        {
+            contrs_.push_back(contr);
+        }
+    }
+}
+
+void CairoCanvas::EraseContour(const cv::Ptr<cv::mvlab::Contour> &contr)
+{
+    if (contr)
+    {
+        cv::Rect bbox = contr->BoundingBox();
+        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+        if (boundRect && boundRect->area() > 0.)
+        {
+            wxRect invalidRect = ImageToScreen(boundRect);
+            Refresh(false, &invalidRect);
+        }
+
+        auto it = std::find(contrs_.cbegin(), contrs_.cend(), contr);
+        if (it != contrs_.cend())
+        {
+            contrs_.erase(it);
+        }
+    }
+}
+
+void CairoCanvas::DrawMarker(const Geom::PathVector &marker)
+{
+    Geom::OptRect boundRect = marker.boundsFast();
+    if (boundRect && boundRect->area() > 0.)
+    {
+        markers_.push_back(marker);
+        wxRect invalidRect = ImageToScreen(boundRect).Inflate(32, 32);
+        Refresh(false, &invalidRect);
+    }
+}
+
 void CairoCanvas::RefreshDrawable(const SPDrawableNode &de)
 {
     InvalidateDrawable(SPDrawableNodeVector(1, de));
@@ -919,6 +969,60 @@ void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const cv::P
     }
 }
 
+void CairoCanvas::EraseBoxArea(const Geom::Rect &boxArea)
+{
+    std::vector<Geom::PathVector> remainingMarkers;
+    for (Geom::PathVector &marker : markers_)
+    {
+        const auto oRect = marker.boundsFast();
+        if (oRect && boxArea.contains(oRect)) {
+            continue;
+        }
+
+        remainingMarkers.push_back(std::move(marker));
+    }
+
+    markers_.swap(remainingMarkers);
+    wxRect invalidRect = ImageToScreen(boxArea).Inflate(32, 32);
+    Refresh(false, &invalidRect);
+}
+
+void CairoCanvas::EraseFullArea()
+{
+    Geom::Rect iRect;
+    for (const Geom::PathVector &marker : markers_)
+    {
+        const auto oRect = marker.boundsFast();
+        if (oRect)
+        {
+            iRect.unionWith(oRect);
+        }
+    }
+
+    for (const auto &rgn : rgns_)
+    {
+        cv::Rect bbox = rgn->BoundingBox();
+        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+        iRect.unionWith(boundRect);
+    }
+
+    for (const auto &contr : contrs_)
+    {
+        cv::Rect bbox = contr->BoundingBox();
+        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+        iRect.unionWith(boundRect);
+    }
+
+    rgns_.clear();
+    markers_.clear();
+
+    if (iRect.area() > 0.)
+    {
+        wxRect invalidRect = ImageToScreen(iRect).Inflate(32, 32);
+        Refresh(false, &invalidRect);
+    }
+}
+
 void CairoCanvas::OnSize(wxSizeEvent& e)
 {
     if (!disMat_.empty())
@@ -996,7 +1100,9 @@ void CairoCanvas::OnPaint(wxPaintEvent& e)
         auto spCtx = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
 #endif
         RenderImage(spCtx);
+        RenderMarkers(spCtx);
         RenderRegions(spCtx);
+        RenderContours(spCtx);
         RenderEntities(spCtx);
         RenderPath(spCtx);
         RenderRubberBand(spCtx);
@@ -1220,73 +1326,195 @@ void CairoCanvas::RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const
     }
 }
 
+void CairoCanvas::RenderMarkers(Cairo::RefPtr<Cairo::Context> &cr) const
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            for (const Geom::PathVector &marker : markers_)
+            {
+                Geom::PathVector pv = marker * Geom::Translate(0.5, 0.5);
+                double ux = station->GetLineWidth(), uy = station->GetLineWidth();
+                cr->device_to_user_distance(ux, uy);
+                if (ux < uy) ux = uy;
+
+                cr->save();
+                cr->translate(anchorX_, anchorY_);
+                cr->scale(GetMatScale(), GetMatScale());
+                Geom::CairoPathSink cairoPathSink(cr->cobj());
+                wxColour c = station->GetColor();
+                cairoPathSink.feed(pv);
+                cr->set_line_width(ux);
+                cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
+                cr->set_source_rgba(c.Red() / 255.0, c.Green() / 255.0, c.Blue() / 255.0, c.Alpha() / 255.0);
+                if (std::string("fill") == station->GetDraw())
+                {
+                    cr->fill();
+                }
+                else
+                {
+                    cr->stroke();
+                }
+                cr->restore();
+            }
+        }
+    }
+}
+
 void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr) const
 {
-    for (const cv::Ptr<cv::mvlab::Region> &rgn : rgns_)
+    auto model = Spam::GetModel();
+    if (model)
     {
-        if (!rgn)
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
         {
-            continue;
-        }
-
-        const cv::Ptr<cv::mvlab::Contour> outer = rgn->GetContour();
-        const cv::Ptr<cv::mvlab::Contour> inner = rgn->GetHole();
-
-        Geom::PathVector pv;
-        Geom::PathBuilder pb(pv);
-
-        if (outer)
-        {
-            std::vector<cv::Point2f> vertexes;
-            outer->GetPoints(vertexes);
-            if (vertexes.size() > 2)
+            for (const cv::Ptr<cv::mvlab::Region> &rgn : rgns_)
             {
-                pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
-                for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                if (!rgn)
                 {
-                    pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                    continue;
                 }
-                pb.closePath();
-            }
-        }
 
-        if (inner)
-        {
-            for (int cc = 0; cc < inner->Count(); ++cc)
-            {
-                const cv::Ptr<cv::mvlab::Contour> hole = inner->SelectObj(cc);
-                if (hole)
+                const cv::Ptr<cv::mvlab::Contour> outer = rgn->GetContour();
+                const cv::Ptr<cv::mvlab::Contour> inner = rgn->GetHole();
+
+                Geom::PathVector pv;
+                Geom::PathBuilder pb(pv);
+
+                if (outer)
                 {
-                    std::vector<cv::Point2f> vertexes;
-                    hole->GetPoints(vertexes);
-                    if (vertexes.size() > 2)
+                    for (int cc = 0; cc < outer->Count(); ++cc)
                     {
-                        pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
-                        for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                        const cv::Ptr<cv::mvlab::Contour> boundary = outer->SelectObj(cc);
+                        if (boundary)
                         {
-                            pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                            std::vector<cv::Point2f> vertexes;
+                            boundary->GetPoints(vertexes);
+                            if (vertexes.size() > 2)
+                            {
+                                pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
+                                for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                                {
+                                    pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                                }
+                                pb.closePath();
+                            }
                         }
-                        pb.closePath();
                     }
                 }
+
+                if (inner)
+                {
+                    for (int cc = 0; cc < inner->Count(); ++cc)
+                    {
+                        const cv::Ptr<cv::mvlab::Contour> hole = inner->SelectObj(cc);
+                        if (hole)
+                        {
+                            std::vector<cv::Point2f> vertexes;
+                            hole->GetPoints(vertexes);
+                            if (vertexes.size() > 2)
+                            {
+                                pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
+                                for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                                {
+                                    pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                                }
+                                pb.closePath();
+                            }
+                        }
+                    }
+                }
+
+                pv *= Geom::Translate(0.5, 0.5);
+                double ux = station->GetLineWidth(), uy = station->GetLineWidth();
+                cr->device_to_user_distance(ux, uy);
+                if (ux < uy) ux = uy;
+
+                cr->save();
+                cr->translate(anchorX_, anchorY_);
+                cr->scale(GetMatScale(), GetMatScale());
+                Geom::CairoPathSink cairoPathSink(cr->cobj());
+                wxColour c = station->GetColor();
+                cairoPathSink.feed(pv);
+                cr->set_line_width(ux);
+                cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
+                cr->set_source_rgba(c.Red() / 255.0, c.Green() / 255.0, c.Blue() / 255.0, c.Alpha() / 255.0);
+                if (std::string("fill") == station->GetDraw())
+                {
+                    cr->fill();
+                }
+                else
+                {
+                    cr->stroke();
+                }
+                cr->restore();
             }
         }
+    }
+}
 
-        pv *= Geom::Translate(0.5, 0.5);
-        double ux = 1, uy = 1;
-        cr->device_to_user_distance(ux, uy);
-        if (ux < uy) ux = uy;
+void CairoCanvas::RenderContours(Cairo::RefPtr<Cairo::Context> &cr) const
+{
+    auto model = Spam::GetModel();
+    if (model)
+    {
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (station)
+        {
+            for (const cv::Ptr<cv::mvlab::Contour> &contr : contrs_)
+            {
+                if (!contr)
+                {
+                    continue;
+                }
 
-        cr->save();
-        cr->translate(anchorX_, anchorY_);
-        cr->scale(GetMatScale(), GetMatScale());
-        Geom::CairoPathSink cairoPathSink(cr->cobj());
-        cairoPathSink.feed(pv);
-        cr->set_line_width(ux);
-        cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
-        cr->set_source_rgba(1.0, 0.0, 1.0, 1.0);
-        cr->fill();
-        cr->restore();
+                Geom::PathVector pv;
+                Geom::PathBuilder pb(pv);
+
+                if (contr)
+                {
+                    for (int cc = 0; cc < contr->Count(); ++cc)
+                    {
+                        const cv::Ptr<cv::mvlab::Contour> cobj = contr->SelectObj(cc);
+                        if (cobj)
+                        {
+                            std::vector<cv::Point2f> vertexes;
+                            cobj->GetPoints(vertexes);
+                            if (vertexes.size() > 2)
+                            {
+                                pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
+                                for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                                {
+                                    pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                                }
+                                pb.closePath();
+                            }
+                        }
+                    }
+                }
+
+                pv *= Geom::Translate(0.5, 0.5);
+                double ux = station->GetLineWidth(), uy = station->GetLineWidth();
+                cr->device_to_user_distance(ux, uy);
+                if (ux < uy) ux = uy;
+
+                cr->save();
+                cr->translate(anchorX_, anchorY_);
+                cr->scale(GetMatScale(), GetMatScale());
+                Geom::CairoPathSink cairoPathSink(cr->cobj());
+                wxColour c = station->GetColor();
+                cairoPathSink.feed(pv);
+                cr->set_line_width(ux);
+                cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
+                cr->set_source_rgba(c.Red() / 255.0, c.Green() / 255.0, c.Blue() / 255.0, c.Alpha() / 255.0);
+                cr->stroke();
+                cr->restore();
+            }
+        }
     }
 }
 
@@ -1368,6 +1596,9 @@ void CairoCanvas::MoveAnchor(const wxSize &sViewport, const wxSize &disMatSize)
 {
     anchorX_ = std::max(0, (sViewport.GetWidth() - disMatSize.GetWidth()) / 2);
     anchorY_ = std::max(0, (sViewport.GetHeight() - disMatSize.GetHeight()) / 2);
+
+    anchorX_ = 0;
+    anchorY_ = 0;
 }
 
 void CairoCanvas::ScaleShowImage(const wxSize &sToSize)

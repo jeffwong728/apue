@@ -4,6 +4,7 @@
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
 #include <pybind11/cast.h>
+#include <pybind11/numpy.h>
 #include <opencv2/mvlab.hpp>
 
 enum class MvlabPyType
@@ -15,12 +16,17 @@ enum class MvlabPyType
 
 using RGBTuple = std::tuple<uint8_t, uint8_t, uint8_t>;
 using RGBATuple = std::tuple<uint8_t, uint8_t, uint8_t, uint8_t>;
+using PyPoint2 = std::tuple<double, double>;
+using PyPoint3 = std::tuple<double, double, double>;
+using PyCircle = std::tuple<double, double, double>;
+using PyRange  = std::tuple<double, double>;
 
 extern bool IsMvlabPyTypes(const pybind11::handle o, const MvlabPyType t);
 
 namespace pybind11 { namespace detail {
 
-template <> struct type_caster<cv::Ptr<cv::mvlab::Contour>>
+template <>
+struct type_caster<cv::Ptr<cv::mvlab::Contour>>
 {
 public:
     PYBIND11_TYPE_CASTER(cv::Ptr<cv::mvlab::Contour>, _("cv2.mvlab_Contour"));
@@ -48,7 +54,8 @@ public:
     }
 };
 
-template <> struct type_caster<cv::Ptr<cv::mvlab::Region>>
+template <>
+struct type_caster<cv::Ptr<cv::mvlab::Region>>
 {
 public:
     PYBIND11_TYPE_CASTER(cv::Ptr<cv::mvlab::Region>, _("cv2.mvlab_Region"));
@@ -74,6 +81,19 @@ public:
     static handle cast(cv::Ptr<cv::mvlab::Contour> src, return_value_policy /* policy */, handle /* parent */) {
         return pybind11::none();
     }
+};
+
+template<>
+struct type_caster<cv::Mat>
+{
+public:
+
+    PYBIND11_TYPE_CASTER(cv::Mat, _("numpy.ndarray"));
+
+    //! 1. cast numpy.ndarray to cv::Mat    
+    bool load(handle obj, bool);
+    //! 2. cast cv::Mat to numpy.ndarray    
+    static handle cast(const cv::Mat& mat, return_value_policy, handle defval);
 };
 
 }

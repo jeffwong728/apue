@@ -21,6 +21,7 @@ private:
 
 public:
     static void Save(const H5::Group &g, const std::string &n, const wxColour &c);
+    static void Save(const H5::Group &g, const std::string &n, const std::vector<wxColour> &cs);
     static void SetAttribute(const H5::H5Object &o, const std::string &n, const wxColour &c);
     static void SetAttribute(const H5::H5Object &o, const std::string &n, const std::string &v);
     template<typename T> static H5::PredType NativeType();  
@@ -35,6 +36,7 @@ public:
     template<typename T> static void SetAttribute(const H5::H5Object &o, const std::string &n, const T &v);
     template<typename T> static T GetAttribute(const H5::H5Object &o, const std::string &n);
     static std::vector<wxString> GetSpamProjects(const wxString &dbPath);
+    static void Load(const H5::Group &g, const std::string &n, std::vector<wxColour> &cs);
 };
 
 template<typename T>

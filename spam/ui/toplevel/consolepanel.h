@@ -22,6 +22,8 @@ private:
     void OnUpdateUI(wxUpdateUIEvent& evt);
     void OnEnter(wxCommandEvent& evt);
     void OnKey(wxKeyEvent &evt);
+    void OnConsoleScroll(wxScrollWinEvent & evt);
+    void OnTimingScroll(wxScrollWinEvent & evt);
 
 private:
     std::list<wxString> cmds_;

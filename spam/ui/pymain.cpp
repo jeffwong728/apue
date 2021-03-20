@@ -2,18 +2,24 @@
 #include <pybind11/stl.h>
 #include <iostream>
 
+extern void PyExportDrawable(pybind11::module_ &m);
 extern void PyExportRect(pybind11::module_ &m);
 extern void PyExportStation(pybind11::module_ &m);
+extern void PyExportProject(pybind11::module_ &m);
 extern pybind11::object PyNewStation();
 extern pybind11::object PyFindStation(const std::string &name);
+extern pybind11::object PyGetCurrentProject();
 
 /// Staticly linking a Python extension for embedded Python.
 PYBIND11_EMBEDDED_MODULE(spam, m)
 {
+    PyExportDrawable(m);
     PyExportRect(m);
     PyExportStation(m);
+    PyExportProject(m);
     m.def("CreateStation", PyNewStation);
     m.def("FindStation", PyFindStation);
+    m.def("GetCurrentProject", PyGetCurrentProject);
 }
 
 std::string InitializePython()

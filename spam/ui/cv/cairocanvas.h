@@ -77,6 +77,9 @@ public:
     void EraseDrawables(const SPDrawableNodeVector &des);
     void DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn);
     void EraseRegion(const cv::Ptr<cv::mvlab::Region> &rgn);
+    void DrawContour(const cv::Ptr<cv::mvlab::Contour> &contr);
+    void EraseContour(const cv::Ptr<cv::mvlab::Contour> &contr);
+    void DrawMarker(const Geom::PathVector &marker);
     void RefreshDrawable(const SPDrawableNode &de);
     void HighlightDrawable(const SPDrawableNode &de);
     void DimDrawable(const SPDrawableNode &de);
@@ -110,6 +113,8 @@ public:
     void PushRegionsIntoBufferZone(const std::string &name, const cv::Ptr<cv::mvlab::Region> &rgns);
     void ClearVisiableRegions() { rgnsVisiable_.clear(); }
     void SetVisiableRegion(const std::string &rgnName) { rgnsVisiable_.push_back(rgnName); }
+    void EraseBoxArea(const Geom::Rect &boxArea);
+    void EraseFullArea();
 
 private:
     void OnSize(wxSizeEvent& event);
@@ -134,7 +139,9 @@ private:
     void ConpensateHandle(wxRect &invalidRect) const;
     void InvalidateDrawable(const SPDrawableNodeVector &des);
     void RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void RenderMarkers(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderRegions(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void RenderContours(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderEntities(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const;
@@ -169,6 +176,8 @@ private:
     Geom::OptRect rubber_band_;
     Geom::PathVector path_vector_;
     std::vector<cv::Ptr<cv::mvlab::Region>> rgns_;
+    std::vector<cv::Ptr<cv::mvlab::Contour>> contrs_;
+    std::vector<Geom::PathVector> markers_;
 };
 
 class DnDImageFile : public wxFileDropTarget

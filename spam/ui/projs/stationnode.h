@@ -36,6 +36,15 @@ public:
     SPDrawableNode FindDrawable(const Geom::Point &pt);
     SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
+    void SetColor(const wxColour &color) { drawStyle_.strokeColor_ = color; }
+    wxColour GetColor() const { return drawStyle_.strokeColor_; }
+    void SetColor(const std::vector<wxColour> &colors) { multiColors_ = colors; }
+    void SetColored(const int number_of_colors = 68);
+    double GetLineWidth() const { return drawStyle_.strokeWidth_; }
+    void SetLineWidth(const double width) { drawStyle_.strokeWidth_ = width; }
+    wxColour GetNextColor() const;
+    void SetDraw(const std::string &drawMode) { drawMode_ = drawMode; }
+    std::string GetDraw() const { return drawMode_; }
 
 public:
     void Save(const H5::Group &g) const override;
@@ -56,6 +65,9 @@ private:
 
 public:
     bool current_;
+    mutable int currentColorIndex_ = 0;
+    std::string drawMode_;
+    std::vector<wxColour> multiColors_;
     std::string tabContainerName_;
     cv::Mat img_;
 };
