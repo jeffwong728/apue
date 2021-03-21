@@ -146,6 +146,11 @@ bool ContourImpl::Empty() const
 
 int ContourImpl::Count() const
 {
+    return 1;
+}
+
+int ContourImpl::CountCurves() const
+{
     return static_cast<int>(curves_.size());
 }
 
@@ -285,6 +290,18 @@ void ContourImpl::GetPoints(std::vector<cv::Point2f> &points) const
             std::memcpy(dst, crv.data(), sizeof(cv::Point2f)*cPoints);
             dst += cPoints;
         }
+    }
+}
+
+void ContourImpl::SelectPoints(const int index, std::vector<cv::Point2f> &points) const
+{
+    points.resize(0);
+    if (!curves_.empty() && index>=0 && index<ContourImpl::CountCurves() && !curves_[index].empty())
+    {
+        const int cPoints = static_cast<int>(curves_[index].size()) - IsCurveClosed(curves_[index]);
+        points.resize(cPoints);
+        cv::Point2f *dst = points.data();
+        std::memcpy(dst, curves_[index].data(), sizeof(cv::Point2f)*cPoints);
     }
 }
 

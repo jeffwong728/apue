@@ -42,6 +42,7 @@ public:
 public:
     CV_WRAP virtual bool Empty() const = 0;
     CV_WRAP virtual int Count() const = 0;
+    CV_WRAP virtual int CountCurves() const = 0;
     CV_WRAP virtual int CountPoints() const = 0;
     CV_WRAP virtual void GetCountPoints(CV_OUT std::vector<int> &cPoints) const = 0;
     CV_WRAP virtual double Area() const = 0;
@@ -71,6 +72,7 @@ public:
     CV_WRAP virtual cv::Ptr<Contour> Simplify(const float tolerance) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetConvex() const = 0;
     CV_WRAP virtual void GetPoints(CV_OUT std::vector<cv::Point2f> &vertexes) const = 0;
+    CV_WRAP virtual void SelectPoints(const int index, CV_OUT std::vector<cv::Point2f> &vertexes) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> Move(const cv::Point2f &delta) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> Zoom(const cv::Size2f &scale) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> AffineTrans(const cv::Matx33d &homoMat2D) const = 0;

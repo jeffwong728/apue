@@ -104,6 +104,16 @@ int ContourArrayImpl::Count() const
     return static_cast<int>(contours_.size());
 }
 
+int ContourArrayImpl::CountCurves() const
+{
+    int numCurves = 0;
+    for (const cv::Ptr<Contour> &c : contours_)
+    {
+        numCurves += c->CountCurves();
+    }
+    return numCurves;
+}
+
 void ContourArrayImpl::GetCountPoints(std::vector<int> &cPoints) const
 {
     cPoints.reserve(contours_.size());
@@ -182,6 +192,22 @@ void ContourArrayImpl::GetPoints(std::vector<Point2f> &points) const
     else
     {
         contours_.front()->GetPoints(points);
+    }
+}
+
+void ContourArrayImpl::SelectPoints(const int index, std::vector<cv::Point2f> &points) const
+{
+    int preNumCurves = 0;
+    points.resize(0);
+    for (const cv::Ptr<Contour> &c : contours_)
+    {
+        const int numCurves = preNumCurves + c->CountCurves();
+        if (index >= preNumCurves && index < numCurves)
+        {
+            c->SelectPoints(index - preNumCurves, points);
+            break;
+        }
+        preNumCurves = numCurves;
     }
 }
 

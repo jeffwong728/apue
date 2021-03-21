@@ -1014,6 +1014,7 @@ void CairoCanvas::EraseFullArea()
     }
 
     rgns_.clear();
+    contrs_.clear();
     markers_.clear();
 
     if (iRect.area() > 0.)
@@ -1379,52 +1380,44 @@ void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr) const
                     continue;
                 }
 
-                const cv::Ptr<cv::mvlab::Contour> outer = rgn->GetContour();
-                const cv::Ptr<cv::mvlab::Contour> inner = rgn->GetHole();
+                const cv::Ptr<cv::mvlab::Contour> outer = rgn->GetContour()->Simplify(1.f);
+                const cv::Ptr<cv::mvlab::Contour> inner = rgn->GetHole()->Simplify(1.f);
 
                 Geom::PathVector pv;
                 Geom::PathBuilder pb(pv);
 
                 if (outer)
                 {
-                    for (int cc = 0; cc < outer->Count(); ++cc)
+                    for (int cc = 0; cc < outer->CountCurves(); ++cc)
                     {
-                        const cv::Ptr<cv::mvlab::Contour> boundary = outer->SelectObj(cc);
-                        if (boundary)
+                        std::vector<cv::Point2f> vertexes;
+                        outer->SelectPoints(cc, vertexes);
+                        if (vertexes.size() > 2)
                         {
-                            std::vector<cv::Point2f> vertexes;
-                            boundary->GetPoints(vertexes);
-                            if (vertexes.size() > 2)
+                            pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
+                            for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
                             {
-                                pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
-                                for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
-                                {
-                                    pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
-                                }
-                                pb.closePath();
+                                pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
                             }
+                            pb.closePath();
                         }
                     }
                 }
 
                 if (inner)
                 {
-                    for (int cc = 0; cc < inner->Count(); ++cc)
+                    for (int cc = 0; cc < inner->CountCurves(); ++cc)
                     {
-                        const cv::Ptr<cv::mvlab::Contour> hole = inner->SelectObj(cc);
-                        if (hole)
+                        std::vector<cv::Point2f> vertexes;
+                        inner->SelectPoints(cc, vertexes);
+                        if (vertexes.size() > 2)
                         {
-                            std::vector<cv::Point2f> vertexes;
-                            hole->GetPoints(vertexes);
-                            if (vertexes.size() > 2)
+                            pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
+                            for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
                             {
-                                pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
-                                for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
-                                {
-                                    pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
-                                }
-                                pb.closePath();
+                                pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
                             }
+                            pb.closePath();
                         }
                     }
                 }
@@ -1477,22 +1470,18 @@ void CairoCanvas::RenderContours(Cairo::RefPtr<Cairo::Context> &cr) const
 
                 if (contr)
                 {
-                    for (int cc = 0; cc < contr->Count(); ++cc)
+                    for (int cc = 0; cc < contr->CountCurves(); ++cc)
                     {
-                        const cv::Ptr<cv::mvlab::Contour> cobj = contr->SelectObj(cc);
-                        if (cobj)
+                        std::vector<cv::Point2f> vertexes;
+                        contr->SelectPoints(cc, vertexes);
+                        if (vertexes.size() > 2)
                         {
-                            std::vector<cv::Point2f> vertexes;
-                            cobj->GetPoints(vertexes);
-                            if (vertexes.size() > 2)
+                            pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
+                            for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
                             {
-                                pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
-                                for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
-                                {
-                                    pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
-                                }
-                                pb.closePath();
+                                pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
                             }
+                            pb.closePath();
                         }
                     }
                 }

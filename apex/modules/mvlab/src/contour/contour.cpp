@@ -364,7 +364,6 @@ cv::Ptr<Contour> Contour::GenPolygon(const std::vector<cv::Point2f> &vertexes)
         {
             return makePtr<ContourImpl>(vertexes, K_UNKNOWN);
         }
-
     }
 }
 

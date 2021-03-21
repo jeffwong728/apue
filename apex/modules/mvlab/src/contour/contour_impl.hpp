@@ -23,6 +23,7 @@ public:
 public:
     bool Empty() const CV_OVERRIDE;
     int Count() const CV_OVERRIDE;
+    int CountCurves() const CV_OVERRIDE;
     void GetCountPoints(std::vector<int> &cPoints) const CV_OVERRIDE;
     void GetArea(std::vector<double> &areas) const CV_OVERRIDE;
     void GetLength(std::vector<double> &lengthes) const CV_OVERRIDE;
@@ -35,6 +36,7 @@ public:
     cv::Ptr<Contour> GetConvex() const CV_OVERRIDE;
     //Access
     void GetPoints(std::vector<Point2f> &vertexes) const CV_OVERRIDE;
+    void SelectPoints(const int index, CV_OUT std::vector<cv::Point2f> &vertexes) const CV_OVERRIDE;
     cv::Ptr<Contour> SelectObj(const int index) const CV_OVERRIDE;
     //Geometric Transformations
     cv::Ptr<Contour> Move(const cv::Point2f &delta) const CV_OVERRIDE;
