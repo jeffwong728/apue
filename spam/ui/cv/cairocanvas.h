@@ -53,6 +53,33 @@ public:
     bs2::signal_type<void(const ImageBufferItem &), bs2_dummy_mutex>::type sig_ImageBufferItemAdd;
     bs2::signal_type<void(const ImageBufferItem &), bs2_dummy_mutex>::type sig_ImageBufferItemUpdate;
 
+    struct DispRgn
+    {
+        cv::Ptr<cv::mvlab::Region> cvRgn;
+        std::vector<std::vector<cv::Point2f>> curves;
+        std::vector<cv::Rect2f> bboxs;
+        std::array<double, 4> lineColor;
+        std::array<double, 4> fillColor;
+        int lineStyle;
+        int drawMode;
+        double lineWidth;
+        bool operator==(const cv::Ptr<cv::mvlab::Region> &rgn) const { return cvRgn == rgn; }
+    };
+
+    struct DispContour
+    {
+        cv::Ptr<cv::mvlab::Contour> cvContr;
+        std::vector<std::vector<cv::Point2f>> curves;
+        std::vector<cv::Rect2f> bboxs;
+        std::vector<int> isClosed;
+        double lineWidth;
+        int lineStyle;
+        int drawMode;
+        std::array<double, 4> lineColor;
+        std::array<double, 4> fillColor;
+        bool operator==(const cv::Ptr<cv::mvlab::Contour> &contr) const { return cvContr == contr; }
+    };
+
 public:
     cv::Mat GetOriginalImage() const { return srcImg_; }
     const ImageBufferZone &GetImageBufferZone() const { return imgBufferZone_; }
@@ -85,11 +112,11 @@ public:
     void DimDrawable(const SPDrawableNode &de);
     void DrawPathVector(const Geom::PathVector &pth, const Geom::OptRect &rect);
     void DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &newRect);
-    WPRectNode AddRect(const RectData &rd);
-    void AddLine(const LineData &ld);
-    void AddEllipse(const GenericEllipseArcData &ed);
-    void AddPolygon(const PolygonData &pd);
-    void AddBeziergon(const BezierData &bd);
+    WPGeomNode AddRect(const RectData &rd);
+    WPGeomNode AddLine(const LineData &ld);
+    WPGeomNode AddEllipse(const GenericEllipseArcData &ed);
+    WPGeomNode AddPolygon(const PolygonData &pd);
+    WPGeomNode AddBeziergon(const BezierData &bd);
     void DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
     void DoNodeEdit(const SPDrawableNodeVector &selEnts, const SpamMany &mementos);
@@ -139,9 +166,9 @@ private:
     void ConpensateHandle(wxRect &invalidRect) const;
     void InvalidateDrawable(const SPDrawableNodeVector &des);
     void RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const;
-    void RenderMarkers(Cairo::RefPtr<Cairo::Context> &cr) const;
-    void RenderRegions(Cairo::RefPtr<Cairo::Context> &cr) const;
-    void RenderContours(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void RenderMarkers(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
+    void RenderRegions(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
+    void RenderContours(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
     void RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderEntities(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const;
@@ -151,6 +178,7 @@ private:
     void ScaleShowImage(const wxSize &sToSize);
     wxSize GetDispMatSize(const wxSize &sViewport, const wxSize &srcMatSize);
     wxSize GetFitSize(const wxSize &sViewport, const wxSize &srcMatSize);
+    static bool IsRectNeedRefresh(const Geom::Rect &bbox, const std::vector<Geom::Rect> &invalidRects);
 
 private:
     cv::String cvWndName_;
@@ -175,8 +203,8 @@ private:
     std::vector<std::string> rgnsVisiable_;
     Geom::OptRect rubber_band_;
     Geom::PathVector path_vector_;
-    std::vector<cv::Ptr<cv::mvlab::Region>> rgns_;
-    std::vector<cv::Ptr<cv::mvlab::Contour>> contrs_;
+    std::map<cv::mvlab::Region *const, std::vector<DispRgn>> rgns_;
+    std::map<cv::mvlab::Contour *const, std::vector<DispContour>> contrs_;
     std::vector<Geom::PathVector> markers_;
 };
 

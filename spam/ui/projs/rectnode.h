@@ -45,6 +45,7 @@ public:
     void SetData(const RectData &data) { data_ = data; }
     const RectData& GetData() const { return data_; }
     void PyDoTransform(const Geom::Affine &aff);
+    Geom::Point GetCenter() const;
 
 public:
     void Save(const H5::Group &g) const override;

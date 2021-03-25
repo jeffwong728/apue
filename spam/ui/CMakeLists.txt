@@ -67,7 +67,9 @@ set(ui_core_SRCS
   scripting/pystation.cpp
   scripting/pyproject.cpp
   scripting/mvlabcaster.cpp
+  scripting/pyentity.cpp
   scripting/pydrawable.cpp
+  scripting/pyellipse.cpp
 )
 
 set(ui_core_HEADERS 
@@ -142,7 +144,9 @@ set(ui_core_HEADERS
   scripting/pystation.h
   scripting/pyproject.h
   scripting/mvlabcaster.h
+  scripting/pyentity.h
   scripting/pydrawable.h
+  scripting/pyellipse.h
 )
 
 if(MSVC)

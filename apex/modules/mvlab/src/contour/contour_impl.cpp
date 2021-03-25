@@ -381,7 +381,11 @@ cv::Ptr<Contour> ContourImpl::AffineTrans(const cv::Matx33d &homoMat2D) const
 void ContourImpl::GetTestClosed(std::vector<int> &isClosed) const
 {
     isClosed.resize(0);
-    isClosed.push_back(ContourImpl::TestClosed());
+    isClosed.reserve(ContourImpl::CountCurves());
+    for (const auto &crv : curves_)
+    {
+        isClosed.push_back(IsCurveClosed(crv));
+    }
 }
 
 void ContourImpl::GetTestConvex(std::vector<int> &isConvex) const

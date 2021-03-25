@@ -33,11 +33,13 @@ public:
     void SetImage(const cv::Mat &img) { img_ = img; }
     const cv::Mat &GetImage() const { return img_; }
     cv::Mat &GetImage() { return img_; }
+    SPDrawableNode FindDrawable(const std::string &name);
     SPDrawableNode FindDrawable(const Geom::Point &pt);
     SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
     void SetColor(const wxColour &color) { drawStyle_.strokeColor_ = color; }
     wxColour GetColor() const { return drawStyle_.strokeColor_; }
+    wxColour GetFillColor() const { return drawStyle_.fillColor_; }
     void SetColor(const std::vector<wxColour> &colors) { multiColors_ = colors; }
     void SetColored(const int number_of_colors = 68);
     double GetLineWidth() const { return drawStyle_.strokeWidth_; }

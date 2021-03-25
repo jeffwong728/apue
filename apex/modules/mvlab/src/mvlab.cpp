@@ -56,5 +56,54 @@ int GetGlobalOption(const cv::String& optName, cv::String& optVal)
     return -1;
 }
 
+cv::Rect2f BoundingBox(const std::vector<cv::Point2f> &points)
+{
+    if (points.empty())
+    {
+        return cv::Rect2f();
+    }
+
+    const int numPoints = static_cast<int>(points.size());
+    constexpr int simdSize = 8;
+    const int regularNumPoints = numPoints & (-simdSize);
+
+    vcl::Vec8f top(std::numeric_limits<float>::max());
+    vcl::Vec8f left(std::numeric_limits<float>::max());
+    vcl::Vec8f bot(std::numeric_limits<float>::lowest());
+    vcl::Vec8f right(std::numeric_limits<float>::lowest());
+
+    int n = 0;
+    const cv::Point2f *pt = points.data();
+    for (; n < regularNumPoints; n += simdSize)
+    {
+        vcl::Vec8f v1, v2;
+        v1.load(reinterpret_cast<const float *>(pt));
+        v2.load(reinterpret_cast<const float *>(pt + simdSize / 2));
+        vcl::Vec8f x = vcl::blend8<0, 2, 4, 6, 8, 10, 12, 14>(v1, v2);
+        vcl::Vec8f y = vcl::blend8<1, 3, 5, 7, 9, 11, 13, 15>(v1, v2);
+
+        top = vcl::min(top, y);
+        left = vcl::min(left, x);
+        bot = vcl::max(bot, y);
+        right = vcl::max(right, x);
+
+        pt += simdSize;
+    }
+
+    float xmin = vcl::horizontal_min(left);
+    float xmax = vcl::horizontal_max(right);
+    float ymin = vcl::horizontal_min(top);
+    float ymax = vcl::horizontal_max(bot);
+    for (; n < numPoints; ++n, ++pt)
+    {
+        xmin = std::min(xmin, pt->x);
+        ymin = std::min(ymin, pt->y);
+        xmax = std::max(xmax, pt->x);
+        ymax = std::max(ymax, pt->y);
+    }
+
+    return cv::Rect2f(xmin, ymin, xmax - xmin, ymax - ymin);
+}
+
 }
 }

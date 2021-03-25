@@ -72,6 +72,20 @@ int StationNode::GetNumDrawable() const
     return numDra;
 }
 
+SPDrawableNode StationNode::FindDrawable(const std::string &name)
+{
+    for (auto &c : GetChildren())
+    {
+        auto drawable = std::dynamic_pointer_cast<DrawableNode>(c);
+        if (drawable && drawable->GetTitle() == name)
+        {
+            return drawable;
+        }
+    }
+
+    return SPDrawableNode();
+}
+
 SPDrawableNode StationNode::FindDrawable(const Geom::Point &pt)
 {
     const SelectionFilter *sf = Spam::GetSelectionFilter();

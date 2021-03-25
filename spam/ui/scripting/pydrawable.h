@@ -1,12 +1,11 @@
 #ifndef SPAM_UI_SCRIPTING_PYDRAWABLE_H
 #define SPAM_UI_SCRIPTING_PYDRAWABLE_H
 
-#include "mvlabcaster.h"
+#include "pyentity.h"
 #include <ui/projs/modelfwd.h>
 
-struct PyDrawable
+struct PyDrawable : public PyEntity
 {
-    WPDrawableNode wpObj;
     void SetColor(const RGBATuple &color);
     pybind11::object GetColor() const;
     std::string toString() const;

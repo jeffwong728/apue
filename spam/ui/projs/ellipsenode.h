@@ -46,6 +46,9 @@ public:
     void InitData(GenericEllipseArcData &data);
     void SetData(const GenericEllipseArcData &data) { data_ = data; }
     const GenericEllipseArcData& GetData() const { return data_; }
+    Geom::Point GetCenter() const;
+    void PyDoTransform(const Geom::Affine &aff);
+    std::string GetArcTypeName() const;
 
 public:
     void Save(const H5::Group &g) const override;
@@ -59,7 +62,6 @@ public:
 
 protected:
     void DoTransform(const Geom::Affine &aff, const double dx, const double dy) override;
-    std::string GetArcTypeName() const;
     GenericEllipseArcType GetArcTypeValue(const std::string &tName) const;
 
 private:

@@ -16,6 +16,9 @@ public:
     GeomCmd(ProjTreeModel *model, SPStationNode &station);
     GeomCmd(ProjTreeModel *model, SPStationNode &station, SPGeomNode &geom);
 
+public:
+    WPGeomNode GetGeom() const { return geom_; }
+
 protected:
     ProjTreeModel *model_;
     SPStationNode station_;
@@ -49,9 +52,6 @@ public:
     void Do() wxOVERRIDE;
     void Undo() wxOVERRIDE;
     void Redo() wxOVERRIDE;
-
-public:
-    WPRectNode GetRect() const;
 
 public:
     wxString GetDescription() const wxOVERRIDE;

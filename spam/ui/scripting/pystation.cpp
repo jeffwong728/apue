@@ -1,6 +1,7 @@
 #include "pystation.h"
 #include "pyproject.h"
 #include "pyrect.h"
+#include "pyellipse.h"
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
 #include <2geom/circle.h>
@@ -10,6 +11,7 @@
 #include <ui/toplevel/rootframe.h>
 #include <ui/toplevel/projpanel.h>
 #include <ui/projs/rectnode.h>
+#include <ui/projs/ellipsenode.h>
 #include <ui/projs/stationnode.h>
 #include <ui/projs/projtreemodel.h>
 #include <ui/cv/cairocanvas.h>
@@ -30,10 +32,6 @@ std::string PyStation::GetName() const
 
 pybind11::object PyStation::NewRect(const double center_x, const double center_y, const double width, const double height)
 {
-    std::ostringstream oss;
-    oss << "NewRect be called with arguments: (" << center_x << ", " << center_y << ", " << width << ", " << height << ")";
-    wxLogMessage(wxString(oss.str()));
-
     SPStationNode spStation = wpPyStation.lock();
     if (spStation)
     {
@@ -60,9 +58,118 @@ pybind11::object PyStation::NewRect(const double center_x, const double center_y
 
             PyRect pyRect;
             pyRect.wpObj = cavs->AddRect(rd);
-            cavs->RefreshDrawable(pyRect.wpObj.lock());
+            cavs->RefreshDrawable(std::dynamic_pointer_cast<DrawableNode>(pyRect.wpObj.lock()));
             return pybind11::cast(pyRect);
         }
+    }
+
+    return pybind11::none();
+}
+
+pybind11::object PyStation::NewEllipse(const double center_x, const double center_y, const double width, const double height)
+{
+    SPStationNode spStation = wpPyStation.lock();
+    if (spStation)
+    {
+        auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+        CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
+        if (cavs)
+        {
+            GenericEllipseArcData ed;
+            ed.points[0][0] = center_x - width / 2;
+            ed.points[0][1] = center_y - height / 2;
+            ed.points[1][0] = center_x + width / 2;
+            ed.points[1][1] = center_y - height / 2;
+            ed.points[2][0] = center_x + width / 2;
+            ed.points[2][1] = center_y + height / 2;
+            ed.points[3][0] = center_x - width / 2;
+            ed.points[3][1] = center_y + height / 2;
+            ed.angles[0] = 0.;
+            ed.angles[1] = 360.;
+            ed.type = GenericEllipseArcType::kAtSlice;
+
+            Geom::Affine ide = Geom::Affine::identity();
+            for (int i = 0; i < ed.transform.size(); ++i)
+            {
+                ed.transform[i] = ide[i];
+            }
+
+            PyEllipse pyElli;
+            pyElli.wpObj = cavs->AddEllipse(ed);
+            cavs->RefreshDrawable(std::dynamic_pointer_cast<DrawableNode>(pyElli.wpObj.lock()));
+            return pybind11::cast(pyElli);
+        }
+    }
+
+    return pybind11::none();
+}
+
+pybind11::object PyStation::FindEntity(const std::string &name)
+{
+    SPStationNode spStation = wpPyStation.lock();
+    if (spStation)
+    {
+        SPDrawableNode spObj = spStation->FindDrawable(name);
+        if (std::dynamic_pointer_cast<RectNode>(spObj))
+        {
+            PyRect pyObj;
+            pyObj.wpObj = spObj;
+            return pybind11::cast(pyObj);
+        }
+        else if (std::dynamic_pointer_cast<GenericEllipseArcNode>(spObj))
+        {
+            PyEllipse pyObj;
+            pyObj.wpObj = spObj;
+            return pybind11::cast(pyObj);
+        }
+        else if (spObj)
+        {
+            PyDrawable pyObj;
+            pyObj.wpObj = spObj;
+            return pybind11::cast(pyObj);
+        }
+        else
+        {
+            return pybind11::none();
+        }
+    }
+
+    return pybind11::none();
+}
+
+pybind11::object PyStation::GetAllEntities()
+{
+    SPStationNode spStation = wpPyStation.lock();
+    if (spStation)
+    {
+        pybind11::list objs;
+        for (const SPModelNode &spNode : spStation->GetChildren())
+        {
+            if (std::dynamic_pointer_cast<RectNode>(spNode))
+            {
+                PyRect pyObj;
+                pyObj.wpObj = spNode;
+                objs.append(pybind11::cast(pyObj));
+            }
+            else if (std::dynamic_pointer_cast<GenericEllipseArcNode>(spNode))
+            {
+                PyEllipse pyObj;
+                pyObj.wpObj = spNode;
+                objs.append(pybind11::cast(pyObj));
+            }
+            else if (std::dynamic_pointer_cast<DrawableNode>(spNode))
+            {
+                PyDrawable pyObj;
+                pyObj.wpObj = spNode;
+                objs.append(pybind11::cast(pyObj));
+            }
+            else
+            {
+                // do nothing now
+            }
+        }
+
+        return objs;
     }
 
     return pybind11::none();
@@ -524,16 +631,16 @@ void PyStation::SetColor(const std::string &color)
     }
 }
 
-void PyStation::SetColor(const RGBTuple &color)
+void PyStation::SetColor(const uint8_t red, const uint8_t green, const uint8_t blue)
 {
-    wxColour c{ std::get<0>(color), std::get<1>(color), std::get<2>(color), 0xFF };
+    wxColour c{ red, green, blue, 0xFF };
     SPStationNode spStation = wpPyStation.lock();
     if (spStation) spStation->SetColor(c);
 }
 
-void PyStation::SetColor(const RGBATuple &color)
+void PyStation::SetColor(const uint8_t red, const uint8_t green, const uint8_t blue, const uint8_t alpha)
 {
-    wxColour c{ std::get<0>(color), std::get<1>(color), std::get<2>(color), std::get<3>(color) };
+    wxColour c{ red, green, blue, alpha };
     SPStationNode spStation = wpPyStation.lock();
     if (spStation) spStation->SetColor(c);
 }
@@ -677,6 +784,9 @@ void PyExportStation(pybind11::module_ &m)
     auto c = pybind11::class_<PyStation>(m, "Station");
     c.def("GetName", &PyStation::GetName);
     c.def("NewRect", &PyStation::NewRect, "Create a new rectangle", pybind11::arg("center_x"), pybind11::arg("center_y"), pybind11::arg("width"), pybind11::arg("height"));
+    c.def("NewEllipse", &PyStation::NewEllipse, "Create a new ellipse", pybind11::arg("center_x"), pybind11::arg("center_y"), pybind11::arg("width"), pybind11::arg("height"));
+    c.def("FindEntity", &PyStation::FindEntity, "Find a existing entity by name", pybind11::arg("name"));
+    c.def("GetAllEntities", &PyStation::GetAllEntities, "Get all existing entity");
     c.def("DispObj", pybind11::overload_cast<const cv::Ptr<cv::mvlab::Region> &>(&PyStation::DispObj), "Display a region or regions", pybind11::arg("obj"));
     c.def("DispObj", pybind11::overload_cast<const cv::Ptr<cv::mvlab::Contour> &>(&PyStation::DispObj), "Display a contour or contours", pybind11::arg("obj"));
     c.def("DispCircle", &PyStation::DispCircle, "Displays circles in a station", pybind11::arg("center"), pybind11::arg("radius"));
@@ -690,8 +800,8 @@ void PyExportStation(pybind11::module_ &m)
     c.def("DispRectangle1", &PyStation::DispRectangle1, "Display of rectangles aligned to the coordinate axes in a station", pybind11::arg("point1"), pybind11::arg("point2"));
     c.def("DispRectangle2", &PyStation::DispRectangle2, "Displays arbitrarily oriented rectangles in a station", pybind11::arg("center"), pybind11::arg("phi"), pybind11::arg("lengths"));
     c.def("SetColor", pybind11::overload_cast<const std::string &>(&PyStation::SetColor), "Set output color by color name", pybind11::arg("color"));
-    c.def("SetColor", pybind11::overload_cast<const RGBTuple &>(&PyStation::SetColor), "Set output color in RGB format", pybind11::arg("color"));
-    c.def("SetColor", pybind11::overload_cast<const RGBATuple &>(&PyStation::SetColor), "Set output color in RGBA format", pybind11::arg("color"));
+    c.def("SetColor", pybind11::overload_cast<const uint8_t, const uint8_t, const uint8_t>(&PyStation::SetColor), "Set output color in RGB format", pybind11::arg("red"), pybind11::arg("green"), pybind11::arg("blue"));
+    c.def("SetColor", pybind11::overload_cast<const uint8_t, const uint8_t, const uint8_t, const uint8_t>(&PyStation::SetColor), "Set output color in RGBA format", pybind11::arg("red"), pybind11::arg("green"), pybind11::arg("blue"), pybind11::arg("alpha"));
     c.def("SetColor", pybind11::overload_cast<const std::vector<std::string> &>(&PyStation::SetColor), "Set output colors by color names", pybind11::arg("colors"));
     c.def("SetColor", pybind11::overload_cast<const std::vector<RGBTuple> &>(&PyStation::SetColor), "Set output colors in RGB format", pybind11::arg("colors"));
     c.def("SetColor", pybind11::overload_cast<const std::vector<RGBATuple> &>(&PyStation::SetColor), "Set output colors in RGBA format", pybind11::arg("colors"));
@@ -705,6 +815,7 @@ void PyExportStation(pybind11::module_ &m)
     c.def("EraseBox", &PyStation::EraseBoxArea, "Erase all displayables inside specified box area", pybind11::arg("point1"), pybind11::arg("point2"));
     c.def("EraseAll", &PyStation::EraseFullArea, "Erase all displayables inside full station display area");
     c.def_property_readonly("name", &PyStation::GetName);
+    c.def_property_readonly("entities", &PyStation::GetAllEntities);
     c.def_property("image", &PyStation::GetImage, &PyStation::SetImage);
 }
 

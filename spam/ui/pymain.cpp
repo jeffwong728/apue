@@ -2,8 +2,10 @@
 #include <pybind11/stl.h>
 #include <iostream>
 
+extern void PyExportEntity(pybind11::module_ &m);
 extern void PyExportDrawable(pybind11::module_ &m);
 extern void PyExportRect(pybind11::module_ &m);
+extern void PyExportEllipse(pybind11::module_ &m);
 extern void PyExportStation(pybind11::module_ &m);
 extern void PyExportProject(pybind11::module_ &m);
 extern pybind11::object PyNewStation();
@@ -13,8 +15,10 @@ extern pybind11::object PyGetCurrentProject();
 /// Staticly linking a Python extension for embedded Python.
 PYBIND11_EMBEDDED_MODULE(spam, m)
 {
+    PyExportEntity(m);
     PyExportDrawable(m);
     PyExportRect(m);
+    PyExportEllipse(m);
     PyExportStation(m);
     PyExportProject(m);
     m.def("CreateStation", PyNewStation);

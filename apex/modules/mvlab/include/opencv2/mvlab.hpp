@@ -18,6 +18,7 @@ CV_EXPORTS_W int Initialize(const cv::String& fileName);
 CV_EXPORTS_W int SetGlobalOption(const cv::String& optName, const cv::String& optVal);
 CV_EXPORTS_W int GetGlobalOption(const cv::String& optName, CV_OUT cv::String& optVal);
 CV_EXPORTS_W cv::Ptr<Region> Threshold(cv::InputArray src, const int minGray, const int maxGray);
+CV_EXPORTS_W cv::Rect2f BoundingBox(const std::vector<cv::Point2f> &points);
 }
 }
 

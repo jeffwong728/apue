@@ -118,11 +118,6 @@ void CreateRectCmd::Redo()
     }
 }
 
-WPRectNode CreateRectCmd::GetRect() const 
-{ 
-    return std::dynamic_pointer_cast<RectNode>(geom_);
-}
-
 wxString CreateRectCmd::GetDescription() const
 {
     return wxString(wxT("Create rectangle ") + geom_->GetTitle());

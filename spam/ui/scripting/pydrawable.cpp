@@ -9,8 +9,9 @@ void PyDrawable::SetColor(const RGBATuple &color)
     auto spObj = wpObj.lock();
     if (spObj)
     {
+        SPDrawableNode spDrawable = std::dynamic_pointer_cast<DrawableNode>(spObj);
         wxColour c{ std::get<0>(color), std::get<1>(color), std::get<2>(color), std::get<3>(color) };
-        spObj->SetColor(c);
+        spDrawable->SetColor(c);
         auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
         auto spStation = std::dynamic_pointer_cast<StationNode>(spObj->GetParent());
         if (spStation && frame)
@@ -18,7 +19,7 @@ void PyDrawable::SetColor(const RGBATuple &color)
             CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
             if (cavs)
             {
-                cavs->RefreshDrawable(spObj);
+                cavs->RefreshDrawable(spDrawable);
                 ::wxYield();
             }
         }
@@ -30,7 +31,8 @@ pybind11::object PyDrawable::GetColor() const
     auto spObj = wpObj.lock();
     if (spObj)
     {
-        wxColour cl = spObj->GetColor();
+        SPDrawableNode spDrawable = std::dynamic_pointer_cast<DrawableNode>(spObj);
+        wxColour cl = spDrawable->GetColor();
         RGBATuple c{ cl.Red(), cl.Green(), cl.Blue(), cl.Alpha() };
         return pybind11::cast(c);
     }
@@ -44,7 +46,7 @@ std::string PyDrawable::toString() const
 
 void PyExportDrawable(pybind11::module_ &m)
 {
-    auto c = pybind11::class_<PyDrawable>(m, "Drawable");
+    auto c = pybind11::class_<PyDrawable, PyEntity>(m, "Drawable");
     c.def("SetColor", &PyDrawable::SetColor, "Set drawable color in RGBA format", pybind11::arg("color"));
     c.def("GetColor", &PyDrawable::GetColor, "Get the current drawable color");
     c.def_property("color", &PyDrawable::GetColor, &PyDrawable::SetColor);

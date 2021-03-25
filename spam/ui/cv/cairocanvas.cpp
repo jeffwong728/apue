@@ -295,19 +295,73 @@ void CairoCanvas::EraseDrawables(const SPDrawableNodeVector &des)
 
 void CairoCanvas::DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
 {
-    if (rgn)
+    auto model = Spam::GetModel();
+    if (model)
     {
-        cv::Rect bbox = rgn->BoundingBox();
-        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
-        if (boundRect && boundRect->area() > 0.)
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (rgn && station)
         {
-            wxRect invalidRect = ImageToScreen(boundRect);
-            Refresh(false, &invalidRect);
-        }
+            std::vector<DispRgn> &rgnArr = rgns_[rgn.get()];
+            if (rgnArr.empty())
+            {
+                for (int rr = 0; rr < rgn->Count(); ++rr)
+                {
+                    cv::Ptr<cv::mvlab::Region> subRgn = rgn->SelectObj(rr);
+                    rgnArr.emplace_back();
+                    DispRgn &dRgn = rgnArr.back();
+                    dRgn.cvRgn = subRgn;
+                    const cv::Ptr<cv::mvlab::Contour> outer = dRgn.cvRgn->GetContour();
+                    const cv::Ptr<cv::mvlab::Contour> inner = dRgn.cvRgn->GetHole();
 
-        if (std::none_of(rgns_.cbegin(), rgns_.cend(), [rgn](const cv::Ptr<cv::mvlab::Region> &item) { return rgn==item; }))
-        {
-            rgns_.push_back(rgn);
+                    dRgn.curves.reserve(outer->CountCurves() + inner->CountCurves());
+                    dRgn.bboxs.reserve(outer->CountCurves() + inner->CountCurves());
+
+                    for (int c = 0; c < outer->CountCurves(); ++c)
+                    {
+                        dRgn.curves.emplace_back();
+                        dRgn.bboxs.emplace_back();
+                        outer->SelectPoints(c, dRgn.curves.back());
+                        dRgn.bboxs.back() = cv::mvlab::BoundingBox(dRgn.curves.back());
+                    }
+
+                    for (int c = 0; c < inner->CountCurves(); ++c)
+                    {
+                        dRgn.curves.emplace_back();
+                        dRgn.bboxs.emplace_back();
+                        outer->SelectPoints(c, dRgn.curves.back());
+                        dRgn.bboxs.back() = cv::mvlab::BoundingBox(dRgn.curves.back());
+                    }
+
+                    wxColour lineColor = station->GetColor();
+                    wxColour fillColor = station->GetFillColor();
+                    if (rgn->Count() > 1)
+                    {
+                        lineColor = station->GetNextColor();
+                        fillColor = lineColor;
+                    }
+
+                    dRgn.lineWidth = station->GetLineWidth();
+                    dRgn.lineStyle = 0;
+                    dRgn.drawMode = std::string("fill") == station->GetDraw();
+                    dRgn.lineColor[0] = lineColor.Red() / 255.0;
+                    dRgn.lineColor[1] = lineColor.Green() / 255.0;
+                    dRgn.lineColor[2] = lineColor.Blue() / 255.0;
+                    dRgn.lineColor[3] = lineColor.Alpha() / 255.0;
+                    dRgn.fillColor[0] = fillColor.Red() / 255.0;
+                    dRgn.fillColor[1] = fillColor.Green() / 255.0;
+                    dRgn.fillColor[2] = fillColor.Blue() / 255.0;
+                    dRgn.fillColor[3] = fillColor.Alpha() / 255.0;
+
+                    cv::Rect bbox = subRgn->BoundingBox();
+                    Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+                    if (boundRect && boundRect->area() > 0.)
+                    {
+                        wxRect invalidRect = ImageToScreen(boundRect);
+                        invalidRect.Inflate(cvRound(dRgn.lineWidth), cvRound(dRgn.lineWidth));
+                        Refresh(false, &invalidRect);
+                    }
+                }
+            }
         }
     }
 }
@@ -316,17 +370,20 @@ void CairoCanvas::EraseRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
 {
     if (rgn)
     {
-        cv::Rect bbox = rgn->BoundingBox();
-        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
-        if (boundRect && boundRect->area() > 0.)
-        {
-            wxRect invalidRect = ImageToScreen(boundRect);
-            Refresh(false, &invalidRect);
-        }
-
-        auto it = std::find(rgns_.cbegin(), rgns_.cend(), rgn);
+        auto it = rgns_.find(rgn.get());
         if (it != rgns_.cend())
         {
+            for (const DispRgn &dRgn : it->second)
+            {
+                cv::Rect bbox = dRgn.cvRgn->BoundingBox();
+                Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+                if (boundRect && boundRect->area() > 0.)
+                {
+                    wxRect invalidRect = ImageToScreen(boundRect);
+                    invalidRect.Inflate(cvRound(dRgn.lineWidth), cvRound(dRgn.lineWidth));
+                    Refresh(false, &invalidRect);
+                }
+            }
             rgns_.erase(it);
         }
     }
@@ -334,19 +391,65 @@ void CairoCanvas::EraseRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
 
 void CairoCanvas::DrawContour(const cv::Ptr<cv::mvlab::Contour> &contr)
 {
-    if (contr)
+    auto model = Spam::GetModel();
+    if (model)
     {
-        cv::Rect bbox = contr->BoundingBox();
-        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
-        if (boundRect && boundRect->area() > 0.)
+        auto station = model->FindStationByUUID(stationUUID_);
+        if (contr && station)
         {
-            wxRect invalidRect = ImageToScreen(boundRect);
-            Refresh(false, &invalidRect);
-        }
+            std::vector<DispContour> &contrArr = contrs_[contr.get()];
+            if (contrArr.empty())
+            {
+                for (int cc = 0; cc < contr->Count(); ++cc)
+                {
+                    cv::Ptr<cv::mvlab::Contour> subContr = contr->SelectObj(cc);
 
-        if (std::none_of(contrs_.cbegin(), contrs_.cend(), [contr](const cv::Ptr<cv::mvlab::Contour> &item) { return contr == item; }))
-        {
-            contrs_.push_back(contr);
+                    contrArr.emplace_back();
+                    DispContour &dContr = contrArr.back();
+                    dContr.cvContr = subContr;
+
+                    dContr.curves.reserve(subContr->CountCurves());
+                    dContr.bboxs.reserve(subContr->CountCurves());
+                    subContr->GetTestClosed(dContr.isClosed);
+
+                    for (int c = 0; c < subContr->CountCurves(); ++c)
+                    {
+                        dContr.curves.emplace_back();
+                        dContr.bboxs.emplace_back();
+                        subContr->SelectPoints(c, dContr.curves.back());
+                        dContr.bboxs.back() = cv::mvlab::BoundingBox(dContr.curves.back());
+                    }
+
+                    wxColour lineColor = station->GetColor();
+                    wxColour fillColor = station->GetFillColor();
+                    if (contr->Count() > 1)
+                    {
+                        lineColor = station->GetNextColor();
+                        fillColor = lineColor;
+                    }
+
+                    dContr.lineWidth = station->GetLineWidth();
+                    dContr.lineStyle = 0;
+                    dContr.drawMode = std::string("fill") == station->GetDraw();
+                    dContr.lineColor[0] = lineColor.Red() / 255.0;
+                    dContr.lineColor[1] = lineColor.Green() / 255.0;
+                    dContr.lineColor[2] = lineColor.Blue() / 255.0;
+                    dContr.lineColor[3] = lineColor.Alpha() / 255.0;
+                    dContr.fillColor[0] = fillColor.Red() / 255.0;
+                    dContr.fillColor[1] = fillColor.Green() / 255.0;
+                    dContr.fillColor[2] = fillColor.Blue() / 255.0;
+                    dContr.fillColor[3] = fillColor.Alpha() / 255.0;
+
+                    cv::Rect bbox = subContr->BoundingBox();
+                    Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+                    if (boundRect && boundRect->area() > 0.)
+                    {
+                        wxRect invalidRect = ImageToScreen(boundRect);
+                        invalidRect.Inflate(cvRound(dContr.lineWidth), cvRound(dContr.lineWidth));
+                        Refresh(false, &invalidRect);
+                    }
+                }
+            }
         }
     }
 }
@@ -355,17 +458,20 @@ void CairoCanvas::EraseContour(const cv::Ptr<cv::mvlab::Contour> &contr)
 {
     if (contr)
     {
-        cv::Rect bbox = contr->BoundingBox();
-        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
-        if (boundRect && boundRect->area() > 0.)
-        {
-            wxRect invalidRect = ImageToScreen(boundRect);
-            Refresh(false, &invalidRect);
-        }
-
-        auto it = std::find(contrs_.cbegin(), contrs_.cend(), contr);
+        auto it = contrs_.find(contr.get());
         if (it != contrs_.cend())
         {
+            for (const DispContour &dContr : it->second)
+            {
+                cv::Rect bbox = dContr.cvContr->BoundingBox();
+                Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+                if (boundRect && boundRect->area() > 0.)
+                {
+                    wxRect invalidRect = ImageToScreen(boundRect);
+                    invalidRect.Inflate(cvRound(dContr.lineWidth), cvRound(dContr.lineWidth));
+                    Refresh(false, &invalidRect);
+                }
+            }
             contrs_.erase(it);
         }
     }
@@ -434,7 +540,7 @@ void CairoCanvas::DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &new
     Refresh(false, &invalidRect);
 }
 
-WPRectNode CairoCanvas::AddRect(const RectData &rd)
+WPGeomNode CairoCanvas::AddRect(const RectData &rd)
 {
     auto model = Spam::GetModel();
     if (model)
@@ -448,14 +554,14 @@ WPRectNode CairoCanvas::AddRect(const RectData &rd)
             SpamUndoRedo::AddCommand(cmd);
             Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
 
-            return cmd->GetRect();
+            return cmd->GetGeom();
         }
     }
 
-    return WPRectNode();
+    return WPGeomNode();
 }
 
-void CairoCanvas::AddLine(const LineData &ld)
+WPGeomNode CairoCanvas::AddLine(const LineData &ld)
 {
     auto model = Spam::GetModel();
     if (model)
@@ -468,11 +574,13 @@ void CairoCanvas::AddLine(const LineData &ld)
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
             Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+            return cmd->GetGeom();
         }
     }
+    return WPGeomNode();
 }
 
-void CairoCanvas::AddEllipse(const GenericEllipseArcData &ed)
+WPGeomNode CairoCanvas::AddEllipse(const GenericEllipseArcData &ed)
 {
     auto model = Spam::GetModel();
     if (model)
@@ -485,8 +593,10 @@ void CairoCanvas::AddEllipse(const GenericEllipseArcData &ed)
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
             Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+            return cmd->GetGeom();
         }
     }
+    return WPGeomNode();
 }
 
 void CairoCanvas::DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, const SpamMany &mementos)
@@ -499,7 +609,7 @@ void CairoCanvas::DoEdit(const int toolId, const SPDrawableNodeVector &selEnts, 
     }
 }
 
-void CairoCanvas::AddPolygon(const PolygonData &pd)
+WPGeomNode CairoCanvas::AddPolygon(const PolygonData &pd)
 {
     auto model = Spam::GetModel();
     if (model)
@@ -512,11 +622,13 @@ void CairoCanvas::AddPolygon(const PolygonData &pd)
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
             Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+            return cmd->GetGeom();
         }
     }
+    return WPGeomNode();
 }
 
-void CairoCanvas::AddBeziergon(const BezierData &bd)
+WPGeomNode CairoCanvas::AddBeziergon(const BezierData &bd)
 {
     auto model = Spam::GetModel();
     if (model)
@@ -529,8 +641,10 @@ void CairoCanvas::AddBeziergon(const BezierData &bd)
             cmd->Do();
             SpamUndoRedo::AddCommand(cmd);
             Spam::SetStatus(StatusIconType::kSIT_NONE, cmd->GetDescription());
+            return cmd->GetGeom();
         }
     }
+    return WPGeomNode();
 }
 
 void CairoCanvas::DoTransform(const SPDrawableNodeVector &selEnts, const SpamMany &mementos)
@@ -1001,16 +1115,22 @@ void CairoCanvas::EraseFullArea()
 
     for (const auto &rgn : rgns_)
     {
-        cv::Rect bbox = rgn->BoundingBox();
-        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
-        iRect.unionWith(boundRect);
+        for (const auto &dRgn : rgn.second)
+        {
+            cv::Rect bbox = dRgn.cvRgn->BoundingBox();
+            Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+            iRect.unionWith(boundRect);
+        }
     }
 
     for (const auto &contr : contrs_)
     {
-        cv::Rect bbox = contr->BoundingBox();
-        Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
-        iRect.unionWith(boundRect);
+        for (const auto &dContr : contr.second)
+        {
+            cv::Rect bbox = dContr.cvContr->BoundingBox();
+            Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+            iRect.unionWith(boundRect);
+        }
     }
 
     rgns_.clear();
@@ -1100,10 +1220,26 @@ void CairoCanvas::OnPaint(wxPaintEvent& e)
 #elif _WIN32
         auto spCtx = std::make_shared<Cairo::Context>((cairo_t *)cairoCtx);
 #endif
+        std::vector<Geom::Rect> invalidRects;
+        wxRegionIterator upd(GetUpdateRegion());
+        while (upd)
+        {
+            int vX = upd.GetX();
+            int vY = upd.GetY();
+            int vW = upd.GetW();
+            int vH = upd.GetH();
+
+            wxRealPoint tl = ScreenToImage(wxPoint(vX, vY));
+            wxRealPoint br = ScreenToImage(wxPoint(vX + vW, vY + vH));
+            invalidRects.emplace_back(tl.x, tl.y, br.x, br.y);
+
+            upd++;
+        }
+
         RenderImage(spCtx);
-        RenderMarkers(spCtx);
-        RenderRegions(spCtx);
-        RenderContours(spCtx);
+        RenderMarkers(spCtx, invalidRects);
+        RenderRegions(spCtx, invalidRects);
+        RenderContours(spCtx, invalidRects);
         RenderEntities(spCtx);
         RenderPath(spCtx);
         RenderRubberBand(spCtx);
@@ -1327,7 +1463,7 @@ void CairoCanvas::RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const
     }
 }
 
-void CairoCanvas::RenderMarkers(Cairo::RefPtr<Cairo::Context> &cr) const
+void CairoCanvas::RenderMarkers(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const
 {
     auto model = Spam::GetModel();
     if (model)
@@ -1365,7 +1501,7 @@ void CairoCanvas::RenderMarkers(Cairo::RefPtr<Cairo::Context> &cr) const
     }
 }
 
-void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr) const
+void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const
 {
     auto model = Spam::GetModel();
     if (model)
@@ -1373,84 +1509,60 @@ void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr) const
         auto station = model->FindStationByUUID(stationUUID_);
         if (station)
         {
-            for (const cv::Ptr<cv::mvlab::Region> &rgn : rgns_)
+            Geom::Rect bbox;
+            cr->save();
+            cr->translate(anchorX_, anchorY_);
+            cr->scale(GetMatScale(), GetMatScale());
+            cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
+
+            for (const auto &rgnItem : rgns_)
             {
-                if (!rgn)
+                for (const DispRgn &dRgn : rgnItem.second)
                 {
-                    continue;
-                }
-
-                const cv::Ptr<cv::mvlab::Contour> outer = rgn->GetContour()->Simplify(1.f);
-                const cv::Ptr<cv::mvlab::Contour> inner = rgn->GetHole()->Simplify(1.f);
-
-                Geom::PathVector pv;
-                Geom::PathBuilder pb(pv);
-
-                if (outer)
-                {
-                    for (int cc = 0; cc < outer->CountCurves(); ++cc)
+                    if (!dRgn.cvRgn)
                     {
-                        std::vector<cv::Point2f> vertexes;
-                        outer->SelectPoints(cc, vertexes);
-                        if (vertexes.size() > 2)
+                        continue;
+                    }
+
+                    cr->set_line_width(dRgn.lineWidth);
+                    cr->set_source_rgba(dRgn.lineColor[0], dRgn.lineColor[1], dRgn.lineColor[2], dRgn.lineColor[3]);
+
+                    for (int cc = 0; cc < static_cast<int>(dRgn.curves.size()); ++cc)
+                    {
+                        bbox.setLeft(dRgn.bboxs[cc].x);
+                        bbox.setRight(dRgn.bboxs[cc].x + dRgn.bboxs[cc].width);
+                        bbox.setTop(dRgn.bboxs[cc].y);
+                        bbox.setBottom(dRgn.bboxs[cc].y + dRgn.bboxs[cc].height);
+                        if (IsRectNeedRefresh(bbox, invalidRects))
                         {
-                            pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
-                            for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                            const auto &curve = dRgn.curves[cc];
+                            if (curve.size() > 2)
                             {
-                                pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                                cr->move_to(curve.front().x + 0.5f, curve.front().y + 0.5f);
+                                for (int vv = 1; vv < static_cast<int>(curve.size()); ++vv)
+                                {
+                                    cr->line_to(curve[vv].x + 0.5f, curve[vv].y + 0.5f);
+                                }
+                                cr->close_path();
                             }
-                            pb.closePath();
                         }
                     }
-                }
 
-                if (inner)
-                {
-                    for (int cc = 0; cc < inner->CountCurves(); ++cc)
-                    {
-                        std::vector<cv::Point2f> vertexes;
-                        inner->SelectPoints(cc, vertexes);
-                        if (vertexes.size() > 2)
-                        {
-                            pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
-                            for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
-                            {
-                                pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
-                            }
-                            pb.closePath();
-                        }
+                    if (dRgn.drawMode) {
+                        cr->fill();
+                    }
+                    else {
+                        cr->stroke();
                     }
                 }
-
-                pv *= Geom::Translate(0.5, 0.5);
-                double ux = station->GetLineWidth(), uy = station->GetLineWidth();
-                cr->device_to_user_distance(ux, uy);
-                if (ux < uy) ux = uy;
-
-                cr->save();
-                cr->translate(anchorX_, anchorY_);
-                cr->scale(GetMatScale(), GetMatScale());
-                Geom::CairoPathSink cairoPathSink(cr->cobj());
-                wxColour c = station->GetColor();
-                cairoPathSink.feed(pv);
-                cr->set_line_width(ux);
-                cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
-                cr->set_source_rgba(c.Red() / 255.0, c.Green() / 255.0, c.Blue() / 255.0, c.Alpha() / 255.0);
-                if (std::string("fill") == station->GetDraw())
-                {
-                    cr->fill();
-                }
-                else
-                {
-                    cr->stroke();
-                }
-                cr->restore();
             }
+
+            cr->restore();
         }
     }
 }
 
-void CairoCanvas::RenderContours(Cairo::RefPtr<Cairo::Context> &cr) const
+void CairoCanvas::RenderContours(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const
 {
     auto model = Spam::GetModel();
     if (model)
@@ -1458,51 +1570,53 @@ void CairoCanvas::RenderContours(Cairo::RefPtr<Cairo::Context> &cr) const
         auto station = model->FindStationByUUID(stationUUID_);
         if (station)
         {
-            for (const cv::Ptr<cv::mvlab::Contour> &contr : contrs_)
+            Geom::Rect bbox;
+            cr->save();
+            cr->translate(anchorX_, anchorY_);
+            cr->scale(GetMatScale(), GetMatScale());
+            cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
+
+            for (const auto &contrItem : contrs_)
             {
-                if (!contr)
+                for (const DispContour &dContr : contrItem.second)
                 {
-                    continue;
-                }
-
-                Geom::PathVector pv;
-                Geom::PathBuilder pb(pv);
-
-                if (contr)
-                {
-                    for (int cc = 0; cc < contr->CountCurves(); ++cc)
+                    if (!dContr.cvContr || dContr.curves.size() != dContr.isClosed.size())
                     {
-                        std::vector<cv::Point2f> vertexes;
-                        contr->SelectPoints(cc, vertexes);
-                        if (vertexes.size() > 2)
+                        continue;
+                    }
+
+                    cr->set_line_width(dContr.lineWidth);
+                    cr->set_source_rgba(dContr.lineColor[0], dContr.lineColor[1], dContr.lineColor[2], dContr.lineColor[3]);
+
+                    for (int cc = 0; cc < static_cast<int>(dContr.curves.size()); ++cc)
+                    {
+                        bbox.setLeft(dContr.bboxs[cc].x);
+                        bbox.setRight(dContr.bboxs[cc].x + dContr.bboxs[cc].width);
+                        bbox.setTop(dContr.bboxs[cc].y);
+                        bbox.setBottom(dContr.bboxs[cc].y + dContr.bboxs[cc].height);
+                        if (IsRectNeedRefresh(bbox, invalidRects))
                         {
-                            pb.moveTo(Geom::Point(vertexes.front().x, vertexes.front().y));
-                            for (int vv = 1; vv < static_cast<int>(vertexes.size()); ++vv)
+                            const auto &curve = dContr.curves[cc];
+                            if (curve.size() > 2)
                             {
-                                pb.lineTo(Geom::Point(vertexes[vv].x, vertexes[vv].y));
+                                cr->move_to(curve.front().x + 0.5f, curve.front().y + 0.5f);
+                                for (int vv = 1; vv < static_cast<int>(curve.size()); ++vv)
+                                {
+                                    cr->line_to(curve[vv].x + 0.5f, curve[vv].y + 0.5f);
+                                }
+                                if (dContr.isClosed[cc])
+                                {
+                                    cr->close_path();
+                                }
                             }
-                            pb.closePath();
                         }
                     }
+
+                    cr->stroke();
                 }
-
-                pv *= Geom::Translate(0.5, 0.5);
-                double ux = station->GetLineWidth(), uy = station->GetLineWidth();
-                cr->device_to_user_distance(ux, uy);
-                if (ux < uy) ux = uy;
-
-                cr->save();
-                cr->translate(anchorX_, anchorY_);
-                cr->scale(GetMatScale(), GetMatScale());
-                Geom::CairoPathSink cairoPathSink(cr->cobj());
-                wxColour c = station->GetColor();
-                cairoPathSink.feed(pv);
-                cr->set_line_width(ux);
-                cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
-                cr->set_source_rgba(c.Red() / 255.0, c.Green() / 255.0, c.Blue() / 255.0, c.Alpha() / 255.0);
-                cr->stroke();
-                cr->restore();
             }
+
+            cr->restore();
         }
     }
 }
@@ -1635,6 +1749,19 @@ wxSize CairoCanvas::GetFitSize(const wxSize &sViewport, const wxSize &srcMatSize
     {
         return wxSize(srcMatSize.GetWidth()/fh, sViewport.GetHeight());
     }
+}
+
+bool CairoCanvas::IsRectNeedRefresh(const Geom::Rect &bbox, const std::vector<Geom::Rect> &invalidRects)
+{
+    for (const Geom::Rect &invalidRect : invalidRects)
+    {
+        if (invalidRect.intersects(bbox))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 wxDragResult DnDImageFile::OnDragOver(wxCoord x, wxCoord y, wxDragResult defResult)

@@ -406,6 +406,29 @@ void GenericEllipseArcNode::InitData(GenericEllipseArcData &data)
     data.type = GenericEllipseArcType::kAtSlice;
 }
 
+Geom::Point GenericEllipseArcNode::GetCenter() const
+{
+    Geom::Point pt0{ data_.points[0][0], data_.points[0][1] };
+    Geom::Point pt2{ data_.points[2][0], data_.points[2][1] };
+
+    return Geom::lerp(0.5, pt0, pt2);
+}
+
+void GenericEllipseArcNode::PyDoTransform(const Geom::Affine &aff)
+{
+    if (!aff.isIdentity())
+    {
+        for (int i = 0; i < static_cast<int>(data_.points.size()); ++i)
+        {
+            Geom::Point pt2{ data_.points[i][0], data_.points[i][1] };
+            pt2 *= aff;
+            data_.points[i][0] = pt2.x();
+            data_.points[i][1] = pt2.y();
+        }
+    }
+}
+
+
 void GenericEllipseArcNode::Save(const H5::Group &g) const
 {
     std::string utf8Title(title_.ToUTF8().data());

@@ -9,41 +9,88 @@ PyRect::PyRect()
 {
 }
 
-void PyRect::SetX(const double x_)
+void PyRect::SetX(const double x)
 {
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
+        if (spRect)
+        {
+            Geom::Point cPt = spRect->GetCenter();
+            PyRect::Translate(x-cPt.x(), 0.);
+        }
+    }
 }
 
-void PyRect::SetY(const double y_)
+void PyRect::SetY(const double y)
 {
-}
-
-void PyRect::SetWidth(const double w_)
-{
-    throw std::invalid_argument("Width must be positive");
-}
-
-void PyRect::SetHeight(const double h_)
-{
-    throw std::invalid_argument("Height must be positive");
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
+        if (spRect)
+        {
+            Geom::Point cPt = spRect->GetCenter();
+            PyRect::Translate(0., y - cPt.y());
+        }
+    }
 }
 
 double PyRect::GetX() const
 {
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
+        if (spRect)
+        {
+            Geom::Point cPt = spRect->GetCenter();
+            return cPt.x();
+        }
+    }
     return 0;
 }
 
 double PyRect::GetY() const
 {
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
+        Geom::Point cPt = spRect->GetCenter();
+        return cPt.y();
+    }
     return 0;
 }
 
 double PyRect::GetWidth() const
 {
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
+        Geom::Point cPt = spRect->GetCenter();
+        const auto &rd = spRect->GetData();
+        Geom::Point pt0{ rd.points[0][0], rd.points[0][1] };
+        Geom::Point pt1{ rd.points[1][0], rd.points[1][1] };
+        return Geom::distance(pt0, pt1);
+    }
     return 0;
 }
 
 double PyRect::GetHeight() const
 {
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spRect = std::dynamic_pointer_cast<RectNode>(spObj);
+        Geom::Point cPt = spRect->GetCenter();
+        const auto &rd = spRect->GetData();
+        Geom::Point pt1{ rd.points[1][0], rd.points[1][1] };
+        Geom::Point pt2{ rd.points[2][0], rd.points[2][1] };
+        return Geom::distance(pt1, pt2);
+    }
     return 0;
 }
 
@@ -64,7 +111,7 @@ std::string PyRect::toString() const
     }
     else
     {
-        return "Invalid object";
+        return "Invalid Rect object";
     }
 }
 
@@ -126,8 +173,8 @@ void PyExportRect(pybind11::module_ &m)
     auto c = pybind11::class_<PyRect, PyDrawable>(m, "Rect");
     c.def_property("x", &PyRect::GetX, &PyRect::SetX);
     c.def_property("y", &PyRect::GetY, &PyRect::SetY);
-    c.def_property("width", &PyRect::GetWidth, &PyRect::SetWidth);
-    c.def_property("height", &PyRect::GetHeight, &PyRect::SetHeight);
+    c.def_property_readonly("width", &PyRect::GetWidth);
+    c.def_property_readonly("height", &PyRect::GetHeight);
     c.def("Translate", &PyRect::Translate, "Translate this rectangle", pybind11::arg("delta_x"), pybind11::arg("delta_y"));
     c.def("Rotate", &PyRect::Rotate, "Rotate this rectangle", pybind11::arg("angle"), pybind11::arg("angle_as_degree")=true);
     c.def("__repr__", &PyRect::toString);

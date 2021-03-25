@@ -9,6 +9,9 @@ struct PyStation
 {
     std::string GetName() const;
     pybind11::object NewRect(const double center_x, const double center_y, const double width, const double height);
+    pybind11::object NewEllipse(const double center_x, const double center_y, const double width, const double height);
+    pybind11::object FindEntity(const std::string &name);
+    pybind11::object GetAllEntities();
     pybind11::object FuncTest(pybind11::args args, pybind11::kwargs kwargs);
     void DispObj(const cv::Ptr<cv::mvlab::Region> &obj);
     void DispObj(const cv::Ptr<cv::mvlab::Contour> &obj);
@@ -28,8 +31,8 @@ struct PyStation
     void SetDraw(const std::string &mode);
     pybind11::object GetDraw() const;
     void SetColor(const std::string &color);
-    void SetColor(const RGBTuple &color);
-    void SetColor(const RGBATuple &color);
+    void SetColor(const uint8_t red, const uint8_t green, const uint8_t blue);
+    void SetColor(const uint8_t red, const uint8_t green, const uint8_t blue, const uint8_t alpha);
     void SetColor(const std::vector<std::string> &colors);
     void SetColor(const std::vector<RGBTuple> &colors);
     void SetColor(const std::vector<RGBATuple> &colors);
