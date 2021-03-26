@@ -8,6 +8,10 @@ struct PyDrawable : public PyEntity
 {
     void SetColor(const RGBATuple &color);
     pybind11::object GetColor() const;
+    void SetFillColor(const RGBATuple &color);
+    pybind11::object GetFillColor() const;
+    void SetLineWidth(const double width);
+    pybind11::object GetLineWidth() const;
     std::string toString() const;
     virtual ~PyDrawable() = default;
 };

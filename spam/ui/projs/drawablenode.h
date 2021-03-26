@@ -73,6 +73,10 @@ public:
     void SetSelectionData(const SelectionData &selData);
     void SetColor(const wxColour &color) { drawStyle_.strokeColor_ = color; }
     wxColour GetColor() const { return drawStyle_.strokeColor_; }
+    void SetFillColor(const wxColour &color) { drawStyle_.fillColor_ = color; }
+    wxColour GetFillColor() const { return drawStyle_.fillColor_; }
+    void SetLineWidth(const double lineWidth) { drawStyle_.strokeWidth_ = lineWidth; }
+    double GetLineWidth() const { return drawStyle_.strokeWidth_; }
     const SelectionData &GetSelectionData() const { return selData_; }
     static HighlightData MapSelectionToHighlight(const SelectionData &sd);
     static bool IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr);
