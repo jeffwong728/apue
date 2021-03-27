@@ -31,7 +31,7 @@ public:
     bool IsLegalHit(const SpamEntityOperation entityOp) const override;
     bool IsContainer() const override { return false; }
     void BuildPath(Geom::PathVector &pv) const override;
-    void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const override;
+    void BuildNode(Geom::PathVector &pv, NodeIdVector &ids, const double sx, const double sy) const override;
     void BuildEdge(CurveVector &pth, NodeIdVector &ids) const override;
     void BuildHandle(Geom::PathVector &hpv) const override;
     SelectionData HitTest(const Geom::Point &pt) const override;
@@ -51,8 +51,8 @@ public:
     void SetData(const BezierData &data) { data_ = data; }
     const BezierData& GetData() const { return data_; }
     void Clear() { data_.points.clear(); data_.ntypes.clear(); data_.cvertices.clear(); }
-    void BuildTracingPath(Geom::PathVector &pv) const;
-    void BuildDragingPath(Geom::PathVector &pv) const;
+    void BuildTracingPath(Geom::PathVector &pv, const double sx, const double sy) const;
+    void BuildDragingPath(Geom::PathVector &pv, const double sx, const double sy) const;
     int GetNumCorners() const { return static_cast<int>(data_.points.size()); }
     int GetNumSubPaths() const { return data_.cvertices.empty() ? 1 : static_cast<int>(data_.cvertices.size()); }
     std::pair<int, int> GetSubPathInterval(const int iSubPath) const;

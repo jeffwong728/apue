@@ -35,6 +35,14 @@ void DrawableNode::RestoreColor()
     drawStyle_ = baseStyle_;
 }
 
+void DrawableNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
+{
+    for (auto &crvPath : pth)
+    {
+        crvPath->transform(Geom::Translate(0.5, 0.5));
+    }
+}
+
 void DrawableNode::BuildScaleHandle(const Geom::Point(&corners)[4], const double sx, const double sy, Geom::PathVector &hpv) const
 {
     if (selData_.ss == SelectionState::kSelScale)
@@ -206,7 +214,7 @@ SelectionData DrawableNode::HitTest(const Geom::Point &pt, const double sx, cons
         {
             Geom::PathVector npv;
             NodeIdVector nids;
-            BuildNode(npv, nids);
+            BuildNode(npv, nids, sx, sy);
 
             for (int n = 0; n < static_cast<int>(npv.size()); ++n)
             {
@@ -507,7 +515,7 @@ void DrawableNode::DrawHighlight(Cairo::RefPtr<Cairo::Context> &cr) const
         BuildHandle(hpv);
         DrawHighlightHandle(cr, hpv, HighlightState::kHlNone, sx, hx);
 
-        BuildNode(npv, nids);
+        BuildNode(npv, nids, sx, sy);
         DrawHighlightNode(cr, npv, nids, sx, hx);
 
         Geom::PathVector bpv;

@@ -95,19 +95,20 @@ void PolygonNode::BuildPath(Geom::PathVector &pv) const
     }
 }
 
-void PolygonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
+void PolygonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids, const double sx, const double sy) const
 {
     if (selData_.ss == SelectionState::kSelNodeEdit)
     {
         for (int c = 0; c<GetNumCorners(); ++c)
         {
             Geom::Point pt{ data_.points[c][0], data_.points[c][1] };
-            Geom::Point a = pt + Geom::Point(-3, -3);
-            Geom::Point b = pt + Geom::Point(3, 3);
+            Geom::Point a = pt + Geom::Point(-3*sx, -3*sx);
+            Geom::Point b = pt + Geom::Point(3*sx, 3*sx);
             pv.push_back(Geom::Path(Geom::Rect(a, b)));
             ids.push_back({ c, 0 });
         }
     }
+    pv *= Geom::Translate(0.5, 0.5);
 }
 
 void PolygonNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
@@ -124,6 +125,7 @@ void PolygonNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
             ids.push_back({ e, 0 });
         }
     }
+    DrawableNode::BuildEdge(pth, ids);
 }
 
 SelectionData PolygonNode::HitTest(const Geom::Point &pt) const

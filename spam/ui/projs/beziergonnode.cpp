@@ -190,7 +190,7 @@ void BeziergonNode::BuildPath(Geom::PathVector &pv) const
     BuildPathImpl(pv, true);
 }
 
-void BeziergonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
+void BeziergonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids, const double sx, const double sy) const
 {
     int numCurves = static_cast<int>(data_.points.size());
     if (selData_.ss == SelectionState::kSelNodeEdit && numCurves>1 && data_.points.size() == data_.ntypes.size())
@@ -210,18 +210,18 @@ void BeziergonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
             switch (static_cast<BezierNodeType>(data_.ntypes[n]))
             {
             case BezierNodeType::kBezierPrevCtrl:
-                pv.push_back(Geom::Path(Geom::Circle(Geom::Point(data_.points[n][2], data_.points[n][3]), 3)));
+                pv.push_back(Geom::Path(Geom::Circle(Geom::Point(data_.points[n][2], data_.points[n][3]), 3*sx)));
                 ids.push_back({ n, 1 });
                 break;
 
             case BezierNodeType::kBezierNextCtrl:
-                pv.push_back(Geom::Path(Geom::Circle(Geom::Point(data_.points[n][4], data_.points[n][5]), 3)));
+                pv.push_back(Geom::Path(Geom::Circle(Geom::Point(data_.points[n][4], data_.points[n][5]), 3*sx)));
                 ids.push_back({ n, 2 });
                 break;
 
             case BezierNodeType::kBezierBothCtrl:
-                pv.push_back(Geom::Path(Geom::Circle(Geom::Point(data_.points[n][2], data_.points[n][3]), 3)));
-                pv.push_back(Geom::Path(Geom::Circle(Geom::Point(data_.points[n][4], data_.points[n][5]), 3)));
+                pv.push_back(Geom::Path(Geom::Circle(Geom::Point(data_.points[n][2], data_.points[n][3]), 3*sx)));
+                pv.push_back(Geom::Path(Geom::Circle(Geom::Point(data_.points[n][4], data_.points[n][5]), 3*sx)));
                 ids.push_back({ n, 1 });
                 ids.push_back({ n, 2 });
                 break;
@@ -235,10 +235,11 @@ void BeziergonNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
         for (const auto &pt : data_.points)
         {
             Geom::Point nPt{ pt[0], pt[1] };
-            pv.push_back(Geom::Path(Geom::Rect(nPt + Geom::Point(-3, -3), nPt + Geom::Point(3, 3))));
+            pv.push_back(Geom::Path(Geom::Rect(nPt + Geom::Point(-3*sx, -3*sx), nPt + Geom::Point(3*sx, 3*sx))));
             ids.push_back({ nNext++, 0 });
         }
     }
+    pv *= Geom::Translate(0.5, 0.5);
 }
 
 void BeziergonNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
@@ -265,6 +266,7 @@ void BeziergonNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
             }
         }
     }
+    DrawableNode::BuildEdge(pth, ids);
 }
 
 void BeziergonNode::BuildHandle(Geom::PathVector &hpv) const
@@ -311,6 +313,8 @@ void BeziergonNode::BuildHandle(Geom::PathVector &hpv) const
             }
         }
     }
+
+    hpv *= Geom::Translate(0.5, 0.5);
 }
 
 SelectionData BeziergonNode::HitTest(const Geom::Point &pt) const
@@ -633,7 +637,7 @@ void BeziergonNode::InitData(BezierData &data)
     data.type = GenericEllipseArcType::kAtChord;
 }
 
-void BeziergonNode::BuildTracingPath(Geom::PathVector &pv) const
+void BeziergonNode::BuildTracingPath(Geom::PathVector &pv, const double sx, const double sy) const
 {
     BuildPathImpl(pv, false);
     if (data_.points.size()>1 && data_.ntypes.size()>1)
@@ -648,20 +652,20 @@ void BeziergonNode::BuildTracingPath(Geom::PathVector &pv) const
         {
         case BezierNodeType::kBezierPrevCtrl:
             pth.append(Geom::LineSegment(selfPt, prevPt));
-            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3)));
+            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3*sx)));
             pv.push_back(pth);
             break;
 
         case BezierNodeType::kBezierNextCtrl:
             pth.append(Geom::LineSegment(selfPt, nextPt));
-            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3)));
+            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3*sx)));
             pv.push_back(pth);
             break;
 
         case BezierNodeType::kBezierBothCtrl:
             pth.append(Geom::LineSegment(prevPt, nextPt));
-            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3)));
-            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3)));
+            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3*sx)));
+            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3*sx)));
             pv.push_back(pth);
             break;
 
@@ -669,9 +673,10 @@ void BeziergonNode::BuildTracingPath(Geom::PathVector &pv) const
             break;
         }
     }
+    pv *= Geom::Translate(0.5, 0.5);
 }
 
-void BeziergonNode::BuildDragingPath(Geom::PathVector &pv) const
+void BeziergonNode::BuildDragingPath(Geom::PathVector &pv, const double sx, const double sy) const
 {
     BuildPathImpl(pv, false);
     if (!data_.points.empty() && !data_.ntypes.empty())
@@ -685,20 +690,20 @@ void BeziergonNode::BuildDragingPath(Geom::PathVector &pv) const
         {
         case BezierNodeType::kBezierPrevCtrl:
             pth.append(Geom::LineSegment(selfPt, prevPt));
-            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3)));
+            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3*sx)));
             pv.push_back(pth);
             break;
 
         case BezierNodeType::kBezierNextCtrl:
             pth.append(Geom::LineSegment(selfPt, nextPt));
-            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3)));
+            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3*sx)));
             pv.push_back(pth);
             break;
 
         case BezierNodeType::kBezierBothCtrl:
             pth.append(Geom::LineSegment(prevPt, nextPt));
-            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3)));
-            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3)));
+            pv.push_back(Geom::Path(Geom::Circle(prevPt, 3*sx)));
+            pv.push_back(Geom::Path(Geom::Circle(nextPt, 3*sx)));
             pv.push_back(pth);
             break;
 
@@ -706,6 +711,7 @@ void BeziergonNode::BuildDragingPath(Geom::PathVector &pv) const
             break;
         }
     }
+    pv *= Geom::Translate(0.5, 0.5);
 }
 
 std::pair<int, int> BeziergonNode::GetSubPathInterval(const int iSubPath) const

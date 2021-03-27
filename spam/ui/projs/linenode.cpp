@@ -58,7 +58,7 @@ void LineNode::BuildPath(Geom::PathVector &pv) const
     pb.flush();
 }
 
-void LineNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
+void LineNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids, const double sx, const double sy) const
 {
     if (selData_.ss == SelectionState::kSelNodeEdit)
     {
@@ -67,11 +67,13 @@ void LineNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
             Geom::Point(data_.points[1][0], data_.points[1][1])
         };
 
-        pv.push_back(Geom::Path(Geom::Circle(pts[0], 3)));
-        pv.push_back(Geom::Path(Geom::Circle(pts[1], 3)));
+        pv.push_back(Geom::Path(Geom::Circle(pts[0], 3*sx)));
+        pv.push_back(Geom::Path(Geom::Circle(pts[1], 3*sx)));
         ids.push_back({ 0, 0 });
         ids.push_back({ 1, 0 });
     }
+
+    pv *= Geom::Translate(0.5, 0.5);
 }
 
 void LineNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
@@ -86,6 +88,7 @@ void LineNode::BuildEdge(CurveVector &pth, NodeIdVector &ids) const
         pth.push_back(std::make_unique<Geom::LineSegment>(pts[0], pts[1]));
         ids.push_back({ 0, 0 });
     }
+    DrawableNode::BuildEdge(pth, ids);
 }
 
 SelectionData LineNode::HitTest(const Geom::Point &pt) const

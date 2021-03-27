@@ -118,7 +118,7 @@ void GenericEllipseArcNode::BuildPath(Geom::PathVector &pv) const
     }
 }
 
-void GenericEllipseArcNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
+void GenericEllipseArcNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids, const double sx, const double sy) const
 {
     if (selData_.ss == SelectionState::kSelNodeEdit)
     {
@@ -155,10 +155,10 @@ void GenericEllipseArcNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) c
             Geom::Point saPt = e.pointAt(Geom::rad_from_deg(data_.angles[0]))*raff;
             Geom::Point eaPt = e.pointAt(Geom::rad_from_deg(data_.angles[1]))*raff;
 
-            pv.push_back(Geom::Path(Geom::Rect(tPt + Geom::Point(-3, -3), tPt + Geom::Point(3, 3))));
-            pv.push_back(Geom::Path(Geom::Rect(lPt + Geom::Point(-3, -3), lPt + Geom::Point(3, 3))));
-            pv.push_back(Geom::Path(Geom::Circle(saPt, 3)));
-            pv.push_back(Geom::Path(Geom::Circle(eaPt, 3)));
+            pv.push_back(Geom::Path(Geom::Rect(tPt + Geom::Point(-3*sx, -3*sx), tPt + Geom::Point(3*sx, 3*sx))));
+            pv.push_back(Geom::Path(Geom::Rect(lPt + Geom::Point(-3*sx, -3*sx), lPt + Geom::Point(3*sx, 3*sx))));
+            pv.push_back(Geom::Path(Geom::Circle(saPt, 3*sx)));
+            pv.push_back(Geom::Path(Geom::Circle(eaPt, 3*sx)));
 
             ids.push_back({ 0, 0 });
             ids.push_back({ 0, 1 });
@@ -166,6 +166,7 @@ void GenericEllipseArcNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) c
             ids.push_back({ 1, 1 });
         }
     }
+    pv *= Geom::Translate(0.5, 0.5);
 }
 
 SelectionData GenericEllipseArcNode::HitTest(const Geom::Point &pt) const

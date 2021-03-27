@@ -12,6 +12,7 @@ struct PyStation
     pybind11::object NewEllipse(const double center_x, const double center_y, const double width, const double height);
     pybind11::object FindEntity(const std::string &name);
     pybind11::object GetAllEntities();
+    pybind11::object GetSelected();
     pybind11::object FuncTest(pybind11::args args, pybind11::kwargs kwargs);
     void DispObj(const cv::Ptr<cv::mvlab::Region> &obj);
     void DispObj(const cv::Ptr<cv::mvlab::Contour> &obj);

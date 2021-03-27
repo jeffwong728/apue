@@ -23,15 +23,16 @@ void BeziergonTool::OnTracing(const EvMouseMove &e)
     {
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
+        auto s = 1 / cav->GetMatScale();
 
         Geom::PathVector opv;
-        beziergon->BuildTracingPath(opv);
+        beziergon->BuildTracingPath(opv, s, s);
 
         beziergon->PopCorner();
         beziergon->AddCorner(freePt, freePt, freePt, BezierNodeType::kBezierNoneCtrl);
 
         Geom::PathVector pv;
-        beziergon->BuildTracingPath(pv);
+        beziergon->BuildTracingPath(pv, s, s);
 
         auto orect = opv.boundsFast();
         auto rect = pv.boundsFast();
@@ -52,9 +53,10 @@ void BeziergonTool::CompleteCreate(const wxMouseEvent &e)
 
         auto imgPt = cav->ScreenToImage(e.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
+        auto s = 1 / cav->GetMatScale();
 
         Geom::PathVector opv;
-        beziergon->BuildTracingPath(opv);
+        beziergon->BuildTracingPath(opv, s, s);
 
         beziergon->PopCorner();
         beziergon->AddCorner(freePt, freePt, freePt, BezierNodeType::kBezierNoneCtrl);
@@ -110,18 +112,19 @@ void BeziergonTool::OnStartDraging(const EvLMouseDown &e)
     {
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
+        auto s = 1 / cav->GetMatScale();
 
         Geom::Point corner, c0, c1;
         BezierNodeType t = beziergon->GetCorner(beziergon->GetNumCorners() - 1, corner, c0, c1);
         c0 = Geom::lerp(2, freePt, corner);
 
         Geom::PathVector opv;
-        beziergon->BuildTracingPath(opv);
+        beziergon->BuildTracingPath(opv, s, s);
 
         beziergon->ReplaceBackCorner(corner, c0, freePt, BezierNodeType::kBezierNoneCtrl);
 
         Geom::PathVector pv;
-        beziergon->BuildDragingPath(pv);
+        beziergon->BuildDragingPath(pv, s, s);
 
         auto orect = opv.boundsFast();
         auto rect = pv.boundsFast();
@@ -138,18 +141,19 @@ void BeziergonTool::OnDraging(const EvMouseMove &e)
     {
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
+        auto s = 1 / cav->GetMatScale();
 
         Geom::Point corner, c0, c1;
         beziergon->GetCorner(beziergon->GetNumCorners()-1, corner, c0, c1);
         c0 = Geom::lerp(2, freePt, corner);
 
         Geom::PathVector opv;
-        beziergon->BuildDragingPath(opv);
+        beziergon->BuildDragingPath(opv, s, s);
 
         beziergon->ReplaceBackCorner(corner, c0, freePt, BezierNodeType::kBezierBothCtrl);
 
         Geom::PathVector pv;
-        beziergon->BuildDragingPath(pv);
+        beziergon->BuildDragingPath(pv, s, s);
 
         auto orect = opv.boundsFast();
         auto rect = pv.boundsFast();
@@ -166,6 +170,7 @@ void BeziergonTool::OnEndDraging(const EvLMouseUp &e)
     {
         auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
         Geom::Point freePt(imgPt.x, imgPt.y);
+        auto s = 1 / cav->GetMatScale();
 
         Geom::Point corner, c0, c1;
         BezierNodeType t = beziergon->GetCorner(beziergon->GetNumCorners() - 1, corner, c0, c1);
@@ -177,13 +182,13 @@ void BeziergonTool::OnEndDraging(const EvLMouseUp &e)
         }
 
         Geom::PathVector opv;
-        beziergon->BuildDragingPath(opv);
+        beziergon->BuildDragingPath(opv, s, s);
 
         beziergon->ReplaceBackCorner(corner, c0, freePt, t);
         beziergon->AddCorner(freePt, c1, freePt, BezierNodeType::kBezierNoneCtrl);
 
         Geom::PathVector pv;
-        beziergon->BuildTracingPath(pv);
+        beziergon->BuildTracingPath(pv, s, s);
 
         auto orect = opv.boundsFast();
         auto rect = pv.boundsFast();

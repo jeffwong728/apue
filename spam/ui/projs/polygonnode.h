@@ -26,7 +26,7 @@ public:
     bool IsLegalHit(const SpamEntityOperation entityOp) const override;
     bool IsContainer() const override { return false; }
     void BuildPath(Geom::PathVector &pv) const override;
-    void BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const override;
+    void BuildNode(Geom::PathVector &pv, NodeIdVector &ids, const double sx, const double sy) const override;
     void BuildEdge(CurveVector &pth, NodeIdVector &ids) const override;
     SelectionData HitTest(const Geom::Point &pt) const override;
     SelectionData HitTest(const Geom::Point &pt, const double sx, const double sy) const override;

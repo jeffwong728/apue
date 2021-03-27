@@ -175,6 +175,44 @@ pybind11::object PyStation::GetAllEntities()
     return pybind11::none();
 }
 
+pybind11::object PyStation::GetSelected()
+{
+    SPStationNode spStation = wpPyStation.lock();
+    if (spStation)
+    {
+        pybind11::list objs;
+        for (const SPModelNode &spNode : spStation->GeSelected())
+        {
+            if (std::dynamic_pointer_cast<RectNode>(spNode))
+            {
+                PyRect pyObj;
+                pyObj.wpObj = spNode;
+                objs.append(pybind11::cast(pyObj));
+            }
+            else if (std::dynamic_pointer_cast<GenericEllipseArcNode>(spNode))
+            {
+                PyEllipse pyObj;
+                pyObj.wpObj = spNode;
+                objs.append(pybind11::cast(pyObj));
+            }
+            else if (std::dynamic_pointer_cast<DrawableNode>(spNode))
+            {
+                PyDrawable pyObj;
+                pyObj.wpObj = spNode;
+                objs.append(pybind11::cast(pyObj));
+            }
+            else
+            {
+                // do nothing now
+            }
+        }
+
+        return objs;
+    }
+
+    return pybind11::none();
+}
+
 pybind11::object PyStation::FuncTest(pybind11::args args, pybind11::kwargs kwargs)
 {
     const auto cArgs = pybind11::len(args);
@@ -816,6 +854,7 @@ void PyExportStation(pybind11::module_ &m)
     c.def("EraseAll", &PyStation::EraseFullArea, "Erase all displayables inside full station display area");
     c.def_property_readonly("name", &PyStation::GetName);
     c.def_property_readonly("entities", &PyStation::GetAllEntities);
+    c.def_property_readonly("selected", &PyStation::GetSelected);
     c.def_property("image", &PyStation::GetImage, &PyStation::SetImage);
 }
 

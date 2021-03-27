@@ -137,7 +137,7 @@ void RectNode::BuildPath(Geom::PathVector &pv) const
     }
 }
 
-void RectNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
+void RectNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids, const double sx, const double sy) const
 {
     if (selData_.ss == SelectionState::kSelNodeEdit)
     {
@@ -167,20 +167,21 @@ void RectNode::BuildNode(Geom::PathVector &pv, NodeIdVector &ids) const
             {
                 Geom::Point r0 = Geom::lerp(radi[c][0] / lens[c][0], pts[c], pts[indices[c][0]]);
                 Geom::Point r1 = Geom::lerp(radi[c][1] / lens[c][1], pts[c], pts[indices[c][1]]);
-                pv.push_back(Geom::Path(Geom::Circle(r0, 3)));
-                pv.push_back(Geom::Path(Geom::Circle(r1, 3)));
+                pv.push_back(Geom::Path(Geom::Circle(r0, 3*sx)));
+                pv.push_back(Geom::Path(Geom::Circle(r1, 3*sx)));
                 ids.push_back({ c, 1 });
                 ids.push_back({ c, 2 });
             }
             else
             {
-                Geom::Point a = pts[c] + Geom::Point(-3, -3);
-                Geom::Point b = pts[c] + Geom::Point(3, 3);
+                Geom::Point a = pts[c] + Geom::Point(-3*sx, -3*sx);
+                Geom::Point b = pts[c] + Geom::Point(3*sx, 3*sx);
                 pv.push_back(Geom::Path(Geom::Rect(a, b)));
                 ids.push_back({ c, 0 });
             }
         }
     }
+    pv *= Geom::Translate(0.5, 0.5);
 }
 
 SelectionData RectNode::HitTest(const Geom::Point &pt) const
