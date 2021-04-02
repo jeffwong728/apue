@@ -29,6 +29,15 @@ public:
     cv::Point3d SmallestCircle() const CV_OVERRIDE;
     double AreaHoles() const CV_OVERRIDE;
     double Contlength() const CV_OVERRIDE;
+    double Circularity() const CV_OVERRIDE;
+    double Compactness() const CV_OVERRIDE;
+    double Convexity() const CV_OVERRIDE;
+    cv::Scalar Diameter() const CV_OVERRIDE;
+    cv::Point3d EllipticAxis() const CV_OVERRIDE;
+    double Anisometry() const CV_OVERRIDE;
+    double Bulkiness() const CV_OVERRIDE;
+    double StructureFactor() const CV_OVERRIDE;
+    double Orientation() const CV_OVERRIDE;
     int Count() const CV_OVERRIDE;
     int CountRuns() const CV_OVERRIDE;
     int CountRows() const CV_OVERRIDE;
@@ -36,6 +45,7 @@ public:
     int CountHoles() const CV_OVERRIDE;
     // Access
     cv::Ptr<Region> SelectObj(const int index) const CV_OVERRIDE;
+    cv::Ptr<Region> SelectArea(const double minArea, const double maxArea) const CV_OVERRIDE;
     cv::Ptr<Contour> GetContour() const CV_OVERRIDE;
     cv::Ptr<Contour> GetHole() const CV_OVERRIDE;
     cv::Ptr<Contour> GetConvex() const CV_OVERRIDE;

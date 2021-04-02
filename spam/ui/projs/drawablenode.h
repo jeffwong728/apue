@@ -77,6 +77,7 @@ public:
     wxColour GetFillColor() const { return drawStyle_.fillColor_; }
     void SetLineWidth(const double lineWidth) { drawStyle_.strokeWidth_ = lineWidth; }
     double GetLineWidth() const { return drawStyle_.strokeWidth_; }
+    cv::Ptr<cv::mvlab::Region> ToRegion() const;
     const SelectionData &GetSelectionData() const { return selData_; }
     static HighlightData MapSelectionToHighlight(const SelectionData &sd);
     static bool IsHighlightChanged(const HighlightData &hdl, const HighlightData &hdr);

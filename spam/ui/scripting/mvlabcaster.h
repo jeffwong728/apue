@@ -57,17 +57,16 @@ public:
 template <>
 struct type_caster<cv::Ptr<cv::mvlab::Region>>
 {
+    struct pyopencv_Region
+    {
+        PyObject_HEAD
+        cv::Ptr<cv::mvlab::Region> v;
+    };
 public:
     PYBIND11_TYPE_CASTER(cv::Ptr<cv::mvlab::Region>, _("cv2.mvlab_Region"));
 
     bool load(handle src, bool)
     {
-        struct pyopencv_Region
-        {
-            PyObject_HEAD
-            cv::Ptr<cv::mvlab::Region> v;
-        };
-
         if (IsMvlabPyTypes(src, MvlabPyType::kMVPT_REGION))
         {
             PyObject *source = src.ptr();
@@ -78,8 +77,17 @@ public:
         return false;
     }
 
-    static handle cast(cv::Ptr<cv::mvlab::Contour> src, return_value_policy /* policy */, handle /* parent */) {
-        return pybind11::none();
+    static handle cast(cv::Ptr<cv::mvlab::Region> src, return_value_policy /* policy */, handle /* parent */)
+    {
+        pybind11::object mainModule = pybind11::module_::import("__main__");
+        pybind11::object mainNamespace = mainModule.attr("__dict__");
+        pybind11::eval<pybind11::eval_single_statement>("import mvlab", mainNamespace);
+
+        pybind11::object rgn = pybind11::eval<pybind11::eval_expr>("mvlab.Region_GenEmpty()", mainNamespace);
+        PyObject *source = rgn.ptr();
+        ((pyopencv_Region*)source)->v = src;
+
+        return rgn.release();
     }
 };
 

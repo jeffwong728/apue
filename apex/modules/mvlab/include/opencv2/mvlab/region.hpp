@@ -68,7 +68,17 @@ public:
     CV_WRAP virtual cv::Point3d SmallestCircle() const = 0;
     CV_WRAP virtual double AreaHoles() const = 0;
     CV_WRAP virtual double Contlength() const = 0;
+    CV_WRAP virtual double Circularity() const = 0;
+    CV_WRAP virtual double Compactness() const = 0;
+    CV_WRAP virtual double Convexity() const = 0;
+    CV_WRAP virtual cv::Scalar Diameter() const = 0;
+    CV_WRAP virtual cv::Point3d EllipticAxis() const = 0;
+    CV_WRAP virtual double Anisometry() const = 0;
+    CV_WRAP virtual double Bulkiness() const = 0;
+    CV_WRAP virtual double StructureFactor() const = 0;
+    CV_WRAP virtual double Orientation() const = 0;
     CV_WRAP virtual cv::Ptr<Region> SelectObj(const int index) const = 0;
+    CV_WRAP virtual cv::Ptr<Region> SelectArea(const double minArea, const double maxArea) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetContour() const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetHole() const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetConvex() const = 0;

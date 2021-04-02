@@ -25,12 +25,16 @@ struct ProbeTool : boost::statechart::simple_state<ProbeTool, Spamer, ProbeIdle>
 
     void OnOptionChanged(const EvToolOption &e);
     void OnImageClicked(const EvImageClicked &e);
+    void OnRegionClicked(const EvRegionClicked &e);
+    void OnContourClicked(const EvContourClicked &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, ProbeTool>,
         boost::statechart::transition<EvToolQuit, NoTool>,
         boost::statechart::in_state_reaction<EvAppQuit,        BoxToolT,  &BoxToolT::QuitApp>,
         boost::statechart::in_state_reaction<EvImageClicked,   ProbeTool, &ProbeTool::OnImageClicked>,
+        boost::statechart::in_state_reaction<EvRegionClicked,  ProbeTool, &ProbeTool::OnRegionClicked>,
+        boost::statechart::in_state_reaction<EvContourClicked, ProbeTool, &ProbeTool::OnContourClicked>,
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT,  &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT,  &BoxToolT::SelectDrawable>> reactions;
 

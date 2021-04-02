@@ -239,6 +239,85 @@ double RegionImpl::Contlength() const
     return *cont_length_;
 }
 
+double RegionImpl::Circularity() const
+{
+    if (boost::none == circularity_)
+    {
+        const double F = RegionImpl::Area();
+        const double maxSqrRadius = MaxSqrRadius();
+        if (maxSqrRadius > G_D_TOL)
+        {
+            const double CS = F / (maxSqrRadius*M_PI);
+            circularity_ = std::min(1., CS);
+        }
+        else
+        {
+            circularity_ = 0.;
+        }
+    }
+
+    return *circularity_;
+}
+
+double RegionImpl::Compactness() const
+{
+    const double L = RegionImpl::Contlength();
+    const double F = RegionImpl::Area();
+    if (F > G_D_TOL)
+    {
+        const double CS = (L*L) / (4 * F*M_PI);
+        return std::max(1., CS);
+    }
+    else
+    {
+        return std::numeric_limits<double>::max();
+    }
+}
+
+double RegionImpl::Convexity() const
+{
+    const double FC = RegionImpl::GetConvex()->Area();
+    const double FO = RegionImpl::Area();
+    if (FC > G_D_TOL)
+    {
+        return FO/FC;
+    }
+    else
+    {
+        return 0.;
+    }
+}
+
+cv::Scalar RegionImpl::Diameter() const
+{
+    return RegionImpl::GetConvex()->Diameter();
+}
+
+cv::Point3d RegionImpl::EllipticAxis() const
+{
+    return RegionImpl::GetContour()->EllipticAxis();
+}
+
+double RegionImpl::Anisometry() const
+{
+    return RegionImpl::GetContour()->Anisometry();
+}
+
+double RegionImpl::Bulkiness() const
+{
+    return RegionImpl::GetContour()->Bulkiness();
+}
+
+double RegionImpl::StructureFactor() const
+{
+    return RegionImpl::GetContour()->StructureFactor();
+}
+
+double RegionImpl::Orientation() const
+{
+    return RegionImpl::GetContour()->EllipticAxis().z;
+}
+
 int RegionImpl::Count() const
 {
     return 1;
@@ -264,17 +343,42 @@ int RegionImpl::CountRows() const
 
 int RegionImpl::CountConnect() const
 {
-    return RegionImpl::GetContour()->Count();
+    return RegionImpl::GetContour()->CountCurves();
 }
 
 int RegionImpl::CountHoles() const
 {
-    return RegionImpl::GetHole()->Count();
+    return RegionImpl::GetHole()->CountCurves();
 }
 
 cv::Ptr<Region> RegionImpl::SelectObj(const int index) const
 {
     if (0 == index)
+    {
+        return (cv::Ptr<RegionImpl>)const_cast<RegionImpl *>(this)->shared_from_this();
+    }
+    else
+    {
+        return cv::Ptr<RegionImpl>();
+    }
+}
+
+cv::Ptr<Region> RegionImpl::SelectArea(const double minArea, const double maxArea) const
+{
+    double minA = minArea;
+    double maxA = maxArea;
+    if (minA < 0.)
+    {
+        minA = std::numeric_limits<double>::min();
+    }
+
+    if (maxA < 0.)
+    {
+        maxA = std::numeric_limits<double>::max();
+    }
+
+    const double A = RegionImpl::Area();
+    if (A <= maxA && A >= minA)
     {
         return (cv::Ptr<RegionImpl>)const_cast<RegionImpl *>(this)->shared_from_this();
     }
@@ -1179,6 +1283,33 @@ void RegionImpl::GatherBasicFeatures() const
         bbox_.emplace(0, 0, 0, 0);
         centroid_.emplace(0, 0);
     }
+}
+
+double RegionImpl::MaxSqrRadius() const
+{
+    if (boost::none == max_radius_)
+    {
+        cv::Point2d cPt = Centroid();
+        double maxRadius = 0.;
+        for (const auto &run : rgn_runs_)
+        {
+            cv::Point2d sPt( run.colb, run.row );
+            cv::Point2d ePt( run.cole - 1, run.row );
+            const double sRad = cPt.ddot(sPt);
+            const double eRad = cPt.ddot(ePt);
+            if (sRad > maxRadius)
+            {
+                maxRadius = sRad;
+            }
+            if (eRad > maxRadius)
+            {
+                maxRadius = eRad;
+            }
+        }
+        max_radius_ = maxRadius;
+    }
+
+    return *max_radius_;
 }
 
 void RegionImpl::GetContourInfo(const cv::Ptr<Contour> &contour, int &numEdges, int &maxNumPoints) const

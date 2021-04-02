@@ -325,6 +325,51 @@ double RegionArrayImpl::Contlength() const
     return scl.len_sum;
 }
 
+double RegionArrayImpl::Circularity() const
+{
+    return 0.;
+}
+
+double RegionArrayImpl::Compactness() const
+{
+    return std::numeric_limits<double>::max();
+}
+
+double RegionArrayImpl::Convexity() const
+{
+    return 0.;
+}
+
+cv::Scalar RegionArrayImpl::Diameter() const
+{
+    return cv::Scalar();
+}
+
+cv::Point3d RegionArrayImpl::EllipticAxis() const
+{
+    return cv::Point3d();
+}
+
+double RegionArrayImpl::Anisometry() const
+{
+    return 0.;
+}
+
+double RegionArrayImpl::Bulkiness() const
+{
+    return 0.;
+}
+
+double RegionArrayImpl::StructureFactor() const
+{
+    return 0.;
+}
+
+double RegionArrayImpl::Orientation() const
+{
+    return 0.;
+}
+
 int RegionArrayImpl::Count() const
 {
     return static_cast<int>(rgns_.size());
@@ -390,6 +435,33 @@ cv::Ptr<Region> RegionArrayImpl::SelectObj(const int index) const
     {
         return cv::Ptr<RegionImpl>();
     }
+}
+
+cv::Ptr<Region> RegionArrayImpl::SelectArea(const double minArea, const double maxArea) const
+{
+    double minA = minArea;
+    double maxA = maxArea;
+    if (minA < 0.)
+    {
+        minA = std::numeric_limits<double>::min();
+    }
+
+    if (maxA < 0.)
+    {
+        maxA = std::numeric_limits<double>::max();
+    }
+
+    std::vector<cv::Ptr<Region>> selRgns;
+    for (const auto &rgn : rgns_)
+    {
+        const double A = rgn->Area();
+        if (A <= maxA && A >= minA)
+        {
+            selRgns.push_back(rgn);
+        }
+    }
+
+    return makePtr<RegionArrayImpl>(&selRgns);
 }
 
 cv::Ptr<Contour> RegionArrayImpl::GetContour() const

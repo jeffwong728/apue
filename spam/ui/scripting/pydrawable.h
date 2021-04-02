@@ -12,6 +12,7 @@ struct PyDrawable : public PyEntity
     pybind11::object GetFillColor() const;
     void SetLineWidth(const double width);
     pybind11::object GetLineWidth() const;
+    pybind11::object ToRegion() const;
     std::string toString() const;
     virtual ~PyDrawable() = default;
 };

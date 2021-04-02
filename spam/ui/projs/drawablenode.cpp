@@ -594,6 +594,36 @@ void DrawableNode::SetSelectionData(const SelectionData &selData)
     selData_ = selData;
 }
 
+cv::Ptr<cv::mvlab::Region> DrawableNode::ToRegion() const
+{
+    Geom::PathVector paths;
+    BuildPath(paths);
+
+    Geom::OptRect opRect = paths.boundsFast();
+    if (opRect && opRect->area() > 0.)
+    {
+        int x = cvFloor(opRect->left());
+        int y = cvFloor(opRect->top());
+        int w = cvCeil(opRect->right()) - x + 1;
+        int h = cvCeil(opRect->bottom()) - y + 1;
+        int step = Cairo::ImageSurface::format_stride_for_width(Cairo::Format::FORMAT_A8, w);
+        std::vector<uchar> imgData(h*step, 0);
+        cv::Mat mask(h, w, CV_8UC1, imgData.data(), step);
+        auto imgSurf = Cairo::ImageSurface::create(mask.data, Cairo::Format::FORMAT_A8, mask.cols, mask.rows, static_cast<int>(mask.step1()));
+        auto cr = Cairo::Context::create(imgSurf);
+        Geom::CairoPathSink cairoPathSink(cr->cobj());
+        cr->translate(0.5-x, 0.5-y);
+        cairoPathSink.feed(paths);
+        cr->set_source_rgba(1.0, 1.0, 1.0, 1.0);
+        cr->fill();
+
+        cv::Ptr<cv::mvlab::Region> rgn = cv::mvlab::Threshold(mask, 200, 255);
+        return rgn->Move(cv::Point(x, y));
+    }
+
+    return nullptr;
+}
+
 HighlightData DrawableNode::MapSelectionToHighlight(const SelectionData &sd)
 {
     HighlightState hss[] = 

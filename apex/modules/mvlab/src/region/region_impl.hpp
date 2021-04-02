@@ -104,6 +104,15 @@ public:
     cv::Point3d SmallestCircle() const CV_OVERRIDE;
     double AreaHoles() const CV_OVERRIDE;
     double Contlength() const CV_OVERRIDE;
+    double Circularity() const CV_OVERRIDE;
+    double Compactness() const CV_OVERRIDE;
+    double Convexity()  const CV_OVERRIDE;
+    cv::Scalar Diameter() const CV_OVERRIDE;
+    cv::Point3d EllipticAxis() const CV_OVERRIDE;
+    double Anisometry() const CV_OVERRIDE;
+    double Bulkiness() const CV_OVERRIDE;
+    double StructureFactor() const CV_OVERRIDE;
+    double Orientation() const CV_OVERRIDE;
     int Count() const CV_OVERRIDE;
     int CountRuns() const CV_OVERRIDE;
     int CountRows() const CV_OVERRIDE;
@@ -111,6 +120,7 @@ public:
     int CountHoles() const CV_OVERRIDE;
     // Access
     cv::Ptr<Region> SelectObj(const int index) const CV_OVERRIDE;
+    cv::Ptr<Region> SelectArea(const double minArea, const double maxArea) const CV_OVERRIDE;
     cv::Ptr<Contour> GetContour() const CV_OVERRIDE;
     cv::Ptr<Contour> GetHole() const CV_OVERRIDE;
     cv::Ptr<Contour> GetConvex() const CV_OVERRIDE;
@@ -159,6 +169,7 @@ private:
     void DrawVerifiedGray(Mat &img, const Scalar& fillColor) const;
     void TraceContour() const;
     void GatherBasicFeatures() const;
+    double MaxSqrRadius() const;
     void GetContourInfo(const cv::Ptr<Contour> &contour, int &numEdges, int &maxNumPoints) const;
     void ZoomContourToEdges(const cv::Ptr<Contour> &contour, const cv::Size2f &scale, UScalablePointSequence &v, UScalablePolyEdgeSequence::pointer &pEdge) const;
     void AffineContourToEdges(const cv::Ptr<Contour> &contour, const cv::Matx33d &m, UScalablePointSequence &v, UScalablePolyEdgeSequence::pointer &pEdge) const;
@@ -192,6 +203,8 @@ private:
     mutable boost::optional<double>      area_;
     mutable boost::optional<double>      hole_area_;
     mutable boost::optional<double>      cont_length_;
+    mutable boost::optional<double>      max_radius_;
+    mutable boost::optional<double>      circularity_;
     mutable boost::optional<cv::Point2d> centroid_;
     mutable boost::optional<cv::Rect>    bbox_;
     mutable boost::optional<cv::Point3d> min_circle_;

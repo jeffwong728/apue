@@ -328,7 +328,7 @@ void CairoCanvas::DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
                     {
                         dRgn.curves.emplace_back();
                         dRgn.bboxs.emplace_back();
-                        outer->SelectPoints(c, dRgn.curves.back());
+                        inner->SelectPoints(c, dRgn.curves.back());
                         dRgn.bboxs.back() = cv::mvlab::BoundingBox(dRgn.curves.back());
                     }
 
@@ -812,6 +812,28 @@ SPDrawableNode CairoCanvas::FindDrawable(const Geom::Point &pt, const double sx,
     return SPDrawableNode();
 }
 
+cv::Ptr<cv::mvlab::Region> CairoCanvas::FindRegion(const Geom::Point &pt)
+{
+    cv::Point point{cvRound(pt.x()), cvRound(pt.y())};
+    for (const auto &rgnsItem : rgns_)
+    {
+        for (const auto &rgnItem : rgnsItem.second)
+        {
+            if (rgnItem.cvRgn->TestPoint(point))
+            {
+                return rgnItem.cvRgn;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+cv::Ptr<cv::mvlab::Contour> CairoCanvas::FindContour(const Geom::Point &pt)
+{
+    return nullptr;
+}
+
 void CairoCanvas::SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents)
 {
     SPStationNode sn = GetStation();
@@ -967,6 +989,106 @@ void CairoCanvas::PopupImageInfomation(const wxPoint &pos)
         info->Position(ClientToScreen(pos), wxSize(0, 5));
         info->Popup(this);
     }
+}
+
+void CairoCanvas::ClearSelectRegions()
+{
+    for (auto &rgnsItem : rgns_)
+    {
+        for (auto &rgnItem : rgnsItem.second)
+        {
+            if (rgnItem.selected)
+            {
+                rgnItem.selected = false;
+                cv::Rect bbox = rgnItem.cvRgn->BoundingBox();
+                Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+                if (boundRect && boundRect->area() > 0.)
+                {
+                    wxRect invalidRect = ImageToScreen(boundRect);
+                    invalidRect.Inflate(cvRound(rgnItem.lineWidth), cvRound(rgnItem.lineWidth));
+                    Refresh(false, &invalidRect);
+                }
+            }
+        }
+    }
+}
+
+void CairoCanvas::ClearSelectContours()
+{
+    for (auto &contrsItem : contrs_)
+    {
+        for (auto &contrItem : contrsItem.second)
+        {
+            if (contrItem.selected)
+            {
+                contrItem.selected = false;
+                cv::Rect bbox = contrItem.cvContr->BoundingBox();
+                Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+                if (boundRect && boundRect->area() > 0.)
+                {
+                    wxRect invalidRect = ImageToScreen(boundRect);
+                    invalidRect.Inflate(cvRound(contrItem.lineWidth), cvRound(contrItem.lineWidth));
+                    Refresh(false, &invalidRect);
+                }
+            }
+        }
+    }
+}
+
+void CairoCanvas::PopupRegionInfomation(const wxPoint &pos, const cv::Ptr<cv::mvlab::Region> &rgn)
+{
+    for (auto &rgnsItem : rgns_)
+    {
+        for (auto &rgnItem : rgnsItem.second)
+        {
+            if (rgnItem.selected)
+            {
+                rgnItem.selected = false;
+                cv::Rect bbox = rgnItem.cvRgn->BoundingBox();
+                Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+                if (boundRect && boundRect->area() > 0.)
+                {
+                    wxRect invalidRect = ImageToScreen(boundRect);
+                    invalidRect.Inflate(cvRound(rgnItem.lineWidth), cvRound(rgnItem.lineWidth));
+                    Refresh(false, &invalidRect);
+                }
+            }
+            else
+            {
+                if (rgn == rgnItem.cvRgn)
+                {
+                    rgnItem.selected = true;
+                    cv::Rect bbox = rgnItem.cvRgn->BoundingBox();
+                    Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
+                    if (boundRect && boundRect->area() > 0.)
+                    {
+                        wxRect invalidRect = ImageToScreen(boundRect);
+                        invalidRect.Inflate(cvRound(rgnItem.lineWidth), cvRound(rgnItem.lineWidth));
+                        Refresh(false, &invalidRect);
+                    }
+                }
+            }
+        }
+    }
+
+    std::vector<wxString> messages;
+    messages.push_back(wxString::Format(wxT("<b>Area:</b> %.1f"), rgn->Area()));
+    messages.push_back(wxString::Format(wxT("<b>Contour Length:</b> %.1f"), rgn->Contlength()));
+    messages.push_back(wxString::Format(wxT("<b>Hole Area:</b> %.1f"), rgn->AreaHoles()));
+    messages.push_back(wxString::Format(wxT("<b>Circularity:</b> %.3f"), rgn->Circularity()));
+    messages.push_back(wxString::Format(wxT("<b>Compactness:</b> %.3f"), rgn->Compactness()));
+    messages.push_back(wxString::Format(wxT("<b>Convexity:</b> %.3f"), rgn->Convexity()));
+    messages.push_back(wxString::Format(wxT("<b>Connected Component:</b> %d"), rgn->CountConnect()));
+    messages.push_back(wxString::Format(wxT("<b>Hole Number:</b> %d"), rgn->CountHoles()));
+    messages.push_back(wxString::Format(wxT("<b>Orientation:</b> %.3f"), rgn->Orientation()));
+
+    InformationTip *info = new InformationTip(this, messages, wxBitmap());
+    info->Position(ClientToScreen(pos), wxSize(0, 5));
+    info->Popup(this);
+}
+
+void CairoCanvas::PopupContourInfomation(const wxPoint &pos, const cv::Ptr<cv::mvlab::Contour> &contr)
+{
 }
 
 void CairoCanvas::PushImageIntoBufferZone(const std::string &name)
@@ -1548,11 +1670,34 @@ void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr, const std::ve
                         }
                     }
 
-                    if (dRgn.drawMode) {
-                        cr->fill();
+                    if (dRgn.drawMode)
+                    {
+                        cr->fill_preserve();
+                        if (dRgn.selected)
+                        {
+                            double offset = 0.;
+                            std::vector<double> dashes;
+                            cr->get_dash(dashes, offset);
+                            cr->set_dash(std::vector<double>(2, 3 * GetMatScale()), 0);
+                            cr->stroke();
+                            cr->set_dash(dashes, offset);
+                        }
                     }
-                    else {
-                        cr->stroke();
+                    else
+                    {
+                        if (dRgn.selected)
+                        {
+                            double offset = 0.;
+                            std::vector<double> dashes;
+                            cr->get_dash(dashes, offset);
+                            cr->set_dash(std::vector<double>(2, 3 * GetMatScale()), 0);
+                            cr->stroke();
+                            cr->set_dash(dashes, offset);
+                        }
+                        else
+                        {
+                            cr->stroke();
+                        }
                     }
                 }
             }

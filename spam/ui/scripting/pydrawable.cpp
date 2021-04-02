@@ -106,6 +106,21 @@ pybind11::object PyDrawable::GetLineWidth() const
     return pybind11::none();
 }
 
+pybind11::object PyDrawable::ToRegion() const
+{
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        SPDrawableNode spDrawable = std::dynamic_pointer_cast<DrawableNode>(spObj);
+        cv::Ptr<cv::mvlab::Region> rgn = spDrawable->ToRegion();
+        if (rgn)
+        {
+            return pybind11::cast(rgn);
+        }
+    }
+    return pybind11::none();
+}
+
 std::string PyDrawable::toString() const
 {
     return std::string("Drawable object");
@@ -120,6 +135,7 @@ void PyExportDrawable(pybind11::module_ &m)
     c.def("SetFillColor", &PyDrawable::GetFillColor, "Get the current drawable fill color");
     c.def("SetLineWidth", &PyDrawable::SetLineWidth, "Set drawable stroke line width in pixel unit", pybind11::arg("width"));
     c.def("GetLineWidth", &PyDrawable::GetLineWidth, "Get drawable stroke line width in pixel unit");
+    c.def("ToRegion", &PyDrawable::ToRegion, "Convert this drawable object to mvlab region object");
     c.def_property("color", &PyDrawable::GetColor, &PyDrawable::SetColor);
     c.def_property("fillcolor", &PyDrawable::GetFillColor, &PyDrawable::SetFillColor);
     c.def_property("linewidth", &PyDrawable::GetLineWidth, &PyDrawable::SetLineWidth);

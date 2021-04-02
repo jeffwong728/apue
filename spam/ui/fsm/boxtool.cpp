@@ -103,7 +103,23 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
                 }
                 else
                 {
-                    FireClickImage(e.evData);
+                    cv::Ptr<cv::mvlab::Region> rgn = cav->FindRegion(freePt);
+                    if (rgn)
+                    {
+                        FireClickRegion(e.evData, rgn);
+                    }
+                    else
+                    {
+                        cv::Ptr<cv::mvlab::Contour> contr = cav->FindContour(freePt);
+                        if (contr)
+                        {
+                            FireClickContour(e.evData, contr);
+                        }
+                        else
+                        {
+                            FireClickImage(e.evData);
+                        }
+                    }
                 }
             }
             else
@@ -296,6 +312,9 @@ void BoxToolImpl::ResetTool()
 
                 FireDeselectEntity(selEnts.second.ents);
                 Spam::InvalidateCanvasRect(uuid, refreshRect);
+
+                cav->ClearSelectRegions();
+                cav->ClearSelectContours();
             }
         }
 

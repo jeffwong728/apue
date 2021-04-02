@@ -2,6 +2,7 @@
 #define SPAM_UI_FSM_EVENTS_H
 #include <wx/event.h>
 #include <boost/statechart/event.hpp>
+#include <opencv2/mvlab.hpp>
 #include <ui/cmndef.h>
 #include <ui/projs/modelfwd.h>
 #pragma warning( push )
@@ -103,6 +104,20 @@ struct EvImageClicked : boost::statechart::event<EvImageClicked>
 {
     EvImageClicked(const wxMouseEvent &e) : evData(e) {}
     wxMouseEvent evData;
+};
+
+struct EvRegionClicked : boost::statechart::event<EvRegionClicked>
+{
+    EvRegionClicked(const wxMouseEvent &e, const cv::Ptr<cv::mvlab::Region> &rgn) : evData(e), cvRgn(rgn) {}
+    wxMouseEvent evData;
+    cv::Ptr<cv::mvlab::Region> cvRgn;
+};
+
+struct EvContourClicked : boost::statechart::event<EvContourClicked>
+{
+    EvContourClicked(const wxMouseEvent &e, const cv::Ptr<cv::mvlab::Contour> &contr) : evData(e), cvContr(contr) {}
+    wxMouseEvent evData;
+    cv::Ptr<cv::mvlab::Contour> cvContr;
 };
 
 struct EvBoxingEnded : boost::statechart::event<EvBoxingEnded>

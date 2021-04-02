@@ -63,6 +63,7 @@ public:
         int lineStyle;
         int drawMode;
         double lineWidth;
+        bool selected = false;
         bool operator==(const cv::Ptr<cv::mvlab::Region> &rgn) const { return cvRgn == rgn; }
     };
 
@@ -77,6 +78,7 @@ public:
         int drawMode;
         std::array<double, 4> lineColor;
         std::array<double, 4> fillColor;
+        bool selected = false;
         bool operator==(const cv::Ptr<cv::mvlab::Contour> &contr) const { return cvContr == contr; }
     };
 
@@ -127,6 +129,8 @@ public:
     SPStationNode GetStation() const;
     SPDrawableNode FindDrawable(const Geom::Point &pt);
     SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
+    cv::Ptr<cv::mvlab::Region> FindRegion(const Geom::Point &pt);
+    cv::Ptr<cv::mvlab::Contour> FindContour(const Geom::Point &pt);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);
     std::string GetUUID() const { return stationUUID_.ToStdString(); }
     void ModifyDrawable(const SPDrawableNode &ent, const Geom::Point &pt, const SelectionData &sd, const int editMode);
@@ -136,6 +140,10 @@ public:
     void StopInstructionTip();
     void ShowPixelValue(const wxPoint &pos);
     void PopupImageInfomation(const wxPoint &pos);
+    void ClearSelectRegions();
+    void ClearSelectContours();
+    void PopupRegionInfomation(const wxPoint &pos, const cv::Ptr<cv::mvlab::Region> &rgn);
+    void PopupContourInfomation(const wxPoint &pos, const cv::Ptr<cv::mvlab::Contour> &contr);
     void PushImageIntoBufferZone(const std::string &name);
     void PushRegionsIntoBufferZone(const std::string &name, const cv::Ptr<cv::mvlab::Region> &rgns);
     void ClearVisiableRegions() { rgnsVisiable_.clear(); }
