@@ -12,16 +12,19 @@ ProbeBox::ProbeBox(wxWindow* parent)
 {
     wxWindowID toolIds[] = {
         kSpamID_TOOLBOX_PROBE_SELECT,
+        kSpamID_TOOLBOX_PROBE_REGION,
         kSpamID_TOOLBOX_PROBE_HISTOGRAM
     };
 
     wxString   toolTips[] = {
         wxT("Select entities to show infomation"),
+        wxT("Select regions to show infomation"),
         wxT("Select entities to show histogram")
     };
 
     const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
     wxBitmap toolIcons[] = {
+        Spam::GetBitmap(ip, bm_Pointer),
         Spam::GetBitmap(ip, bm_Pointer),
         Spam::GetBitmap(ip, bm_NodeEdit)
     };
@@ -85,7 +88,7 @@ void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
 wxPanel *ProbeBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 {
     constexpr int numTools = kSpamID_TOOLBOX_PROBE_GUARD - kSpamID_TOOLBOX_PROBE_SELECT;
-    wxPanel *(ProbeBox::*createOption[numTools])(wxWindow *parent) = { &ProbeBox::CreateSelectOption, &ProbeBox::CreateHistOption };
+    wxPanel *(ProbeBox::*createOption[numTools])(wxWindow *parent) = { &ProbeBox::CreateSelectOption, &ProbeBox::CreateRegionOption, &ProbeBox::CreateHistOption };
 
     if (createOption[toolIndex])
     {
@@ -99,6 +102,7 @@ ToolOptions ProbeBox::GetToolOptions() const
 {
     ToolOptions tos;
     tos[cp_ToolProbeMode] = probeMode_;
+    tos[cp_ToolProbeRegionMask] = 0;
     return tos;
 }
 
@@ -112,6 +116,13 @@ void ProbeBox::OnProbeMode(wxCommandEvent &cmd)
     sig_OptionsChanged(tos);
 }
 
+void ProbeBox::OnProbeRegion(wxCommandEvent &cmd)
+{
+    ToolOptions tos = ProbeBox::GetToolOptions();
+    tos[cp_ToolId] = kSpamID_TOOLBOX_PROBE_REGION;
+    sig_OptionsChanged(tos);
+}
+
 void ProbeBox::OnToolEnter(const ToolOptions &toolOpts)
 {
     const int toolId = boost::get<int>(toolOpts.at(cp_ToolId));
@@ -119,6 +130,12 @@ void ProbeBox::OnToolEnter(const ToolOptions &toolOpts)
     {
     case kSpamID_TOOLBOX_PROBE_SELECT:
         UpdateSelectionFilter();
+        break;
+
+    case kSpamID_TOOLBOX_PROBE_REGION:
+        Spam::GetSelectionFilter()->ReplacePassType(SpamEntityType::kET_REGION);
+        Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_MULTIPLE);
+        Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_REGION_PROBE);
         break;
 
     case kSpamID_TOOLBOX_PROBE_HISTOGRAM:
@@ -144,6 +161,45 @@ wxPanel *ProbeBox::CreateSelectOption(wxWindow *parent)
     probeMode->AddRadioTool(kSpamID_TOOLBOX_PROBE_IMAGE,  wxT("Probe image"),  Spam::GetBitmap(ip, bm_Pointer));
     probeMode->ToggleTool(kSpamID_TOOLBOX_PROBE_PIXEL, true);
     probeMode->Bind(wxEVT_TOOL, &ProbeBox::OnProbeMode, this, kSpamID_TOOLBOX_PROBE_PIXEL, kSpamID_TOOLBOX_PROBE_IMAGE);
+    probeMode->Realize();
+
+    sizerRoot->Add(probeMode, wxSizerFlags(0).Expand().Border());
+
+    auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
+    helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProbeBox::OnHelpCollapse, this, wxID_ANY);
+    sizerRoot->Add(helpPane, wxSizerFlags(1).Expand());
+
+    wxWindow *win = helpPane->GetPane();
+    auto helpSizer = new wxBoxSizer(wxVERTICAL);
+    auto html = new wxHtmlWindow(win, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_NEVER);
+    html->SetBorders(0);
+    html->LoadPage(wxT("res/help/rect.htm"));
+    html->SetInitialSize(wxSize(html->GetInternalRepresentation()->GetWidth(), html->GetInternalRepresentation()->GetHeight()));
+    helpSizer->Add(html, wxSizerFlags(1).Expand().DoubleBorder());
+    win->SetSizerAndFit(helpSizer);
+
+    panel->SetScrollRate(6, 6);
+    panel->SetVirtualSize(panel->GetBestSize());
+    panel->SetSizerAndFit(sizerRoot);
+    return panel;
+}
+
+wxPanel *ProbeBox::CreateRegionOption(wxWindow *parent)
+{
+    auto panel = new wxScrolledWindow(parent, wxID_ANY);
+    wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+
+    const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
+    auto probeMode = new wxToolBar(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_VERTICAL | wxTB_TEXT | wxTB_HORZ_TEXT | wxTB_NODIVIDER);
+    probeMode->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXHIGHLIGHTTEXT));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_AREA, wxT("Probe Area"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_CENTROID, wxT("Probe Centroid"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_CONVEX, wxT("Probe Convex Hull"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_DIAMETER, wxT("Probe Diameter"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_SMALLESTCIRCLE, wxT("Probe Smallest Circle"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_ORIENTATION, wxT("Probe Orientation"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->ToggleTool(kSpamID_TOOLBOX_PROBE_REGION_AREA, true);
+    probeMode->Bind(wxEVT_TOOL, &ProbeBox::OnProbeRegion, this, kSpamID_TOOLBOX_PROBE_REGION_AREA, kSpamID_TOOLBOX_PROBE_REGION_ORIENTATION);
     probeMode->Realize();
 
     sizerRoot->Add(probeMode, wxSizerFlags(0).Expand().Border());

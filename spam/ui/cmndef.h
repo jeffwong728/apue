@@ -127,6 +127,7 @@ enum
     kSpamID_TOOLBOX_STYLE,
 
     kSpamID_TOOLBOX_PROBE_SELECT,
+    kSpamID_TOOLBOX_PROBE_REGION,
     kSpamID_TOOLBOX_PROBE_HISTOGRAM,
     kSpamID_TOOLBOX_PROBE_GUARD,
 
@@ -163,7 +164,15 @@ enum
 
     kSpamID_TOOLBOX_PROBE_PIXEL,
     kSpamID_TOOLBOX_PROBE_ENTITY,
+    kSpamID_TOOLBOX_PROBE_CONTOUR,
     kSpamID_TOOLBOX_PROBE_IMAGE,
+
+    kSpamID_TOOLBOX_PROBE_REGION_AREA,
+    kSpamID_TOOLBOX_PROBE_REGION_CENTROID,
+    kSpamID_TOOLBOX_PROBE_REGION_CONVEX,
+    kSpamID_TOOLBOX_PROBE_REGION_DIAMETER,
+    kSpamID_TOOLBOX_PROBE_REGION_SMALLESTCIRCLE,
+    kSpamID_TOOLBOX_PROBE_REGION_ORIENTATION,
 
     kSpamID_TOOLBOX_GEOM_FILL_COLOR,
     kSpamID_TOOLBOX_GEOM_FILL_ALPHA,
@@ -194,7 +203,6 @@ enum class SpamEntityType
 {
     kET_IMAGE,
     kET_GEOM,
-    kET_GEOM_REGION,
     kET_GEOM_RECT,
     kET_GEOM_ELLIPSE,
     kET_GEOM_POLYGON,
@@ -204,6 +212,8 @@ enum class SpamEntityType
     kET_GEOM_ZIGZAGLINE,
     kET_GEOM_POLYLINE,
     kET_GEOM_BEZIERLINE,
+    kET_REGION,
+    kET_CONTOUR,
 
     kET_GUARD
 };
@@ -229,6 +239,8 @@ enum class SpamEntityOperation
     kEO_VERTEX_SMOOTH,
     kEO_VERTEX_CUSP,
     kEO_VERTEX_SYMMETRIC,
+    kEO_REGION_PROBE,
+    kEO_CONTOUR_PROBE,
 
     kEO_GUARD
 };
@@ -271,6 +283,7 @@ extern const std::string cp_ToolGeomStrokeJoin;
 extern const std::string cp_ToolGeomStrokeCap;
 extern const std::string cp_ToolGeomVertexEditMode;
 extern const std::string cp_ToolProbeMode;
+extern const std::string cp_ToolProbeRegionMask;
 extern const std::string cp_ThemeDarkMode;
 extern const std::string cp_Py3EditorStyle;
 extern const std::string cp_Py3EditorRememberScriptPath;

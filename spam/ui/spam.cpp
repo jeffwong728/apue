@@ -331,7 +331,10 @@ void SelectionFilter::AddAllPassType()
     SpamEntityType t = SpamEntityType::kET_IMAGE;
     while ( t != SpamEntityType::kET_GUARD)
     {
-        passTypes_.push_back(t);
+        if (t != SpamEntityType::kET_REGION && t != SpamEntityType::kET_CONTOUR)
+        {
+            passTypes_.push_back(t);
+        }
         t = static_cast<SpamEntityType>(static_cast<int>(t) + 1);
     }
 }

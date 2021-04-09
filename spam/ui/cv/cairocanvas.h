@@ -211,7 +211,7 @@ private:
     std::vector<std::string> rgnsVisiable_;
     Geom::OptRect rubber_band_;
     Geom::PathVector path_vector_;
-    std::map<cv::mvlab::Region *const, std::vector<DispRgn>> rgns_;
+    std::map<cv::mvlab::Region *const, std::vector<SPRegionNode>> rgns_;
     std::map<cv::mvlab::Contour *const, std::vector<DispContour>> contrs_;
     std::vector<Geom::PathVector> markers_;
 };

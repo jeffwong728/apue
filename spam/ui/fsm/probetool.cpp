@@ -34,42 +34,6 @@ void ProbeTool::OnImageClicked(const EvImageClicked &e)
     }
 }
 
-void ProbeTool::OnRegionClicked(const EvRegionClicked &e)
-{
-    const int probeMode = boost::get<int>(toolOptions.at(cp_ToolProbeMode));
-    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
-    if (kSpamID_TOOLBOX_PROBE_ENTITY == probeMode)
-    {
-        if (cav)
-        {
-            cav->PopupRegionInfomation(e.evData.GetPosition(), e.cvRgn);
-        }
-    }
-
-    if (cav)
-    {
-        cav->ClearSelectContours();
-    }
-}
-
-void ProbeTool::OnContourClicked(const EvContourClicked &e)
-{
-    const int probeMode = boost::get<int>(toolOptions.at(cp_ToolProbeMode));
-    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
-    if (kSpamID_TOOLBOX_PROBE_ENTITY == probeMode)
-    {
-        if (cav)
-        {
-            cav->PopupContourInfomation(e.evData.GetPosition(), e.cvContr);
-        }
-    }
-
-    if (cav)
-    {
-        cav->ClearSelectRegions();
-    }
-}
-
 void ProbeIdle::OnSafari(const EvMouseMove &e)
 {
     context<ProbeTool>().Safari(e);

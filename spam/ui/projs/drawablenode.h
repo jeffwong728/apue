@@ -11,7 +11,11 @@
 class DrawableNode : public ModelNode
 {
 public:
-    DrawableNode() : ModelNode() {}
+    DrawableNode() : ModelNode()
+    {
+        ClearSelection();
+        ClearHighlight();
+    }
     DrawableNode(const SPModelNode &parent) : ModelNode(parent) {}
     DrawableNode(const SPModelNode &parent, const wxString &title);
     ~DrawableNode();
@@ -99,6 +103,20 @@ private:
     void BuildSkewMat(const Geom::Point &anchorPt, const Geom::Point &freePt, Geom::Affine &aff);
     void SwitchTransformState();
     void SwitchNodeEditState();
+
+protected:
+    static bool IsNeedRefresh(const Geom::Rect &bbox, const std::vector<Geom::Rect> &invalidRects)
+    {
+        for (const Geom::Rect &invalidRect : invalidRects)
+        {
+            if (invalidRect.intersects(bbox))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
 protected:
     SelectionData selData_;

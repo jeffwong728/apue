@@ -103,23 +103,7 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
                 }
                 else
                 {
-                    cv::Ptr<cv::mvlab::Region> rgn = cav->FindRegion(freePt);
-                    if (rgn)
-                    {
-                        FireClickRegion(e.evData, rgn);
-                    }
-                    else
-                    {
-                        cv::Ptr<cv::mvlab::Contour> contr = cav->FindContour(freePt);
-                        if (contr)
-                        {
-                            FireClickContour(e.evData, contr);
-                        }
-                        else
-                        {
-                            FireClickImage(e.evData);
-                        }
-                    }
+                    FireClickImage(e.evData);
                 }
             }
             else

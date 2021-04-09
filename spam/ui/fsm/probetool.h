@@ -20,21 +20,17 @@ using  HistogramBoxTool = BoxTool<HistogramTool, kSpamID_TOOLBOX_PROBE_HISTOGRAM
 struct ProbeTool : boost::statechart::simple_state<ProbeTool, Spamer, ProbeIdle>, ProbeBoxTool
 {
     using BoxToolT = BoxToolImpl;
-    ProbeTool() : ProbeBoxTool(*this) {}
-    ~ProbeTool() {}
+    ProbeTool() : ProbeBoxTool(*this) { wxLogMessage(wxT("ProbeTool Enter.")); }
+    ~ProbeTool() { wxLogMessage(wxT("ProbeTool Quit.")); }
 
     void OnOptionChanged(const EvToolOption &e);
     void OnImageClicked(const EvImageClicked &e);
-    void OnRegionClicked(const EvRegionClicked &e);
-    void OnContourClicked(const EvContourClicked &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, ProbeTool>,
         boost::statechart::transition<EvToolQuit, NoTool>,
         boost::statechart::in_state_reaction<EvAppQuit,        BoxToolT,  &BoxToolT::QuitApp>,
         boost::statechart::in_state_reaction<EvImageClicked,   ProbeTool, &ProbeTool::OnImageClicked>,
-        boost::statechart::in_state_reaction<EvRegionClicked,  ProbeTool, &ProbeTool::OnRegionClicked>,
-        boost::statechart::in_state_reaction<EvContourClicked, ProbeTool, &ProbeTool::OnContourClicked>,
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT,  &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT,  &BoxToolT::SelectDrawable>> reactions;
 
@@ -43,8 +39,8 @@ struct ProbeTool : boost::statechart::simple_state<ProbeTool, Spamer, ProbeIdle>
 
 struct ProbeIdle : boost::statechart::simple_state<ProbeIdle, ProbeTool>
 {
-    ProbeIdle() {}
-    ~ProbeIdle() {}
+    ProbeIdle() { wxLogMessage(wxT("ProbeIdle Enter.")); }
+    ~ProbeIdle() { wxLogMessage(wxT("ProbeIdle Quit.")); }
 
     void OnSafari(const EvMouseMove &e);
     void OnLeaveCanvas(const EvCanvasLeave &e);
@@ -58,8 +54,8 @@ struct ProbeIdle : boost::statechart::simple_state<ProbeIdle, ProbeTool>
 
 struct ProbeDraging : boost::statechart::simple_state<ProbeDraging, ProbeTool>
 {
-    ProbeDraging() {}
-    ~ProbeDraging() {}
+    ProbeDraging() { wxLogMessage(wxT("ProbeDraging Enter.")); }
+    ~ProbeDraging() { wxLogMessage(wxT("ProbeDraging Quit.")); }
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvLMouseUp, ProbeIdle, ProbeTool::BoxToolT, &ProbeTool::BoxToolT::EndBoxing>,
@@ -70,8 +66,8 @@ struct ProbeDraging : boost::statechart::simple_state<ProbeDraging, ProbeTool>
 struct HistogramTool : boost::statechart::simple_state<HistogramTool, Spamer, HistogramIdle>, HistogramBoxTool
 {
     using BoxToolT = BoxToolImpl;
-    HistogramTool() : HistogramBoxTool(*this) {}
-    ~HistogramTool() {}
+    HistogramTool() : HistogramBoxTool(*this) { wxLogMessage(wxT("HistogramTool Enter.")); }
+    ~HistogramTool() { wxLogMessage(wxT("HistogramTool Quit.")); }
 
     void OnOptionChanged(const EvToolOption &e);
     void OnBoxingEnded(const EvBoxingEnded &e);
@@ -93,8 +89,8 @@ struct HistogramTool : boost::statechart::simple_state<HistogramTool, Spamer, Hi
 
 struct HistogramIdle : boost::statechart::simple_state<HistogramIdle, HistogramTool>
 {
-    HistogramIdle() {}
-    ~HistogramIdle() {}
+    HistogramIdle() { wxLogMessage(wxT("HistogramIdle Enter.")); }
+    ~HistogramIdle() { wxLogMessage(wxT("HistogramIdle Quit.")); }
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvLMouseDown, HistogramDraging, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::StartBoxing>,
@@ -105,8 +101,8 @@ struct HistogramIdle : boost::statechart::simple_state<HistogramIdle, HistogramT
 
 struct HistogramDraging : boost::statechart::simple_state<HistogramDraging, HistogramTool>
 {
-    HistogramDraging() {}
-    ~HistogramDraging() {}
+    HistogramDraging() { wxLogMessage(wxT("HistogramDraging Enter.")); }
+    ~HistogramDraging() { wxLogMessage(wxT("HistogramDraging Quit.")); }
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvLMouseUp, HistogramIdle, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::EndBoxing>,

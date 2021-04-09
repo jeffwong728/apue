@@ -30,15 +30,18 @@ protected:
 
 private:
     void OnProbeMode(wxCommandEvent &cmd);
+    void OnProbeRegion(wxCommandEvent &cmd);
     void OnToolEnter(const ToolOptions &toolOpts);
 
 private:
     wxPanel *CreateSelectOption(wxWindow *parent);
+    wxPanel *CreateRegionOption(wxWindow *parent);
     wxPanel *CreateHistOption(wxWindow *parent);
     void UpdateSelectionFilter(void);
 
 private:
     int probeMode_{ kSpamID_TOOLBOX_PROBE_PIXEL };
+    int regionProbeMask_{ 0 };
     HistogramWidget *hist_;
 };
 #endif //SPAM_UI_TOOLBOX_PROBE_BOX_H

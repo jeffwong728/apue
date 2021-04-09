@@ -11,6 +11,7 @@ const std::string cp_ToolGeomStrokeJoin             = std::string("spam.tool.geo
 const std::string cp_ToolGeomStrokeCap              = std::string("spam.tool.geom.stroke.cap");
 const std::string cp_ToolGeomVertexEditMode         = std::string("spam.tool.geom.vertex.editmode");
 const std::string cp_ToolProbeMode                  = std::string("spam.tool.probe.mode");
+const std::string cp_ToolProbeRegionMask            = std::string("spam.tool.probe.region.mask");
 const std::string cp_Py3EditorStyle                 = std::string("spam.py3editor.style");
 const std::string cp_Py3EditorRememberScriptPath    = std::string("spam.py3editor.scriptpath.remember");
 const std::string cp_Py3EditorScriptFullPath        = std::string("spam.py3editor.scriptpath.fullpath");

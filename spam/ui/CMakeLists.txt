@@ -32,6 +32,7 @@ set(ui_core_SRCS
   projs/drawablenode.cpp
   projs/polygonnode.cpp
   projs/beziergonnode.cpp
+  projs/fixednode.cpp
   projs/stylecellrenderer.cpp
   toplevel/preferencesdlg.cpp
   toplevel/logpanel.cpp
@@ -108,6 +109,7 @@ set(ui_core_HEADERS
   projs/ellipsenode.h
   projs/beziergonnode.h
   projs/geomnode.h
+  projs/fixednode.h
   projs/stylecellrenderer.h
   toplevel/preferencesdlg.h
   toplevel/logpanel.h

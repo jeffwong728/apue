@@ -25,7 +25,6 @@ bool LineNode::IsTypeOf(const SpamEntityType t) const
     switch (t)
     {
     case SpamEntityType::kET_GEOM:
-    case SpamEntityType::kET_GEOM_REGION:
     case SpamEntityType::kET_GEOM_LINE:
         return true;
 

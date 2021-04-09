@@ -5,6 +5,7 @@
 #include <ui/projs/geomnode.h>
 #include <ui/projs/drawablenode.h>
 #include <ui/projs/projtreemodel.h>
+#include <ui/projs/fixednode.h>
 #include <ui/cmds/geomcmd.h>
 #include <ui/cmds/transcmd.h>
 #include <wx/graphics.h>
@@ -102,7 +103,7 @@ void CairoCanvas::SwitchImage(const std::string &iName)
         }
         else
         {
-            if (SpamEntityType::kET_GEOM_REGION == itF->second.iType)
+            if (SpamEntityType::kET_REGION == itF->second.iType)
             {
                 if (1!=rgnsVisiable_.size() || rgnsVisiable_[0]!=itF->second.iName.ToStdString())
                 {
@@ -301,36 +302,13 @@ void CairoCanvas::DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
         auto station = model->FindStationByUUID(stationUUID_);
         if (rgn && station)
         {
-            std::vector<DispRgn> &rgnArr = rgns_[rgn.get()];
+            std::vector<SPRegionNode> &rgnArr = rgns_[rgn.get()];
             if (rgnArr.empty())
             {
                 for (int rr = 0; rr < rgn->Count(); ++rr)
                 {
                     cv::Ptr<cv::mvlab::Region> subRgn = rgn->SelectObj(rr);
-                    rgnArr.emplace_back();
-                    DispRgn &dRgn = rgnArr.back();
-                    dRgn.cvRgn = subRgn;
-                    const cv::Ptr<cv::mvlab::Contour> outer = dRgn.cvRgn->GetContour();
-                    const cv::Ptr<cv::mvlab::Contour> inner = dRgn.cvRgn->GetHole();
-
-                    dRgn.curves.reserve(outer->CountCurves() + inner->CountCurves());
-                    dRgn.bboxs.reserve(outer->CountCurves() + inner->CountCurves());
-
-                    for (int c = 0; c < outer->CountCurves(); ++c)
-                    {
-                        dRgn.curves.emplace_back();
-                        dRgn.bboxs.emplace_back();
-                        outer->SelectPoints(c, dRgn.curves.back());
-                        dRgn.bboxs.back() = cv::mvlab::BoundingBox(dRgn.curves.back());
-                    }
-
-                    for (int c = 0; c < inner->CountCurves(); ++c)
-                    {
-                        dRgn.curves.emplace_back();
-                        dRgn.bboxs.emplace_back();
-                        inner->SelectPoints(c, dRgn.curves.back());
-                        dRgn.bboxs.back() = cv::mvlab::BoundingBox(dRgn.curves.back());
-                    }
+                    SPRegionNode rgnNode = std::make_shared<RegionNode>(subRgn);
 
                     wxColour lineColor = station->GetColor();
                     wxColour fillColor = station->GetFillColor();
@@ -340,26 +318,21 @@ void CairoCanvas::DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
                         fillColor = lineColor;
                     }
 
-                    dRgn.lineWidth = station->GetLineWidth();
-                    dRgn.lineStyle = 0;
-                    dRgn.drawMode = std::string("fill") == station->GetDraw();
-                    dRgn.lineColor[0] = lineColor.Red() / 255.0;
-                    dRgn.lineColor[1] = lineColor.Green() / 255.0;
-                    dRgn.lineColor[2] = lineColor.Blue() / 255.0;
-                    dRgn.lineColor[3] = lineColor.Alpha() / 255.0;
-                    dRgn.fillColor[0] = fillColor.Red() / 255.0;
-                    dRgn.fillColor[1] = fillColor.Green() / 255.0;
-                    dRgn.fillColor[2] = fillColor.Blue() / 255.0;
-                    dRgn.fillColor[3] = fillColor.Alpha() / 255.0;
+                    rgnNode->SetLineWidth(station->GetLineWidth());
+                    rgnNode->SetDraw(std::string("fill") == station->GetDraw());
+                    rgnNode->SetColor(lineColor);
+                    rgnNode->SetFillColor(fillColor);
 
                     cv::Rect bbox = subRgn->BoundingBox();
                     Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
                     if (boundRect && boundRect->area() > 0.)
                     {
                         wxRect invalidRect = ImageToScreen(boundRect);
-                        invalidRect.Inflate(cvRound(dRgn.lineWidth), cvRound(dRgn.lineWidth));
+                        invalidRect.Inflate(cvRound(rgnNode->GetLineWidth()), cvRound(rgnNode->GetLineWidth()));
                         Refresh(false, &invalidRect);
                     }
+
+                    rgnArr.push_back(rgnNode);
                 }
             }
         }
@@ -373,14 +346,14 @@ void CairoCanvas::EraseRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
         auto it = rgns_.find(rgn.get());
         if (it != rgns_.cend())
         {
-            for (const DispRgn &dRgn : it->second)
+            for (const SPRegionNode &rgnNode : it->second)
             {
-                cv::Rect bbox = dRgn.cvRgn->BoundingBox();
+                cv::Rect bbox = rgnNode->BoundingBox();
                 Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
                 if (boundRect && boundRect->area() > 0.)
                 {
                     wxRect invalidRect = ImageToScreen(boundRect);
-                    invalidRect.Inflate(cvRound(dRgn.lineWidth), cvRound(dRgn.lineWidth));
+                    invalidRect.Inflate(cvRound(rgnNode->GetLineWidth()), cvRound(rgnNode->GetLineWidth()));
                     Refresh(false, &invalidRect);
                 }
             }
@@ -803,6 +776,23 @@ SPDrawableNode CairoCanvas::FindDrawable(const Geom::Point &pt, const double sx,
     sd.subid = -1;
     sd.master = 0;
 
+    const SelectionFilter *sf = Spam::GetSelectionFilter();
+    for (const auto &rgnsItem : rgns_)
+    {
+        for (const SPRegionNode &rgnNode : rgnsItem.second)
+        {
+            if (sf && sf->IsPass(rgnNode))
+            {
+                auto ht = rgnNode->HitTest(pt, sx, sy);
+                if (ht.hs != HitState::kHsNone)
+                {
+                    sd = ht;
+                    return rgnNode;
+                }
+            }
+        }
+    }
+
     SPStationNode sn = GetStation();
     if (sn)
     {
@@ -819,9 +809,9 @@ cv::Ptr<cv::mvlab::Region> CairoCanvas::FindRegion(const Geom::Point &pt)
     {
         for (const auto &rgnItem : rgnsItem.second)
         {
-            if (rgnItem.cvRgn->TestPoint(point))
+            if (rgnItem->GetRegion()->TestPoint(point))
             {
-                return rgnItem.cvRgn;
+                return rgnItem->GetRegion();
             }
         }
     }
@@ -839,7 +829,19 @@ void CairoCanvas::SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &en
     SPStationNode sn = GetStation();
     if (sn)
     {
-        return sn->SelectDrawable(box, ents);
+        sn->SelectDrawable(box, ents);
+    }
+
+    const SelectionFilter *sf = Spam::GetSelectionFilter();
+    for (const auto &rgnsItem : rgns_)
+    {
+        for (const SPRegionNode &rgnNode : rgnsItem.second)
+        {
+            if (sf && sf->IsPass(rgnNode) && rgnNode->IsIntersection(box))
+            {
+                ents.push_back(rgnNode);
+            }
+        }
     }
 }
 
@@ -997,15 +999,15 @@ void CairoCanvas::ClearSelectRegions()
     {
         for (auto &rgnItem : rgnsItem.second)
         {
-            if (rgnItem.selected)
+            if (rgnItem->IsSelected())
             {
-                rgnItem.selected = false;
-                cv::Rect bbox = rgnItem.cvRgn->BoundingBox();
+                rgnItem->ClearSelection();
+                cv::Rect bbox = rgnItem->GetRegion()->BoundingBox();
                 Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
                 if (boundRect && boundRect->area() > 0.)
                 {
                     wxRect invalidRect = ImageToScreen(boundRect);
-                    invalidRect.Inflate(cvRound(rgnItem.lineWidth), cvRound(rgnItem.lineWidth));
+                    invalidRect.Inflate(cvRound(rgnItem->GetLineWidth()), cvRound(rgnItem->GetLineWidth()));
                     Refresh(false, &invalidRect);
                 }
             }
@@ -1041,29 +1043,29 @@ void CairoCanvas::PopupRegionInfomation(const wxPoint &pos, const cv::Ptr<cv::mv
     {
         for (auto &rgnItem : rgnsItem.second)
         {
-            if (rgnItem.selected)
+            if (rgnItem->IsSelected())
             {
-                rgnItem.selected = false;
-                cv::Rect bbox = rgnItem.cvRgn->BoundingBox();
+                rgnItem->ClearSelection();
+                cv::Rect bbox = rgnItem->BoundingBox();
                 Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
                 if (boundRect && boundRect->area() > 0.)
                 {
                     wxRect invalidRect = ImageToScreen(boundRect);
-                    invalidRect.Inflate(cvRound(rgnItem.lineWidth), cvRound(rgnItem.lineWidth));
+                    invalidRect.Inflate(cvRound(rgnItem->GetLineWidth()), cvRound(rgnItem->GetLineWidth()));
                     Refresh(false, &invalidRect);
                 }
             }
             else
             {
-                if (rgn == rgnItem.cvRgn)
+                if (rgn == rgnItem->GetRegion())
                 {
-                    rgnItem.selected = true;
-                    cv::Rect bbox = rgnItem.cvRgn->BoundingBox();
+                    rgnItem->Select(0);
+                    cv::Rect bbox = rgnItem->BoundingBox();
                     Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
                     if (boundRect && boundRect->area() > 0.)
                     {
                         wxRect invalidRect = ImageToScreen(boundRect);
-                        invalidRect.Inflate(cvRound(rgnItem.lineWidth), cvRound(rgnItem.lineWidth));
+                        invalidRect.Inflate(cvRound(rgnItem->GetLineWidth()), cvRound(rgnItem->GetLineWidth()));
                         Refresh(false, &invalidRect);
                     }
                 }
@@ -1183,7 +1185,7 @@ void CairoCanvas::PushRegionsIntoBufferZone(const std::string &name, const cv::P
         }
     }
 
-    ImageBufferItem bufItem{ SpamEntityType::kET_GEOM_REGION, name, stationUUID_, srcImg_, wxBitmap(thumbImg) };
+    ImageBufferItem bufItem{ SpamEntityType::kET_REGION, name, stationUUID_, srcImg_, wxBitmap(thumbImg) };
     auto insResult = rgnBufferZone_.insert(std::make_pair(name, rgns));
     if (!insResult.second)
     {
@@ -1239,7 +1241,7 @@ void CairoCanvas::EraseFullArea()
     {
         for (const auto &dRgn : rgn.second)
         {
-            cv::Rect bbox = dRgn.cvRgn->BoundingBox();
+            cv::Rect bbox = dRgn->BoundingBox();
             Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
             iRect.unionWith(boundRect);
         }
@@ -1631,7 +1633,6 @@ void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr, const std::ve
         auto station = model->FindStationByUUID(stationUUID_);
         if (station)
         {
-            Geom::Rect bbox;
             cr->save();
             cr->translate(anchorX_, anchorY_);
             cr->scale(GetMatScale(), GetMatScale());
@@ -1639,66 +1640,13 @@ void CairoCanvas::RenderRegions(Cairo::RefPtr<Cairo::Context> &cr, const std::ve
 
             for (const auto &rgnItem : rgns_)
             {
-                for (const DispRgn &dRgn : rgnItem.second)
+                for (const auto &dRgn : rgnItem.second)
                 {
-                    if (!dRgn.cvRgn)
+                    if (!dRgn->GetRegion())
                     {
                         continue;
                     }
-
-                    cr->set_line_width(dRgn.lineWidth);
-                    cr->set_source_rgba(dRgn.lineColor[0], dRgn.lineColor[1], dRgn.lineColor[2], dRgn.lineColor[3]);
-
-                    for (int cc = 0; cc < static_cast<int>(dRgn.curves.size()); ++cc)
-                    {
-                        bbox.setLeft(dRgn.bboxs[cc].x);
-                        bbox.setRight(dRgn.bboxs[cc].x + dRgn.bboxs[cc].width);
-                        bbox.setTop(dRgn.bboxs[cc].y);
-                        bbox.setBottom(dRgn.bboxs[cc].y + dRgn.bboxs[cc].height);
-                        if (IsRectNeedRefresh(bbox, invalidRects))
-                        {
-                            const auto &curve = dRgn.curves[cc];
-                            if (curve.size() > 2)
-                            {
-                                cr->move_to(curve.front().x + 0.5f, curve.front().y + 0.5f);
-                                for (int vv = 1; vv < static_cast<int>(curve.size()); ++vv)
-                                {
-                                    cr->line_to(curve[vv].x + 0.5f, curve[vv].y + 0.5f);
-                                }
-                                cr->close_path();
-                            }
-                        }
-                    }
-
-                    if (dRgn.drawMode)
-                    {
-                        cr->fill_preserve();
-                        if (dRgn.selected)
-                        {
-                            double offset = 0.;
-                            std::vector<double> dashes;
-                            cr->get_dash(dashes, offset);
-                            cr->set_dash(std::vector<double>(2, 3 * GetMatScale()), 0);
-                            cr->stroke();
-                            cr->set_dash(dashes, offset);
-                        }
-                    }
-                    else
-                    {
-                        if (dRgn.selected)
-                        {
-                            double offset = 0.;
-                            std::vector<double> dashes;
-                            cr->get_dash(dashes, offset);
-                            cr->set_dash(std::vector<double>(2, 3 * GetMatScale()), 0);
-                            cr->stroke();
-                            cr->set_dash(dashes, offset);
-                        }
-                        else
-                        {
-                            cr->stroke();
-                        }
-                    }
+                    dRgn->Draw(cr, invalidRects);
                 }
             }
 
