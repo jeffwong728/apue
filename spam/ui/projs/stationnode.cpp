@@ -151,7 +151,7 @@ void StationNode::SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &en
 void StationNode::SetColored(const int number_of_colors)
 {
     std::vector<wxColour> multiColors;
-    multiColors.reserve(68);
+    multiColors.reserve(64);
     multiColors.emplace_back(wxColour("RED"));
     multiColors.emplace_back(wxColour("AQUAMARINE"));
     multiColors.emplace_back(wxColour("BLUE"));
@@ -171,8 +171,6 @@ void StationNode::SetColored(const int number_of_colors)
     multiColors.emplace_back(wxColour("DARK TURQUOISE"));
     multiColors.emplace_back(wxColour("FIREBRICK"));
     multiColors.emplace_back(wxColour("FOREST GREEN"));
-    multiColors.emplace_back(wxColour("GOLD"));
-    multiColors.emplace_back(wxColour("GOLDENROD"));
     multiColors.emplace_back(wxColour("GREEN"));
     multiColors.emplace_back(wxColour("GREEN YELLOW"));
     multiColors.emplace_back(wxColour("INDIAN RED"));
@@ -184,25 +182,21 @@ void StationNode::SetColored(const int number_of_colors)
     multiColors.emplace_back(wxColour("MAROON"));
     multiColors.emplace_back(wxColour("MEDIUM AQUAMARINE"));
     multiColors.emplace_back(wxColour("MEDIUM BLUE"));
-    multiColors.emplace_back(wxColour("GREY"));
     multiColors.emplace_back(wxColour("MEDIUM FOREST GREEN"));
     multiColors.emplace_back(wxColour("MEDIUM GOLDENROD"));
     multiColors.emplace_back(wxColour("MEDIUM ORCHID"));
     multiColors.emplace_back(wxColour("MEDIUM SEA GREEN"));
     multiColors.emplace_back(wxColour("MEDIUM SLATE BLUE"));
     multiColors.emplace_back(wxColour("MEDIUM SPRING GREEN"));
-    multiColors.emplace_back(wxColour("DARK SLATE GREY"));
     multiColors.emplace_back(wxColour("MEDIUM TURQUOISE"));
     multiColors.emplace_back(wxColour("MEDIUM VIOLET RED"));
     multiColors.emplace_back(wxColour("MIDNIGHT BLUE"));
     multiColors.emplace_back(wxColour("NAVY"));
     multiColors.emplace_back(wxColour("ORANGE RED"));
     multiColors.emplace_back(wxColour("ORCHID"));
-    multiColors.emplace_back(wxColour("DARK GREY"));
     multiColors.emplace_back(wxColour("PALE GREEN"));
     multiColors.emplace_back(wxColour("PLUM"));
     multiColors.emplace_back(wxColour("PURPLE"));
-    multiColors.emplace_back(wxColour("DIM GREY"));
     multiColors.emplace_back(wxColour("SALMON"));
     multiColors.emplace_back(wxColour("SEA GREEN"));
     multiColors.emplace_back(wxColour("SIENNA"));
@@ -216,10 +210,7 @@ void StationNode::SetColored(const int number_of_colors)
     multiColors.emplace_back(wxColour("VIOLET"));
     multiColors.emplace_back(wxColour("VIOLET RED"));
     multiColors.emplace_back(wxColour("WHEAT"));
-    multiColors.emplace_back(wxColour("LIGHT GREY"));
-    multiColors.emplace_back(wxColour("WHITE"));
     multiColors.emplace_back(wxColour("YELLOW GREEN"));
-    multiColors.emplace_back(wxColour("BLACK"));
 
     const int numColors = (number_of_colors < static_cast<int>(multiColors.size())) ? number_of_colors : static_cast<int>(multiColors.size());
     multiColors_.assign(multiColors.cbegin(), multiColors.cbegin() + numColors);

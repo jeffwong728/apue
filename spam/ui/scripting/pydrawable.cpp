@@ -132,7 +132,7 @@ void PyExportDrawable(pybind11::module_ &m)
     c.def("SetColor", &PyDrawable::SetColor, "Set drawable color in RGBA format", pybind11::arg("color"));
     c.def("GetColor", &PyDrawable::GetColor, "Get the current drawable color");
     c.def("SetFillColor", &PyDrawable::SetFillColor, "Set drawable fill color in RGBA format", pybind11::arg("color"));
-    c.def("SetFillColor", &PyDrawable::GetFillColor, "Get the current drawable fill color");
+    c.def("GetFillColor", &PyDrawable::GetFillColor, "Get the current drawable fill color");
     c.def("SetLineWidth", &PyDrawable::SetLineWidth, "Set drawable stroke line width in pixel unit", pybind11::arg("width"));
     c.def("GetLineWidth", &PyDrawable::GetLineWidth, "Get drawable stroke line width in pixel unit");
     c.def("ToRegion", &PyDrawable::ToRegion, "Convert this drawable object to mvlab region object");

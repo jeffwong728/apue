@@ -8,6 +8,7 @@ extern void PyExportRect(pybind11::module_ &m);
 extern void PyExportEllipse(pybind11::module_ &m);
 extern void PyExportStation(pybind11::module_ &m);
 extern void PyExportProject(pybind11::module_ &m);
+extern void PyExportFixed(pybind11::module_ &m);
 extern pybind11::object PyNewStation();
 extern pybind11::object PyFindStation(const std::string &name);
 extern pybind11::object PyGetCurrentProject();
@@ -19,6 +20,7 @@ PYBIND11_EMBEDDED_MODULE(spam, m)
     PyExportDrawable(m);
     PyExportRect(m);
     PyExportEllipse(m);
+    PyExportFixed(m);
     PyExportStation(m);
     PyExportProject(m);
     m.def("CreateStation", PyNewStation);

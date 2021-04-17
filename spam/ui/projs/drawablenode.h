@@ -16,7 +16,11 @@ public:
         ClearSelection();
         ClearHighlight();
     }
-    DrawableNode(const SPModelNode &parent) : ModelNode(parent) {}
+    DrawableNode(const SPModelNode &parent) : ModelNode(parent) 
+    {
+        ClearSelection();
+        ClearHighlight();
+    }
     DrawableNode(const SPModelNode &parent, const wxString &title);
     ~DrawableNode();
 

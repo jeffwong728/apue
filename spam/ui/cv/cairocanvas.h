@@ -53,20 +53,6 @@ public:
     bs2::signal_type<void(const ImageBufferItem &), bs2_dummy_mutex>::type sig_ImageBufferItemAdd;
     bs2::signal_type<void(const ImageBufferItem &), bs2_dummy_mutex>::type sig_ImageBufferItemUpdate;
 
-    struct DispRgn
-    {
-        cv::Ptr<cv::mvlab::Region> cvRgn;
-        std::vector<std::vector<cv::Point2f>> curves;
-        std::vector<cv::Rect2f> bboxs;
-        std::array<double, 4> lineColor;
-        std::array<double, 4> fillColor;
-        int lineStyle;
-        int drawMode;
-        double lineWidth;
-        bool selected = false;
-        bool operator==(const cv::Ptr<cv::mvlab::Region> &rgn) const { return cvRgn == rgn; }
-    };
-
     struct DispContour
     {
         cv::Ptr<cv::mvlab::Contour> cvContr;
@@ -129,6 +115,7 @@ public:
     SPStationNode GetStation() const;
     SPDrawableNode FindDrawable(const Geom::Point &pt);
     SPDrawableNode FindDrawable(const Geom::Point &pt, const double sx, const double sy, SelectionData &sd);
+    SPDrawableNodeVector GetAllFixed() const;
     cv::Ptr<cv::mvlab::Region> FindRegion(const Geom::Point &pt);
     cv::Ptr<cv::mvlab::Contour> FindContour(const Geom::Point &pt);
     void SelectDrawable(const Geom::Rect &box, SPDrawableNodeVector &ents);

@@ -2,6 +2,7 @@
 #include "pyproject.h"
 #include "pyrect.h"
 #include "pyellipse.h"
+#include "pyfixed.h"
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
 #include <2geom/circle.h>
@@ -11,6 +12,7 @@
 #include <ui/toplevel/rootframe.h>
 #include <ui/toplevel/projpanel.h>
 #include <ui/projs/rectnode.h>
+#include <ui/projs/fixednode.h>
 #include <ui/projs/ellipsenode.h>
 #include <ui/projs/stationnode.h>
 #include <ui/projs/projtreemodel.h>
@@ -204,6 +206,21 @@ pybind11::object PyStation::GetSelected()
             else
             {
                 // do nothing now
+            }
+        }
+
+        auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+        CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
+        if (cavs)
+        {
+            for (const SPDrawableNode &spNode : cavs->GetAllFixed())
+            {
+                if (spNode->IsSelected())
+                {
+                    PyFixed pyObj;
+                    pyObj.wpObj = spNode;
+                    objs.append(pybind11::cast(pyObj));
+                }
             }
         }
 

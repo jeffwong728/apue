@@ -305,10 +305,11 @@ void CairoCanvas::DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
             std::vector<SPRegionNode> &rgnArr = rgns_[rgn.get()];
             if (rgnArr.empty())
             {
+                cv::Rect tBBox;
                 for (int rr = 0; rr < rgn->Count(); ++rr)
                 {
                     cv::Ptr<cv::mvlab::Region> subRgn = rgn->SelectObj(rr);
-                    SPRegionNode rgnNode = std::make_shared<RegionNode>(subRgn);
+                    SPRegionNode rgnNode = std::make_shared<RegionNode>(subRgn, station);
 
                     wxColour lineColor = station->GetColor();
                     wxColour fillColor = station->GetFillColor();
@@ -323,16 +324,16 @@ void CairoCanvas::DrawRegion(const cv::Ptr<cv::mvlab::Region> &rgn)
                     rgnNode->SetColor(lineColor);
                     rgnNode->SetFillColor(fillColor);
 
-                    cv::Rect bbox = subRgn->BoundingBox();
-                    Geom::OptRect boundRect(bbox.tl().x, bbox.tl().y, bbox.br().x, bbox.br().y);
-                    if (boundRect && boundRect->area() > 0.)
-                    {
-                        wxRect invalidRect = ImageToScreen(boundRect);
-                        invalidRect.Inflate(cvRound(rgnNode->GetLineWidth()), cvRound(rgnNode->GetLineWidth()));
-                        Refresh(false, &invalidRect);
-                    }
-
+                    tBBox |= subRgn->BoundingBox();
                     rgnArr.push_back(rgnNode);
+                }
+
+                Geom::OptRect boundRect(tBBox.tl().x, tBBox.tl().y, tBBox.br().x, tBBox.br().y);
+                if (boundRect && boundRect->area() > 0.)
+                {
+                    wxRect invalidRect = ImageToScreen(boundRect);
+                    invalidRect.Inflate(cvRound(station->GetLineWidth()), cvRound(station->GetLineWidth()));
+                    Refresh(false, &invalidRect);
                 }
             }
         }
@@ -800,6 +801,19 @@ SPDrawableNode CairoCanvas::FindDrawable(const Geom::Point &pt, const double sx,
     }
 
     return SPDrawableNode();
+}
+
+SPDrawableNodeVector CairoCanvas::GetAllFixed() const
+{
+    SPDrawableNodeVector allFixed;
+    for (const auto &rgnsItem : rgns_)
+    {
+        for (const SPRegionNode &rgnNode : rgnsItem.second)
+        {
+            allFixed.push_back(rgnNode);
+        }
+    }
+    return allFixed;
 }
 
 cv::Ptr<cv::mvlab::Region> CairoCanvas::FindRegion(const Geom::Point &pt)

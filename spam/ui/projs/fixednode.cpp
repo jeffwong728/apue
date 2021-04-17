@@ -12,8 +12,8 @@
 #include <2geom/path-intersection.h>
 #pragma warning( pop )
 
-FixedNode::FixedNode()
-    : DrawableNode()
+FixedNode::FixedNode(const SPModelNode &parent)
+    : DrawableNode(parent)
 {
 }
 
@@ -21,8 +21,8 @@ FixedNode::~FixedNode()
 {
 }
 
-RegionNode::RegionNode(const cv::Ptr<cv::mvlab::Region> &rgn)
-    : FixedNode(), cvRgn_(rgn)
+RegionNode::RegionNode(const cv::Ptr<cv::mvlab::Region> &rgn, const SPModelNode &parent)
+    : FixedNode(parent), cvRgn_(rgn)
 {
     if (cvRgn_)
     {
@@ -48,6 +48,8 @@ RegionNode::RegionNode(const cv::Ptr<cv::mvlab::Region> &rgn)
             inner->SelectPoints(c, innerCurves_.back());
             innerBBoxs_.back() = cv::mvlab::BoundingBox(innerCurves_.back());
         }
+
+        title_ = wxString("Region ") + wxString::Format("%p", rgn.get());
     }
 }
 
@@ -125,9 +127,15 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
     wxColour::ChannelType g = drawStyle_.strokeColor_.Green();
     wxColour::ChannelType b = drawStyle_.strokeColor_.Blue();
     wxColour::ChannelType a = drawStyle_.strokeColor_.Alpha();
+
+    if (IsSelected())
+    {
+        r = 218; g = 165; b = 32; a = 0xFF;
+    }
+
     if (HighlightState::kHlFace == hlData_.hls)
     {
-        r = 0xF9; g = 0xA6; b = 0x02; a = 0xFF;
+        r = 255; g = 215; b = 0; a = 0xFF;
     }
 
     cr->set_line_width(drawStyle_.strokeWidth_);
@@ -178,30 +186,33 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
 
     if (drawMode_)
     {
-        cr->fill_preserve();
-        if (IsSelected())
-        {
-            double offset = 0.;
-            std::vector<double> dashes;
-            cr->get_dash(dashes, offset);
-            cr->set_dash(std::vector<double>(2, 5), 0);
-            cr->stroke();
-            cr->set_dash(dashes, offset);
-        }
+        cr->fill();
     }
     else
     {
-        if (IsSelected())
+        cr->stroke();
+    }
+
+    if (cvRgn_)
+    {
+        if (TestFeature(RegionFeatureFlag::kRFF_DIAMETER))
         {
-            double offset = 0.;
-            std::vector<double> dashes;
-            cr->get_dash(dashes, offset);
-            cr->set_dash(std::vector<double>(2, 5), 0);
+            cr->set_line_width(drawStyle_.strokeWidth_);
+            cr->set_source_rgba(1., 1., 1., 1.);
+            cv::Scalar dia = cvRgn_->Diameter();
+
+            cr->move_to(dia[0] + 0.5f, dia[1] + 0.5f);
+            cr->line_to(dia[2] + 0.5f, dia[3] + 0.5f);
             cr->stroke();
-            cr->set_dash(dashes, offset);
         }
-        else
+
+        if (TestFeature(RegionFeatureFlag::kRFF_SMALLEST_CIRCLE))
         {
+            cr->set_line_width(drawStyle_.strokeWidth_);
+            cr->set_source_rgba(1., 1., 1., 1.);
+            cv::Point3d sc = cvRgn_->SmallestCircle();
+
+            cr->arc(sc.x, sc.y, sc.z, 0, 2 * M_PI);
             cr->stroke();
         }
     }

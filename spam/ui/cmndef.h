@@ -270,6 +270,21 @@ enum class Py3EditorStyle
     kPES_FOREGROUND
 };
 
+enum class RegionFeatureFlag : uint64_t
+{
+    kRFF_AREA = 0x1,
+    kRFF_LENGTH = 0x2,
+    kRFF_RECT1 = 0x4,
+    kRFF_RECT2 = 0x8,
+    kRFF_SMALLEST_CIRCLE = 0x10,
+    kRFF_ORIENTATION = 0x20,
+    kRFF_ELLIPTIC_AXIS = 0x40,
+    kRFF_CONVEX_HULL = 0x80,
+    kRFF_DIAMETER = 0x100,
+    kRFF_CENTROID = 0x200,
+    kRFF_ALL_FEATURES = 0xFFFFFFFFFFFFFFFF
+};
+
 typedef boost::mpl::vector<int, long, double> OptTypes0;
 typedef boost::mpl::push_front<OptTypes0, std::string>::type OptTypes;
 using ToolOptions = std::unordered_map<std::string, boost::make_variant_over<OptTypes>::type>;

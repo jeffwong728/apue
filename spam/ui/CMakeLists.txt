@@ -71,6 +71,7 @@ set(ui_core_SRCS
   scripting/pyentity.cpp
   scripting/pydrawable.cpp
   scripting/pyellipse.cpp
+  scripting/pyfixed.cpp
 )
 
 set(ui_core_HEADERS 
@@ -149,6 +150,7 @@ set(ui_core_HEADERS
   scripting/pyentity.h
   scripting/pydrawable.h
   scripting/pyellipse.h
+  scripting/pyfixed.h
 )
 
 if(MSVC)

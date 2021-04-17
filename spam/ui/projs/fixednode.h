@@ -12,7 +12,7 @@
 class FixedNode : public DrawableNode
 {
 public:
-    FixedNode();
+    FixedNode(const SPModelNode &parent);
     ~FixedNode();
 
 public:
@@ -38,15 +38,23 @@ public:
 
     boost::any CreateMemento() const wxOVERRIDE { return boost::any(); }
     bool RestoreFromMemento(const boost::any &WXUNUSED(memento)) wxOVERRIDE { return false; }
+    void ClearAllFeatures() { m_features = 0; }
+    void SetFeature(const RegionFeatureFlag ff) { m_features |= static_cast<uint64_t>(ff); }
+    void ClearFeature(const RegionFeatureFlag ff) { m_features &= ~static_cast<uint64_t>(ff); }
+    void ToggleFeature(const RegionFeatureFlag ff) { m_features ^= static_cast<uint64_t>(ff); }
+    bool TestFeature(const RegionFeatureFlag ff) const { return m_features & static_cast<uint64_t>(ff); }
 
 protected:
     void DoTransform(const Geom::Affine &WXUNUSED(aff), const double WXUNUSED(dx), const double WXUNUSED(dy)) wxOVERRIDE {}
+
+protected:
+    uint64_t m_features = 0;
 };
 
 class RegionNode : public FixedNode
 {
 public:
-    RegionNode(const cv::Ptr<cv::mvlab::Region> &rgn);
+    RegionNode(const cv::Ptr<cv::mvlab::Region> &rgn, const SPModelNode &parent);
 
 public:
     bool IsTypeOf(const SpamEntityType t) const wxOVERRIDE;
