@@ -138,7 +138,15 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
         r = 255; g = 215; b = 0; a = 0xFF;
     }
 
-    cr->set_line_width(drawStyle_.strokeWidth_);
+    if (drawMode_)
+    {
+        cr->set_line_width(0.);
+    }
+    else
+    {
+        cr->set_line_width(drawStyle_.strokeWidth_ > 0.5 ? drawStyle_.strokeWidth_ : 1.5);
+    }
+
     cr->set_source_rgba(r / 255., g / 255., b / 255., a / 255.);
 
     Geom::Rect bbox;
@@ -197,7 +205,7 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
     {
         if (TestFeature(RegionFeatureFlag::kRFF_DIAMETER))
         {
-            cr->set_line_width(drawStyle_.strokeWidth_);
+            cr->set_line_width(drawStyle_.strokeWidth_ > 0.5 ? drawStyle_.strokeWidth_ : 1.5);
             cr->set_source_rgba(1., 1., 1., 1.);
             cv::Scalar dia = cvRgn_->Diameter();
 
@@ -208,7 +216,7 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
 
         if (TestFeature(RegionFeatureFlag::kRFF_SMALLEST_CIRCLE))
         {
-            cr->set_line_width(drawStyle_.strokeWidth_);
+            cr->set_line_width(drawStyle_.strokeWidth_ > 0.5 ? drawStyle_.strokeWidth_ : 1.5);
             cr->set_source_rgba(1., 1., 1., 1.);
             cv::Point3d sc = cvRgn_->SmallestCircle();
 
