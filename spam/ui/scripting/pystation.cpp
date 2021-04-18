@@ -171,6 +171,18 @@ pybind11::object PyStation::GetAllEntities()
             }
         }
 
+        auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+        CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
+        if (cavs)
+        {
+            for (const SPDrawableNode &spNode : cavs->GetAllFixed())
+            {
+                PyFixed pyObj;
+                pyObj.wpObj = spNode;
+                objs.append(pybind11::cast(pyObj));
+            }
+        }
+
         return objs;
     }
 

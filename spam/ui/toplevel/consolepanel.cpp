@@ -223,7 +223,6 @@ void ConsolePanel::OnEnter(wxCommandEvent& evt)
                     timeMS = (t2 - t1).seconds() * 1000;
                     if (res.second)
                     {
-                        cursor_ = cmds_.insert(cursor_, strCmd);
                         if (!res.first.empty())
                         {
                             consoleCtrl->AppendText(res.first);
@@ -233,6 +232,7 @@ void ConsolePanel::OnEnter(wxCommandEvent& evt)
                     {
                         Spam::PopupPyError(res.first);
                     }
+                    cursor_ = cmds_.insert(cursor_, strCmd);
                 }
             }
             consoleCtrl->AppendText(wxT(">>> "));

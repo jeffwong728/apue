@@ -467,6 +467,32 @@ void CairoCanvas::RefreshDrawable(const SPDrawableNode &de)
     InvalidateDrawable(SPDrawableNodeVector(1, de));
 }
 
+void CairoCanvas::RefreshRect(const Geom::OptRect &invalidRect)
+{
+    if (invalidRect && invalidRect->area() > 0.)
+    {
+        wxRect iRect = ImageToScreen(invalidRect);
+        ConpensateHandle(iRect);
+        Refresh(false, &iRect);
+    }
+}
+
+void CairoCanvas::RefreshRects(const std::vector<Geom::OptRect> &invalidRects)
+{
+    Geom::OptRect boundRect;
+    for (const auto &irc : invalidRects)
+    {
+        boundRect.unionWith(irc);
+    }
+
+    if (boundRect && boundRect->area() > 0.)
+    {
+        wxRect invalidRect = ImageToScreen(boundRect);
+        ConpensateHandle(invalidRect);
+        Refresh(false, &invalidRect);
+    }
+}
+
 void CairoCanvas::HighlightDrawable(const SPDrawableNode &de)
 {
     InvalidateDrawable(SPDrawableNodeVector(1, de));
@@ -509,9 +535,39 @@ void CairoCanvas::DrawBox(const Geom::OptRect &oldRect, const Geom::OptRect &new
         rubber_band_->setRight(rcRubber.GetRight());
     }
 
-    wxRect invalidRect = ImageToScreen(rect);
-    ConpensateHandle(invalidRect);
-    Refresh(false, &invalidRect);
+    const double iTol = 1.0 / GetMatScale();
+    Geom::OptRect irects[4];
+    if (oldRect)
+    {
+        Geom::Coord t = oldRect->top();
+        Geom::Coord b = oldRect->bottom();
+        Geom::Coord l = oldRect->left();
+        Geom::Coord r = oldRect->right();
+
+        irects[0] = Geom::OptRect(l - iTol, t - iTol, r + iTol, t + iTol);
+        irects[1] = Geom::OptRect(l - iTol, b - iTol, r + iTol, b + iTol);
+        irects[2] = Geom::OptRect(l - iTol, t + iTol, l + iTol, b - iTol);
+        irects[3] = Geom::OptRect(r - iTol, t + iTol, r + iTol, b - iTol);
+    }
+
+    if (newRect)
+    {
+        Geom::Coord t = newRect->top();
+        Geom::Coord b = newRect->bottom();
+        Geom::Coord l = newRect->left();
+        Geom::Coord r = newRect->right();
+
+        irects[0].unionWith(Geom::OptRect(l - iTol, t - iTol, r + iTol, t + iTol));
+        irects[1].unionWith(Geom::OptRect(l - iTol, b - iTol, r + iTol, b + iTol));
+        irects[2].unionWith(Geom::OptRect(l - iTol, t + iTol, l + iTol, b - iTol));
+        irects[3].unionWith(Geom::OptRect(r - iTol, t + iTol, r + iTol, b - iTol));
+    }
+
+    for (const auto &iRect : irects)
+    {
+        wxRect invalidRect = ImageToScreen(iRect);
+        Refresh(false, &invalidRect);
+    }
 }
 
 WPGeomNode CairoCanvas::AddRect(const RectData &rd)

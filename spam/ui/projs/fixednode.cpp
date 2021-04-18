@@ -114,7 +114,7 @@ Geom::OptRect RegionNode::GetBoundingBox() const
 {
     if (cvRgn_)
     {
-        cv::Rect cvRC = cvRgn_->BoundingBox();
+        cv::Rect cvRC = BoundingBox();
         return Geom::OptRect(Geom::IntRect(cvRC.tl().x, cvRC.tl().y, cvRC.br().x, cvRC.br().y));
     }
 
@@ -138,13 +138,18 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
         r = 255; g = 215; b = 0; a = 0xFF;
     }
 
+    double lineWidthX = drawStyle_.strokeWidth_ > 0.5 ? drawStyle_.strokeWidth_ : 1.5;
+    double lineWidthY = drawStyle_.strokeWidth_ > 0.5 ? drawStyle_.strokeWidth_ : 1.5;
+    cr->device_to_user_distance(lineWidthX, lineWidthY);
+    if (lineWidthY < lineWidthX) lineWidthY = lineWidthX;
+
     if (drawMode_)
     {
         cr->set_line_width(0.);
     }
     else
     {
-        cr->set_line_width(drawStyle_.strokeWidth_ > 0.5 ? drawStyle_.strokeWidth_ : 1.5);
+        cr->set_line_width(lineWidthY);
     }
 
     cr->set_source_rgba(r / 255., g / 255., b / 255., a / 255.);
@@ -201,27 +206,146 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
         cr->stroke();
     }
 
-    if (cvRgn_)
+    if (cvRgn_ && IsNeedRefresh(*GetBoundingBox(), invalidRects))
     {
-        if (TestFeature(RegionFeatureFlag::kRFF_DIAMETER))
-        {
-            cr->set_line_width(drawStyle_.strokeWidth_ > 0.5 ? drawStyle_.strokeWidth_ : 1.5);
-            cr->set_source_rgba(1., 1., 1., 1.);
-            cv::Scalar dia = cvRgn_->Diameter();
+        cr->set_line_width(lineWidthY);
+        cr->set_source_rgba(1., 1., 1., 1.);
+        cr->select_font_face("Sans", Cairo::FONT_SLANT_NORMAL, Cairo::FONT_WEIGHT_BOLD);
+        cr->set_font_size(12.0*lineWidthY);
 
+        if (TestFeature(RegionFeatureFlag::kRFF_AREA) || TestHighlightFeature(RegionFeatureFlag::kRFF_AREA))
+        {
+            Cairo::TextExtents extents;
+            std::string utf8 = std::to_string(cv::saturate_cast<long long>(cvRgn_->Area()));
+            cr->get_text_extents(utf8, extents);
+
+            cv::Point2d ct = cvRgn_->Centroid();
+            cr->move_to(ct.x - extents.width / 2, ct.y + extents.height / 2);
+            cr->show_text(utf8);
+        }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_DIAMETER) || TestHighlightFeature(RegionFeatureFlag::kRFF_DIAMETER))
+        {
+            cv::Scalar dia = cvRgn_->Diameter();
             cr->move_to(dia[0] + 0.5f, dia[1] + 0.5f);
             cr->line_to(dia[2] + 0.5f, dia[3] + 0.5f);
             cr->stroke();
+
+            Geom::Point sPt(dia[0], dia[1]);
+            Geom::Point ePt(dia[2], dia[3]);
+            Geom::Point vPt = ePt - sPt;
+            Geom::Point ct = Geom::middle_point(sPt, ePt);
+
+            cr->save();
+            cr->translate(ct.x(), ct.y());
+            cr->rotate(std::atan2(vPt.y(), vPt.x())+ Geom::rad_from_deg(180));
+            cr->translate(-ct.x(), -ct.y());
+            std::string utf8(wxString::Format(wxT("%.3f"), Geom::distance(sPt, ePt)).ToUTF8().data());
+            Cairo::TextExtents extents;
+            cr->get_text_extents(utf8, extents);
+            cr->move_to(ct.x() - extents.width / 2, ct.y() - lineWidthY * 4);
+            cr->show_text(utf8);
+            cr->restore();
         }
 
-        if (TestFeature(RegionFeatureFlag::kRFF_SMALLEST_CIRCLE))
+        if (TestFeature(RegionFeatureFlag::kRFF_SMALLEST_CIRCLE) || TestHighlightFeature(RegionFeatureFlag::kRFF_SMALLEST_CIRCLE))
         {
-            cr->set_line_width(drawStyle_.strokeWidth_ > 0.5 ? drawStyle_.strokeWidth_ : 1.5);
-            cr->set_source_rgba(1., 1., 1., 1.);
             cv::Point3d sc = cvRgn_->SmallestCircle();
 
             cr->arc(sc.x, sc.y, sc.z, 0, 2 * M_PI);
             cr->stroke();
         }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_CONVEX_HULL) || TestHighlightFeature(RegionFeatureFlag::kRFF_CONVEX_HULL))
+        {
+            if (convexHull_.empty())
+            {
+                cvRgn_->GetConvex()->SelectPoints(0, convexHull_);
+            }
+
+            if (convexHull_.size() > 2)
+            {
+                cr->move_to(convexHull_.front().x + 0.5f, convexHull_.front().y + 0.5f);
+                for (int vv = 1; vv < static_cast<int>(convexHull_.size()); ++vv)
+                {
+                    cr->line_to(convexHull_[vv].x + 0.5f, convexHull_[vv].y + 0.5f);
+                }
+                cr->close_path();
+                cr->stroke();
+            }
+        }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_RECT2) || TestHighlightFeature(RegionFeatureFlag::kRFF_RECT2))
+        {
+            cv::RotatedRect rect2 = cvRgn_->GetContour()->SmallestRectangle();
+            cv::Point2f pts[4];
+            rect2.points(pts);
+            cr->move_to(pts[0].x + 0.5f, pts[0].y + 0.5f);
+            cr->line_to(pts[1].x + 0.5f, pts[1].y + 0.5f);
+            cr->line_to(pts[2].x + 0.5f, pts[2].y + 0.5f);
+            cr->line_to(pts[3].x + 0.5f, pts[3].y + 0.5f);
+            cr->close_path();
+            cr->stroke();
+        }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_ELLIPTIC_AXIS) || TestHighlightFeature(RegionFeatureFlag::kRFF_ELLIPTIC_AXIS))
+        {
+            cv::Point2d ct = cvRgn_->Centroid();
+            cv::Point3d ea = cvRgn_->EllipticAxis();
+
+            Geom::CairoPathSink cairoPathSink(cr->cobj());
+            Geom::Ellipse ge(ct.x, ct.y, ea.x, ea.y, Geom::rad_from_deg(ea.z));
+            if (ea.x > Geom::EPSILON && ea.y > Geom::EPSILON)
+            {
+                cairoPathSink.feed(ge);
+                cr->stroke();
+            }
+        }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_ORIENTATION) || TestHighlightFeature(RegionFeatureFlag::kRFF_ORIENTATION))
+        {
+            cv::Point2d ct = cvRgn_->Centroid();
+            cv::Point3d ea = cvRgn_->EllipticAxis();
+            const Geom::Coord arrowLen = std::max(12., std::max(ea.x, ea.y)*0.618);
+            Geom::Point sPt{ ct.x, ct.y };
+            Geom::Point ePt{ ct.x + arrowLen * std::cos(Geom::rad_from_deg(ea.z)), ct.y + arrowLen * std::sin(Geom::rad_from_deg(ea.z)) };
+            Geom::Point arrowBase = Geom::lerp(8 / arrowLen, ePt, sPt);
+            Geom::Point tPt = arrowBase + Geom::rot90(ePt - arrowBase);
+            Geom::Point rPt = Geom::lerp(0.618, tPt, arrowBase);
+            Geom::Point lPt = Geom::lerp(2, rPt, arrowBase);
+
+            cr->move_to(ePt.x(), ePt.y());
+            cr->line_to(rPt.x(), rPt.y());
+            cr->line_to(lPt.x(), lPt.y());
+            cr->close_path();
+            cr->move_to(sPt.x(), sPt.y());
+            cr->line_to(ePt.x(), ePt.y());
+            cr->stroke();
+
+            cr->save();
+            cr->translate(ct.x, ct.y);
+            cr->rotate_degrees(ea.z);
+            cr->translate(-ct.x, -ct.y);
+            std::string utf8(wxString::Format(wxT("%.3f"), cvRgn_->Orientation()).ToUTF8().data());
+            cr->move_to(ct.x, ct.y - lineWidthY * 4);
+            cr->show_text(utf8);
+            cr->restore();
+        }
+    }
+}
+
+cv::Rect RegionNode::BoundingBox() const
+{
+    if (m_features)
+    {
+        cv::Point3d sc = cvRgn_->SmallestCircle();
+        const int x = cvFloor(sc.x - sc.z - drawStyle_.strokeWidth_);
+        const int y = cvFloor(sc.y - sc.z - drawStyle_.strokeWidth_);
+        const int w = cvCeil((sc.z+ drawStyle_.strokeWidth_ )*2);
+        return cv::Rect(x, y, w, w);
+    }
+    else
+    {
+        return cvRgn_->BoundingBox();
     }
 }

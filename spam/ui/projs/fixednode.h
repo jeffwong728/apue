@@ -39,16 +39,23 @@ public:
     boost::any CreateMemento() const wxOVERRIDE { return boost::any(); }
     bool RestoreFromMemento(const boost::any &WXUNUSED(memento)) wxOVERRIDE { return false; }
     void ClearAllFeatures() { m_features = 0; }
+    void ClearAllHightlightFeatures() { m_hfeatures = 0; }
     void SetFeature(const RegionFeatureFlag ff) { m_features |= static_cast<uint64_t>(ff); }
     void ClearFeature(const RegionFeatureFlag ff) { m_features &= ~static_cast<uint64_t>(ff); }
     void ToggleFeature(const RegionFeatureFlag ff) { m_features ^= static_cast<uint64_t>(ff); }
     bool TestFeature(const RegionFeatureFlag ff) const { return m_features & static_cast<uint64_t>(ff); }
+    void SetHighlightFeature(const RegionFeatureFlag ff) { m_hfeatures |= static_cast<uint64_t>(ff); }
+    void ClearHighlightFeature(const RegionFeatureFlag ff) { m_hfeatures &= ~static_cast<uint64_t>(ff); }
+    void ToggleHighlightFeature(const RegionFeatureFlag ff) { m_hfeatures ^= static_cast<uint64_t>(ff); }
+    bool TestHighlightFeature(const RegionFeatureFlag ff) const { return m_hfeatures & static_cast<uint64_t>(ff); }
 
 protected:
     void DoTransform(const Geom::Affine &WXUNUSED(aff), const double WXUNUSED(dx), const double WXUNUSED(dy)) wxOVERRIDE {}
 
 protected:
     uint64_t m_features = 0;
+    uint64_t m_hfeatures = 0;
+    mutable std::vector<cv::Point2f> convexHull_;
 };
 
 class RegionNode : public FixedNode
@@ -67,7 +74,7 @@ public:
 public:
     void Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
     void SetDraw(const int drawMode) { drawMode_ = drawMode; }
-    cv::Rect BoundingBox() const { return cvRgn_->BoundingBox(); }
+    cv::Rect BoundingBox() const;
     cv::Ptr<cv::mvlab::Region> GetRegion() const { return cvRgn_; }
 
 private:

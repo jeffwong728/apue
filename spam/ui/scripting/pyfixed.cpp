@@ -37,6 +37,18 @@ bool PyFixed::SetFeatureImpl(const std::string &feature)
             {
                 spFixed->SetFeature(RegionFeatureFlag::kRFF_SMALLEST_CIRCLE);
             }
+            else if (feature == "convex_hull")
+            {
+                spFixed->SetFeature(RegionFeatureFlag::kRFF_CONVEX_HULL);
+            }
+            else if (feature == "elliptic_axis")
+            {
+                spFixed->SetFeature(RegionFeatureFlag::kRFF_ELLIPTIC_AXIS);
+            }
+            else if (feature == "rect2")
+            {
+                spFixed->SetFeature(RegionFeatureFlag::kRFF_RECT2);
+            }
             else
             {
                 throw std::invalid_argument(std::string("Invalid feature: ") + feature);
@@ -81,6 +93,18 @@ bool PyFixed::ClearFeatureImpl(const std::string &feature)
             {
                 spFixed->ClearFeature(RegionFeatureFlag::kRFF_SMALLEST_CIRCLE);
             }
+            else if (feature == "convex_hull")
+            {
+                spFixed->ClearFeature(RegionFeatureFlag::kRFF_CONVEX_HULL);
+            }
+            else if (feature == "elliptic_axis")
+            {
+                spFixed->ClearFeature(RegionFeatureFlag::kRFF_ELLIPTIC_AXIS);
+            }
+            else if (feature == "rect2")
+            {
+                spFixed->ClearFeature(RegionFeatureFlag::kRFF_RECT2);
+            }
             else
             {
                 throw std::invalid_argument(std::string("Invalid feature: ") + feature);
@@ -95,6 +119,17 @@ bool PyFixed::ClearFeatureImpl(const std::string &feature)
 
 void PyFixed::SetFeature(const std::string &feature)
 {
+    Geom::OptRect oldBBox;
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spFixed = std::dynamic_pointer_cast<FixedNode>(spObj);
+        if (spFixed)
+        {
+            oldBBox = spFixed->GetBoundingBox();
+        }
+    }
+
     if (SetFeatureImpl(feature))
     {
         auto spObj = wpObj.lock();
@@ -108,7 +143,8 @@ void PyFixed::SetFeature(const std::string &feature)
                 CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
                 if (cavs)
                 {
-                    cavs->RefreshDrawable(spFixed);
+                    oldBBox.unionWith(spFixed->GetBoundingBox());
+                    cavs->RefreshRect(oldBBox);
                     ::wxYield();
                 }
             }
@@ -118,6 +154,17 @@ void PyFixed::SetFeature(const std::string &feature)
 
 void PyFixed::SetFeature(const std::vector<std::string> &features)
 {
+    Geom::OptRect oldBBox;
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spFixed = std::dynamic_pointer_cast<FixedNode>(spObj);
+        if (spFixed)
+        {
+            oldBBox = spFixed->GetBoundingBox();
+        }
+    }
+
     bool bSuccess = !features.empty();
     for (const std::string &feature : features)
     {
@@ -137,7 +184,8 @@ void PyFixed::SetFeature(const std::vector<std::string> &features)
                 CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
                 if (cavs)
                 {
-                    cavs->RefreshDrawable(spFixed);
+                    oldBBox.unionWith(spFixed->GetBoundingBox());
+                    cavs->RefreshRect(oldBBox);
                     ::wxYield();
                 }
             }
@@ -147,6 +195,17 @@ void PyFixed::SetFeature(const std::vector<std::string> &features)
 
 void PyFixed::ClearFeature(const std::string &feature)
 {
+    Geom::OptRect oldBBox;
+    auto spObj = wpObj.lock();
+    if (spObj)
+    {
+        auto spFixed = std::dynamic_pointer_cast<FixedNode>(spObj);
+        if (spFixed)
+        {
+            oldBBox = spFixed->GetBoundingBox();
+        }
+    }
+
     if (ClearFeatureImpl(feature))
     {
         auto spObj = wpObj.lock();
@@ -160,7 +219,8 @@ void PyFixed::ClearFeature(const std::string &feature)
                 CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
                 if (cavs)
                 {
-                    cavs->RefreshDrawable(spFixed);
+                    oldBBox.unionWith(spFixed->GetBoundingBox());
+                    cavs->RefreshRect(oldBBox);
                     ::wxYield();
                 }
             }
@@ -176,6 +236,17 @@ void PyFixed::ClearFeature(const std::vector<std::string> &features)
     }
     else
     {
+        Geom::OptRect oldBBox;
+        auto spObj = wpObj.lock();
+        if (spObj)
+        {
+            auto spFixed = std::dynamic_pointer_cast<FixedNode>(spObj);
+            if (spFixed)
+            {
+                oldBBox = spFixed->GetBoundingBox();
+            }
+        }
+
         bool bSuccess = true;
         for (const std::string &feature : features)
         {
@@ -195,7 +266,8 @@ void PyFixed::ClearFeature(const std::vector<std::string> &features)
                     CairoCanvas *cavs = frame->FindCanvasByUUID(spStation->GetUUIDTag());
                     if (cavs)
                     {
-                        cavs->RefreshDrawable(spFixed);
+                        oldBBox.unionWith(spFixed->GetBoundingBox());
+                        cavs->RefreshRect(oldBBox);
                         ::wxYield();
                     }
                 }

@@ -96,6 +96,8 @@ public:
     void EraseContour(const cv::Ptr<cv::mvlab::Contour> &contr);
     void DrawMarker(const Geom::PathVector &marker);
     void RefreshDrawable(const SPDrawableNode &de);
+    void RefreshRect(const Geom::OptRect &invalidRect);
+    void RefreshRects(const std::vector<Geom::OptRect> &invalidRects);
     void HighlightDrawable(const SPDrawableNode &de);
     void DimDrawable(const SPDrawableNode &de);
     void DrawPathVector(const Geom::PathVector &pth, const Geom::OptRect &rect);
