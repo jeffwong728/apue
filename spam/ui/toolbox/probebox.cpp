@@ -102,11 +102,11 @@ ToolOptions ProbeBox::GetToolOptions() const
 {
     ToolOptions tos;
     tos[cp_ToolProbeMode] = probeMode_;
-    tos[cp_ToolProbeRegionMask] = 0;
+    tos[cp_ToolProbeRegionMask] = regionProbeMask_;
     return tos;
 }
 
-void ProbeBox::OnProbeMode(wxCommandEvent &cmd)
+void ProbeBox::OnProbeEntity(wxCommandEvent &cmd)
 {
     probeMode_ = cmd.GetId();
     UpdateSelectionFilter();
@@ -118,6 +118,22 @@ void ProbeBox::OnProbeMode(wxCommandEvent &cmd)
 
 void ProbeBox::OnProbeRegion(wxCommandEvent &cmd)
 {
+    void (ProbeBox::*flagOp)(const RegionFeatureFlag) = cmd.IsChecked() ? &ProbeBox::SetFeature : &ProbeBox::ClearFeature;
+    switch (cmd.GetId())
+    {
+    case kSpamID_TOOLBOX_PROBE_REGION_AREA: (this->*flagOp)(RegionFeatureFlag::kRFF_AREA); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_CIRCULARITY: (this->*flagOp)(RegionFeatureFlag::kRFF_CIRCULARITY); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_CONVEXITY: (this->*flagOp)(RegionFeatureFlag::kRFF_CONVEXITY); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_BBOX: (this->*flagOp)(RegionFeatureFlag::kRFF_RECT1); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_CENTROID: (this->*flagOp)(RegionFeatureFlag::kRFF_CENTROID); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_CONVEX: (this->*flagOp)(RegionFeatureFlag::kRFF_CONVEX_HULL); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_DIAMETER: (this->*flagOp)(RegionFeatureFlag::kRFF_DIAMETER); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_SMALLESTRECT: (this->*flagOp)(RegionFeatureFlag::kRFF_RECT2); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_SMALLESTCIRCLE: (this->*flagOp)(RegionFeatureFlag::kRFF_SMALLEST_CIRCLE); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_ORIENTATION: (this->*flagOp)(RegionFeatureFlag::kRFF_ORIENTATION); break;
+    case kSpamID_TOOLBOX_PROBE_REGION_ELLIPTIC_AXIS: (this->*flagOp)(RegionFeatureFlag::kRFF_ELLIPTIC_AXIS); break;
+    default: break;
+    }
     ToolOptions tos = ProbeBox::GetToolOptions();
     tos[cp_ToolId] = kSpamID_TOOLBOX_PROBE_REGION;
     sig_OptionsChanged(tos);
@@ -159,8 +175,8 @@ wxPanel *ProbeBox::CreateSelectOption(wxWindow *parent)
     probeMode->AddRadioTool(kSpamID_TOOLBOX_PROBE_PIXEL,  wxT("Probe pixel"),  Spam::GetBitmap(ip, bm_Pointer));
     probeMode->AddRadioTool(kSpamID_TOOLBOX_PROBE_ENTITY, wxT("Probe entity"), Spam::GetBitmap(ip, bm_Pointer));
     probeMode->AddRadioTool(kSpamID_TOOLBOX_PROBE_IMAGE,  wxT("Probe image"),  Spam::GetBitmap(ip, bm_Pointer));
-    probeMode->ToggleTool(kSpamID_TOOLBOX_PROBE_PIXEL, true);
-    probeMode->Bind(wxEVT_TOOL, &ProbeBox::OnProbeMode, this, kSpamID_TOOLBOX_PROBE_PIXEL, kSpamID_TOOLBOX_PROBE_IMAGE);
+    probeMode->ToggleTool(kSpamID_TOOLBOX_PROBE_PIXEL, true); SetFeature(RegionFeatureFlag::kRFF_AREA);
+    probeMode->Bind(wxEVT_TOOL, &ProbeBox::OnProbeEntity, this, kSpamID_TOOLBOX_PROBE_PIXEL, kSpamID_TOOLBOX_PROBE_IMAGE);
     probeMode->Realize();
 
     sizerRoot->Add(probeMode, wxSizerFlags(0).Expand().Border());
@@ -193,13 +209,18 @@ wxPanel *ProbeBox::CreateRegionOption(wxWindow *parent)
     auto probeMode = new wxToolBar(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_VERTICAL | wxTB_TEXT | wxTB_HORZ_TEXT | wxTB_NODIVIDER);
     probeMode->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOXHIGHLIGHTTEXT));
     probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_AREA, wxT("Probe Area"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_CIRCULARITY, wxT("Probe Circularity"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_CONVEXITY, wxT("Probe Convexity"), Spam::GetBitmap(ip, bm_Pointer));
     probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_CENTROID, wxT("Probe Centroid"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_BBOX, wxT("Probe Bounding Box"), Spam::GetBitmap(ip, bm_Pointer));
     probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_CONVEX, wxT("Probe Convex Hull"), Spam::GetBitmap(ip, bm_Pointer));
     probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_DIAMETER, wxT("Probe Diameter"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_SMALLESTRECT, wxT("Probe Smallest Rectangle"), Spam::GetBitmap(ip, bm_Pointer));
     probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_SMALLESTCIRCLE, wxT("Probe Smallest Circle"), Spam::GetBitmap(ip, bm_Pointer));
     probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_ORIENTATION, wxT("Probe Orientation"), Spam::GetBitmap(ip, bm_Pointer));
+    probeMode->AddCheckTool(kSpamID_TOOLBOX_PROBE_REGION_ELLIPTIC_AXIS, wxT("Probe Elliptic Axis"), Spam::GetBitmap(ip, bm_Pointer));
     probeMode->ToggleTool(kSpamID_TOOLBOX_PROBE_REGION_AREA, true);
-    probeMode->Bind(wxEVT_TOOL, &ProbeBox::OnProbeRegion, this, kSpamID_TOOLBOX_PROBE_REGION_AREA, kSpamID_TOOLBOX_PROBE_REGION_ORIENTATION);
+    probeMode->Bind(wxEVT_TOOL, &ProbeBox::OnProbeRegion, this, kSpamID_TOOLBOX_PROBE_REGION_AREA, kSpamID_TOOLBOX_PROBE_REGION_ELLIPTIC_AXIS);
     probeMode->Realize();
 
     sizerRoot->Add(probeMode, wxSizerFlags(0).Expand().Border());

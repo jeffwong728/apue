@@ -164,15 +164,19 @@ enum
 
     kSpamID_TOOLBOX_PROBE_PIXEL,
     kSpamID_TOOLBOX_PROBE_ENTITY,
-    kSpamID_TOOLBOX_PROBE_CONTOUR,
     kSpamID_TOOLBOX_PROBE_IMAGE,
 
     kSpamID_TOOLBOX_PROBE_REGION_AREA,
+    kSpamID_TOOLBOX_PROBE_REGION_CIRCULARITY,
+    kSpamID_TOOLBOX_PROBE_REGION_CONVEXITY,
+    kSpamID_TOOLBOX_PROBE_REGION_BBOX,
     kSpamID_TOOLBOX_PROBE_REGION_CENTROID,
     kSpamID_TOOLBOX_PROBE_REGION_CONVEX,
     kSpamID_TOOLBOX_PROBE_REGION_DIAMETER,
+    kSpamID_TOOLBOX_PROBE_REGION_SMALLESTRECT,
     kSpamID_TOOLBOX_PROBE_REGION_SMALLESTCIRCLE,
     kSpamID_TOOLBOX_PROBE_REGION_ORIENTATION,
+    kSpamID_TOOLBOX_PROBE_REGION_ELLIPTIC_AXIS,
 
     kSpamID_TOOLBOX_GEOM_FILL_COLOR,
     kSpamID_TOOLBOX_GEOM_FILL_ALPHA,
@@ -187,7 +191,9 @@ enum
     kSpamID_TOOLBOX_MATCH_GUARD,
 
     kSpamID_STATION_THUMBNAIL_DELETE,
-    kSpamID_STATION_THUMBNAIL_SAVE
+    kSpamID_STATION_THUMBNAIL_SAVE,
+
+    kSpamID_PY3_SCRIPT_PLAY
 };
 
 enum SpamIconPurpose
@@ -282,10 +288,12 @@ enum class RegionFeatureFlag : uint64_t
     kRFF_CONVEX_HULL = 0x80,
     kRFF_DIAMETER = 0x100,
     kRFF_CENTROID = 0x200,
+    kRFF_CIRCULARITY = 0x400,
+    kRFF_CONVEXITY = 0x800,
     kRFF_ALL_FEATURES = 0xFFFFFFFFFFFFFFFF
 };
 
-typedef boost::mpl::vector<int, long, double> OptTypes0;
+typedef boost::mpl::vector<int, long, double, uint64_t> OptTypes0;
 typedef boost::mpl::push_front<OptTypes0, std::string>::type OptTypes;
 using ToolOptions = std::unordered_map<std::string, boost::make_variant_over<OptTypes>::type>;
 

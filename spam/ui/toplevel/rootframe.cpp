@@ -170,14 +170,13 @@ void RootFrame::CreateAuiPanes()
     Bind(wxEVT_AUI_PANE_CLOSE, &RootFrame::OnAuiPageClosed, this);
 
     wxAuiToolBar* tbBar = new wxAuiToolBar(this, kSpamToolboxBar, wxDefaultPosition, wxDefaultSize, wxAUI_TB_VERTICAL);
-    tbBar->SetToolBitmapSize(wxSize(24, 24));
-    tbBar->AddTool(kSpamID_TOOLBOX_PROBE, toolBoxLabels[kSpam_TOOLBOX_PROBE], wxArtProvider::GetBitmap(wxART_NEW), wxT("Image Infomation"), wxITEM_CHECK);
+    tbBar->SetToolBitmapSize(wxSize(48, 48));
+    tbBar->AddTool(kSpamID_TOOLBOX_PROBE, toolBoxLabels[kSpam_TOOLBOX_PROBE], wxArtProvider::GetBitmap(wxART_TIP), wxT("Image Infomation"), wxITEM_CHECK);
     tbBar->AddTool(kSpamID_TOOLBOX_GEOM, toolBoxLabels[kSpam_TOOLBOX_GEOM], wxArtProvider::GetBitmap(wxART_NEW), wxT("Geometry Tool"), wxITEM_CHECK);
     tbBar->AddTool(kSpamID_TOOLBOX_PROC, toolBoxLabels[kSpam_TOOLBOX_PROC], wxArtProvider::GetBitmap(wxART_NEW), wxT("Image Processing"), wxITEM_CHECK);
     tbBar->AddTool(kSpamID_TOOLBOX_MATCH, toolBoxLabels[kSpam_TOOLBOX_MATCH], wxArtProvider::GetBitmap(wxART_NEW), wxT("Pattern Match"), wxITEM_CHECK);
     tbBar->AddSeparator();
     tbBar->AddTool(kSpamID_TOOLBOX_STYLE, toolBoxLabels[kSpam_TOOLBOX_STYLE], wxArtProvider::GetBitmap(wxART_NEW), wxT("Geometry Style"), wxITEM_CHECK);
-    tbBar->Realize();
 
     tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxInfo,  this, kSpamID_TOOLBOX_PROBE);
     tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxGeom,  this, kSpamID_TOOLBOX_GEOM);
@@ -236,6 +235,18 @@ void RootFrame::CreateAuiPanes()
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_MATCH]).MinSize(matchBox->GetSizer()->GetMinSize());
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_STYLE]).MinSize(styleBox->GetSizer()->GetMinSize());
 
+    auto pyEditor = dynamic_cast<PyEditor *>(wxAuiMgr_.GetPane(pyEditorName_).window);
+    if (pyEditor)
+    {
+        pyEditor->LoadDefaultPyFile();
+        boost::system::error_code ec;
+        const std::wstring ansiFilePath = SpamConfig::Get<wxString>(cp_Py3EditorScriptFullPath, wxT("")).ToStdWstring();
+        boost::filesystem::path p(ansiFilePath);
+        wxAuiMgr_.GetPane(pyEditorName_).Caption(wxString("Script Editor - ") + wxString(p.filename().string()));
+    }
+
+    tbBar->SetToolBitmapSize(wxSize(48, 48));
+    tbBar->Realize();
 
     ToggleToolboxPane(kSpam_TOOLBOX_GUARD);
     wxAuiMgr_.GetArtProvider()->SetMetric(wxAUI_DOCKART_PANE_BORDER_SIZE, 0);
@@ -262,6 +273,15 @@ void RootFrame::SaveProject(const wxString &dbPath)
     if (pyEditor)
     {
         pyEditor->SavePyFile();
+    }
+}
+
+void RootFrame::PlayScript()
+{
+    auto pyEditor = dynamic_cast<PyEditor *>(wxAuiMgr_.GetPane(pyEditorName_).window);
+    if (pyEditor)
+    {
+        pyEditor->PlayPyFile();
     }
 }
 
@@ -528,6 +548,7 @@ void RootFrame::OnLoadPy3(wxCommandEvent& event)
         if (pyEditor)
         {
             pyEditor->LoadPyFile(openFileDialog.GetPath());
+            wxAuiMgr_.GetPane(pyEditorName_).Caption(wxString("Script Editor - ") + openFileDialog.GetFilename());
         }
     }
 }
@@ -777,6 +798,9 @@ void RootFrame::OnUpdateUI(wxUpdateUIEvent& e)
             break;
         case wxID_REDO:
             gtk_widget_set_sensitive(wItem.second, SpamUndoRedo::IsRedoable());
+            break;
+        case kSpamID_PY3_SCRIPT_PLAY:
+            gtk_widget_set_sensitive(wItem.second, wxAuiMgr_.GetPane(pyEditorName_).IsShown());
             break;
         default:
             break;
@@ -1309,6 +1333,15 @@ void RootFrame::redo_cb(GtkWidget *widget, gpointer user_data)
     SpamUndoRedo::Redo();
 }
 
+void RootFrame::play_cb(GtkWidget *widget, gpointer user_data)
+{
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    if (frame)
+    {
+        frame->PlayScript();
+    }
+}
+
 void RootFrame::help_about_cb(GtkWidget *widget, gpointer user_data)
 {
 #ifdef _DEBUG
@@ -1450,18 +1483,23 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), udTb, -1);
     GtkToolItem *rdTb = gtk_tool_button_new_from_stock(GTK_STOCK_REDO);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), rdTb, -1);
-    GtkToolItem *sep = gtk_separator_tool_item_new();
-    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), sep, -1);
+    GtkToolItem *sep1 = gtk_separator_tool_item_new();
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), sep1, -1);
     GtkToolItem *newTb = gtk_tool_button_new_from_stock(GTK_STOCK_NEW);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), newTb, -1);
     GtkToolItem *openTb = gtk_tool_button_new_from_stock(GTK_STOCK_OPEN);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), openTb, -1);
     GtkToolItem *saveTb = gtk_tool_button_new_from_stock(GTK_STOCK_SAVE);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), saveTb, -1);
+    GtkToolItem *sep2 = gtk_separator_tool_item_new();
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), sep2, -1);
+    GtkToolItem *playTb = gtk_tool_button_new_from_stock(GTK_STOCK_MEDIA_PLAY);
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar), playTb, -1);
 
     gtk_widget_set_tooltip_text(GTK_WIDGET(newTb), "New a Project");
     gtk_widget_set_tooltip_text(GTK_WIDGET(openTb), "Open Project");
     gtk_widget_set_tooltip_text(GTK_WIDGET(saveTb), "Save Project");
+    gtk_widget_set_tooltip_text(GTK_WIDGET(playTb), "Play Current Python 3 script");
 
     GtkWidget *menubar = gtk_menu_bar_new();
     GtkWidget *fileMenu = gtk_menu_new();
@@ -1561,10 +1599,12 @@ void RootFrame::ReplaceTitleBar(void)
 
     g_signal_connect(G_OBJECT(udTb), "clicked", G_CALLBACK(undo_cb), this);
     g_signal_connect(G_OBJECT(rdTb), "clicked", G_CALLBACK(redo_cb), this);
+    g_signal_connect(G_OBJECT(playTb), "clicked", G_CALLBACK(play_cb), this);
 
     widgets_.reserve(64);
     widgets_.emplace_back(wxID_UNDO, GTK_WIDGET(udTb));
     widgets_.emplace_back(wxID_REDO, GTK_WIDGET(rdTb));
+    widgets_.emplace_back(kSpamID_PY3_SCRIPT_PLAY, GTK_WIDGET(playTb));
     widgets_.emplace_back(spamID_VIEW_PROJECT, projMi);
     widgets_.emplace_back(spamID_VIEW_LOG, logWMi);
     widgets_.emplace_back(spamID_VIEW_CONSOLE, conWMi);

@@ -66,8 +66,8 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
             oldRect.unionWith(selEnt->GetBoundingBox());
         }
 
+        bool singleClick = false;
         SPDrawableNodeVector newSelEnts;
-
         if (SpamEntitySelectionMode::kESM_MULTIPLE == Spam::GetSelectionFilter()->GetEntitySelectionMode())
         {
             if (!rect.empty())
@@ -98,6 +98,7 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
                 SPDrawableNode fEnt = cav->FindDrawable(freePt, s, s, sd);
                 if (fEnt)
                 {
+                    singleClick = true;
                     newSelEnts.push_back(fEnt);
                     FireClickEntity(fEnt, e.evData, freePt, sd);
                 }
@@ -110,6 +111,11 @@ void BoxToolImpl::EndBoxing(const EvLMouseUp &e)
             {
                 FireEndBoxing(rect, e.evData);
             }
+        }
+
+        if (!singleClick && !newSelEnts.empty())
+        {
+            FireBoxEntity(newSelEnts);
         }
 
         for (SPDrawableNode &selEnt : newSelEnts)
@@ -247,8 +253,8 @@ void BoxToolImpl::Safari(const EvMouseMove &e)
                 }
 
                 drawable->SetHighlightData(hlState);
-                cav->HighlightDrawable(drawable);
                 FireGlowEntity(drawable);
+                cav->HighlightDrawable(drawable);
             }
         }
         else

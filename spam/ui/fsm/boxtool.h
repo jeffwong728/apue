@@ -41,8 +41,7 @@ struct BoxToolImpl
     virtual void FireGlowEntity(const SPDrawableNode &ent) const = 0;
     virtual void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const {}
     virtual void FireClickImage(const wxMouseEvent &e) const {}
-    virtual void FireClickRegion(const wxMouseEvent &e, const cv::Ptr<cv::mvlab::Region> &rgn) const {}
-    virtual void FireClickContour(const wxMouseEvent &e, const cv::Ptr<cv::mvlab::Contour> &contr) const {}
+    virtual void FireBoxEntity(const SPDrawableNodeVector &ents) const {}
     virtual void FireEndBoxing(const Geom::OptRect &boxRect, const wxMouseEvent &e) const {}
 
     Geom::Point    anchor;
@@ -61,12 +60,11 @@ struct BoxTool : public BoxToolImpl
 
     void FireDeselectEntity(const SPDrawableNodeVector &ents) const override { tool.template context<Spamer>().sig_EntityDesel(ents); }
     void FireSelectEntity(const SPDrawableNodeVector &ents) const override { tool.template context<Spamer>().sig_EntitySel(ents); }
-    void FireDimEntity(const SPDrawableNode &ent) const override { tool.template context<Spamer>().sig_EntityDim(ent); }
-    void FireGlowEntity(const SPDrawableNode &ent) const override { tool.template context<Spamer>().sig_EntityGlow(ent); }
+    void FireDimEntity(const SPDrawableNode &ent) const override { tool.template context<Spamer>().sig_EntityDim(ent); tool.post_event(EvEntityLoseHighlight(ent)); }
+    void FireGlowEntity(const SPDrawableNode &ent) const override { tool.template context<Spamer>().sig_EntityGlow(ent); tool.post_event(EvEntityHighlight(ent)); }
     void FireClickEntity(const SPDrawableNode &ent, const wxMouseEvent &e, const Geom::Point &pt, const SelectionData &sd) const override { tool.post_event(EvEntityClicked(ent, e, pt, sd)); }
     void FireClickImage(const wxMouseEvent &e) const override { tool.post_event(EvImageClicked(e)); }
-    void FireClickRegion(const wxMouseEvent &e, const cv::Ptr<cv::mvlab::Region> &rgn) const { tool.post_event(EvRegionClicked(e, rgn)); }
-    void FireClickContour(const wxMouseEvent &e, const cv::Ptr<cv::mvlab::Contour> &contr) const { tool.post_event(EvContourClicked(e, contr)); }
+    void FireBoxEntity(const SPDrawableNodeVector &ents) const { tool.post_event(EvEntityBoxed(ents)); }
     void FireEndBoxing(const Geom::OptRect &boxRect, const wxMouseEvent &e) const override { tool.post_event(EvBoxingEnded(boxRect, e)); }
 
     ToolT &tool;

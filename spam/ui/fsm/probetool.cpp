@@ -4,6 +4,7 @@
 #include <ui/toplevel/rootframe.h>
 #include <ui/cv/cairocanvas.h>
 #include <ui/projs/drawablenode.h>
+#include <ui/projs/fixednode.h>
 
 void ProbeTool::OnOptionChanged(const EvToolOption &e)
 {
@@ -105,5 +106,54 @@ void HistogramTool::OnEntityClicked(const EvEntityClicked &e)
         Geom::PathVector pv;
         e.ent->BuildPath(pv);
         frame->RequestUpdateHistogram(cav->GetUUID(), pv);
+    }
+}
+
+void RegionTool::OnOptionChanged(const EvToolOption &e)
+{
+    const int toolId = boost::get<int>(e.toolOptions.at(cp_ToolId));
+    if (kSpamID_TOOLBOX_PROBE_REGION == toolId)
+    {
+        toolOptions = e.toolOptions;
+        BoxToolImpl::ResetTool();
+    }
+}
+
+void RegionTool::OnRegionClicked(const EvEntityClicked &e)
+{
+    auto spFixed = std::dynamic_pointer_cast<FixedNode>(e.ent);
+    if (spFixed)
+    {
+        spFixed->SetFeatures(boost::get<uint64_t>(toolOptions.at(cp_ToolProbeRegionMask)));
+    }
+}
+
+void RegionTool::OnRegionBoxed(const EvEntityBoxed &e)
+{
+    for (auto &ent : e.ents)
+    {
+        auto spFixed = std::dynamic_pointer_cast<FixedNode>(ent);
+        if (spFixed)
+        {
+            spFixed->SetFeatures(boost::get<uint64_t>(toolOptions.at(cp_ToolProbeRegionMask)));
+        }
+    }
+}
+
+void RegionTool::OnRegionHighlight(const EvEntityHighlight &e)
+{
+    auto spFixed = std::dynamic_pointer_cast<FixedNode>(e.ent);
+    if (spFixed)
+    {
+        spFixed->SetHighlightFeatures(boost::get<uint64_t>(toolOptions.at(cp_ToolProbeRegionMask)));
+    }
+}
+
+void RegionTool::OnRegionLoseHighlight(const EvEntityLoseHighlight &e)
+{
+    auto spFixed = std::dynamic_pointer_cast<FixedNode>(e.ent);
+    if (spFixed)
+    {
+        spFixed->SetHighlightFeatures(0ULL);
     }
 }

@@ -4,6 +4,7 @@
 #include <wx/stc/stc.h>
 #include <ui/spam.h>
 extern void PyAddImportPath(const std::string &strDir);
+extern std::pair<std::string, bool> PyRunStrings(const std::string &strCmd);
 
 PyEditor::PyEditor(wxWindow* parent)
 : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
@@ -22,11 +23,13 @@ PyEditor::PyEditor(wxWindow* parent)
     stc->SetMarginWidth(0, stc->TextWidth(wxSTC_STYLE_LINENUMBER, "_9999"));
     stc->SetIndentationGuides(TRUE);
     stc->SetViewWhiteSpace(wxSTC_WS_VISIBLEALWAYS);
-    stc->CmdKeyClear(wxSTC_KEY_TAB, 0);
     stc->SetLayoutCache(wxSTC_CACHE_PAGE);
     stc->UsePopUp(wxSTC_POPUP_ALL);
-    stc->SetWhitespaceForeground(true, wxColour("DARK SLATE GREY"));
+    stc->SetWhitespaceForeground(true, wxColour("GREY"));
     stc->SetSelBackground(true, wxColour(wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT)));
+    stc->SetIndent(4);
+    stc->SetUseTabs(false);
+    stc->SetTabWidth(4);
 
     for (int st = wxSTC_STYLE_DEFAULT; st <= wxSTC_STYLE_LASTPREDEFINED; ++st)
     {
@@ -63,19 +66,6 @@ PyEditor::PyEditor(wxWindow* parent)
     SetSizer(sizerRoot);
     GetSizer()->SetSizeHints(this);
 
-    if (SpamConfig::Get<bool>(cp_Py3EditorRememberScriptPath, true))
-    {
-        const wxString fullPath = SpamConfig::Get<wxString>(cp_Py3EditorScriptFullPath, wxT(""));
-        const std::wstring ansiFilePath = fullPath.ToStdWstring();
-        boost::system::error_code ec;
-        boost::filesystem::path p(ansiFilePath);
-        if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
-        {
-            LoadPyFile(fullPath);
-            PyAddImportPath(p.remove_filename().string());
-        }
-    }
-
     Show();
 }
 
@@ -83,17 +73,37 @@ PyEditor::~PyEditor()
 {
 }
 
+void PyEditor::LoadDefaultPyFile()
+{
+    if (SpamConfig::Get<bool>(cp_Py3EditorRememberScriptPath, true))
+    {
+        LoadPyFile(SpamConfig::Get<wxString>(cp_Py3EditorScriptFullPath, wxT("")));
+    }
+}
+
 void PyEditor::LoadPyFile(const wxString &fullPath)
 {
     auto stc = dynamic_cast<wxStyledTextCtrl *>(GetSizer()->GetItemById(kSpamPyEditorCtrl)->GetWindow());
     if (stc)
     {
-        stc->LoadFile(fullPath);
-        stc->EmptyUndoBuffer();
-
-        if (SpamConfig::Get<bool>(cp_Py3EditorRememberScriptPath, true))
+        boost::system::error_code ec;
+        const std::wstring ansiFilePath = fullPath.ToStdWstring();
+        boost::filesystem::path p(ansiFilePath);
+        if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
         {
-            SpamConfig::Set(cp_Py3EditorScriptFullPath, fullPath);
+            std::string pyDir = p.remove_filename().string();
+            if (pyImpDirs_.insert(pyDir).second)
+            {
+                PyAddImportPath(pyDir);
+            }
+
+            stc->LoadFile(fullPath);
+            stc->EmptyUndoBuffer();
+
+            if (SpamConfig::Get<bool>(cp_Py3EditorRememberScriptPath, true))
+            {
+                SpamConfig::Set(cp_Py3EditorScriptFullPath, fullPath);
+            }
         }
     }
 }
@@ -105,6 +115,28 @@ void PyEditor::SavePyFile() const
     {
         const wxString fullPath = SpamConfig::Get<wxString>(cp_Py3EditorScriptFullPath, wxT(""));
         stc->SaveFile(fullPath);
+    }
+}
+
+void PyEditor::PlayPyFile() const
+{
+    auto stc = dynamic_cast<wxStyledTextCtrl *>(GetSizer()->GetItemById(kSpamPyEditorCtrl)->GetWindow());
+    if (stc)
+    {
+        std::pair<std::string, bool> res{"", true};
+        {
+            wxBusyCursor wait;
+            res = PyRunStrings(stc->GetText().ToStdString());
+        }
+
+        if (res.second)
+        {
+            Spam::LogPyOutput();
+        }
+        else
+        {
+            Spam::PopupPyError(res.first);
+        }
     }
 }
 

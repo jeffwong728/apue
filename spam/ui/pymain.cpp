@@ -124,3 +124,29 @@ std::pair<std::string, bool> PyRunCommand(const std::string &strCmd)
         return std::make_pair(std::string(e.what()), false);
     }
 }
+
+std::pair<std::string, bool> PyRunStrings(const std::string &strCmd)
+{
+    try
+    {
+        pybind11::object mainModule = pybind11::module_::import("__main__");
+        pybind11::object mainNamespace = mainModule.attr("__dict__");
+        PyClearOutput();
+        pybind11::object resultObj = pybind11::eval<pybind11::eval_statements>(strCmd.c_str(), mainNamespace);
+        const auto resultTypeStr = resultObj.get_type().str().cast<std::string>();
+        const auto noneTypeStr = pybind11::none().get_type().str().cast<std::string>();
+        if (resultTypeStr != noneTypeStr)
+        {
+            return std::make_pair(resultObj.str(), true);
+        }
+        else
+        {
+            return std::make_pair(PyGetOutput(), true);
+        }
+    }
+    catch (const pybind11::error_already_set&e)
+    {
+        return std::make_pair(std::string(e.what()), false);
+    }
+}
+

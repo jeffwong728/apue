@@ -60,6 +60,7 @@ public:
     SelectionFilter *GetSelectionFilter() { return selFilter_.get(); }
     ProjPanel *GetProjPanel();
     void SaveProject(const wxString &dbPath);
+    void PlayScript();
     wxAuiNotebook *GetStationNotebook() const;
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
@@ -128,6 +129,7 @@ public:
     static void file_save_as_cb(GtkWidget *menuitem, gpointer user_data);
     static void undo_cb(GtkWidget *widget, gpointer user_data);
     static void redo_cb(GtkWidget *widget, gpointer user_data);
+    static void play_cb(GtkWidget *widget, gpointer user_data);
     static void help_about_cb(GtkWidget *widget, gpointer user_data);
     static void view_project_cb(GtkWidget *widget, gpointer user_data);
     static void view_entity_cb(GtkWidget *widget, gpointer user_data);

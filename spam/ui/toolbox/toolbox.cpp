@@ -70,7 +70,7 @@ void ToolBox::Init(const wxWindowID toolIds[], const wxString toolTips[], const 
 
     for (int t = 0; t<numTools; ++t)
     {
-        auto tBtn = new wxBitmapToggleButton(winTool, toolIds[t], toolIcons[t], wxDefaultPosition, wxSize(32, 32), wxBU_LEFT | wxBU_EXACTFIT);
+        auto tBtn = new wxBitmapToggleButton(winTool, toolIds[t], toolIcons[t], wxDefaultPosition, wxSize(40, 40), wxBU_LEFT | wxBU_EXACTFIT);
         tBtn->SetToolTip(toolTips[t]);
         tBtn->Bind(wxEVT_TOGGLEBUTTON, &ToolBox::OnTool, this, toolIds[t]);
         paneSizer->Add(tBtn, wxSizerFlags(1).Expand());

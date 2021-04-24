@@ -1295,8 +1295,8 @@ double RegionImpl::MaxSqrRadius() const
         {
             cv::Point2d sPt( run.colb, run.row );
             cv::Point2d ePt( run.cole - 1, run.row );
-            const double sRad = cPt.ddot(sPt);
-            const double eRad = cPt.ddot(ePt);
+            const double sRad = cv::normL2Sqr<double>(cPt-sPt);
+            const double eRad = cv::normL2Sqr<double>(cPt-ePt);
             if (sRad > maxRadius)
             {
                 maxRadius = sRad;

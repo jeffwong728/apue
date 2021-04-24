@@ -29,7 +29,7 @@ protected:
     ToolOptions GetToolOptions() const override;
 
 private:
-    void OnProbeMode(wxCommandEvent &cmd);
+    void OnProbeEntity(wxCommandEvent &cmd);
     void OnProbeRegion(wxCommandEvent &cmd);
     void OnToolEnter(const ToolOptions &toolOpts);
 
@@ -38,10 +38,12 @@ private:
     wxPanel *CreateRegionOption(wxWindow *parent);
     wxPanel *CreateHistOption(wxWindow *parent);
     void UpdateSelectionFilter(void);
+    void SetFeature(const RegionFeatureFlag ff) { regionProbeMask_ |= static_cast<uint64_t>(ff); }
+    void ClearFeature(const RegionFeatureFlag ff) { regionProbeMask_ &= ~static_cast<uint64_t>(ff); }
 
 private:
     int probeMode_{ kSpamID_TOOLBOX_PROBE_PIXEL };
-    int regionProbeMask_{ 0 };
+    uint64_t regionProbeMask_{ 0 };
     HistogramWidget *hist_;
 };
 #endif //SPAM_UI_TOOLBOX_PROBE_BOX_H

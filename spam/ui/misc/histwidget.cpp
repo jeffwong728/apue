@@ -28,7 +28,7 @@ HistogramWidget::HistogramWidget(wxWindow* parent)
     {
         wxDouble width{0};
         wxDouble height{0};
-        gc->SetFont(*wxNORMAL_FONT, wxColor());
+        gc->SetFont(*wxNORMAL_FONT, *wxCYAN);
         gc->GetTextExtent(wxT("123"), &width, &height);
         gapX_ = wxRound(height);
         gapY_ = wxRound(height);
@@ -197,7 +197,7 @@ void HistogramWidget::DrawHistogram(wxGCDC &dc, const wxPoint *point) const
     int height = cRect.GetHeight() - 2* gapY_;
 
     dc.SetBrush(wxNullBrush);
-    dc.SetPen(*wxBLACK_PEN);
+    dc.SetPen(*wxGREY_PEN);
     dc.DrawRectangle(wxRect(gapX_-1, gapY_, width+2, height));
 
     bool noProfile = profiles_.empty();

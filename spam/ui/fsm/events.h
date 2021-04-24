@@ -100,24 +100,31 @@ struct EvEntityClicked : boost::statechart::event<EvEntityClicked>
     const SelectionData sd;
 };
 
+struct EvEntityBoxed : boost::statechart::event<EvEntityBoxed>
+{
+    EvEntityBoxed(const SPDrawableNodeVector &entities)
+        : ents(entities) {}
+    const SPDrawableNodeVector ents;
+};
+
+struct EvEntityHighlight : boost::statechart::event<EvEntityHighlight>
+{
+    EvEntityHighlight(const SPDrawableNode &entity)
+        : ent(entity) {}
+    const SPDrawableNode ent;
+};
+
+struct EvEntityLoseHighlight : boost::statechart::event<EvEntityLoseHighlight>
+{
+    EvEntityLoseHighlight(const SPDrawableNode &entity)
+        : ent(entity) {}
+    const SPDrawableNode ent;
+};
+
 struct EvImageClicked : boost::statechart::event<EvImageClicked>
 {
     EvImageClicked(const wxMouseEvent &e) : evData(e) {}
     wxMouseEvent evData;
-};
-
-struct EvRegionClicked : boost::statechart::event<EvRegionClicked>
-{
-    EvRegionClicked(const wxMouseEvent &e, const cv::Ptr<cv::mvlab::Region> &rgn) : evData(e), cvRgn(rgn) {}
-    wxMouseEvent evData;
-    cv::Ptr<cv::mvlab::Region> cvRgn;
-};
-
-struct EvContourClicked : boost::statechart::event<EvContourClicked>
-{
-    EvContourClicked(const wxMouseEvent &e, const cv::Ptr<cv::mvlab::Contour> &contr) : evData(e), cvContr(contr) {}
-    wxMouseEvent evData;
-    cv::Ptr<cv::mvlab::Contour> cvContr;
 };
 
 struct EvBoxingEnded : boost::statechart::event<EvBoxingEnded>

@@ -48,6 +48,8 @@ public:
     void ClearHighlightFeature(const RegionFeatureFlag ff) { m_hfeatures &= ~static_cast<uint64_t>(ff); }
     void ToggleHighlightFeature(const RegionFeatureFlag ff) { m_hfeatures ^= static_cast<uint64_t>(ff); }
     bool TestHighlightFeature(const RegionFeatureFlag ff) const { return m_hfeatures & static_cast<uint64_t>(ff); }
+    void SetFeatures(const uint64_t features) { m_features = features; }
+    void SetHighlightFeatures(const uint64_t hfeatures) { m_hfeatures = hfeatures; }
 
 protected:
     void DoTransform(const Geom::Affine &WXUNUSED(aff), const double WXUNUSED(dx), const double WXUNUSED(dy)) wxOVERRIDE {}

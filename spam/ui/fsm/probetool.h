@@ -9,12 +9,16 @@
 #pragma warning( pop )
 
 struct ProbeTool;
+struct RegionTool;
 struct HistogramTool;
 struct ProbeIdle;
+struct RegionIdle;
 struct HistogramIdle;
 struct ProbeDraging;
+struct RegionDraging;
 struct HistogramDraging;
 using  ProbeBoxTool = BoxTool<ProbeTool, kSpamID_TOOLBOX_PROBE_SELECT>;
+using  RegionBoxTool = BoxTool<RegionTool, kSpamID_TOOLBOX_PROBE_REGION>;
 using  HistogramBoxTool = BoxTool<HistogramTool, kSpamID_TOOLBOX_PROBE_HISTOGRAM>;
 
 struct ProbeTool : boost::statechart::simple_state<ProbeTool, Spamer, ProbeIdle>, ProbeBoxTool
@@ -108,6 +112,55 @@ struct HistogramDraging : boost::statechart::simple_state<HistogramDraging, Hist
         boost::statechart::transition<EvLMouseUp, HistogramIdle, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::EndBoxing>,
         boost::statechart::transition<EvReset, HistogramIdle, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::ResetBoxing>,
         boost::statechart::in_state_reaction<EvMouseMove, HistogramTool::BoxToolT, &HistogramTool::BoxToolT::ContinueBoxing>> reactions;
+};
+
+struct RegionTool : boost::statechart::simple_state<RegionTool, Spamer, RegionIdle>, RegionBoxTool
+{
+    using BoxToolT = BoxToolImpl;
+    RegionTool() : RegionBoxTool(*this) { wxLogMessage(wxT("RegionTool Enter.")); }
+    ~RegionTool() { wxLogMessage(wxT("RegionTool Quit.")); }
+
+    void OnOptionChanged(const EvToolOption &e);
+    void OnRegionClicked(const EvEntityClicked &e);
+    void OnRegionBoxed(const EvEntityBoxed &e);
+    void OnRegionHighlight(const EvEntityHighlight &e);
+    void OnRegionLoseHighlight(const EvEntityLoseHighlight &e);
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvReset, RegionTool>,
+        boost::statechart::transition<EvToolQuit, NoTool>,
+        boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
+        boost::statechart::in_state_reaction<EvEntityHighlight, RegionTool, &RegionTool::OnRegionHighlight>,
+        boost::statechart::in_state_reaction<EvEntityLoseHighlight, RegionTool, &RegionTool::OnRegionLoseHighlight>,
+        boost::statechart::in_state_reaction<EvEntityClicked, RegionTool, &RegionTool::OnRegionClicked>,
+        boost::statechart::in_state_reaction<EvEntityBoxed, RegionTool, &RegionTool::OnRegionBoxed>,
+        boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
+        boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>> reactions;
+
+    ToolOptions toolOptions;
+};
+
+struct RegionIdle : boost::statechart::simple_state<RegionIdle, RegionTool>
+{
+    RegionIdle() { wxLogMessage(wxT("RegionIdle Enter.")); }
+    ~RegionIdle() { wxLogMessage(wxT("RegionIdle Quit.")); }
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseDown, RegionDraging, RegionTool::BoxToolT, &RegionTool::BoxToolT::StartBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, RegionTool::BoxToolT, &RegionTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvToolOption, RegionTool, &RegionTool::OnOptionChanged>,
+        boost::statechart::in_state_reaction<EvCanvasLeave, RegionTool::BoxToolT, &RegionTool::BoxToolT::LeaveCanvas>> reactions;
+};
+
+struct RegionDraging : boost::statechart::simple_state<RegionDraging, RegionTool>
+{
+    RegionDraging() { wxLogMessage(wxT("RegionDraging Enter.")); }
+    ~RegionDraging() { wxLogMessage(wxT("RegionDraging Quit.")); }
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseUp, RegionIdle, RegionTool::BoxToolT, &RegionTool::BoxToolT::EndBoxing>,
+        boost::statechart::transition<EvReset, RegionIdle, RegionTool::BoxToolT, &RegionTool::BoxToolT::ResetBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, RegionTool::BoxToolT, &RegionTool::BoxToolT::ContinueBoxing>> reactions;
 };
 
 #endif //SPAM_UI_FSM_PROBE_TOOL_H

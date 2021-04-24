@@ -224,6 +224,42 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
             cr->show_text(utf8);
         }
 
+        if (TestFeature(RegionFeatureFlag::kRFF_LENGTH) || TestHighlightFeature(RegionFeatureFlag::kRFF_LENGTH))
+        {
+            Cairo::TextExtents extents;
+            std::ostringstream oss; oss << std::setprecision(3) << cvRgn_->Contlength();
+            std::string utf8 = oss.str();
+            cr->get_text_extents(utf8, extents);
+
+            cv::Point2d ct = cvRgn_->Centroid();
+            cr->move_to(ct.x - extents.width / 2, ct.y + extents.height / 2);
+            cr->show_text(utf8);
+        }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_CIRCULARITY) || TestHighlightFeature(RegionFeatureFlag::kRFF_CIRCULARITY))
+        {
+            Cairo::TextExtents extents;
+            std::ostringstream oss; oss << std::setprecision(3) << cvRgn_->Circularity();
+            std::string utf8 = oss.str();
+            cr->get_text_extents(utf8, extents);
+
+            cv::Point2d ct = cvRgn_->Centroid();
+            cr->move_to(ct.x - extents.width / 2, ct.y + extents.height / 2);
+            cr->show_text(utf8);
+        }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_CONVEXITY) || TestHighlightFeature(RegionFeatureFlag::kRFF_CONVEXITY))
+        {
+            Cairo::TextExtents extents;
+            std::ostringstream oss; oss << std::setprecision(3) << cvRgn_->Convexity();
+            std::string utf8 = oss.str();
+            cr->get_text_extents(utf8, extents);
+
+            cv::Point2d ct = cvRgn_->Centroid();
+            cr->move_to(ct.x - extents.width / 2, ct.y + extents.height / 2);
+            cr->show_text(utf8);
+        }
+
         if (TestFeature(RegionFeatureFlag::kRFF_DIAMETER) || TestHighlightFeature(RegionFeatureFlag::kRFF_DIAMETER))
         {
             cv::Scalar dia = cvRgn_->Diameter();
@@ -273,6 +309,18 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
                 cr->close_path();
                 cr->stroke();
             }
+        }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_RECT1) || TestHighlightFeature(RegionFeatureFlag::kRFF_RECT1))
+        {
+            cv::Rect rc1 = cvRgn_->BoundingBox();
+            cv::Point2f pts[4] = { cv::Point2f(rc1.x, rc1.y), cv::Point2f(rc1.x + rc1.width, rc1.y), cv::Point2f(rc1.x + rc1.width, rc1.y + rc1.height), cv::Point2f(rc1.x, rc1.y + rc1.height) };
+            cr->move_to(pts[0].x + 0.5f, pts[0].y + 0.5f);
+            cr->line_to(pts[1].x + 0.5f, pts[1].y + 0.5f);
+            cr->line_to(pts[2].x + 0.5f, pts[2].y + 0.5f);
+            cr->line_to(pts[3].x + 0.5f, pts[3].y + 0.5f);
+            cr->close_path();
+            cr->stroke();
         }
 
         if (TestFeature(RegionFeatureFlag::kRFF_RECT2) || TestHighlightFeature(RegionFeatureFlag::kRFF_RECT2))
@@ -331,21 +379,21 @@ void RegionNode::Draw(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom:
             cr->show_text(utf8);
             cr->restore();
         }
+
+        if (TestFeature(RegionFeatureFlag::kRFF_CENTROID) || TestHighlightFeature(RegionFeatureFlag::kRFF_CENTROID))
+        {
+            cv::Point2d ct = cvRgn_->Centroid();
+            cr->arc(ct.x, ct.y, 2.5, 0, 2 * M_PI);
+            cr->fill();
+        }
     }
 }
 
 cv::Rect RegionNode::BoundingBox() const
 {
-    if (m_features)
-    {
-        cv::Point3d sc = cvRgn_->SmallestCircle();
-        const int x = cvFloor(sc.x - sc.z - drawStyle_.strokeWidth_);
-        const int y = cvFloor(sc.y - sc.z - drawStyle_.strokeWidth_);
-        const int w = cvCeil((sc.z+ drawStyle_.strokeWidth_ )*2);
-        return cv::Rect(x, y, w, w);
-    }
-    else
-    {
-        return cvRgn_->BoundingBox();
-    }
+    cv::Point3d sc = cvRgn_->SmallestCircle();
+    const int x = cvFloor(sc.x - sc.z - drawStyle_.strokeWidth_);
+    const int y = cvFloor(sc.y - sc.z - drawStyle_.strokeWidth_);
+    const int w = cvCeil((sc.z+ drawStyle_.strokeWidth_ )*2);
+    return cv::Rect(x, y, w, w);
 }
