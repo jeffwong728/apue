@@ -10,6 +10,7 @@
 #include <opencv2/mvlab/contour.hpp>
 #include <opencv2/mvlab/transformations.hpp>
 #include <opencv2/mvlab/contour_template.hpp>
+#include <opencv2/mvlab/measure_box.hpp>
 
 namespace cv {
 namespace mvlab {

@@ -1760,7 +1760,7 @@ void CairoCanvas::RenderContours(Cairo::RefPtr<Cairo::Context> &cr, const std::v
                         if (IsRectNeedRefresh(bbox, invalidRects))
                         {
                             const auto &curve = dContr.curves[cc];
-                            if (curve.size() > 2)
+                            if (curve.size() > 1)
                             {
                                 cr->move_to(curve.front().x + 0.5f, curve.front().y + 0.5f);
                                 for (int vv = 1; vv < static_cast<int>(curve.size()); ++vv)

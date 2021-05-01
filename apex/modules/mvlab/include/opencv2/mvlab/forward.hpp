@@ -14,6 +14,7 @@ class CV_EXPORTS_W Contour;
 class CV_EXPORTS_W PixelTemplate;
 class CV_EXPORTS_W ContourTemplate;
 class CV_EXPORTS_W MatchResult;
+class CV_EXPORTS_W MeasureBox;
 
 }
 }
