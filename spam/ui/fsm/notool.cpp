@@ -52,6 +52,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     {
         return transit<HistogramTool>();
     }
+    else if (kSpamID_TOOLBOX_PROBE_PROFILE == toolId)
+    {
+        return transit<ProfileTool>();
+    }
     else if (kSpamID_TOOLBOX_PROC_THRESHOLD == toolId)
     {
         return transit<ThresholdTool>();

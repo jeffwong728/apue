@@ -1799,6 +1799,8 @@ void CairoCanvas::RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const
         cairoPathSink.feed(pth);
         cr->set_line_width(ux);
         cr->set_line_cap(Cairo::LineCap::LINE_CAP_SQUARE);
+        cr->set_source_rgba(1.0, 0.0, 1.0, 0.1);
+        cr->fill_preserve();
         cr->set_source_rgba(1.0, 0.0, 1.0, 1.0);
         cr->stroke();
         cr->restore();

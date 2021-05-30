@@ -22,6 +22,7 @@ public:
     ~ProbeBox();
 
 public:
+    void UpdateProfile(const cv::Mat &srcImg, const Geom::Point &sPt, const Geom::Point &ePt);
     void UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi);
 
 protected:
@@ -37,6 +38,7 @@ private:
     wxPanel *CreateSelectOption(wxWindow *parent);
     wxPanel *CreateRegionOption(wxWindow *parent);
     wxPanel *CreateHistOption(wxWindow *parent);
+    wxPanel *CreateProfileOption(wxWindow *parent);
     void UpdateSelectionFilter(void);
     void SetFeature(const RegionFeatureFlag ff) { regionProbeMask_ |= static_cast<uint64_t>(ff); }
     void ClearFeature(const RegionFeatureFlag ff) { regionProbeMask_ &= ~static_cast<uint64_t>(ff); }
@@ -45,5 +47,6 @@ private:
     int probeMode_{ kSpamID_TOOLBOX_PROBE_PIXEL };
     uint64_t regionProbeMask_{ 0 };
     HistogramWidget *hist_;
+    HistogramWidget *profile_;
 };
 #endif //SPAM_UI_TOOLBOX_PROBE_BOX_H

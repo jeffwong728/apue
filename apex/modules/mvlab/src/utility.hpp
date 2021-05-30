@@ -18,6 +18,7 @@ public:
     static std::vector<double> GetDashesPattern(const int bls, const double lineWidth);
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz);
     static cv::Mat PathToMask(const Geom::PathVector &pv, const cv::Size &sz, UScalableUCharSequence &buf);
+    static inline float InterpolateBiLinear(const cv::Mat &img, const cv::Point2f &pt);
     static inline float constrainAngle(float x);
     static inline float square(float x) { return x * x; }
     static inline double square(double x) { return x * x; }
@@ -541,6 +542,31 @@ int LoadFromFile(T &c, const char *label, const cv::String &fileName, const cv::
     }
 
     return MLR_SUCCESS;
+}
+
+inline float Util::InterpolateBiLinear(const cv::Mat &img, const cv::Point2f &pt)
+{
+    const int l = cvFloor(pt.x);
+    const int t = cvFloor(pt.y);
+    const int r = l + 1;
+    const int b = t + 1;
+    const bool insideImg = l >= 0 && r < img.cols && t >= 0 && b < img.rows;
+    if (insideImg)
+    {
+        float rx = pt.x - l;
+        float tx = 1 - rx;
+        float ry = pt.y - t;
+        float ty = 1 - ry;
+
+        auto pT = img.ptr<uint8_t>(t);
+        auto pB = img.ptr<uint8_t>(b);
+
+        return pT[l] * tx * ty + pT[r] * rx * ty + pB[l] * tx * ry + pB[r] * rx * ry;
+    }
+    else
+    {
+        return -1.f;
+    }
 }
 
 }

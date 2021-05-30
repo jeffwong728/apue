@@ -17,6 +17,9 @@ struct HistogramIdle;
 struct ProbeDraging;
 struct RegionDraging;
 struct HistogramDraging;
+struct ProfileIdle;
+struct ProfileDraging;
+struct ProfileTracing;
 using  ProbeBoxTool = BoxTool<ProbeTool, kSpamID_TOOLBOX_PROBE_SELECT>;
 using  RegionBoxTool = BoxTool<RegionTool, kSpamID_TOOLBOX_PROBE_REGION>;
 using  HistogramBoxTool = BoxTool<HistogramTool, kSpamID_TOOLBOX_PROBE_HISTOGRAM>;
@@ -161,6 +164,66 @@ struct RegionDraging : boost::statechart::simple_state<RegionDraging, RegionTool
         boost::statechart::transition<EvLMouseUp, RegionIdle, RegionTool::BoxToolT, &RegionTool::BoxToolT::EndBoxing>,
         boost::statechart::transition<EvReset, RegionIdle, RegionTool::BoxToolT, &RegionTool::BoxToolT::ResetBoxing>,
         boost::statechart::in_state_reaction<EvMouseMove, RegionTool::BoxToolT, &RegionTool::BoxToolT::ContinueBoxing>> reactions;
+};
+
+struct ProfileTool : boost::statechart::simple_state<ProfileTool, Spamer, ProfileIdle>
+{
+    ProfileTool() {}
+    ~ProfileTool() {}
+
+    void OnStartDraging(const EvLMouseDown &e);
+    void OnDraging(const EvMouseMove &e);
+    void OnTracing(const EvMouseMove &e);
+    void OnEndDraging(const EvLMouseUp &e);
+    void OnEndTracing(const EvLMouseDown &e);
+    void OnReset(const EvReset &e);
+    void EndDraging(const wxMouseEvent &e);
+    void EndTracing(const wxMouseEvent &e);
+    void OnCanvasEnter(const EvCanvasEnter &e);
+    void OnCanvasLeave(const EvCanvasLeave &e);
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvReset, ProfileTool>,
+        boost::statechart::in_state_reaction<EvCanvasEnter, ProfileTool, &ProfileTool::OnCanvasEnter>,
+        boost::statechart::in_state_reaction<EvCanvasLeave, ProfileTool, &ProfileTool::OnCanvasLeave>> reactions;
+
+    Geom::Point   anchor;
+    Geom::OptRect rect;
+};
+
+struct ProfileIdle : boost::statechart::simple_state<ProfileIdle, ProfileTool>
+{
+    ProfileIdle() {}
+    ~ProfileIdle() {}
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseDown, ProfileDraging, ProfileTool, &ProfileTool::OnStartDraging>,
+        boost::statechart::custom_reaction<EvToolQuit>> reactions;
+
+    sc::result react(const EvToolQuit &e);
+};
+
+struct ProfileDraging : boost::statechart::simple_state<ProfileDraging, ProfileTool>
+{
+    ProfileDraging() {}
+    ~ProfileDraging() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::custom_reaction<EvLMouseUp>,
+        boost::statechart::transition<EvReset, ProfileIdle, ProfileTool, &ProfileTool::OnReset>,
+        boost::statechart::in_state_reaction<EvMouseMove, ProfileTool, &ProfileTool::OnDraging>> reactions;
+
+    sc::result react(const EvLMouseUp &e);
+};
+
+struct ProfileTracing : boost::statechart::simple_state<ProfileTracing, ProfileTool>
+{
+    ProfileTracing() {}
+    ~ProfileTracing() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseDown, ProfileIdle, ProfileTool, &ProfileTool::OnEndTracing>,
+        boost::statechart::transition<EvReset, ProfileIdle, ProfileTool, &ProfileTool::OnReset>,
+        boost::statechart::in_state_reaction<EvMouseMove, ProfileTool, &ProfileTool::OnTracing>> reactions;
 };
 
 #endif //SPAM_UI_FSM_PROBE_TOOL_H

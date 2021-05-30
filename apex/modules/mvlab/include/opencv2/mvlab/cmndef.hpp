@@ -42,6 +42,7 @@ constexpr int MLR_H5DB_INVALID = 14000;
 constexpr int MLR_H5DB_EXCEPTION = 14001;
 constexpr int MLR_H5DB_NAME_NOT_EXIST = 14002;
 constexpr int MLR_H5DB_TYPE_NOT_MATCH = 14003;
+constexpr int MLR_MEASURE_BOX_INVALID = 15000;
 constexpr int MLR_ERROR = -1;
 constexpr int MLR_FAILURE = MLR_ERROR;
 

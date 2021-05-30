@@ -6,27 +6,33 @@
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
 #include <wx/wxhtml.h>
+#include <opencv2/mvlab.hpp>
 
 ProbeBox::ProbeBox(wxWindow* parent)
 : ToolBox(parent, kSpamID_TOOLPAGE_PROBE, wxT("Infomation"), std::vector<wxString>(), kSpamID_TOOLBOX_PROBE_GUARD - kSpamID_TOOLBOX_PROBE_SELECT, kSpamID_TOOLBOX_PROBE_SELECT)
+, hist_(nullptr)
+, profile_(nullptr)
 {
     wxWindowID toolIds[] = {
         kSpamID_TOOLBOX_PROBE_SELECT,
         kSpamID_TOOLBOX_PROBE_REGION,
-        kSpamID_TOOLBOX_PROBE_HISTOGRAM
+        kSpamID_TOOLBOX_PROBE_HISTOGRAM,
+        kSpamID_TOOLBOX_PROBE_PROFILE
     };
 
     wxString   toolTips[] = {
         wxT("Select entities to show infomation"),
         wxT("Select regions to show infomation"),
-        wxT("Select entities to show histogram")
+        wxT("Select entities to show histogram"),
+        wxT("Select or draw line to show intensity profile")
     };
 
     const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
     wxBitmap toolIcons[] = {
         Spam::GetBitmap(ip, bm_Pointer),
         Spam::GetBitmap(ip, bm_Pointer),
-        Spam::GetBitmap(ip, bm_NodeEdit)
+        Spam::GetBitmap(ip, bm_NodeEdit),
+        Spam::GetBitmap(ip, bm_Line)
     };
 
     ToolBox::Init(toolIds, toolTips, toolIcons, WXSIZEOF(toolTips), 0, 0);
@@ -35,6 +41,38 @@ ProbeBox::ProbeBox(wxWindow* parent)
 
 ProbeBox::~ProbeBox()
 {
+}
+
+void ProbeBox::UpdateProfile(const cv::Mat &srcImg, const Geom::Point &sPt, const Geom::Point &ePt)
+{
+    const Geom::Point vec = ePt - sPt;
+    const Geom::Coord len = vec.length();
+    if (profile_ && len > 3)
+    {
+        cv::Mat img = srcImg;
+        srcImg.channels();
+        if (srcImg.channels() > 1)
+        {
+            std::vector<cv::Mat> imags;
+            cv::split(srcImg, imags);
+            img = imags[0];
+        }
+
+        cv::Point2f pt1{ static_cast<float>(sPt.x()), static_cast<float>(sPt.y()) };
+        cv::Point2f pt2{ static_cast<float>(ePt.x()), static_cast<float>(ePt.y()) };
+        cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, 3), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
+        cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::GenMeasureBox(box, cv::Point2f(1.f, 1.f));
+        if (spMB->Valid())
+        {
+            HistogramWidget::Profile profile{ wxT(""), *wxRED };
+            if (cv::mvlab::MLR_SUCCESS == spMB->GetProfile(img, profile.seq))
+            {
+                profile_->ClearProfiles();
+                profile_->AddProfile(std::move(profile));
+                profile_->Refresh(true);
+            }
+        }
+    }
 }
 
 void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
@@ -88,7 +126,13 @@ void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
 wxPanel *ProbeBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 {
     constexpr int numTools = kSpamID_TOOLBOX_PROBE_GUARD - kSpamID_TOOLBOX_PROBE_SELECT;
-    wxPanel *(ProbeBox::*createOption[numTools])(wxWindow *parent) = { &ProbeBox::CreateSelectOption, &ProbeBox::CreateRegionOption, &ProbeBox::CreateHistOption };
+    wxPanel *(ProbeBox::*createOption[numTools])(wxWindow *parent) = 
+    { 
+        &ProbeBox::CreateSelectOption,
+        &ProbeBox::CreateRegionOption,
+        &ProbeBox::CreateHistOption,
+        &ProbeBox::CreateProfileOption
+    };
 
     if (createOption[toolIndex])
     {
@@ -157,6 +201,12 @@ void ProbeBox::OnToolEnter(const ToolOptions &toolOpts)
     case kSpamID_TOOLBOX_PROBE_HISTOGRAM:
         Spam::GetSelectionFilter()->ReplacePassType(SpamEntityType::kET_GEOM);
         Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_BOX_SINGLE);
+        Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GENERAL);
+        break;
+
+    case kSpamID_TOOLBOX_PROBE_PROFILE:
+        Spam::GetSelectionFilter()->Clear();
+        Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_NONE);
         Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GENERAL);
         break;
 
@@ -251,6 +301,44 @@ wxPanel *ProbeBox::CreateHistOption(wxWindow *parent)
 
     hist_ = new HistogramWidget(panel);
     sizerRoot->Add(hist_, wxSizerFlags(0).Expand().Border());
+
+    auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
+    helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProbeBox::OnHelpCollapse, this, wxID_ANY);
+    sizerRoot->Add(helpPane, wxSizerFlags(1).Expand());
+
+    wxWindow *win = helpPane->GetPane();
+    auto helpSizer = new wxBoxSizer(wxVERTICAL);
+    auto html = new wxHtmlWindow(win, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHW_SCROLLBAR_NEVER);
+    html->SetBorders(0);
+    html->LoadPage(wxT("res/help/rect.htm"));
+    html->SetInitialSize(wxSize(html->GetInternalRepresentation()->GetWidth(), html->GetInternalRepresentation()->GetHeight()));
+    helpSizer->Add(html, wxSizerFlags(1).Expand().DoubleBorder());
+    win->SetSizerAndFit(helpSizer);
+
+    panel->SetScrollRate(6, 6);
+    panel->SetVirtualSize(panel->GetBestSize());
+    panel->SetSizerAndFit(sizerRoot);
+    return panel;
+}
+
+wxPanel *ProbeBox::CreateProfileOption(wxWindow *parent)
+{
+    auto panel = new wxScrolledWindow(parent, wxID_ANY);
+    wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+
+    profile_ = new HistogramWidget(panel);
+    sizerRoot->Add(profile_, wxSizerFlags(0).Expand().Border());
+
+    auto styleSizer = new wxFlexGridSizer(2, 2, 2);
+    styleSizer->AddGrowableCol(1, 1);
+    styleSizer->SetFlexibleDirection(wxHORIZONTAL);
+    styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Width:")), wxSizerFlags().Right().Border(wxLEFT));
+    styleSizer->Add(new wxTextCtrl(panel, wxID_ANY), wxSizerFlags(1).Expand().HorzBorder());
+    styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma X:")), wxSizerFlags().Right().Border(wxLEFT));
+    styleSizer->Add(new wxTextCtrl(panel, wxID_ANY), wxSizerFlags(1).Expand().HorzBorder());
+    styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma Y:")), wxSizerFlags().Right().Border(wxLEFT));
+    styleSizer->Add(new wxTextCtrl(panel, wxID_ANY), wxSizerFlags(1).Expand().HorzBorder());
+    sizerRoot->Add(styleSizer, wxSizerFlags().Expand());
 
     auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
     helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProbeBox::OnHelpCollapse, this, wxID_ANY);

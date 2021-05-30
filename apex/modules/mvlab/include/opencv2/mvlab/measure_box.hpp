@@ -18,6 +18,7 @@ public:
 public:
     CV_WRAP virtual bool Valid() const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetMarks() const = 0;
+    CV_WRAP virtual int GetProfile(cv::InputArray img, CV_OUT std::vector<double> &grays) const = 0;
 };
 
 }

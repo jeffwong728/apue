@@ -229,6 +229,16 @@ void RootFrame::CreateAuiPanes()
         wxAuiMgr_.LoadPaneInfo(toolBoxBarPanePers, toolBoxBarPaneInfo);
     }
 
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]).Gripper(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_GEOM]).Gripper(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROC]).Gripper(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_MATCH]).Gripper(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_STYLE]).Gripper(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]).CaptionVisible(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_GEOM]).CaptionVisible(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROC]).CaptionVisible(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_MATCH]).CaptionVisible(false);
+    wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_STYLE]).CaptionVisible(false);
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]).MinSize(infoBox->GetSizer()->GetMinSize());
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_GEOM]).MinSize(geomBox->GetSizer()->GetMinSize());
     wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROC]).MinSize(procBox->GetSizer()->GetMinSize());
@@ -341,6 +351,17 @@ int RootFrame::FindImagePanelIndexByUUID(const std::string &uuidTag) const
     }
 
     return -1;
+}
+
+void RootFrame::RequestUpdateProfile(const std::string &uuidTag, const Geom::Point &sPt, const Geom::Point &ePt)
+{
+    CairoCanvas *canv = FindCanvasByUUID(uuidTag);
+    auto &tbPanelInfo = wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]);
+    ProbeBox *probeBox = dynamic_cast<ProbeBox *>(tbPanelInfo.window);
+    if (probeBox && canv)
+    {
+        probeBox->UpdateProfile(canv->GetOriginalImage(), sPt, ePt);
+    }
 }
 
 void RootFrame::RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi)

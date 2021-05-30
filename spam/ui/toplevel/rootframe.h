@@ -34,6 +34,7 @@ namespace Geom
 {
     class OptRect;
     class Path;
+    class Point;
 }
 
 class RootFrame : public wxFrame
@@ -65,6 +66,7 @@ public:
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
     int FindImagePanelIndexByUUID(const std::string &uuidTag) const;
+    void RequestUpdateProfile(const std::string &uuidTag, const Geom::Point &sPt, const Geom::Point &ePt);
     void RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi);
     void RequestUpdateThreshold(const std::string &uuidTag, const boost::any &roi);
     void AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect);

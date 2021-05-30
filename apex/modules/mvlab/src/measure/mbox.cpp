@@ -1,5 +1,6 @@
 #include "precomp.hpp"
 #include "mbox.h"
+#include "utility.hpp"
 #include <opencv2/mvlab/cmndef.hpp>
 #include <opencv2/mvlab/contour.hpp>
 
@@ -71,6 +72,74 @@ cv::Ptr<Contour> MeasureBoxImpl::GetMarks() const
     std::vector<float> angles(centers.size(), box_.angle);
 
     return Contour::GenCross(centers, sizes, angles);
+}
+
+int MeasureBoxImpl::GetProfile(cv::InputArray img, std::vector<double> &grays) const
+{
+    grays.resize(0);
+    if (!Valid())
+    {
+        return MLR_MEASURE_BOX_INVALID;
+    }
+
+    cv::Mat imgMat = img.getMat();
+    if (imgMat.empty())
+    {
+        return MLR_IMAGE_EMPTY;
+    }
+
+    int dph = imgMat.depth();
+    int cnl = imgMat.channels();
+    if (CV_8U != dph || 1 != cnl)
+    {
+        return MLR_IMAGE_FORMAT_ERROR;
+    }
+
+    grays.reserve(NumLines()+1);
+    const int numSmooths = cvRound((lengths_.y / 2) / sample_size_.y);
+    for (int ll = 0; ll <= NumLines(); ++ll)
+    {
+        int numValidPoints = 0;
+        float graySum = 0.;
+        const cv::Point2f lCenter = start_point_ + ll * delta_1_;
+        float grayPt = Util::InterpolateBiLinear(imgMat, lCenter);
+        if (grayPt >= 0.f)
+        {
+            graySum += grayPt;
+            numValidPoints += 1;
+        }
+
+        for (int ss = 0; ss < numSmooths; ++ss)
+        {
+            const cv::Point2f ptPos = lCenter + (ss + 1) * delta_2_;
+            const cv::Point2f ptNeg = lCenter - (ss + 1) * delta_2_;
+
+            grayPt = Util::InterpolateBiLinear(imgMat, ptPos);
+            if (grayPt >= 0.f)
+            {
+                graySum += grayPt;
+                numValidPoints += 1;
+            }
+
+            grayPt = Util::InterpolateBiLinear(imgMat, ptNeg);
+            if (grayPt >= 0.f)
+            {
+                graySum += grayPt;
+                numValidPoints += 1;
+            }
+        }
+
+        if (numValidPoints)
+        {
+            grays.push_back(graySum / numValidPoints);
+        }
+        else
+        {
+            grays.push_back(-1.0);
+        }
+    }
+
+    return MLR_SUCCESS;
 }
 
 }

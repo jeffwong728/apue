@@ -21,6 +21,7 @@ public:
 public:
     bool Valid() const CV_OVERRIDE { return NumLines() >= 3; }
     cv::Ptr<Contour> GetMarks() const CV_OVERRIDE;
+    int GetProfile(cv::InputArray img, std::vector<double> &grays) const CV_OVERRIDE;
 
 private:
     int NumLines() const { return cvRound(lengths_.x / sample_size_.x); }
