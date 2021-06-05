@@ -41,7 +41,7 @@ void StyleBox::TransferDataToUI()
     auto fillColorCtrl = dynamic_cast<wxColourPickerCtrl *>(FindWindow(kSpamID_TOOLBOX_GEOM_FILL_COLOR));
     if (fillColorCtrl)
     {
-        fillColorCtrl->SetColour(fillColor);
+        fillColorCtrl->SetColour(wxColour(fillColor.GetRGB()));
     }
 
     auto fillColorAlpha = dynamic_cast<wxSpinCtrl *>(FindWindow(kSpamID_TOOLBOX_GEOM_FILL_ALPHA));
@@ -64,7 +64,7 @@ void StyleBox::TransferDataToUI()
     auto strokeColorCtrl = dynamic_cast<wxColourPickerCtrl *>(FindWindow(kSpamID_TOOLBOX_GEOM_STROKE_COLOR));
     if (strokeColorCtrl)
     {
-        strokeColorCtrl->SetColour(strokeColor);
+        strokeColorCtrl->SetColour(wxColour(strokeColor.GetRGB()));
     }
 
     auto strokeColorAlpha = dynamic_cast<wxSpinCtrl *>(FindWindow(kSpamID_TOOLBOX_GEOM_STROKE_ALPHA));

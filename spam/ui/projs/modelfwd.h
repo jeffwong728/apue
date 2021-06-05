@@ -32,6 +32,7 @@ class PolygonNode;
 class BeziergonNode;
 class GeomNode;
 class RegionNode;
+class ProfileNode;
 class wxDataViewModel;
 class ProjTreeModel;
 
@@ -47,6 +48,7 @@ typedef std::shared_ptr<PolygonNode>           SPPolygonNode;
 typedef std::shared_ptr<BeziergonNode>         SPBeziergonNode;
 typedef std::shared_ptr<GeomNode>              SPGeomNode;
 typedef std::shared_ptr<RegionNode>            SPRegionNode;
+typedef std::shared_ptr<ProfileNode>           SPProfileNode;
 typedef std::weak_ptr<ModelNode>               WPModelNode;
 typedef std::weak_ptr<ProjNode>                WPProjNode;
 typedef std::weak_ptr<StationNode>             WPStationNode;

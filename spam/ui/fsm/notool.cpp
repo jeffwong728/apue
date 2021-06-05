@@ -1,5 +1,6 @@
 #include "notool.h"
 #include "probetool.h"
+#include "profiletool.h"
 #include "proctool.h"
 #include "recttool.h"
 #include "linetool.h"

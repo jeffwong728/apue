@@ -12,6 +12,7 @@ ProbeBox::ProbeBox(wxWindow* parent)
 : ToolBox(parent, kSpamID_TOOLPAGE_PROBE, wxT("Infomation"), std::vector<wxString>(), kSpamID_TOOLBOX_PROBE_GUARD - kSpamID_TOOLBOX_PROBE_SELECT, kSpamID_TOOLBOX_PROBE_SELECT)
 , hist_(nullptr)
 , profile_(nullptr)
+, profileChoice_(nullptr)
 {
     wxWindowID toolIds[] = {
         kSpamID_TOOLBOX_PROBE_SELECT,
@@ -47,30 +48,51 @@ void ProbeBox::UpdateProfile(const cv::Mat &srcImg, const Geom::Point &sPt, cons
 {
     const Geom::Point vec = ePt - sPt;
     const Geom::Coord len = vec.length();
-    if (profile_ && len > 3)
+    if (profile_)
     {
-        cv::Mat img = srcImg;
-        srcImg.channels();
-        if (srcImg.channels() > 1)
+        if (len > 3)
         {
-            std::vector<cv::Mat> imags;
-            cv::split(srcImg, imags);
-            img = imags[0];
-        }
-
-        cv::Point2f pt1{ static_cast<float>(sPt.x()), static_cast<float>(sPt.y()) };
-        cv::Point2f pt2{ static_cast<float>(ePt.x()), static_cast<float>(ePt.y()) };
-        cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, 3), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
-        cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::GenMeasureBox(box, cv::Point2f(1.f, 1.f));
-        if (spMB->Valid())
-        {
-            HistogramWidget::Profile profile{ wxT(""), *wxRED };
-            if (cv::mvlab::MLR_SUCCESS == spMB->GetProfile(img, profile.seq))
+            imags_.clear();
+            if (srcImg.channels() > 1)
             {
-                profile_->ClearProfiles();
-                profile_->AddProfile(std::move(profile));
-                profile_->Refresh(true);
+                cv::split(srcImg, imags_);
             }
+            else
+            {
+                imags_.push_back(srcImg);
+            }
+
+            begPoint_ = sPt;
+            endPoint_ = ePt;
+            RePopulateProfileChoice(srcImg.channels());
+
+            wxColor grayColor = SpamConfig::Get<bool>(cp_ThemeDarkMode, true) ? *wxWHITE : *wxBLACK;
+            wxColor colors[4] = { wxColour(0xCF9F72), *wxGREEN, *wxRED, grayColor };
+            if (srcImg.channels() < 2)
+            {
+                colors[0] = grayColor;
+            }
+
+            cv::Mat img = imags_[profileChoice_->GetSelection()];
+            cv::Point2f pt1{ static_cast<float>(begPoint_.x()), static_cast<float>(begPoint_.y()) };
+            cv::Point2f pt2{ static_cast<float>(endPoint_.x()), static_cast<float>(endPoint_.y()) };
+            cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, 3), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
+            cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::GenMeasureBox(box, cv::Point2f(1.f, 1.f));
+            if (spMB->Valid())
+            {
+                HistogramWidget::Profile profile{ wxT(""), colors[profileChoice_->GetSelection()] };
+                if (cv::mvlab::MLR_SUCCESS == spMB->GetProfile(img, profile.seq))
+                {
+                    profile_->ClearProfiles();
+                    profile_->AddProfile(std::move(profile));
+                    profile_->Refresh(true);
+                }
+            }
+        }
+        else
+        {
+            profile_->ClearProfiles();
+            profile_->Refresh(true);
         }
     }
 }
@@ -99,10 +121,10 @@ void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
     std::vector<cv::Mat> imags;
     cv::split(srcImg, imags);
     hist_->ClearProfiles();
-    wxColor  colors[4] = { *wxBLUE, *wxGREEN, *wxRED, *wxBLACK };
+    wxColor  colors[4] = { wxColour(0xCF9F72), *wxGREEN, *wxRED, *wxLIGHT_GREY };
     if (imags.size() < 2)
     {
-        colors[0] = *wxBLACK;
+        colors[0] = *wxLIGHT_GREY;
     }
 
     int c = 0;
@@ -212,6 +234,45 @@ void ProbeBox::OnToolEnter(const ToolOptions &toolOpts)
 
     default:
         break;
+    }
+}
+
+void ProbeBox::OnProfileChanged(wxCommandEvent &WXUNUSED(e))
+{
+    const Geom::Point vec = endPoint_ - begPoint_;
+    const Geom::Coord len = vec.length();
+    if (profile_ && !imags_.empty())
+    {
+        if (len > 3)
+        {
+            wxColor grayColor = SpamConfig::Get<bool>(cp_ThemeDarkMode, true) ? *wxWHITE : *wxBLACK;
+            wxColor colors[4] = { wxColour(0xCF9F72), *wxGREEN, *wxRED, grayColor };
+            if (imags_.size() < 2)
+            {
+                colors[0] = grayColor;
+            }
+
+            cv::Mat img = imags_[profileChoice_->GetSelection()];
+            cv::Point2f pt1{ static_cast<float>(begPoint_.x()), static_cast<float>(begPoint_.y()) };
+            cv::Point2f pt2{ static_cast<float>(endPoint_.x()), static_cast<float>(endPoint_.y()) };
+            cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, 3), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
+            cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::GenMeasureBox(box, cv::Point2f(1.f, 1.f));
+            if (spMB->Valid())
+            {
+                HistogramWidget::Profile profile{ wxT(""), colors[profileChoice_->GetSelection()] };
+                if (cv::mvlab::MLR_SUCCESS == spMB->GetProfile(img, profile.seq))
+                {
+                    profile_->ClearProfiles();
+                    profile_->AddProfile(std::move(profile));
+                    profile_->Refresh(true);
+                }
+            }
+        }
+        else
+        {
+            profile_->ClearProfiles();
+            profile_->Refresh(true);
+        }
     }
 }
 
@@ -332,6 +393,9 @@ wxPanel *ProbeBox::CreateProfileOption(wxWindow *parent)
     auto styleSizer = new wxFlexGridSizer(2, 2, 2);
     styleSizer->AddGrowableCol(1, 1);
     styleSizer->SetFlexibleDirection(wxHORIZONTAL);
+    profileChoice_ = new wxChoice(panel, wxID_ANY);
+    styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Channel:")), wxSizerFlags().Right().Border(wxLEFT));
+    styleSizer->Add(profileChoice_, wxSizerFlags(1).Expand().HorzBorder());
     styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Width:")), wxSizerFlags().Right().Border(wxLEFT));
     styleSizer->Add(new wxTextCtrl(panel, wxID_ANY), wxSizerFlags(1).Expand().HorzBorder());
     styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma X:")), wxSizerFlags().Right().Border(wxLEFT));
@@ -339,6 +403,7 @@ wxPanel *ProbeBox::CreateProfileOption(wxWindow *parent)
     styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma Y:")), wxSizerFlags().Right().Border(wxLEFT));
     styleSizer->Add(new wxTextCtrl(panel, wxID_ANY), wxSizerFlags(1).Expand().HorzBorder());
     sizerRoot->Add(styleSizer, wxSizerFlags().Expand());
+    profileChoice_->Bind(wxEVT_CHOICE, &ProbeBox::OnProfileChanged, this);
 
     auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
     helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProbeBox::OnHelpCollapse, this, wxID_ANY);
@@ -389,4 +454,22 @@ void ProbeBox::UpdateSelectionFilter(void)
     }
 
     Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GENERAL);
+}
+
+void ProbeBox::RePopulateProfileChoice(const int numChannels)
+{
+    if (numChannels != profileChoice_->GetCount())
+    {
+        wxString  channelNames[4] = { wxT("Blue"), wxT("Green"), wxT("Red"), wxT("Alpha") };
+        if (numChannels < 2)
+        {
+            channelNames[0] = wxT("Gray Scale");
+        }
+        profileChoice_->Clear();
+        for (int c = 0; c < numChannels; ++c)
+        {
+            profileChoice_->AppendString(channelNames[c]);
+        }
+        profileChoice_->SetSelection(0);
+    }
 }

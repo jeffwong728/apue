@@ -139,6 +139,8 @@ public:
     void SetVisiableRegion(const std::string &rgnName) { rgnsVisiable_.push_back(rgnName); }
     void EraseBoxArea(const Geom::Rect &boxArea);
     void EraseFullArea();
+    void UpdateProfileNode(const Geom::Point &begPoint, const Geom::Point &endPoint);
+    void RemoveProfileNode();
 
 private:
     void OnSize(wxSizeEvent& event);
@@ -167,7 +169,7 @@ private:
     void RenderRegions(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
     void RenderContours(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
     void RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const;
-    void RenderEntities(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void RenderEntities(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
     void RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const;
 
 private:
@@ -203,6 +205,7 @@ private:
     std::map<cv::mvlab::Region *const, std::vector<SPRegionNode>> rgns_;
     std::map<cv::mvlab::Contour *const, std::vector<DispContour>> contrs_;
     std::vector<Geom::PathVector> markers_;
+    SPProfileNode profileNode_;
 };
 
 class DnDImageFile : public wxFileDropTarget

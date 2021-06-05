@@ -33,6 +33,7 @@ set(ui_core_SRCS
   projs/polygonnode.cpp
   projs/beziergonnode.cpp
   projs/fixednode.cpp
+  projs/profilenode.cpp
   projs/stylecellrenderer.cpp
   toplevel/preferencesdlg.cpp
   toplevel/logpanel.cpp
@@ -54,6 +55,7 @@ set(ui_core_SRCS
   fsm/booltool.cpp
   fsm/notool.cpp
   fsm/probetool.cpp
+  fsm/profiletool.cpp
   fsm/proctool.cpp
   fsm/recttool.cpp
   fsm/linetool.cpp
@@ -111,6 +113,7 @@ set(ui_core_HEADERS
   projs/beziergonnode.h
   projs/geomnode.h
   projs/fixednode.h
+  projs/profilenode.h
   projs/stylecellrenderer.h
   toplevel/preferencesdlg.h
   toplevel/logpanel.h
@@ -132,6 +135,7 @@ set(ui_core_HEADERS
   fsm/booltool.h
   fsm/notool.h
   fsm/probetool.h
+  fsm/profiletool.h
   fsm/proctool.h
   fsm/recttool.h
   fsm/linetool.h

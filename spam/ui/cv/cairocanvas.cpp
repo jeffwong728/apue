@@ -6,6 +6,7 @@
 #include <ui/projs/drawablenode.h>
 #include <ui/projs/projtreemodel.h>
 #include <ui/projs/fixednode.h>
+#include <ui/projs/profilenode.h>
 #include <ui/cmds/geomcmd.h>
 #include <ui/cmds/transcmd.h>
 #include <wx/graphics.h>
@@ -1338,6 +1339,52 @@ void CairoCanvas::EraseFullArea()
     }
 }
 
+void CairoCanvas::UpdateProfileNode(const Geom::Point &begPoint, const Geom::Point &endPoint)
+{
+    if (!profileNode_)
+    {
+        profileNode_ = std::make_shared<ProfileNode>(nullptr);
+    }
+    else
+    {
+        Geom::OptRect rcBox = profileNode_->GetBoundingBox();
+        if (rcBox && rcBox->area() > 0.)
+        {
+            wxRect invalidRect = ImageToScreen(rcBox);
+            ConpensateHandle(invalidRect);
+            Refresh(false, &invalidRect);
+        }
+    }
+
+    if (profileNode_)
+    {
+        profileNode_->SetData(begPoint, endPoint);
+        Geom::OptRect rcBox = profileNode_->GetBoundingBox();
+        if (rcBox && rcBox->area() > 0.)
+        {
+            wxRect invalidRect = ImageToScreen(rcBox);
+            ConpensateHandle(invalidRect);
+            Refresh(false, &invalidRect);
+        }
+    }
+}
+
+void CairoCanvas::RemoveProfileNode()
+{
+    if (profileNode_)
+    {
+        Geom::OptRect rcBox = profileNode_->GetBoundingBox();
+        if (rcBox && rcBox->area() > 0.)
+        {
+            wxRect invalidRect = ImageToScreen(rcBox);
+            ConpensateHandle(invalidRect);
+            Refresh(false, &invalidRect);
+        }
+    }
+
+    profileNode_ = nullptr;
+}
+
 void CairoCanvas::OnSize(wxSizeEvent& e)
 {
     if (!disMat_.empty())
@@ -1434,7 +1481,7 @@ void CairoCanvas::OnPaint(wxPaintEvent& e)
         RenderMarkers(spCtx, invalidRects);
         RenderRegions(spCtx, invalidRects);
         RenderContours(spCtx, invalidRects);
-        RenderEntities(spCtx);
+        RenderEntities(spCtx, invalidRects);
         RenderPath(spCtx);
         RenderRubberBand(spCtx);
     }
@@ -1807,7 +1854,7 @@ void CairoCanvas::RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const
     }
 }
 
-void CairoCanvas::RenderEntities(Cairo::RefPtr<Cairo::Context> &cr) const
+void CairoCanvas::RenderEntities(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const
 {
     auto station = GetStation();
     if (station)
@@ -1823,6 +1870,7 @@ void CairoCanvas::RenderEntities(Cairo::RefPtr<Cairo::Context> &cr) const
                 drawable->Draw(cr);
             }
         }
+        if (profileNode_) profileNode_->Draw(cr, invalidRects);
         cr->restore();
     }
 }
