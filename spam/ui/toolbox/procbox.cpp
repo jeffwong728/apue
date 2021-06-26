@@ -8,10 +8,10 @@
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
 #include <wx/wxhtml.h>
+#include <wx/valnum.h>
 
 ProcBox::ProcBox(wxWindow* parent)
 : ToolBox(parent, kSpamID_TOOLPAGE_PROC, wxT("Process"), std::vector<wxString>(), kSpamID_TOOLBOX_PROC_GUARD - kSpamID_TOOLBOX_PROC_ENHANCEMENT, kSpamID_TOOLBOX_PROC_ENHANCEMENT)
-, nameText_(nullptr)
 , channelChoice_(nullptr)
 , hist_(nullptr)
 {
@@ -37,7 +37,7 @@ ProcBox::ProcBox(wxWindow* parent)
         Spam::GetBitmap(ip, bm_Pointer),
         Spam::GetBitmap(ip, bm_Pointer),
         Spam::GetBitmap(ip, bm_Pointer),
-        Spam::GetBitmap(ip, bm_Pointer)
+        Spam::GetBitmap(ip, std::string("proc.pyramid"))
     };
 
     ToolBox::Init(toolIds, toolTips, toolIcons, WXSIZEOF(toolTips), 0, 0);
@@ -70,18 +70,24 @@ void ProcBox::UpdateHistogram(const std::string &uuidTag, const cv::Mat &srcImg,
 
     img_ = srcImg;
     uuidStation_ = uuidTag;
-    roi_ = cv::mvlab::Region::GenEmpty();
     cv::split(srcImg, imgs_);
 
-    RePopulateHistogramProfiles(imgs_, mask_);
     RePopulateChannelChoice(static_cast<int>(imgs_.size()));
+    RePopulateHistogramProfiles(imgs_, mask_);
     ReThreshold();
 }
 
 wxPanel *ProcBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 {
     constexpr int numTools = kSpamID_TOOLBOX_PROC_GUARD - kSpamID_TOOLBOX_PROC_ENHANCEMENT;
-    wxPanel *(ProcBox::*createOption[numTools])(wxWindow *parent) = { nullptr, &ProcBox::CreateThresholdOption };
+    wxPanel *(ProcBox::*createOption[numTools])(wxWindow *parent) = 
+    {
+        nullptr,
+        &ProcBox::CreateThresholdOption,
+        nullptr,
+        nullptr,
+        &ProcBox::CreatePyramidOption
+    };
 
     if (createOption[toolIndex])
     {
@@ -94,6 +100,10 @@ wxPanel *ProcBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
 ToolOptions ProcBox::GetToolOptions() const
 {
     ToolOptions tos;
+    tos[cp_ToolProcPyramidLevel] = pyraLevel_;
+    tos[cp_ToolProcThresholdMin] = minGray_;
+    tos[cp_ToolProcThresholdMax] = maxGray_;
+    tos[cp_ToolProcThresholdChannel] = channelChoice_ ? channelChoice_->GetSelection() : 0;
     return tos;
 }
 
@@ -112,6 +122,9 @@ void ProcBox::OnToolEnter(const ToolOptions &toolOpts)
         break;
 
     case kSpamID_TOOLBOX_PROC_PYRAMID:
+        Spam::GetSelectionFilter()->Clear();
+        Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_BOX_SINGLE);
+        Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GENERAL);
         break;
 
     default:
@@ -126,12 +139,52 @@ void ProcBox::OnChannelChanged(wxCommandEvent& e)
     {
         hist_->SetPlane(sel);
         hist_->Refresh(true);
+
+        ToolOptions tos = ProcBox::GetToolOptions();
+        tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_THRESHOLD;
+        sig_OptionsChanged(tos);
     }
 }
 
 void ProcBox::OnThreshold(HistogramWidget *hist)
 {
     ReThreshold();
+}
+
+void ProcBox::OnPyramidEnter(wxCommandEvent &evt)
+{
+    auto txtCtrl = dynamic_cast<wxTextCtrl *>(evt.GetEventObject());
+    if (txtCtrl)
+    {
+        auto txtParent = txtCtrl->GetParent();
+        if (txtParent)
+        {
+            if (txtParent->TransferDataFromWindow())
+            {
+                ToolOptions tos = ProcBox::GetToolOptions();
+                tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_PYRAMID;
+                sig_OptionsChanged(tos);
+            }
+        }
+    }
+}
+
+void ProcBox::OnThresholdEnter(wxCommandEvent &e)
+{
+    auto txtCtrl = dynamic_cast<wxTextCtrl *>(e.GetEventObject());
+    if (txtCtrl)
+    {
+        auto txtParent = txtCtrl->GetParent();
+        if (txtParent)
+        {
+            if (txtParent->TransferDataFromWindow())
+            {
+                ToolOptions tos = ProcBox::GetToolOptions();
+                tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_THRESHOLD;
+                sig_OptionsChanged(tos);
+            }
+        }
+    }
 }
 
 wxPanel *ProcBox::CreateThresholdOption(wxWindow *parent)
@@ -142,21 +195,28 @@ wxPanel *ProcBox::CreateThresholdOption(wxWindow *parent)
     hist_ = new HistogramWidget(panel);
     sizerRoot->Add(hist_, wxSizerFlags(0).Expand().Border());
     hist_->SetRangeX(std::make_pair(0, 255));
-    hist_->AddThumb(60);
-    hist_->AddThumb(200);
-    hist_->sig_ThumbsMoved.connect(std::bind(&ProcBox::OnThreshold, this, std::placeholders::_1));
+
+    wxIntegerValidator<int> minVal(&minGray_);
+    wxIntegerValidator<int> maxVal(&maxGray_);
+    minVal.SetRange(0, 255);
+    maxVal.SetRange(1, 255);
 
     auto optSizer = new wxFlexGridSizer(2, 2, 2);
-    nameText_ = new wxTextCtrl(panel, wxID_ANY, wxT("binary"));
+    auto minCtrl_ = new wxTextCtrl(panel, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, minVal);
+    auto maxCtrl_ = new wxTextCtrl(panel, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, maxVal);
     channelChoice_ = new wxChoice(panel, wxID_ANY);
     optSizer->AddGrowableCol(1, 1);
     optSizer->SetFlexibleDirection(wxHORIZONTAL);
     optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Channel:")), wxSizerFlags().Right().Border(wxLEFT));
     optSizer->Add(channelChoice_, wxSizerFlags(1).Expand().HorzBorder());
-    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Name:")), wxSizerFlags().Right().Border(wxLEFT));
-    optSizer->Add(nameText_, wxSizerFlags(1).Expand().HorzBorder());
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Threshold Min:")), wxSizerFlags().Right().Border(wxLEFT));
+    optSizer->Add(minCtrl_, wxSizerFlags(1).Expand().HorzBorder());
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Threshold Max:")), wxSizerFlags().Right().Border(wxLEFT));
+    optSizer->Add(maxCtrl_, wxSizerFlags(1).Expand().HorzBorder());
     sizerRoot->Add(optSizer, wxSizerFlags().Expand());
     channelChoice_->Bind(wxEVT_CHOICE, &ProcBox::OnChannelChanged, this);
+    minCtrl_->Bind(wxEVT_TEXT_ENTER, &ProcBox::OnThresholdEnter, this);
+    maxCtrl_->Bind(wxEVT_TEXT_ENTER, &ProcBox::OnThresholdEnter, this);
 
     auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
     helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProcBox::OnHelpCollapse, this, wxID_ANY);
@@ -174,6 +234,31 @@ wxPanel *ProcBox::CreateThresholdOption(wxWindow *parent)
     panel->SetScrollRate(6, 6);
     panel->SetVirtualSize(panel->GetBestSize());
     panel->SetSizerAndFit(sizerRoot);
+    panel->TransferDataToWindow();
+    return panel;
+}
+
+wxPanel *ProcBox::CreatePyramidOption(wxWindow *parent)
+{
+    auto panel = new wxScrolledWindow(parent, wxID_ANY);
+    wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+
+    wxIntegerValidator<int> levelVal(&pyraLevel_);
+    levelVal.SetRange(2, 64);
+
+    auto optSizer = new wxFlexGridSizer(2, 2, 2);
+    auto levelCtrl = new wxTextCtrl(panel, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, levelVal);
+    optSizer->AddGrowableCol(1, 1);
+    optSizer->SetFlexibleDirection(wxHORIZONTAL);
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Pyramid Level:")), wxSizerFlags().Right().Border(wxTOP | wxLEFT));
+    optSizer->Add(levelCtrl, wxSizerFlags(1).Expand().HorzBorder());
+    sizerRoot->Add(optSizer, wxSizerFlags().Expand());
+    levelCtrl->Bind(wxEVT_TEXT_ENTER, &ProcBox::OnPyramidEnter, this);
+
+    panel->SetScrollRate(6, 6);
+    panel->SetVirtualSize(panel->GetBestSize());
+    panel->SetSizerAndFit(sizerRoot);
+    panel->TransferDataToWindow();
     return panel;
 }
 
@@ -188,12 +273,16 @@ void ProcBox::RePopulateChannelChoice(const int numChannels)
     {
         channelNames[0] = wxT("Gray Scale");
     }
-    channelChoice_->Clear();
-    for (int c = 0; c<numChannels; ++c)
+
+    if (channelChoice_->GetCount() != numChannels)
     {
-        channelChoice_->AppendString(channelNames[c]);
+        channelChoice_->Clear();
+        for (int c = 0; c < numChannels; ++c)
+        {
+            channelChoice_->AppendString(channelNames[c]);
+        }
+        channelChoice_->SetSelection(0);
     }
-    channelChoice_->SetSelection(0);
 }
 
 void ProcBox::RePopulateHistogramProfiles(const std::vector<cv::Mat> &imags, const cv::Mat &mask)
@@ -201,11 +290,11 @@ void ProcBox::RePopulateHistogramProfiles(const std::vector<cv::Mat> &imags, con
     int numChannels = static_cast<int>(imags.size());
 
     hist_->ClearProfiles();
-    wxColor  colors[4] = { *wxBLUE, *wxGREEN, *wxRED, *wxBLACK };
-
+    wxColor grayColor = SpamConfig::Get<bool>(cp_ThemeDarkMode, true) ? *wxWHITE : *wxBLACK;
+    wxColor  colors[4] = { wxColour(0xCF9F72), *wxGREEN, *wxRED, grayColor };
     if (numChannels < 2)
     {
-        colors[0] = *wxBLACK;
+        colors[0] = grayColor;;
     }
 
     int c = 0;
@@ -224,7 +313,7 @@ void ProcBox::RePopulateHistogramProfiles(const std::vector<cv::Mat> &imags, con
         hist_->AddProfile(std::move(profile));
     }
 
-    hist_->SetPlane(0);
+    hist_->SetPlane(channelChoice_->GetCurrentSelection());
     hist_->Refresh(true);
 }
 
@@ -234,18 +323,8 @@ void ProcBox::ReThreshold()
     if (selChannel>=0 && selChannel<static_cast<int>(imgs_.size()))
     {
         CairoCanvas *cav = Spam::FindCanvas(uuidStation_);
-        if (cav && nameText_)
+        if (cav)
         {
-            int minGray = hist_->GetThumbs()[0];
-            int maxGray = hist_->GetThumbs()[1];
-
-            cv::Ptr<cv::mvlab::Region> rgns = cv::mvlab::Region::GenEmpty();
-            rgns->GetContour();
-
-            cav->PushRegionsIntoBufferZone(nameText_->GetValue().ToStdString(), rgns);
-            cav->ClearVisiableRegions();
-            cav->SetVisiableRegion(nameText_->GetValue().ToStdString());
-            cav->Refresh(false);
         }
     }
 }

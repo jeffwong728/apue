@@ -45,6 +45,7 @@ public:
     static int CheckLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &formatHint, cv::String &errMsg);
     static int CheckCompressLoadParameters(const cv::String &fileName, const cv::Ptr<Dict> &opts, cv::String &formatHint, cv::String &errMsg);
     static void SIMDZeroMemory(void *dest, const int sz);
+    static inline int EstimateGaussianKernelSize(const double sigma);
 };
 
 class WinP
@@ -567,6 +568,14 @@ inline float Util::InterpolateBiLinear(const cv::Mat &img, const cv::Point2f &pt
     {
         return -1.f;
     }
+}
+
+inline int Util::EstimateGaussianKernelSize(const double sigma)
+{
+    // Compute an appropriate kernel size according to the specified sigma
+    int ksize = static_cast<int>(cvCeil(2.0*(1.0 + (sigma - 0.8) / (0.3))));
+    ksize |= 1; // kernel should be odd
+    return ksize;
 }
 
 }

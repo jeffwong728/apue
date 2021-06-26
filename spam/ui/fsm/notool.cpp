@@ -2,6 +2,7 @@
 #include "probetool.h"
 #include "profiletool.h"
 #include "proctool.h"
+#include "pyramidtool.h"
 #include "recttool.h"
 #include "linetool.h"
 #include "ellipsetool.h"
@@ -60,6 +61,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     else if (kSpamID_TOOLBOX_PROC_THRESHOLD == toolId)
     {
         return transit<ThresholdTool>();
+    }
+    else if (kSpamID_TOOLBOX_PROC_PYRAMID == toolId)
+    {
+        return transit<PyramidTool>();
     }
     else if (kSpamID_TOOLBOX_GEOM_RECT == toolId)
     {

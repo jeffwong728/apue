@@ -13,10 +13,11 @@ public:
     MeasureBox() {}
     virtual ~MeasureBox() {}
 
-    CV_WRAP static cv::Ptr<MeasureBox> GenMeasureBox(const cv::RotatedRect &box, const cv::Point2f &sampleSize);
+    CV_WRAP static cv::Ptr<MeasureBox> Gen(const cv::RotatedRect &box, const cv::Size2f &sampleSize);
 
 public:
     CV_WRAP virtual bool Valid() const = 0;
+    CV_WRAP virtual int SetSigma(const float sigma) const = 0;
     CV_WRAP virtual cv::Ptr<Contour> GetMarks() const = 0;
     CV_WRAP virtual int GetProfile(cv::InputArray img, CV_OUT std::vector<double> &grays) const = 0;
 };

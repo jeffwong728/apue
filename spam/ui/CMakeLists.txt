@@ -57,6 +57,7 @@ set(ui_core_SRCS
   fsm/probetool.cpp
   fsm/profiletool.cpp
   fsm/proctool.cpp
+  fsm/pyramidtool.cpp
   fsm/recttool.cpp
   fsm/linetool.cpp
   fsm/ellipsetool.cpp
@@ -137,6 +138,7 @@ set(ui_core_HEADERS
   fsm/probetool.h
   fsm/profiletool.h
   fsm/proctool.h
+  fsm/pyramidtool.h
   fsm/recttool.h
   fsm/linetool.h
   fsm/ellipsetool.h

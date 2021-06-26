@@ -35,6 +35,7 @@ private:
     void OnProbeRegion(wxCommandEvent &cmd);
     void OnToolEnter(const ToolOptions &toolOpts);
     void OnProfileChanged(wxCommandEvent& e);
+    void OnEnter(wxCommandEvent &e);
 
 private:
     wxPanel *CreateSelectOption(wxWindow *parent);
@@ -55,5 +56,7 @@ private:
     std::vector<cv::Mat> imags_;
     Geom::Point begPoint_;
     Geom::Point endPoint_;
+    float profileWidth_;
+    float profileSigma_;
 };
 #endif //SPAM_UI_TOOLBOX_PROBE_BOX_H

@@ -35,23 +35,27 @@ private:
     void OnToolEnter(const ToolOptions &toolOpts);
     void OnChannelChanged(wxCommandEvent& e);
     void OnThreshold(HistogramWidget *hist);
+    void OnPyramidEnter(wxCommandEvent &e);
+    void OnThresholdEnter(wxCommandEvent &e);
 
 private:
     wxPanel *CreateThresholdOption(wxWindow *parent);
+    wxPanel *CreatePyramidOption(wxWindow *parent);
     void UpdateSelectionFilter(void);
     void RePopulateChannelChoice(const int numChannels);
     void RePopulateHistogramProfiles(const std::vector<cv::Mat> &imags, const cv::Mat &mask);
     void ReThreshold();
 
 private:
-    wxTextCtrl      *nameText_;
     wxChoice        *channelChoice_;
     HistogramWidget *hist_;
     cv::Mat img_;
     cv::Mat mask_;
-    cv::Ptr<cv::mvlab::Region> roi_;
     std::vector<cv::Mat> imgs_;
     std::string uuidStation_;
+    int pyraLevel_ = 5;
+    int minGray_ = 50;
+    int maxGray_ = 200;
 
 };
 #endif //SPAM_UI_TOOLBOX_PROC_BOX_H

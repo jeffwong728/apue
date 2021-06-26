@@ -9,6 +9,7 @@
 #include <ui/projs/profilenode.h>
 #include <ui/cmds/geomcmd.h>
 #include <ui/cmds/transcmd.h>
+#include <ui/proc/basic.h>
 #include <wx/graphics.h>
 #include <wx/popupwin.h>
 #include <wx/artprov.h>
@@ -1385,6 +1386,44 @@ void CairoCanvas::RemoveProfileNode()
     profileNode_ = nullptr;
 }
 
+void CairoCanvas::UpdatePyramid(const Geom::Rect &roiBox, const int pyraLevel)
+{
+    imgProc_.ipKind = kIPK_PYRAMID;
+    imgProc_.roi = Geom::Path(roiBox);
+    if (pyraLevel > 1 && !disMat_.empty())
+    {
+        imgProc_.disMats.clear();
+        imgProc_.iParams[cp_ToolProcPyramidLevel] = pyraLevel;
+        ImageProcessPyramid();
+        Refresh(false);
+    }
+}
+
+void CairoCanvas::UpdateBinary(const Geom::Rect &roiBox, const int minGray, const int maxGray, const int channel)
+{
+    imgProc_.ipKind = kIPK_BINARY;
+    imgProc_.roi = Geom::Path(roiBox);
+    if (!disMat_.empty() && channel>=0 && channel< disMat_.channels() && minGray < maxGray)
+    {
+        imgProc_.disMats.clear();
+        imgProc_.iParams[cp_ToolProcThresholdMin] = minGray;
+        imgProc_.iParams[cp_ToolProcThresholdMax] = maxGray;
+        imgProc_.iParams[cp_ToolProcThresholdChannel] = channel;
+        ImageProcessBinary();
+        Refresh(false);
+    }
+}
+
+void CairoCanvas::RemoveImageProcessData()
+{
+    imgProc_.ipKind = kIPK_NONE;
+    imgProc_.roi.clear();
+    imgProc_.disMats.clear();
+    imgProc_.iParams.clear();
+    imgProc_.fParams.clear();
+    Refresh(false);
+}
+
 void CairoCanvas::OnSize(wxSizeEvent& e)
 {
     if (!disMat_.empty())
@@ -1699,6 +1738,38 @@ void CairoCanvas::RenderImage(Cairo::RefPtr<Cairo::Context> &cr) const
                 cr->paint();
             }
 
+            if (!imgProc_.disMats.empty())
+            {
+                int begRow = 0;
+                int begCol = 0;
+
+                if (1 == imgProc_.disMats.size())
+                {
+                    Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
+                    if (vbox)
+                    {
+                        begRow = cvRound(vbox->top()*GetMatScale());
+                        begCol = cvRound(vbox->left()*GetMatScale());
+                    }
+                }
+
+                for (const cv::Mat &pyraMat : imgProc_.disMats)
+                {
+                    wxRect rcOld = wxRect(tl, br).Intersect(wxRect(begCol, begRow, pyraMat.cols, pyraMat.rows));
+                    if (!rcOld.IsEmpty())
+                    {
+                        cv::Mat m(pyraMat, cv::Range(rcOld.GetTop() - begRow, rcOld.GetBottom() - begRow), cv::Range(rcOld.GetLeft() - begCol, rcOld.GetRight() - begCol));
+
+                        auto imgSurf = Cairo::ImageSurface::create(m.ptr(), Cairo::Format::FORMAT_RGB24, m.cols, m.rows, m.step1());
+                        cr->set_source(imgSurf, anchorX_ + rcOld.GetX(), anchorY_ + rcOld.GetY());
+                        cr->paint();
+                    }
+
+                    begRow += pyraMat.rows;
+                    begCol += pyraMat.cols;
+                }
+            }
+
             upd++;
         }
     }
@@ -1908,6 +1979,142 @@ void CairoCanvas::RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const
     }
 }
 
+void CairoCanvas::ConvertToDisplayMats(const std::vector<cv::Mat> &mats, std::vector<cv::Mat> &disMats)
+{
+    disMats.clear();
+    for (const cv::Mat &m : mats)
+    {
+        if (!m.empty())
+        {
+            int dph = m.depth();
+            int cnl = m.channels();
+
+            if (CV_8U == dph && (1 == cnl || 3 == cnl || 4 == cnl))
+            {
+                cv::Mat srcMat;
+                if (1 == cnl)
+                {
+                    cv::cvtColor(m, srcMat, cv::COLOR_GRAY2BGRA);
+                }
+                else if (3 == cnl)
+                {
+                    cv::cvtColor(m, srcMat, cv::COLOR_BGR2BGRA);
+                }
+                else
+                {
+                    srcMat = m;
+                }
+
+                const int toW = cvRound(GetMatScale()*srcMat.cols);
+                const int toH = cvRound(GetMatScale()*srcMat.rows);
+
+                if (toW == srcMat.cols && toH == srcMat.rows)
+                {
+                    disMats.push_back(srcMat);
+                }
+                else
+                {
+                    cv::Mat disMat;
+                    cv::Size newSize(toW, toH);
+                    const bool shrink = newSize.width < srcMat.cols || newSize.height < srcMat.rows;
+                    cv::resize(srcMat, disMat, newSize, 0.0, 0.0, shrink ? cv::INTER_AREA : cv::INTER_NEAREST);
+                    disMats.push_back(disMat);
+                }
+            }
+        }
+    }
+}
+
+void CairoCanvas::ImageProcessBinary()
+{
+    if (kIPK_BINARY == imgProc_.ipKind)
+    {
+        imgProc_.disMats.clear();
+        auto itMinGray = imgProc_.iParams.find(cp_ToolProcThresholdMin);
+        auto itMaxGray = imgProc_.iParams.find(cp_ToolProcThresholdMax);
+        auto itChannel = imgProc_.iParams.find(cp_ToolProcThresholdChannel);
+        if (itMinGray != imgProc_.iParams.end() &&
+            itMaxGray != imgProc_.iParams.end() &&
+            itChannel != imgProc_.iParams.end() && 
+            itMinGray->second >= 0 && itMinGray->second <= 255 &&
+            itMaxGray->second >= 0 && itMinGray->second <= 255 &&
+            itMinGray->second < itMaxGray->second &&
+            itChannel->second >=0 && itChannel->second < srcImg_.channels())
+        {
+            std::vector<cv::Mat> resImgs;
+            Geom::OptRect ibox(0, 0, srcImg_.cols - 1, srcImg_.rows - 1);
+            Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
+            vbox.intersectWith(ibox);
+
+            cv::Mat procMat;
+            if (vbox && vbox->width() > 3. && vbox->height() > 3.)
+            {
+                const int t = cvRound(vbox->top());
+                const int b = cvRound(vbox->bottom());
+                const int l = cvRound(vbox->left());
+                const int r = cvRound(vbox->right());
+                procMat = cv::Mat(srcImg_, cv::Range(t, b), cv::Range(l, r));
+            }
+            else
+            {
+                procMat = srcImg_;
+            }
+
+            if (procMat.channels() > 1)
+            {
+                std::vector<cv::Mat> cMats;
+                cv::split(procMat, cMats);
+                resImgs.push_back(BasicImgProc::Binarize(cMats[itChannel->second], itMinGray->second, itMaxGray->second));
+            }
+            else
+            {
+                resImgs.push_back(BasicImgProc::Binarize(procMat, itMinGray->second, itMaxGray->second));
+            }
+
+            if (!resImgs.empty())
+            {
+                ConvertToDisplayMats(resImgs, imgProc_.disMats);
+            }
+        }
+    }
+}
+
+void CairoCanvas::ImageProcessPyramid()
+{
+    if (kIPK_PYRAMID == imgProc_.ipKind)
+    {
+        imgProc_.disMats.clear();
+        auto itLevel = imgProc_.iParams.find(cp_ToolProcPyramidLevel);
+        if (itLevel != imgProc_.iParams.end() && itLevel->second > 1)
+        {
+            std::vector<cv::Mat> pyraImgs;
+            Geom::OptRect ibox(0, 0, srcImg_.cols-1, srcImg_.rows - 1);
+            Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
+            vbox.intersectWith(ibox);
+            if (vbox && vbox->width() > 3. && vbox->height() > 3.)
+            {
+                const int t = cvRound(vbox->top());
+                const int b = cvRound(vbox->bottom());
+                const int l = cvRound(vbox->left());
+                const int r = cvRound(vbox->right());
+                cv::Mat m(srcImg_, cv::Range(t, b), cv::Range(l, r));
+                cv::buildPyramid(m, pyraImgs, itLevel->second);
+            }
+            else
+            {
+                cv::buildPyramid(srcImg_, pyraImgs, itLevel->second);
+            }
+
+            if (pyraImgs.size() > 1)
+            {
+                std::vector<cv::Mat> rPyraImgs(pyraImgs.size() - 1);
+                std::reverse_copy(pyraImgs.cbegin() + 1, pyraImgs.cend(), rPyraImgs.begin());
+                ConvertToDisplayMats(rPyraImgs, imgProc_.disMats);
+            }
+        }
+    }
+}
+
 void CairoCanvas::MoveAnchor(const wxSize &sViewport, const wxSize &disMatSize)
 {
     anchorX_ = std::max(0, (sViewport.GetWidth() - disMatSize.GetWidth()) / 2);
@@ -1931,6 +2138,12 @@ void CairoCanvas::ScaleShowImage(const wxSize &sToSize)
             bool shrink = newSize.width<srcMat_.cols || newSize.height<srcMat_.rows;
             ScopedTimer st(wxT("cv::resize"));
             cv::resize(srcMat_, disMat_, newSize, 0.0, 0.0, shrink ? cv::INTER_AREA : cv::INTER_NEAREST);
+        }
+        switch (imgProc_.ipKind)
+        {
+        case kIPK_BINARY: ImageProcessBinary(); break;
+        case kIPK_PYRAMID: ImageProcessPyramid(); break;
+        default: break;
         }
         Refresh(false);
     }

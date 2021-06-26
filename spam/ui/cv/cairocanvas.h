@@ -68,6 +68,22 @@ public:
         bool operator==(const cv::Ptr<cv::mvlab::Contour> &contr) const { return cvContr == contr; }
     };
 
+    enum ImageProcKind
+    {
+        kIPK_NONE,
+        kIPK_BINARY,
+        kIPK_PYRAMID
+    };
+
+    struct ImageProcData
+    {
+        int ipKind = kIPK_NONE;
+        Geom::Path roi;
+        std::vector<cv::Mat> disMats;
+        std::map<std::string, int> iParams;
+        std::map<std::string, double> fParams;
+    };
+
 public:
     cv::Mat GetOriginalImage() const { return srcImg_; }
     const ImageBufferZone &GetImageBufferZone() const { return imgBufferZone_; }
@@ -141,6 +157,9 @@ public:
     void EraseFullArea();
     void UpdateProfileNode(const Geom::Point &begPoint, const Geom::Point &endPoint);
     void RemoveProfileNode();
+    void UpdatePyramid(const Geom::Rect &roiBox, const int pyraLevel);
+    void UpdateBinary(const Geom::Rect &roiBox, const int minGray, const int maxGray, const int channel);
+    void RemoveImageProcessData();
 
 private:
     void OnSize(wxSizeEvent& event);
@@ -171,6 +190,9 @@ private:
     void RenderRubberBand(Cairo::RefPtr<Cairo::Context> &cr) const;
     void RenderEntities(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
     void RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const;
+    void ConvertToDisplayMats(const std::vector<cv::Mat> &mats, std::vector<cv::Mat> &disMats);
+    void ImageProcessBinary();
+    void ImageProcessPyramid();
 
 private:
     void MoveAnchor(const wxSize &sViewport, const wxSize &disMatSize);
@@ -206,6 +228,7 @@ private:
     std::map<cv::mvlab::Contour *const, std::vector<DispContour>> contrs_;
     std::vector<Geom::PathVector> markers_;
     SPProfileNode profileNode_;
+    ImageProcData imgProc_;
 };
 
 class DnDImageFile : public wxFileDropTarget

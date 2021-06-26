@@ -6,6 +6,7 @@
 #include <wx/collpane.h>
 #include <wx/tglbtn.h>
 #include <wx/wxhtml.h>
+#include <wx/valnum.h>
 #include <opencv2/mvlab.hpp>
 
 ProbeBox::ProbeBox(wxWindow* parent)
@@ -13,6 +14,8 @@ ProbeBox::ProbeBox(wxWindow* parent)
 , hist_(nullptr)
 , profile_(nullptr)
 , profileChoice_(nullptr)
+, profileWidth_(1.0f)
+, profileSigma_(0.4f)
 {
     wxWindowID toolIds[] = {
         kSpamID_TOOLBOX_PROBE_SELECT,
@@ -76,8 +79,9 @@ void ProbeBox::UpdateProfile(const cv::Mat &srcImg, const Geom::Point &sPt, cons
             cv::Mat img = imags_[profileChoice_->GetSelection()];
             cv::Point2f pt1{ static_cast<float>(begPoint_.x()), static_cast<float>(begPoint_.y()) };
             cv::Point2f pt2{ static_cast<float>(endPoint_.x()), static_cast<float>(endPoint_.y()) };
-            cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, 3), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
-            cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::GenMeasureBox(box, cv::Point2f(1.f, 1.f));
+            cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, profileWidth_), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
+            cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::Gen(box, cv::Point2f(1.f, 1.f));
+            spMB->SetSigma(profileSigma_);
             if (spMB->Valid())
             {
                 HistogramWidget::Profile profile{ wxT(""), colors[profileChoice_->GetSelection()] };
@@ -255,8 +259,9 @@ void ProbeBox::OnProfileChanged(wxCommandEvent &WXUNUSED(e))
             cv::Mat img = imags_[profileChoice_->GetSelection()];
             cv::Point2f pt1{ static_cast<float>(begPoint_.x()), static_cast<float>(begPoint_.y()) };
             cv::Point2f pt2{ static_cast<float>(endPoint_.x()), static_cast<float>(endPoint_.y()) };
-            cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, 3), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
-            cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::GenMeasureBox(box, cv::Point2f(1.f, 1.f));
+            cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, profileWidth_), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
+            cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::Gen(box, cv::Point2f(1.f, 1.f));
+            spMB->SetSigma(profileSigma_);
             if (spMB->Valid())
             {
                 HistogramWidget::Profile profile{ wxT(""), colors[profileChoice_->GetSelection()] };
@@ -272,6 +277,22 @@ void ProbeBox::OnProfileChanged(wxCommandEvent &WXUNUSED(e))
         {
             profile_->ClearProfiles();
             profile_->Refresh(true);
+        }
+    }
+}
+
+void ProbeBox::OnEnter(wxCommandEvent &evt)
+{
+    auto txtCtrl = dynamic_cast<wxTextCtrl *>(evt.GetEventObject());
+    if (txtCtrl)
+    {
+        auto txtParent = txtCtrl->GetParent();
+        if (txtParent)
+        {
+            if (txtParent->TransferDataFromWindow())
+            {
+                OnProfileChanged(evt);
+            }
         }
     }
 }
@@ -390,20 +411,27 @@ wxPanel *ProbeBox::CreateProfileOption(wxWindow *parent)
     profile_ = new HistogramWidget(panel);
     sizerRoot->Add(profile_, wxSizerFlags(0).Expand().Border());
 
+    wxFloatingPointValidator<float> sigmVal(2, &profileSigma_, wxNUM_VAL_ZERO_AS_BLANK | wxNUM_VAL_NO_TRAILING_ZEROES);
+    wxFloatingPointValidator<float> widthVal(2, &profileWidth_, wxNUM_VAL_ZERO_AS_BLANK | wxNUM_VAL_NO_TRAILING_ZEROES);
+    sigmVal.SetRange(0.f, 100.f);
+    widthVal.SetRange(0.01f, 9999999.f);
+
     auto styleSizer = new wxFlexGridSizer(2, 2, 2);
     styleSizer->AddGrowableCol(1, 1);
     styleSizer->SetFlexibleDirection(wxHORIZONTAL);
     profileChoice_ = new wxChoice(panel, wxID_ANY);
+    auto sigmCtrl = new wxTextCtrl(panel, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, sigmVal);
+    auto widthCtrl = new wxTextCtrl(panel, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, widthVal);
     styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Channel:")), wxSizerFlags().Right().Border(wxLEFT));
     styleSizer->Add(profileChoice_, wxSizerFlags(1).Expand().HorzBorder());
     styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Width:")), wxSizerFlags().Right().Border(wxLEFT));
-    styleSizer->Add(new wxTextCtrl(panel, wxID_ANY), wxSizerFlags(1).Expand().HorzBorder());
-    styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma X:")), wxSizerFlags().Right().Border(wxLEFT));
-    styleSizer->Add(new wxTextCtrl(panel, wxID_ANY), wxSizerFlags(1).Expand().HorzBorder());
-    styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma Y:")), wxSizerFlags().Right().Border(wxLEFT));
-    styleSizer->Add(new wxTextCtrl(panel, wxID_ANY), wxSizerFlags(1).Expand().HorzBorder());
+    styleSizer->Add(widthCtrl, wxSizerFlags(1).Expand().HorzBorder());
+    styleSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma:")), wxSizerFlags().Right().Border(wxLEFT));
+    styleSizer->Add(sigmCtrl, wxSizerFlags(1).Expand().HorzBorder());
     sizerRoot->Add(styleSizer, wxSizerFlags().Expand());
     profileChoice_->Bind(wxEVT_CHOICE, &ProbeBox::OnProfileChanged, this);
+    sigmCtrl->Bind(wxEVT_TEXT_ENTER, &ProbeBox::OnEnter, this);
+    widthCtrl->Bind(wxEVT_TEXT_ENTER, &ProbeBox::OnEnter, this);
 
     auto helpPane = new wxCollapsiblePane(panel, wxID_ANY, wxT("Instructions"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE | wxCP_NO_TLW_RESIZE);
     helpPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &ProbeBox::OnHelpCollapse, this, wxID_ANY);
@@ -421,6 +449,7 @@ wxPanel *ProbeBox::CreateProfileOption(wxWindow *parent)
     panel->SetScrollRate(6, 6);
     panel->SetVirtualSize(panel->GetBestSize());
     panel->SetSizerAndFit(sizerRoot);
+    panel->TransferDataToWindow();
     return panel;
 }
 
