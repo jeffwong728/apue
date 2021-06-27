@@ -41,7 +41,7 @@ GeomBox::GeomBox(wxWindow* parent)
     wxBitmap cToolIcons[] = {
         Spam::GetBitmap(ip, bm_Pointer),
         Spam::GetBitmap(ip, bm_NodeEdit),
-        Spam::GetBitmap(ip, bm_Box),
+        Spam::GetBitmap(ip, std::string("geom.square")),
         Spam::GetBitmap(ip, bm_Ellipse),
         Spam::GetBitmap(ip, bm_Polygon),
         Spam::GetBitmap(ip, bm_Beziergon),

@@ -3,6 +3,11 @@
 #include "spamer.h"
 #include "notool.h"
 #include "boxtool.h"
+#include <wx/log.h>
+#include <ui/spam.h>
+#include <ui/toplevel/rootframe.h>
+#include <ui/cv/cairocanvas.h>
+#include <ui/projs/drawablenode.h>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
 #include <2geom/path.h>

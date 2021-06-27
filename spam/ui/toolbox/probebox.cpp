@@ -33,10 +33,10 @@ ProbeBox::ProbeBox(wxWindow* parent)
 
     const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
     wxBitmap toolIcons[] = {
-        Spam::GetBitmap(ip, bm_Pointer),
-        Spam::GetBitmap(ip, bm_Pointer),
-        Spam::GetBitmap(ip, bm_NodeEdit),
-        Spam::GetBitmap(ip, bm_Line)
+        Spam::GetBitmap(ip, std::string("probe.image")),
+        Spam::GetBitmap(ip, std::string("probe.geometry")),
+        Spam::GetBitmap(ip, std::string("probe.histogram")),
+        Spam::GetBitmap(ip, std::string("probe.profile"))
     };
 
     ToolBox::Init(toolIds, toolTips, toolIcons, WXSIZEOF(toolTips), 0, 0);

@@ -34,11 +34,13 @@ protected:
 private:
     void OnToolEnter(const ToolOptions &toolOpts);
     void OnChannelChanged(wxCommandEvent& e);
+    void OnFilterTypeChanged(wxCommandEvent& e);
     void OnThreshold(HistogramWidget *hist);
     void OnPyramidEnter(wxCommandEvent &e);
     void OnThresholdEnter(wxCommandEvent &e);
 
 private:
+    wxPanel *CreateFilterOption(wxWindow *parent);
     wxPanel *CreateThresholdOption(wxWindow *parent);
     wxPanel *CreatePyramidOption(wxWindow *parent);
     void UpdateSelectionFilter(void);
@@ -50,7 +52,6 @@ private:
     wxChoice        *channelChoice_;
     HistogramWidget *hist_;
     cv::Mat img_;
-    cv::Mat mask_;
     std::vector<cv::Mat> imgs_;
     std::string uuidStation_;
     int pyraLevel_ = 5;

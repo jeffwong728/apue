@@ -9,6 +9,60 @@
 #include <2geom/path.h>
 #pragma warning( pop )
 
+struct FilterTool;
+struct FilterIdle;
+struct FilterDraging;
+using  FilterBoxTool = BoxTool<FilterTool, kSpamID_TOOLBOX_PROC_FILTER>;
+
+struct FilterTool : boost::statechart::simple_state<FilterTool, Spamer, FilterIdle>, FilterBoxTool
+{
+    using BoxToolT = BoxToolImpl;
+    FilterTool() : FilterBoxTool(*this) {}
+    ~FilterTool() {}
+
+    void OnOptionChanged(const EvToolOption &e);
+    void OnBoxingEnded(const EvBoxingEnded &e);
+    void OnImageClicked(const EvImageClicked &e);
+    void OnEntityClicked(const EvEntityClicked &e);
+    sc::result react(const EvToolQuit &e);
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvReset, FilterTool>,
+        boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
+        boost::statechart::in_state_reaction<EvBoxingEnded, FilterTool, &FilterTool::OnBoxingEnded>,
+        boost::statechart::in_state_reaction<EvImageClicked, FilterTool, &FilterTool::OnImageClicked>,
+        boost::statechart::in_state_reaction<EvEntityClicked, FilterTool, &FilterTool::OnEntityClicked>,
+        boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
+        boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
+        boost::statechart::custom_reaction<EvToolQuit>> reactions;
+
+    ToolOptions toolOptions;
+    std::set<std::string> uuids;
+};
+
+struct FilterIdle : boost::statechart::simple_state<FilterIdle, FilterTool>
+{
+    FilterIdle() {}
+    ~FilterIdle() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseDown, FilterDraging, FilterTool::BoxToolT, &FilterTool::BoxToolT::StartBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, FilterTool::BoxToolT, &FilterTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvToolOption, FilterTool, &FilterTool::OnOptionChanged>,
+        boost::statechart::in_state_reaction<EvCanvasLeave, FilterTool::BoxToolT, &FilterTool::BoxToolT::LeaveCanvas>> reactions;
+};
+
+struct FilterDraging : boost::statechart::simple_state<FilterDraging, FilterTool>
+{
+    FilterDraging() {}
+    ~FilterDraging() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseUp, FilterIdle, FilterTool::BoxToolT, &FilterTool::BoxToolT::EndBoxing>,
+        boost::statechart::transition<EvReset, FilterIdle, FilterTool::BoxToolT, &FilterTool::BoxToolT::ResetBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, FilterTool::BoxToolT, &FilterTool::BoxToolT::ContinueBoxing>> reactions;
+};
+
 struct ThresholdTool;
 struct ThresholdIdle;
 struct ThresholdDraging;

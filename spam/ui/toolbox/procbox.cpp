@@ -33,10 +33,10 @@ ProcBox::ProcBox(wxWindow* parent)
 
     const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
     wxBitmap toolIcons[] = {
-        Spam::GetBitmap(ip, bm_Pointer),
-        Spam::GetBitmap(ip, bm_Pointer),
-        Spam::GetBitmap(ip, bm_Pointer),
-        Spam::GetBitmap(ip, bm_Pointer),
+        Spam::GetBitmap(ip, std::string("proc.enhancement")),
+        Spam::GetBitmap(ip, std::string("proc.threshold")),
+        Spam::GetBitmap(ip, std::string("proc.filter")),
+        Spam::GetBitmap(ip, std::string("proc.edge")),
         Spam::GetBitmap(ip, std::string("proc.pyramid"))
     };
 
@@ -50,13 +50,14 @@ ProcBox::~ProcBox()
 
 void ProcBox::UpdateHistogram(const std::string &uuidTag, const cv::Mat &srcImg, const boost::any &roi)
 {
+    cv::Mat mask;
     const Geom::OptRect *rect = boost::any_cast<Geom::OptRect>(&roi);
     if (rect)
     {
         if (!rect->empty())
         {
             Geom::PathVector pv{ Geom::Path(**rect) };
-            mask_ = SpamUtility::GetMaskFromPath(pv, cv::Size(srcImg.cols, srcImg.rows));
+            mask = SpamUtility::GetMaskFromPath(pv, cv::Size(srcImg.cols, srcImg.rows));
         }
     }
     else
@@ -64,7 +65,7 @@ void ProcBox::UpdateHistogram(const std::string &uuidTag, const cv::Mat &srcImg,
         const Geom::PathVector *pv = boost::any_cast<Geom::PathVector>(&roi);
         if (pv)
         {
-            mask_ = SpamUtility::GetMaskFromPath(*pv, cv::Size(srcImg.cols, srcImg.rows));
+            mask = SpamUtility::GetMaskFromPath(*pv, cv::Size(srcImg.cols, srcImg.rows));
         }
     }
 
@@ -73,7 +74,7 @@ void ProcBox::UpdateHistogram(const std::string &uuidTag, const cv::Mat &srcImg,
     cv::split(srcImg, imgs_);
 
     RePopulateChannelChoice(static_cast<int>(imgs_.size()));
-    RePopulateHistogramProfiles(imgs_, mask_);
+    RePopulateHistogramProfiles(imgs_, mask);
     ReThreshold();
 }
 
@@ -84,7 +85,7 @@ wxPanel *ProcBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
     {
         nullptr,
         &ProcBox::CreateThresholdOption,
-        nullptr,
+        &ProcBox::CreateFilterOption,
         nullptr,
         &ProcBox::CreatePyramidOption
     };
@@ -146,6 +147,23 @@ void ProcBox::OnChannelChanged(wxCommandEvent& e)
     }
 }
 
+void ProcBox::OnFilterTypeChanged(wxCommandEvent& e)
+{
+    auto filterTypeChoice = dynamic_cast<wxChoice *>(e.GetEventObject());
+    if (filterTypeChoice)
+    {
+        for (auto cc = 0U; cc < filterTypeChoice->GetCount(); ++cc)
+        {
+            wxSizer *optSizer = reinterpret_cast<wxSizer *>(filterTypeChoice->GetClientData(cc));
+            optSizer->Show(false);
+        }
+
+        wxSizer *currSizer = reinterpret_cast<wxSizer *>(filterTypeChoice->GetClientData(filterTypeChoice->GetCurrentSelection()));
+        currSizer->Show(true);
+        filterTypeChoice->GetParent()->GetSizer()->Layout();
+    }
+}
+
 void ProcBox::OnThreshold(HistogramWidget *hist)
 {
     ReThreshold();
@@ -185,6 +203,81 @@ void ProcBox::OnThresholdEnter(wxCommandEvent &e)
             }
         }
     }
+}
+
+wxPanel *ProcBox::CreateFilterOption(wxWindow *parent)
+{
+    auto panel = new wxScrolledWindow(parent, wxID_ANY);
+    wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+
+    auto filterTypeChoice = new wxChoice(panel, wxID_ANY);
+    wxFlexGridSizer *blurSizer = new wxFlexGridSizer(2, 2, 2);
+    wxFlexGridSizer *boxSizer = new wxFlexGridSizer(2, 2, 2);
+    wxFlexGridSizer *gaussianSizer = new wxFlexGridSizer(2, 2, 2);
+    wxFlexGridSizer *medianSizer = new wxFlexGridSizer(2, 2, 2);
+    wxFlexGridSizer *bilateralSizer = new wxFlexGridSizer(2, 2, 2);
+    filterTypeChoice->Append(wxT("Blur"), blurSizer);
+    filterTypeChoice->Append(wxT("Box"), boxSizer);
+    filterTypeChoice->Append(wxT("Gaussian"), gaussianSizer);
+    filterTypeChoice->Append(wxT("Median"), medianSizer);
+    filterTypeChoice->Append(wxT("Bilateral"), bilateralSizer);
+    filterTypeChoice->SetSelection(0);
+    filterTypeChoice->Bind(wxEVT_CHOICE, &ProcBox::OnFilterTypeChanged, this);
+
+    auto filterTypeSizer = new wxBoxSizer(wxHORIZONTAL);
+    filterTypeSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Filter Type:")), wxSizerFlags().Left().CentreVertical().HorzBorder());
+    filterTypeSizer->Add(filterTypeChoice, wxSizerFlags(1).Border(wxRIGHT).Expand());
+    sizerRoot->AddSpacer(3);
+    sizerRoot->Add(filterTypeSizer, wxSizerFlags(0).Expand());
+    sizerRoot->AddSpacer(9);
+    sizerRoot->Add(blurSizer, wxSizerFlags(1).Expand());
+    sizerRoot->Add(boxSizer, wxSizerFlags(1).Expand());
+    sizerRoot->Add(gaussianSizer, wxSizerFlags(1).Expand());
+    sizerRoot->Add(medianSizer, wxSizerFlags(1).Expand());
+    sizerRoot->Add(bilateralSizer, wxSizerFlags(1).Expand());
+
+    blurSizer->AddGrowableCol(1, 1);
+    blurSizer->SetFlexibleDirection(wxHORIZONTAL);
+    blurSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Kernel Size:")), wxSizerFlags().Right().Border(wxTOP | wxLEFT));
+    blurSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+
+    boxSizer->AddGrowableCol(1, 1);
+    boxSizer->SetFlexibleDirection(wxHORIZONTAL);
+    boxSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Kernel Size:")), wxSizerFlags().Right().Border(wxTOP | wxLEFT));
+    boxSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+    boxSizer->Show(false);
+
+    gaussianSizer->AddGrowableCol(1, 1);
+    gaussianSizer->SetFlexibleDirection(wxHORIZONTAL);
+    gaussianSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Kernel Size:")), wxSizerFlags().Right().Border(wxTOP | wxLEFT));
+    gaussianSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+    gaussianSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma X:")), wxSizerFlags().Right().Border(wxLEFT));
+    gaussianSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("1.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+    gaussianSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma Y:")), wxSizerFlags().Right().Border(wxLEFT));
+    gaussianSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("1.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+    gaussianSizer->Show(false);
+
+    medianSizer->AddGrowableCol(1, 1);
+    medianSizer->SetFlexibleDirection(wxHORIZONTAL);
+    medianSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Kernel Size:")), wxSizerFlags().Right().Border(wxTOP | wxLEFT));
+    medianSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+    medianSizer->Show(false);
+
+    bilateralSizer->AddGrowableCol(1, 1);
+    bilateralSizer->SetFlexibleDirection(wxHORIZONTAL);
+    bilateralSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Diameter:")), wxSizerFlags().Right().Border(wxTOP | wxLEFT));
+    bilateralSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+    bilateralSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma Color:")), wxSizerFlags().Right().Border(wxLEFT));
+    bilateralSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("1.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+    bilateralSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Sigma Space:")), wxSizerFlags().Right().Border(wxLEFT));
+    bilateralSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("1.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER), wxSizerFlags(1).Expand().HorzBorder());
+    bilateralSizer->Show(false);
+
+    panel->SetScrollRate(6, 6);
+    panel->SetVirtualSize(panel->GetBestSize());
+    panel->SetSizerAndFit(sizerRoot);
+    panel->TransferDataToWindow();
+    return panel;
 }
 
 wxPanel *ProcBox::CreateThresholdOption(wxWindow *parent)
