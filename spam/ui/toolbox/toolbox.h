@@ -7,6 +7,7 @@
 #endif
 #include <tuple>
 #include <vector>
+#include <boost/any.hpp>
 #include <boost/signals2.hpp>
 class wxCollapsiblePaneEvent;
 class wxToggleButton;
@@ -27,6 +28,7 @@ protected:
 public:
     virtual void OpenToolbox();
     virtual void QuitToolbox();
+    virtual void UpdateUI(const int toolId, const std::string &uuidTag, const boost::any &params) {}
 
 public:
     bs2::signal_type<void(const ToolOptions &), bs2::keywords::mutex_type<bs2::dummy_mutex>>::type sig_ToolEnter;

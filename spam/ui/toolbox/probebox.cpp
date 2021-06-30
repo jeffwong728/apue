@@ -1,6 +1,4 @@
 #include "probebox.h"
-#include <ui/spam.h>
-#include <ui/misc/spamutility.h>
 #include <wx/artprov.h>
 #include <wx/statline.h>
 #include <wx/collpane.h>
@@ -8,6 +6,9 @@
 #include <wx/wxhtml.h>
 #include <wx/valnum.h>
 #include <opencv2/mvlab.hpp>
+#include <ui/spam.h>
+#include <ui/misc/spamutility.h>
+#include <ui/cv/cairocanvas.h>
 
 ProbeBox::ProbeBox(wxWindow* parent)
 : ToolBox(parent, kSpamID_TOOLPAGE_PROBE, wxT("Infomation"), std::vector<wxString>(), kSpamID_TOOLBOX_PROBE_GUARD - kSpamID_TOOLBOX_PROBE_SELECT, kSpamID_TOOLBOX_PROBE_SELECT)
@@ -147,6 +148,20 @@ void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
         hist_->AddProfile(std::move(profile));
     }
     hist_->Refresh(true);
+}
+
+void ProbeBox::UpdateUI(const int toolId, const std::string &uuidTag, const boost::any &params)
+{
+    if (kSpamID_TOOLBOX_PROBE_HISTOGRAM == toolId)
+    {
+        cv::Mat srcImg;
+        CairoCanvas *cav = Spam::FindCanvas(uuidTag);
+        if (cav)
+        {
+            srcImg = cav->GetOriginalImage();
+            UpdateHistogram(srcImg, params);
+        }
+    }
 }
 
 wxPanel *ProbeBox::GetOptionPanel(const int toolIndex, wxWindow *parent)

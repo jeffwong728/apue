@@ -66,6 +66,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     {
         return transit<PyramidTool>();
     }
+    else if (kSpamID_TOOLBOX_PROC_FILTER == toolId)
+    {
+        return transit<FilterTool>();
+    }
     else if (kSpamID_TOOLBOX_GEOM_RECT == toolId)
     {
         return transit<RectTool>();

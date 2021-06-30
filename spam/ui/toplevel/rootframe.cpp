@@ -50,6 +50,7 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
 extern std::pair<std::string, bool> PyRunFile(const std::string &strFullPath);
 
 RootFrame::RootFrame()
@@ -68,6 +69,7 @@ RootFrame::RootFrame()
     , selFilter_(std::make_unique<SelectionFilter>())
     , cavDirtRects_(std::make_unique<std::map<std::string, Geom::OptRect>>())
 {
+    SetGTKGlobalStyle();
     ReplaceTitleBar();
 #ifdef _MSC_VER
     SetIcon(wxICON(spam));
@@ -364,25 +366,22 @@ void RootFrame::RequestUpdateProfile(const std::string &uuidTag, const Geom::Poi
     }
 }
 
-void RootFrame::RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi)
+void RootFrame::UpdateToolboxUI(const int toolboxId, const int toolId, const std::string &uuidTag, const boost::any &roi)
 {
-    CairoCanvas *canv = FindCanvasByUUID(uuidTag);
-    auto &tbPanelInfo = wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]);
-    ProbeBox *probeBox = dynamic_cast<ProbeBox *>(tbPanelInfo.window);
-    if (probeBox && canv)
+    ToolBox *toolBox = nullptr;
+    switch (toolboxId)
     {
-        probeBox->UpdateHistogram(canv->GetOriginalImage(), roi);
+    case kSpamID_TOOLBOX_PROBE: toolBox = dynamic_cast<ToolBox *>(wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]).window); break;
+    case kSpamID_TOOLBOX_GEOM: toolBox = dynamic_cast<ToolBox *>(wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_GEOM]).window); break;
+    case kSpamID_TOOLBOX_PROC: toolBox = dynamic_cast<ToolBox *>(wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROC]).window); break;
+    case kSpamID_TOOLBOX_MATCH: toolBox = dynamic_cast<ToolBox *>(wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_MATCH]).window); break;
+    case kSpamID_TOOLBOX_STYLE: toolBox = dynamic_cast<ToolBox *>(wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_STYLE]).window); break;
+    default: break;
     }
-}
 
-void RootFrame::RequestUpdateThreshold(const std::string &uuidTag, const boost::any &roi)
-{
-    CairoCanvas *canv = FindCanvasByUUID(uuidTag);
-    auto &tbPanelInfo = wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROC]);
-    ProcBox *procBox = dynamic_cast<ProcBox *>(tbPanelInfo.window);
-    if (procBox && canv)
+    if (toolBox)
     {
-        procBox->UpdateHistogram(uuidTag, canv->GetOriginalImage(), roi);
+        toolBox->UpdateUI(toolId, uuidTag, roi);
     }
 }
 
@@ -1600,6 +1599,7 @@ void RootFrame::ReplaceTitleBar(void)
     GtkStyleContext *context = gtk_widget_get_style_context(toolbar);
     gtk_style_context_add_class(context, "TitleToolBar");
     gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(css_provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+    g_object_unref(css_provider);
 
     gtk_window_set_titlebar(GTK_WINDOW(m_widget), header_bar);
 
@@ -1633,6 +1633,25 @@ void RootFrame::ReplaceTitleBar(void)
     widgets_.emplace_back(spamID_VIEW_IMAGES_ZONE, entZMi);
     widgets_.emplace_back(spamID_VIEW_TOOLBOX_BAR, toolMi);
     wxGCC_WARNING_RESTORE(deprecated-declarations)
+}
+
+void RootFrame::SetGTKGlobalStyle(void)
+{
+    boost::system::error_code ec;
+    boost::filesystem::path p = boost::dll::program_location(ec);
+    p = p.parent_path();
+    p.append(wxT("res")).append(wxT("css")).append(wxT("spam.css"));
+    if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
+    {
+
+        GError *error = 0;
+        GtkCssProvider *provider = gtk_css_provider_new();
+        GdkDisplay *display = gdk_display_get_default();
+        GdkScreen *screen = gdk_display_get_default_screen(display);
+        gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        gtk_css_provider_load_from_file(GTK_CSS_PROVIDER(provider), g_file_new_for_path(wxString(p.native()).ToUTF8()), &error);
+        g_object_unref(provider);
+    }
 }
 
 wxAuiNotebook *RootFrame::CreateStationNotebook()

@@ -1414,6 +1414,20 @@ void CairoCanvas::UpdateBinary(const Geom::Rect &roiBox, const int minGray, cons
     }
 }
 
+void CairoCanvas::UpdateFilter(const Geom::Rect &roiBox, const std::map<std::string, int> &iParams, const std::map<std::string, double> &fParams)
+{
+    imgProc_.ipKind = kIPK_FILTER;
+    imgProc_.roi = Geom::Path(roiBox);
+    if (!disMat_.empty())
+    {
+        imgProc_.disMats.clear();
+        imgProc_.iParams = iParams;
+        imgProc_.fParams = fParams;
+        ImageProcessFilter();
+        Refresh(false);
+    }
+}
+
 void CairoCanvas::RemoveImageProcessData()
 {
     imgProc_.ipKind = kIPK_NONE;
@@ -2079,6 +2093,81 @@ void CairoCanvas::ImageProcessBinary()
     }
 }
 
+void CairoCanvas::ImageProcessFilter()
+{
+    if (kIPK_FILTER == imgProc_.ipKind)
+    {
+        imgProc_.disMats.clear();
+        auto itFilterType = imgProc_.iParams.find(cp_ToolProcFilterType);
+        if (itFilterType != imgProc_.iParams.end())
+        {
+            wxBusyCursor wait;
+            Geom::OptRect ibox(0, 0, srcImg_.cols - 1, srcImg_.rows - 1);
+            Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
+            vbox.intersectWith(ibox);
+
+            cv::Mat procMat, resImg;
+            if (vbox && vbox->width() > 3. && vbox->height() > 3.)
+            {
+                const int t = cvRound(vbox->top());
+                const int b = cvRound(vbox->bottom());
+                const int l = cvRound(vbox->left());
+                const int r = cvRound(vbox->right());
+                procMat = cv::Mat(srcImg_, cv::Range(t, b), cv::Range(l, r));
+            }
+            else
+            {
+                procMat = srcImg_;
+            }
+
+            const int borderType = imgProc_.iParams[cp_ToolProcFilterBorderType];
+            switch (itFilterType->second)
+            {
+            case 0://Box
+            {
+                const cv::Size ksize(imgProc_.iParams[cp_ToolProcFilterBoxKernelWidth], imgProc_.iParams[cp_ToolProcFilterBoxKernelHeight]);
+                cv::boxFilter(procMat, resImg, -1, ksize, cv::Point(-1, -1), true, borderType);
+                break;
+            }
+
+            case 1://Gaussian
+            {
+                const double sigmaX = imgProc_.fParams[cp_ToolProcFilterGaussianKernelWidth];
+                const double sigmaY = imgProc_.fParams[cp_ToolProcFilterGaussianKernelWidth];
+                const cv::Size ksize(imgProc_.iParams[cp_ToolProcFilterGaussianKernelWidth], imgProc_.iParams[cp_ToolProcFilterGaussianKernelHeight]);
+                cv::GaussianBlur(procMat, resImg, ksize, sigmaX, sigmaY, borderType);
+                break;
+            }
+
+            case 2://Median
+            {
+                const int ksize = imgProc_.iParams[cp_ToolProcFilterMedianKernelWidth];
+                cv::medianBlur(procMat, resImg, ksize);
+                break;
+            }
+
+            case 3://Bilateral
+            {
+                const int d = imgProc_.iParams[cp_ToolProcFilterBilateralDiameter];
+                const double sigmaColor = imgProc_.fParams[cp_ToolProcFilterBilateralSigmaColor];
+                const double sigmaSpace = imgProc_.fParams[cp_ToolProcFilterBilateralSigmaSpace];
+                cv::bilateralFilter(procMat, resImg, d, sigmaColor, sigmaSpace, borderType);
+                break;
+            }
+
+            default:
+                break;
+            }
+
+            if (!resImg.empty())
+            {
+                std::vector<cv::Mat> resImgs(1, resImg);
+                ConvertToDisplayMats(resImgs, imgProc_.disMats);
+            }
+        }
+    }
+}
+
 void CairoCanvas::ImageProcessPyramid()
 {
     if (kIPK_PYRAMID == imgProc_.ipKind)
@@ -2143,6 +2232,7 @@ void CairoCanvas::ScaleShowImage(const wxSize &sToSize)
         {
         case kIPK_BINARY: ImageProcessBinary(); break;
         case kIPK_PYRAMID: ImageProcessPyramid(); break;
+        case kIPK_FILTER: ImageProcessFilter(); break;
         default: break;
         }
         Refresh(false);

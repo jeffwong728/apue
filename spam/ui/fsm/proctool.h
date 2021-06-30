@@ -25,6 +25,7 @@ struct FilterTool : boost::statechart::simple_state<FilterTool, Spamer, FilterId
     void OnImageClicked(const EvImageClicked &e);
     void OnEntityClicked(const EvEntityClicked &e);
     sc::result react(const EvToolQuit &e);
+    void BuildParameters(std::map<std::string, int> &iParams, std::map<std::string, double> &fParams);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, FilterTool>,

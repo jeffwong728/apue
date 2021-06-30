@@ -25,7 +25,7 @@ public:
     ~ProcBox();
 
 public:
-    void UpdateHistogram(const std::string &uuidTag, const cv::Mat &srcImg, const boost::any &roi);
+    void UpdateUI(const int toolId, const std::string &uuidTag, const boost::any &params) override;
 
 protected:
     wxPanel * GetOptionPanel(const int toolIndex, wxWindow *parent) override;
@@ -35,7 +35,8 @@ private:
     void OnToolEnter(const ToolOptions &toolOpts);
     void OnChannelChanged(wxCommandEvent& e);
     void OnFilterTypeChanged(wxCommandEvent& e);
-    void OnThreshold(HistogramWidget *hist);
+    void OnFilterBorderTypeChanged(wxCommandEvent& e);
+    void OnFilterEnter(wxCommandEvent &e);
     void OnPyramidEnter(wxCommandEvent &e);
     void OnThresholdEnter(wxCommandEvent &e);
 
@@ -43,20 +44,17 @@ private:
     wxPanel *CreateFilterOption(wxWindow *parent);
     wxPanel *CreateThresholdOption(wxWindow *parent);
     wxPanel *CreatePyramidOption(wxWindow *parent);
+    wxPanel *CreateEdgeOption(wxWindow *parent);
     void UpdateSelectionFilter(void);
+    void UpdateThresholdUI(const std::string &uuidTag, const boost::any &roi);
     void RePopulateChannelChoice(const int numChannels);
     void RePopulateHistogramProfiles(const std::vector<cv::Mat> &imags, const cv::Mat &mask);
-    void ReThreshold();
 
 private:
-    wxChoice        *channelChoice_;
+    wxChoice        *threshChannelChoice_;
     HistogramWidget *hist_;
-    cv::Mat img_;
-    std::vector<cv::Mat> imgs_;
     std::string uuidStation_;
-    int pyraLevel_ = 5;
-    int minGray_ = 50;
-    int maxGray_ = 200;
-
+    std::map<std::string, int> iParams_;
+    std::map<std::string, double> fParams_;
 };
 #endif //SPAM_UI_TOOLBOX_PROC_BOX_H

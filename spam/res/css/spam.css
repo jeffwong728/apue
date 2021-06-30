@@ -1,0 +1,12 @@
+button:checked
+{
+    border-top-color : #00FF00;
+    border-top-width : 2px 
+} 
+
+toolbar button:checked
+{
+    border-top-width : 0px;
+    border-left-color : #00FF00;
+    border-left-width : 2px
+}

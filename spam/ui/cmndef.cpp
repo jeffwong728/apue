@@ -2,24 +2,37 @@
 #include "spam.h"
 #include <wx/stc/stc.h>
 
-const std::string cp_ToolId                         = std::string("spam.tool.id");
-const std::string cp_ToolRectMode                   = std::string("spam.tool.geom.rect.mode");
-const std::string cp_ToolGeomFillPaint              = std::string("spam.tool.geom.fill.paint");
-const std::string cp_ToolGeomStrokePaint            = std::string("spam.tool.geom.stroke.paint");
-const std::string cp_ToolGeomStrokeWidth            = std::string("spam.tool.geom.stroke.width");
-const std::string cp_ToolGeomStrokeJoin             = std::string("spam.tool.geom.stroke.join");
-const std::string cp_ToolGeomStrokeCap              = std::string("spam.tool.geom.stroke.cap");
-const std::string cp_ToolGeomVertexEditMode         = std::string("spam.tool.geom.vertex.editmode");
-const std::string cp_ToolProbeMode                  = std::string("spam.tool.probe.mode");
-const std::string cp_ToolProcPyramidLevel           = std::string("spam.tool.process.pyramid.level");
-const std::string cp_ToolProcThresholdMin           = std::string("spam.tool.process.threshold.min");
-const std::string cp_ToolProcThresholdMax           = std::string("spam.tool.process.threshold.max");
-const std::string cp_ToolProcThresholdChannel       = std::string("spam.tool.process.threshold.channel");
-const std::string cp_ToolProbeRegionMask            = std::string("spam.tool.probe.region.mask");
-const std::string cp_Py3EditorStyle                 = std::string("spam.py3editor.style");
-const std::string cp_Py3EditorRememberScriptPath    = std::string("spam.py3editor.scriptpath.remember");
-const std::string cp_Py3EditorScriptFullPath        = std::string("spam.py3editor.scriptpath.fullpath");
-const std::string cp_ThemeDarkMode                  = std::string("spam.theme.darkmode");
+const std::string cp_ToolId                             = std::string("spam.tool.id");
+const std::string cp_ToolRectMode                       = std::string("spam.tool.geom.rect.mode");
+const std::string cp_ToolGeomFillPaint                  = std::string("spam.tool.geom.fill.paint");
+const std::string cp_ToolGeomStrokePaint                = std::string("spam.tool.geom.stroke.paint");
+const std::string cp_ToolGeomStrokeWidth                = std::string("spam.tool.geom.stroke.width");
+const std::string cp_ToolGeomStrokeJoin                 = std::string("spam.tool.geom.stroke.join");
+const std::string cp_ToolGeomStrokeCap                  = std::string("spam.tool.geom.stroke.cap");
+const std::string cp_ToolGeomVertexEditMode             = std::string("spam.tool.geom.vertex.editmode");
+const std::string cp_ToolProbeMode                      = std::string("spam.tool.probe.mode");
+const std::string cp_ToolProcPyramidLevel               = std::string("spam.tool.process.pyramid.level");
+const std::string cp_ToolProcThresholdMin               = std::string("spam.tool.process.threshold.min");
+const std::string cp_ToolProcThresholdMax               = std::string("spam.tool.process.threshold.max");
+const std::string cp_ToolProcThresholdChannel           = std::string("spam.tool.process.threshold.channel");
+const std::string cp_ToolProcFilterType                 = std::string("spam.tool.process.filter.type");
+const std::string cp_ToolProcFilterBorderType           = std::string("spam.tool.process.filter.border.type");
+const std::string cp_ToolProcFilterBoxKernelWidth       = std::string("spam.tool.process.filter.box.kernel.width");
+const std::string cp_ToolProcFilterBoxKernelHeight      = std::string("spam.tool.process.filter.box.kernel.height");
+const std::string cp_ToolProcFilterGaussianKernelWidth  = std::string("spam.tool.process.filter.gaussian.kernel.width");
+const std::string cp_ToolProcFilterGaussianKernelHeight = std::string("spam.tool.process.filter.gaussian.kernel.height");
+const std::string cp_ToolProcFilterGaussianSigmaX       = std::string("spam.tool.process.filter.gaussian.sigma.x");
+const std::string cp_ToolProcFilterGaussianSigmaY       = std::string("spam.tool.process.filter.gaussian.sigma.y");
+const std::string cp_ToolProcFilterMedianKernelWidth    = std::string("spam.tool.process.filter.median.kernel.width");
+const std::string cp_ToolProcFilterMedianKernelHeight   = std::string("spam.tool.process.filter.median.kernel.height");
+const std::string cp_ToolProcFilterBilateralDiameter    = std::string("spam.tool.process.filter.bilateral.diameter");
+const std::string cp_ToolProcFilterBilateralSigmaColor  = std::string("spam.tool.process.filter.bilateral.sigma.color");
+const std::string cp_ToolProcFilterBilateralSigmaSpace  = std::string("spam.tool.process.filter.bilateral.sigma.space");
+const std::string cp_ToolProbeRegionMask                = std::string("spam.tool.probe.region.mask");
+const std::string cp_Py3EditorStyle                     = std::string("spam.py3editor.style");
+const std::string cp_Py3EditorRememberScriptPath        = std::string("spam.py3editor.scriptpath.remember");
+const std::string cp_Py3EditorScriptFullPath            = std::string("spam.py3editor.scriptpath.fullpath");
+const std::string cp_ThemeDarkMode                      = std::string("spam.theme.darkmode");
 
 const std::string bm_Pointer                = std::string("tool.pointer");
 const std::string bm_PointerEdit            = std::string("tool.node.editor");

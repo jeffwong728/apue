@@ -67,8 +67,7 @@ public:
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
     int FindImagePanelIndexByUUID(const std::string &uuidTag) const;
     void RequestUpdateProfile(const std::string &uuidTag, const Geom::Point &sPt, const Geom::Point &ePt);
-    void RequestUpdateHistogram(const std::string &uuidTag, const boost::any &roi);
-    void RequestUpdateThreshold(const std::string &uuidTag, const boost::any &roi);
+    void UpdateToolboxUI(const int toolboxId, const int toolId, const std::string &uuidTag, const boost::any &roi);
     void AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect);
     void RequestRefreshCanvas();
     void SyncScale(double scale, wxAuiNotebook *nb, wxWindow *page);
@@ -143,6 +142,7 @@ public:
 
 private:
     void ReplaceTitleBar(void);
+    void SetGTKGlobalStyle(void);
     wxAuiNotebook *CreateStationNotebook();
     std::string GetNextCVStationWinName();
     std::vector<std::string> GetAllTabPaneNames(const std::string &perspective);

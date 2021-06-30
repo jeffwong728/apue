@@ -72,7 +72,8 @@ public:
     {
         kIPK_NONE,
         kIPK_BINARY,
-        kIPK_PYRAMID
+        kIPK_PYRAMID,
+        kIPK_FILTER
     };
 
     struct ImageProcData
@@ -159,6 +160,7 @@ public:
     void RemoveProfileNode();
     void UpdatePyramid(const Geom::Rect &roiBox, const int pyraLevel);
     void UpdateBinary(const Geom::Rect &roiBox, const int minGray, const int maxGray, const int channel);
+    void UpdateFilter(const Geom::Rect &roiBox, const std::map<std::string, int> &iParams, const std::map<std::string, double> &fParams);
     void RemoveImageProcessData();
 
 private:
@@ -192,6 +194,7 @@ private:
     void RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const;
     void ConvertToDisplayMats(const std::vector<cv::Mat> &mats, std::vector<cv::Mat> &disMats);
     void ImageProcessBinary();
+    void ImageProcessFilter();
     void ImageProcessPyramid();
 
 private:

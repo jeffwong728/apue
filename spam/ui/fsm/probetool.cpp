@@ -90,7 +90,7 @@ void HistogramTool::OnBoxingEnded(const EvBoxingEnded &e)
     auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
     if (cav && frame)
     {
-        frame->RequestUpdateHistogram(cav->GetUUID(), e.boxRect);
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROBE, kSpamID_TOOLBOX_PROBE_HISTOGRAM, cav->GetUUID(), e.boxRect);
     }
 }
 
@@ -100,7 +100,7 @@ void HistogramTool::OnImageClicked(const EvImageClicked &e)
     auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
     if (cav && frame)
     {
-        frame->RequestUpdateHistogram(cav->GetUUID(), Geom::OptRect());
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROBE, kSpamID_TOOLBOX_PROBE_HISTOGRAM, cav->GetUUID(), Geom::OptRect());
     }
 }
 
@@ -112,7 +112,7 @@ void HistogramTool::OnEntityClicked(const EvEntityClicked &e)
     {
         Geom::PathVector pv;
         e.ent->BuildPath(pv);
-        frame->RequestUpdateHistogram(cav->GetUUID(), pv);
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROBE, kSpamID_TOOLBOX_PROBE_HISTOGRAM, cav->GetUUID(), pv);
     }
 }
 

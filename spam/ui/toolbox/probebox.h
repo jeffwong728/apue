@@ -24,7 +24,7 @@ public:
 
 public:
     void UpdateProfile(const cv::Mat &srcImg, const Geom::Point &sPt, const Geom::Point &ePt);
-    void UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi);
+    void UpdateUI(const int toolId, const std::string &uuidTag, const boost::any &params) override;
 
 protected:
     wxPanel * GetOptionPanel(const int toolIndex, wxWindow *parent) override;
@@ -46,6 +46,7 @@ private:
     void SetFeature(const RegionFeatureFlag ff) { regionProbeMask_ |= static_cast<uint64_t>(ff); }
     void ClearFeature(const RegionFeatureFlag ff) { regionProbeMask_ &= ~static_cast<uint64_t>(ff); }
     void RePopulateProfileChoice(const int numChannels);
+    void UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi);
 
 private:
     int probeMode_{ kSpamID_TOOLBOX_PROBE_PIXEL };
