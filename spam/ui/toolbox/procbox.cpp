@@ -12,6 +12,7 @@
 
 ProcBox::ProcBox(wxWindow* parent)
 : ToolBox(parent, kSpamID_TOOLPAGE_PROC, wxT("Process"), std::vector<wxString>(), kSpamID_TOOLBOX_PROC_GUARD - kSpamID_TOOLBOX_PROC_ENHANCEMENT, kSpamID_TOOLBOX_PROC_ENHANCEMENT)
+, edgeChannelChoice_(nullptr)
 , threshChannelChoice_(nullptr)
 , hist_(nullptr)
 {
@@ -59,6 +60,11 @@ ProcBox::ProcBox(wxWindow* parent)
     iParams_[cp_ToolProcFilterBilateralDiameter] = 5;
     fParams_[cp_ToolProcFilterBilateralSigmaColor] = 1.5;
     fParams_[cp_ToolProcFilterBilateralSigmaSpace] = 1.5;
+    iParams_[cp_ToolProcEdgeType] = 0;
+    iParams_[cp_ToolProcEdgeChannel] = 0;
+    iParams_[cp_ToolProcEdgeApertureSize] = 3;
+    iParams_[cp_ToolProcEdgeCannyThresholdLow] = 10;
+    iParams_[cp_ToolProcEdgeCannyThresholdHigh] = 25;
 }
 
 ProcBox::~ProcBox()
@@ -94,17 +100,44 @@ void ProcBox::UpdateThresholdUI(const std::string &uuidTag, const boost::any &ro
 
         std::vector<cv::Mat> imgs;
         cv::split(srcImg, imgs);
+        if (3 == srcImg.channels())
+        {
+            cv::Mat grayMat;
+            cv::cvtColor(srcImg, grayMat, cv::COLOR_BGR2GRAY);
+            imgs.push_back(grayMat);
+        }
 
-        RePopulateChannelChoice(static_cast<int>(imgs.size()));
-        RePopulateHistogramProfiles(imgs, mask);
+        if (4 == srcImg.channels())
+        {
+            cv::Mat grayMat;
+            cv::cvtColor(srcImg, grayMat, cv::COLOR_BGRA2GRAY);
+            imgs.push_back(grayMat);
+        }
+
+        PopulateChannelChoice(threshChannelChoice_, srcImg.channels());
+        PopulateHistogramProfiles(imgs, mask);
+    }
+}
+
+void ProcBox::UpdateEdgeUI(const std::string &uuidTag, const boost::any &roi)
+{
+    cv::Mat srcImg;
+    uuidStation_ = uuidTag;
+    CairoCanvas *cav = Spam::FindCanvas(uuidStation_);
+    if (cav)
+    {
+        srcImg = cav->GetOriginalImage();
+        PopulateChannelChoice(edgeChannelChoice_, static_cast<int>(srcImg.channels()));
     }
 }
 
 void ProcBox::UpdateUI(const int toolId, const std::string &uuidTag, const boost::any &params)
 {
-    if (kSpamID_TOOLBOX_PROC_THRESHOLD == toolId)
+    switch (toolId)
     {
-        UpdateThresholdUI(uuidTag, params);
+    case kSpamID_TOOLBOX_PROC_THRESHOLD: UpdateThresholdUI(uuidTag, params); break;
+    case kSpamID_TOOLBOX_PROC_EDGE: UpdateEdgeUI(uuidTag, params); break;
+    default: break;
     }
 }
 
@@ -116,7 +149,7 @@ wxPanel *ProcBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
         nullptr,
         &ProcBox::CreateThresholdOption,
         &ProcBox::CreateFilterOption,
-        nullptr,
+        &ProcBox::CreateEdgeOption,
         &ProcBox::CreatePyramidOption
     };
 
@@ -134,7 +167,7 @@ ToolOptions ProcBox::GetToolOptions() const
     tos[cp_ToolProcPyramidLevel]                = iParams_.at(cp_ToolProcPyramidLevel);
     tos[cp_ToolProcThresholdMin]                = iParams_.at(cp_ToolProcThresholdMin);
     tos[cp_ToolProcThresholdMax]                = iParams_.at(cp_ToolProcThresholdMax);
-    tos[cp_ToolProcThresholdChannel]            = threshChannelChoice_ ? threshChannelChoice_->GetSelection() : 0;
+    tos[cp_ToolProcThresholdChannel]            = std::max(0, threshChannelChoice_ ? threshChannelChoice_->GetSelection() : 0);
     tos[cp_ToolProcFilterType]                  = iParams_.at(cp_ToolProcFilterType);
     tos[cp_ToolProcFilterBorderType]            = iParams_.at(cp_ToolProcFilterBorderType);
     tos[cp_ToolProcFilterBoxKernelWidth]        = iParams_.at(cp_ToolProcFilterBoxKernelWidth);
@@ -148,6 +181,12 @@ ToolOptions ProcBox::GetToolOptions() const
     tos[cp_ToolProcFilterBilateralDiameter]     = iParams_.at(cp_ToolProcFilterBilateralDiameter);
     tos[cp_ToolProcFilterBilateralSigmaColor]   = fParams_.at(cp_ToolProcFilterBilateralSigmaColor);
     tos[cp_ToolProcFilterBilateralSigmaSpace]   = fParams_.at(cp_ToolProcFilterBilateralSigmaSpace);
+    tos[cp_ToolProcEdgeType]                    = iParams_.at(cp_ToolProcEdgeType);
+    tos[cp_ToolProcEdgeChannel]                 = std::max(0, edgeChannelChoice_ ? edgeChannelChoice_->GetSelection() : 0);
+    tos[cp_ToolProcEdgeApertureSize]            = iParams_.at(cp_ToolProcEdgeApertureSize);
+    tos[cp_ToolProcEdgeCannyThresholdLow]       = iParams_.at(cp_ToolProcEdgeCannyThresholdLow);
+    tos[cp_ToolProcEdgeCannyThresholdHigh]      = iParams_.at(cp_ToolProcEdgeCannyThresholdHigh);
+
     return tos;
 }
 
@@ -297,6 +336,62 @@ void ProcBox::OnThresholdEnter(wxCommandEvent &e)
             {
                 ToolOptions tos = ProcBox::GetToolOptions();
                 tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_THRESHOLD;
+                sig_OptionsChanged(tos);
+            }
+        }
+    }
+}
+
+void ProcBox::OnEdgeEnter(wxCommandEvent &e)
+{
+    auto txtCtrl = dynamic_cast<wxTextCtrl *>(e.GetEventObject());
+    if (txtCtrl)
+    {
+        auto txtParent = txtCtrl->GetParent();
+        if (txtParent)
+        {
+            if (txtParent->TransferDataFromWindow())
+            {
+                ToolOptions tos = ProcBox::GetToolOptions();
+                tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_EDGE;
+                sig_OptionsChanged(tos);
+            }
+        }
+    }
+}
+
+void ProcBox::OnEdgeTypeChanged(wxCommandEvent &e)
+{
+    auto tCtrl = dynamic_cast<wxChoice *>(e.GetEventObject());
+    if (tCtrl)
+    {
+        iParams_[cp_ToolProcEdgeType] = tCtrl->GetSelection();
+        auto tParent = tCtrl->GetParent();
+        if (tParent)
+        {
+            if (tParent->TransferDataFromWindow())
+            {
+                ToolOptions tos = ProcBox::GetToolOptions();
+                tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_EDGE;
+                sig_OptionsChanged(tos);
+            }
+        }
+    }
+}
+
+void ProcBox::OnEdgeChannelChanged(wxCommandEvent &e)
+{
+    auto tCtrl = dynamic_cast<wxChoice *>(e.GetEventObject());
+    if (tCtrl)
+    {
+        iParams_[cp_ToolProcEdgeChannel] = tCtrl->GetSelection();
+        auto tParent = tCtrl->GetParent();
+        if (tParent)
+        {
+            if (tParent->TransferDataFromWindow())
+            {
+                ToolOptions tos = ProcBox::GetToolOptions();
+                tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_EDGE;
                 sig_OptionsChanged(tos);
             }
         }
@@ -495,33 +590,92 @@ wxPanel *ProcBox::CreatePyramidOption(wxWindow *parent)
 
 wxPanel *ProcBox::CreateEdgeOption(wxWindow *parent)
 {
-    return nullptr;
+    auto panel = new wxScrolledWindow(parent, wxID_ANY);
+    wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+
+    wxIntegerValidator<int> apertureSize(&iParams_[cp_ToolProcEdgeApertureSize]);
+    wxIntegerValidator<int> threshLow(&iParams_[cp_ToolProcEdgeCannyThresholdLow]);
+    wxIntegerValidator<int> threshHigh(&iParams_[cp_ToolProcEdgeCannyThresholdHigh]);
+    apertureSize.SetRange(1, 31);
+    threshLow.SetRange(1, 255);
+    threshHigh.SetRange(1, 255);
+
+    auto optSizer = new wxFlexGridSizer(2, 2, 2);
+    optSizer->AddGrowableCol(1, 1);
+    optSizer->SetFlexibleDirection(wxHORIZONTAL);
+
+    std::vector<wxWindow *> editCtrls;
+    auto edgeTypeChoice = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, 0L);
+    edgeTypeChoice->Append(wxT("Canny with Sobel"));
+    edgeTypeChoice->Append(wxT("Canny with Scharr"));
+    edgeTypeChoice->SetSelection(0);
+
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Edge Type:")), wxSizerFlags().Right().CentreVertical().Border(wxLEFT));
+    optSizer->Add(edgeTypeChoice, wxSizerFlags(1).Border(wxRIGHT).Expand());
+
+    edgeChannelChoice_ = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, 0L);
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Channel:")), wxSizerFlags().Right().CentreVertical().Border(wxLEFT));
+    optSizer->Add(edgeChannelChoice_, wxSizerFlags(1).Border(wxRIGHT).Expand());
+    edgeChannelChoice_->Append("Default");
+
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Aperture Size:")), wxSizerFlags().Right().CentreVertical().Border(wxLEFT));
+    editCtrls.push_back(optSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("3"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, apertureSize), wxSizerFlags(1).Expand().Border(wxRIGHT))->GetWindow());
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Threshold Low:")), wxSizerFlags().Right().CentreVertical().Border(wxLEFT));
+    editCtrls.push_back(optSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("10"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, threshLow), wxSizerFlags(1).Expand().Border(wxRIGHT))->GetWindow());
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Threshold High:")), wxSizerFlags().Right().CentreVertical().Border(wxLEFT));
+    editCtrls.push_back(optSizer->Add(new wxTextCtrl(panel, wxID_ANY, wxT("25"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER, threshHigh), wxSizerFlags(1).Expand().Border(wxRIGHT))->GetWindow());
+
+    for (auto editCtrl : editCtrls)
+    {
+        editCtrl->Bind(wxEVT_TEXT_ENTER, &ProcBox::OnEdgeEnter, this);
+    }
+
+    edgeTypeChoice->Bind(wxEVT_CHOICE, &ProcBox::OnEdgeTypeChanged, this);
+    edgeChannelChoice_->Bind(wxEVT_CHOICE, &ProcBox::OnEdgeChannelChanged, this);
+
+    sizerRoot->Add(optSizer, wxSizerFlags().Expand());
+    panel->SetScrollRate(6, 6);
+    panel->SetVirtualSize(panel->GetBestSize());
+    panel->SetSizerAndFit(sizerRoot);
+    panel->TransferDataToWindow();
+
+    return panel;
 }
 
 void ProcBox::UpdateSelectionFilter(void)
 {
 }
 
-void ProcBox::RePopulateChannelChoice(const int numChannels)
+void ProcBox::PopulateChannelChoice(wxChoice *choiceCtrl, const int numChannels)
 {
-    wxString  channelNames[4] = { wxT("Blue"), wxT("Green"), wxT("Red"), wxT("Alpha") };
-    if (numChannels < 2)
+    int cChannels = numChannels;
+    wxString  channelNames[5] = { wxT("Blue"), wxT("Green"), wxT("Red"), wxT("Alpha"), wxT("Gray Scale") };
+    if (1 == numChannels)
     {
         channelNames[0] = wxT("Gray Scale");
     }
-
-    if (threshChannelChoice_->GetCount() != numChannels)
+    else
     {
-        threshChannelChoice_->Clear();
-        for (int c = 0; c < numChannels; ++c)
+        cChannels += 1;
+    }
+
+    if (3 == numChannels)
+    {
+        channelNames[3] = wxT("Gray Scale");
+    }
+
+    if (choiceCtrl && choiceCtrl->GetCount() != cChannels)
+    {
+        choiceCtrl->Clear();
+        for (int c = 0; c < cChannels; ++c)
         {
-            threshChannelChoice_->AppendString(channelNames[c]);
+            choiceCtrl->AppendString(channelNames[c]);
         }
-        threshChannelChoice_->SetSelection(0);
+        choiceCtrl->SetSelection(0);
     }
 }
 
-void ProcBox::RePopulateHistogramProfiles(const std::vector<cv::Mat> &imags, const cv::Mat &mask)
+void ProcBox::PopulateHistogramProfiles(const std::vector<cv::Mat> &imags, const cv::Mat &mask)
 {
     int numChannels = static_cast<int>(imags.size());
 

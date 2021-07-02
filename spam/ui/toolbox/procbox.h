@@ -39,6 +39,9 @@ private:
     void OnFilterEnter(wxCommandEvent &e);
     void OnPyramidEnter(wxCommandEvent &e);
     void OnThresholdEnter(wxCommandEvent &e);
+    void OnEdgeEnter(wxCommandEvent &e);
+    void OnEdgeTypeChanged(wxCommandEvent &e);
+    void OnEdgeChannelChanged(wxCommandEvent &e);
 
 private:
     wxPanel *CreateFilterOption(wxWindow *parent);
@@ -46,14 +49,15 @@ private:
     wxPanel *CreatePyramidOption(wxWindow *parent);
     wxPanel *CreateEdgeOption(wxWindow *parent);
     void UpdateSelectionFilter(void);
+    void UpdateEdgeUI(const std::string &uuidTag, const boost::any &roi);
     void UpdateThresholdUI(const std::string &uuidTag, const boost::any &roi);
-    void RePopulateChannelChoice(const int numChannels);
-    void RePopulateHistogramProfiles(const std::vector<cv::Mat> &imags, const cv::Mat &mask);
+    void PopulateChannelChoice(wxChoice *choiceCtrl, const int numChannels);
+    void PopulateHistogramProfiles(const std::vector<cv::Mat> &imags, const cv::Mat &mask);
 
 private:
-    wxChoice        *threshChannelChoice_;
     HistogramWidget *hist_;
-    std::string uuidStation_;
+    wxChoice *edgeChannelChoice_;
+    wxChoice *threshChannelChoice_;
     std::map<std::string, int> iParams_;
     std::map<std::string, double> fParams_;
 };

@@ -66,7 +66,6 @@ public:
     ProjTreeModel *GetProjTreeModel();
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
     int FindImagePanelIndexByUUID(const std::string &uuidTag) const;
-    void RequestUpdateProfile(const std::string &uuidTag, const Geom::Point &sPt, const Geom::Point &ePt);
     void UpdateToolboxUI(const int toolboxId, const int toolId, const std::string &uuidTag, const boost::any &roi);
     void AddDirtRect(const std::string &uuidTag, const Geom::OptRect &dirtRect);
     void RequestRefreshCanvas();

@@ -48,118 +48,18 @@ ProbeBox::~ProbeBox()
 {
 }
 
-void ProbeBox::UpdateProfile(const cv::Mat &srcImg, const Geom::Point &sPt, const Geom::Point &ePt)
-{
-    const Geom::Point vec = ePt - sPt;
-    const Geom::Coord len = vec.length();
-    if (profile_)
-    {
-        if (len > 3)
-        {
-            imags_.clear();
-            if (srcImg.channels() > 1)
-            {
-                cv::split(srcImg, imags_);
-            }
-            else
-            {
-                imags_.push_back(srcImg);
-            }
-
-            begPoint_ = sPt;
-            endPoint_ = ePt;
-            RePopulateProfileChoice(srcImg.channels());
-
-            wxColor grayColor = SpamConfig::Get<bool>(cp_ThemeDarkMode, true) ? *wxWHITE : *wxBLACK;
-            wxColor colors[4] = { wxColour(0xCF9F72), *wxGREEN, *wxRED, grayColor };
-            if (srcImg.channels() < 2)
-            {
-                colors[0] = grayColor;
-            }
-
-            cv::Mat img = imags_[profileChoice_->GetSelection()];
-            cv::Point2f pt1{ static_cast<float>(begPoint_.x()), static_cast<float>(begPoint_.y()) };
-            cv::Point2f pt2{ static_cast<float>(endPoint_.x()), static_cast<float>(endPoint_.y()) };
-            cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, profileWidth_), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
-            cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::Gen(box, cv::Point2f(1.f, 1.f));
-            spMB->SetSigma(profileSigma_);
-            if (spMB->Valid())
-            {
-                HistogramWidget::Profile profile{ wxT(""), colors[profileChoice_->GetSelection()] };
-                if (cv::mvlab::MLR_SUCCESS == spMB->GetProfile(img, profile.seq))
-                {
-                    profile_->ClearProfiles();
-                    profile_->AddProfile(std::move(profile));
-                    profile_->Refresh(true);
-                }
-            }
-        }
-        else
-        {
-            profile_->ClearProfiles();
-            profile_->Refresh(true);
-        }
-    }
-}
-
-void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
-{
-    const Geom::OptRect *rect = boost::any_cast<Geom::OptRect>(&roi);
-    cv::Mat mask;
-    if (rect)
-    {
-        if (!rect->empty())
-        {
-            Geom::PathVector pv{ Geom::Path(**rect) };
-            mask = SpamUtility::GetMaskFromPath(pv, cv::Size(srcImg.cols, srcImg.rows));
-        }
-    }
-    else
-    {
-        const Geom::PathVector *pv = boost::any_cast<Geom::PathVector>(&roi);
-        if (pv)
-        {
-            mask = SpamUtility::GetMaskFromPath(*pv, cv::Size(srcImg.cols, srcImg.rows));
-        }
-    }
-
-    std::vector<cv::Mat> imags;
-    cv::split(srcImg, imags);
-    hist_->ClearProfiles();
-    wxColor  colors[4] = { wxColour(0xCF9F72), *wxGREEN, *wxRED, *wxLIGHT_GREY };
-    if (imags.size() < 2)
-    {
-        colors[0] = *wxLIGHT_GREY;
-    }
-
-    int c = 0;
-    for (const cv::Mat &imag : imags)
-    {
-        const int channels[] = {0};
-        const int histSize[] = { 256 };
-        const float range[] = {0, 256};
-        const float *ranges[] = { range };
-        cv::Mat hist;
-        cv::calcHist(&imag, 1, channels, mask, hist, 1, histSize, ranges, true, false);
-
-        HistogramWidget::Profile profile{wxT(""), colors[c++]};
-        profile.seq.resize(256);
-        std::copy(hist.ptr<float>(0, 0), hist.ptr<float>(0, 0)+256, profile.seq.begin());
-        hist_->AddProfile(std::move(profile));
-    }
-    hist_->Refresh(true);
-}
-
 void ProbeBox::UpdateUI(const int toolId, const std::string &uuidTag, const boost::any &params)
 {
-    if (kSpamID_TOOLBOX_PROBE_HISTOGRAM == toolId)
+    cv::Mat srcImg;
+    CairoCanvas *cav = Spam::FindCanvas(uuidTag);
+    if (cav)
     {
-        cv::Mat srcImg;
-        CairoCanvas *cav = Spam::FindCanvas(uuidTag);
-        if (cav)
+        srcImg = cav->GetOriginalImage();
+        switch (toolId)
         {
-            srcImg = cav->GetOriginalImage();
-            UpdateHistogram(srcImg, params);
+        case kSpamID_TOOLBOX_PROBE_HISTOGRAM: UpdateHistogram(srcImg, params); break;
+        case kSpamID_TOOLBOX_PROBE_PROFILE: UpdateProfile(srcImg, params);  break;
+        default: break;
         }
     }
 }
@@ -516,4 +416,109 @@ void ProbeBox::RePopulateProfileChoice(const int numChannels)
         }
         profileChoice_->SetSelection(0);
     }
+}
+
+void ProbeBox::UpdateProfile(const cv::Mat &srcImg, const boost::any &roi)
+{
+    const std::pair<Geom::Point, Geom::Point> *lineSeg = boost::any_cast<std::pair<Geom::Point, Geom::Point>>(&roi);
+    if (profile_ && lineSeg)
+    {
+        const Geom::Point &sPt = lineSeg->first;
+        const Geom::Point &ePt = lineSeg->second;
+        const Geom::Point vec = ePt - sPt;
+        const Geom::Coord len = vec.length();
+        if (len > 3)
+        {
+            imags_.clear();
+            if (srcImg.channels() > 1)
+            {
+                cv::split(srcImg, imags_);
+            }
+            else
+            {
+                imags_.push_back(srcImg);
+            }
+
+            begPoint_ = sPt;
+            endPoint_ = ePt;
+            RePopulateProfileChoice(srcImg.channels());
+
+            wxColor grayColor = SpamConfig::Get<bool>(cp_ThemeDarkMode, true) ? *wxWHITE : *wxBLACK;
+            wxColor colors[4] = { wxColour(0xCF9F72), *wxGREEN, *wxRED, grayColor };
+            if (srcImg.channels() < 2)
+            {
+                colors[0] = grayColor;
+            }
+
+            cv::Mat img = imags_[profileChoice_->GetSelection()];
+            cv::Point2f pt1{ static_cast<float>(begPoint_.x()), static_cast<float>(begPoint_.y()) };
+            cv::Point2f pt2{ static_cast<float>(endPoint_.x()), static_cast<float>(endPoint_.y()) };
+            cv::RotatedRect box((pt1 + pt2) / 2, cv::Size2f(len, profileWidth_), Geom::deg_from_rad(std::atan2(vec.y(), vec.x())));
+            cv::Ptr<cv::mvlab::MeasureBox> spMB = cv::mvlab::MeasureBox::Gen(box, cv::Point2f(1.f, 1.f));
+            spMB->SetSigma(profileSigma_);
+            if (spMB->Valid())
+            {
+                HistogramWidget::Profile profile{ wxT(""), colors[profileChoice_->GetSelection()] };
+                if (cv::mvlab::MLR_SUCCESS == spMB->GetProfile(img, profile.seq))
+                {
+                    profile_->ClearProfiles();
+                    profile_->AddProfile(std::move(profile));
+                    profile_->Refresh(true);
+                }
+            }
+        }
+        else
+        {
+            profile_->ClearProfiles();
+            profile_->Refresh(true);
+        }
+    }
+}
+
+void ProbeBox::UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi)
+{
+    const Geom::OptRect *rect = boost::any_cast<Geom::OptRect>(&roi);
+    cv::Mat mask;
+    if (rect)
+    {
+        if (!rect->empty())
+        {
+            Geom::PathVector pv{ Geom::Path(**rect) };
+            mask = SpamUtility::GetMaskFromPath(pv, cv::Size(srcImg.cols, srcImg.rows));
+        }
+    }
+    else
+    {
+        const Geom::PathVector *pv = boost::any_cast<Geom::PathVector>(&roi);
+        if (pv)
+        {
+            mask = SpamUtility::GetMaskFromPath(*pv, cv::Size(srcImg.cols, srcImg.rows));
+        }
+    }
+
+    std::vector<cv::Mat> imags;
+    cv::split(srcImg, imags);
+    hist_->ClearProfiles();
+    wxColor  colors[4] = { wxColour(0xCF9F72), *wxGREEN, *wxRED, *wxLIGHT_GREY };
+    if (imags.size() < 2)
+    {
+        colors[0] = *wxLIGHT_GREY;
+    }
+
+    int c = 0;
+    for (const cv::Mat &imag : imags)
+    {
+        const int channels[] = { 0 };
+        const int histSize[] = { 256 };
+        const float range[] = { 0, 256 };
+        const float *ranges[] = { range };
+        cv::Mat hist;
+        cv::calcHist(&imag, 1, channels, mask, hist, 1, histSize, ranges, true, false);
+
+        HistogramWidget::Profile profile{ wxT(""), colors[c++] };
+        profile.seq.resize(256);
+        std::copy(hist.ptr<float>(0, 0), hist.ptr<float>(0, 0) + 256, profile.seq.begin());
+        hist_->AddProfile(std::move(profile));
+    }
+    hist_->Refresh(true);
 }

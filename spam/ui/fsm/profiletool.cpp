@@ -43,7 +43,8 @@ void ProfileTool::OnDraging(const EvMouseMove &e)
         auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
         if (frame && newRect.width() > 1 || newRect.height() > 1)
         {
-            frame->RequestUpdateProfile(cav->GetUUID(), anchor, freePt);
+            std::pair<Geom::Point, Geom::Point> lineSeg(anchor, freePt);
+            frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROBE, kSpamID_TOOLBOX_PROBE_PROFILE, cav->GetUUID(), lineSeg);
         }
     }
 }
@@ -82,7 +83,8 @@ void ProfileTool::EndDraging(const wxMouseEvent &e)
         auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
         if (frame && newRect.width() > 1 || newRect.height() > 1)
         {
-            frame->RequestUpdateProfile(cav->GetUUID(), anchor, freePt);
+            std::pair<Geom::Point, Geom::Point> lineSeg(anchor, freePt);
+            frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROBE, kSpamID_TOOLBOX_PROBE_PROFILE, cav->GetUUID(), lineSeg);
         }
     }
 }

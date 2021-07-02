@@ -23,7 +23,6 @@ public:
     ~ProbeBox();
 
 public:
-    void UpdateProfile(const cv::Mat &srcImg, const Geom::Point &sPt, const Geom::Point &ePt);
     void UpdateUI(const int toolId, const std::string &uuidTag, const boost::any &params) override;
 
 protected:
@@ -46,6 +45,7 @@ private:
     void SetFeature(const RegionFeatureFlag ff) { regionProbeMask_ |= static_cast<uint64_t>(ff); }
     void ClearFeature(const RegionFeatureFlag ff) { regionProbeMask_ &= ~static_cast<uint64_t>(ff); }
     void RePopulateProfileChoice(const int numChannels);
+    void UpdateProfile(const cv::Mat &srcImg, const boost::any &roi);
     void UpdateHistogram(const cv::Mat &srcImg, const boost::any &roi);
 
 private:

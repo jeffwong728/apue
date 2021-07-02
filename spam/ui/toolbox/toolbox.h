@@ -46,6 +46,7 @@ private:
 
 protected:
     const int startToolId_;
+    std::string uuidStation_;
     wxCollapsiblePane *collToolPane_;
     wxCollapsiblePane *collOptPane_;
     std::vector<std::tuple<wxToggleButton*, wxPanel*, wxSizerItem*>> tools_;

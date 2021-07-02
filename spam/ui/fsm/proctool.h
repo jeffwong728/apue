@@ -118,4 +118,59 @@ struct ThresholdDraging : boost::statechart::simple_state<ThresholdDraging, Thre
         boost::statechart::in_state_reaction<EvMouseMove, ThresholdTool::BoxToolT, &ThresholdTool::BoxToolT::ContinueBoxing>> reactions;
 };
 
+struct EdgeTool;
+struct EdgeIdle;
+struct EdgeDraging;
+using  EdgeBoxTool = BoxTool<EdgeTool, kSpamID_TOOLBOX_PROC_EDGE>;
+
+struct EdgeTool : boost::statechart::simple_state<EdgeTool, Spamer, EdgeIdle>, EdgeBoxTool
+{
+    using BoxToolT = BoxToolImpl;
+    EdgeTool() : EdgeBoxTool(*this) {}
+    ~EdgeTool() {}
+
+    void OnOptionChanged(const EvToolOption &e);
+    void OnBoxingEnded(const EvBoxingEnded &e);
+    void OnImageClicked(const EvImageClicked &e);
+    void OnEntityClicked(const EvEntityClicked &e);
+    sc::result react(const EvToolQuit &e);
+    void BuildParameters(std::map<std::string, int> &iParams, std::map<std::string, double> &fParams);
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvReset, EdgeTool>,
+        boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
+        boost::statechart::in_state_reaction<EvBoxingEnded, EdgeTool, &EdgeTool::OnBoxingEnded>,
+        boost::statechart::in_state_reaction<EvImageClicked, EdgeTool, &EdgeTool::OnImageClicked>,
+        boost::statechart::in_state_reaction<EvEntityClicked, EdgeTool, &EdgeTool::OnEntityClicked>,
+        boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
+        boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
+        boost::statechart::custom_reaction<EvToolQuit>> reactions;
+
+    ToolOptions toolOptions;
+    std::set<std::string> uuids;
+};
+
+struct EdgeIdle : boost::statechart::simple_state<EdgeIdle, EdgeTool>
+{
+    EdgeIdle() {}
+    ~EdgeIdle() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseDown, EdgeDraging, EdgeTool::BoxToolT, &EdgeTool::BoxToolT::StartBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, EdgeTool::BoxToolT, &EdgeTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvToolOption, EdgeTool, &EdgeTool::OnOptionChanged>,
+        boost::statechart::in_state_reaction<EvCanvasLeave, EdgeTool::BoxToolT, &EdgeTool::BoxToolT::LeaveCanvas>> reactions;
+};
+
+struct EdgeDraging : boost::statechart::simple_state<EdgeDraging, EdgeTool>
+{
+    EdgeDraging() {}
+    ~EdgeDraging() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseUp, EdgeIdle, EdgeTool::BoxToolT, &EdgeTool::BoxToolT::EndBoxing>,
+        boost::statechart::transition<EvReset, EdgeIdle, EdgeTool::BoxToolT, &EdgeTool::BoxToolT::ResetBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, EdgeTool::BoxToolT, &EdgeTool::BoxToolT::ContinueBoxing>> reactions;
+};
+
 #endif //SPAM_UI_FSM_PROC_TOOL_H

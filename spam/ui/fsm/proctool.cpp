@@ -174,3 +174,90 @@ sc::result ThresholdTool::react(const EvToolQuit &e)
     BoxToolT::QuitTool(e);
     return transit<NoTool>();
 }
+
+void EdgeTool::OnOptionChanged(const EvToolOption &e)
+{
+    const int toolId = boost::get<int>(e.toolOptions.at(cp_ToolId));
+    if (kSpamID_TOOLBOX_PROC_EDGE == toolId)
+    {
+        toolOptions = e.toolOptions;
+        BoxToolImpl::ResetTool();
+    }
+}
+
+void EdgeTool::OnBoxingEnded(const EvBoxingEnded &e)
+{
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.mData.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        std::map<std::string, int> iParams;
+        std::map<std::string, double> fParams;
+        BuildParameters(iParams, fParams);
+        cav->UpdateEdge(*(e.boxRect), iParams, fParams);
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROC, kSpamID_TOOLBOX_PROC_EDGE, cav->GetUUID(), e.boxRect);
+        uuids.insert(cav->GetUUID());
+    }
+}
+
+void EdgeTool::OnImageClicked(const EvImageClicked &e)
+{
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
+        std::map<std::string, int> iParams;
+        std::map<std::string, double> fParams;
+        BuildParameters(iParams, fParams);
+        cav->UpdateEdge(Geom::Rect(imgPt.x, imgPt.y, imgPt.x + 0.5, imgPt.y + 0.5), iParams, fParams);
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROC, kSpamID_TOOLBOX_PROC_EDGE, cav->GetUUID(), Geom::OptRect());
+        uuids.insert(cav->GetUUID());
+    }
+}
+
+void EdgeTool::OnEntityClicked(const EvEntityClicked &e)
+{
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.e.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        Geom::PathVector pv;
+        e.ent->BuildPath(pv);
+        auto bbox = e.ent->GetBoundingBox();
+        std::map<std::string, int> iParams;
+        std::map<std::string, double> fParams;
+        BuildParameters(iParams, fParams);
+        cav->UpdateEdge(bbox ? *bbox : Geom::Rect(), iParams, fParams);
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROC, kSpamID_TOOLBOX_PROC_EDGE, cav->GetUUID(), pv);
+        uuids.insert(cav->GetUUID());
+    }
+}
+
+sc::result EdgeTool::react(const EvToolQuit &e)
+{
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (frame)
+    {
+        for (const auto &uuid : uuids)
+        {
+            CairoCanvas *cav = frame->FindCanvasByUUID(uuid);
+            if (cav)
+            {
+                cav->RemoveImageProcessData();
+            }
+        }
+    }
+
+    BoxToolT::QuitTool(e);
+    return transit<NoTool>();
+}
+
+void EdgeTool::BuildParameters(std::map<std::string, int> &iParams, std::map<std::string, double> &fParams)
+{
+    iParams[cp_ToolProcEdgeType]                = boost::get<int>(toolOptions[cp_ToolProcEdgeType]);
+    iParams[cp_ToolProcEdgeChannel]             = boost::get<int>(toolOptions[cp_ToolProcEdgeChannel]);
+    iParams[cp_ToolProcEdgeApertureSize]        = boost::get<int>(toolOptions[cp_ToolProcEdgeApertureSize]);
+    iParams[cp_ToolProcEdgeCannyThresholdLow]   = boost::get<int>(toolOptions[cp_ToolProcEdgeCannyThresholdLow]);
+    iParams[cp_ToolProcEdgeCannyThresholdHigh]  = boost::get<int>(toolOptions[cp_ToolProcEdgeCannyThresholdHigh]);
+}

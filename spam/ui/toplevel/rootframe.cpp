@@ -355,17 +355,6 @@ int RootFrame::FindImagePanelIndexByUUID(const std::string &uuidTag) const
     return -1;
 }
 
-void RootFrame::RequestUpdateProfile(const std::string &uuidTag, const Geom::Point &sPt, const Geom::Point &ePt)
-{
-    CairoCanvas *canv = FindCanvasByUUID(uuidTag);
-    auto &tbPanelInfo = wxAuiMgr_.GetPane(toolBoxLabels[kSpam_TOOLBOX_PROBE]);
-    ProbeBox *probeBox = dynamic_cast<ProbeBox *>(tbPanelInfo.window);
-    if (probeBox && canv)
-    {
-        probeBox->UpdateProfile(canv->GetOriginalImage(), sPt, ePt);
-    }
-}
-
 void RootFrame::UpdateToolboxUI(const int toolboxId, const int toolId, const std::string &uuidTag, const boost::any &roi)
 {
     ToolBox *toolBox = nullptr;
