@@ -171,14 +171,14 @@ void RootFrame::CreateAuiPanes()
     wxAuiMgr_.SetManagedWindow(this);
     Bind(wxEVT_AUI_PANE_CLOSE, &RootFrame::OnAuiPageClosed, this);
 
-    wxAuiToolBar* tbBar = new wxAuiToolBar(this, kSpamToolboxBar, wxDefaultPosition, wxDefaultSize, wxAUI_TB_VERTICAL);
-    tbBar->SetToolBitmapSize(wxSize(48, 48));
-    tbBar->AddTool(kSpamID_TOOLBOX_PROBE, toolBoxLabels[kSpam_TOOLBOX_PROBE], wxArtProvider::GetBitmap(wxART_TIP), wxT("Image Infomation"), wxITEM_CHECK);
-    tbBar->AddTool(kSpamID_TOOLBOX_GEOM, toolBoxLabels[kSpam_TOOLBOX_GEOM], wxArtProvider::GetBitmap(wxART_NEW), wxT("Geometry Tool"), wxITEM_CHECK);
-    tbBar->AddTool(kSpamID_TOOLBOX_PROC, toolBoxLabels[kSpam_TOOLBOX_PROC], wxArtProvider::GetBitmap(wxART_NEW), wxT("Image Processing"), wxITEM_CHECK);
-    tbBar->AddTool(kSpamID_TOOLBOX_MATCH, toolBoxLabels[kSpam_TOOLBOX_MATCH], wxArtProvider::GetBitmap(wxART_NEW), wxT("Pattern Match"), wxITEM_CHECK);
+    wxAuiToolBar* tbBar = new wxAuiToolBar(this, kSpamToolboxBar, wxDefaultPosition, wxSize(32, -1), wxAUI_TB_VERTICAL);
+    tbBar->SetToolBitmapSize(wxSize(32, 32));
+    tbBar->AddTool(kSpamID_TOOLBOX_PROBE, toolBoxLabels[kSpam_TOOLBOX_PROBE], Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("toolbox.information")), wxT("Image Infomation"), wxITEM_CHECK);
+    tbBar->AddTool(kSpamID_TOOLBOX_GEOM, toolBoxLabels[kSpam_TOOLBOX_GEOM], Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("toolbox.geometry")), wxT("Geometry Tool"), wxITEM_CHECK);
+    tbBar->AddTool(kSpamID_TOOLBOX_PROC, toolBoxLabels[kSpam_TOOLBOX_PROC], Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("toolbox.process")), wxT("Image Processing"), wxITEM_CHECK);
+    tbBar->AddTool(kSpamID_TOOLBOX_MATCH, toolBoxLabels[kSpam_TOOLBOX_MATCH], Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("toolbox.match")), wxT("Pattern Match"), wxITEM_CHECK);
     tbBar->AddSeparator();
-    tbBar->AddTool(kSpamID_TOOLBOX_STYLE, toolBoxLabels[kSpam_TOOLBOX_STYLE], wxArtProvider::GetBitmap(wxART_NEW), wxT("Geometry Style"), wxITEM_CHECK);
+    tbBar->AddTool(kSpamID_TOOLBOX_STYLE, toolBoxLabels[kSpam_TOOLBOX_STYLE], Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("toolbox.style")), wxT("Geometry Style"), wxITEM_CHECK);
 
     tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxInfo,  this, kSpamID_TOOLBOX_PROBE);
     tbBar->Bind(wxEVT_TOOL, &RootFrame::OnToolboxGeom,  this, kSpamID_TOOLBOX_GEOM);
@@ -257,7 +257,7 @@ void RootFrame::CreateAuiPanes()
         wxAuiMgr_.GetPane(pyEditorName_).Caption(wxString("Script Editor - ") + wxString(p.filename().string()));
     }
 
-    tbBar->SetToolBitmapSize(wxSize(48, 48));
+    tbBar->SetToolBitmapSize(wxSize(32, 32));
     tbBar->Realize();
 
     ToggleToolboxPane(kSpam_TOOLBOX_GUARD);
