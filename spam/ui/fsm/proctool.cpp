@@ -261,3 +261,87 @@ void EdgeTool::BuildParameters(std::map<std::string, int> &iParams, std::map<std
     iParams[cp_ToolProcEdgeCannyThresholdLow]   = boost::get<int>(toolOptions[cp_ToolProcEdgeCannyThresholdLow]);
     iParams[cp_ToolProcEdgeCannyThresholdHigh]  = boost::get<int>(toolOptions[cp_ToolProcEdgeCannyThresholdHigh]);
 }
+
+void ColorConvertTool::OnOptionChanged(const EvToolOption &e)
+{
+    const int toolId = boost::get<int>(e.toolOptions.at(cp_ToolId));
+    if (kSpamID_TOOLBOX_PROC_CONVERT == toolId)
+    {
+        toolOptions = e.toolOptions;
+        BoxToolImpl::ResetTool();
+    }
+}
+
+void ColorConvertTool::OnBoxingEnded(const EvBoxingEnded &e)
+{
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.mData.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        std::map<std::string, int> iParams;
+        std::map<std::string, double> fParams;
+        BuildParameters(iParams, fParams);
+        cav->UpdateColorConvert(*(e.boxRect), iParams, fParams);
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROC, kSpamID_TOOLBOX_PROC_CONVERT, cav->GetUUID(), boost::any());
+        uuids.insert(cav->GetUUID());
+    }
+}
+
+void ColorConvertTool::OnImageClicked(const EvImageClicked &e)
+{
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.evData.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        auto imgPt = cav->ScreenToImage(e.evData.GetPosition());
+        std::map<std::string, int> iParams;
+        std::map<std::string, double> fParams;
+        BuildParameters(iParams, fParams);
+        cav->UpdateColorConvert(Geom::Rect(imgPt.x, imgPt.y, imgPt.x + 0.5, imgPt.y + 0.5), iParams, fParams);
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROC, kSpamID_TOOLBOX_PROC_CONVERT, cav->GetUUID(), boost::any());
+        uuids.insert(cav->GetUUID());
+    }
+}
+
+void ColorConvertTool::OnEntityClicked(const EvEntityClicked &e)
+{
+    CairoCanvas *cav = dynamic_cast<CairoCanvas *>(e.e.GetEventObject());
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (cav && frame)
+    {
+        Geom::PathVector pv;
+        e.ent->BuildPath(pv);
+        auto bbox = e.ent->GetBoundingBox();
+        std::map<std::string, int> iParams;
+        std::map<std::string, double> fParams;
+        BuildParameters(iParams, fParams);
+        cav->UpdateColorConvert(bbox ? *bbox : Geom::Rect(), iParams, fParams);
+        frame->UpdateToolboxUI(kSpamID_TOOLBOX_PROC, kSpamID_TOOLBOX_PROC_CONVERT, cav->GetUUID(), boost::any());
+        uuids.insert(cav->GetUUID());
+    }
+}
+
+sc::result ColorConvertTool::react(const EvToolQuit &e)
+{
+    auto frame = dynamic_cast<RootFrame *>(wxTheApp->GetTopWindow());
+    if (frame)
+    {
+        for (const auto &uuid : uuids)
+        {
+            CairoCanvas *cav = frame->FindCanvasByUUID(uuid);
+            if (cav)
+            {
+                cav->RemoveImageProcessData();
+            }
+        }
+    }
+
+    BoxToolT::QuitTool(e);
+    return transit<NoTool>();
+}
+
+void ColorConvertTool::BuildParameters(std::map<std::string, int> &iParams, std::map<std::string, double> &fParams)
+{
+    iParams[cp_ToolProcConvertChannel] = boost::get<int>(toolOptions[cp_ToolProcConvertChannel]);
+}
+

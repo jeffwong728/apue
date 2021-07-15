@@ -74,6 +74,10 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     {
         return transit<EdgeTool>();
     }
+    else if (kSpamID_TOOLBOX_PROC_CONVERT)
+    {
+        return transit<ColorConvertTool>();
+    }
     else if (kSpamID_TOOLBOX_GEOM_RECT == toolId)
     {
         return transit<RectTool>();

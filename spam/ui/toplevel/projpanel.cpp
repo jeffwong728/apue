@@ -16,6 +16,7 @@
 #include <pixmaps/circle_small.xpm>
 #include <hdf5.h>
 #include <H5Cpp.h>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include <helper/h5db.h>
 #include <helper/commondef.h>
 
@@ -214,8 +215,13 @@ wxToolBar *ProjPanel::MakeToolBar()
     wxToolBar *tb = new wxToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_NODIVIDER);
     tb->SetToolBitmapSize(wxSize(16, 16));
 
-    tb->AddTool(kSpamID_ADD_STATION, wxT("Add"),       wxBitmap(wxT("res/add_layer_24.png"), wxBITMAP_TYPE_PNG));
-    tb->AddTool(kSpamID_DELETE_ENTITIES, wxT("Delete"), wxBitmap(wxT("res/remove_layer_24.png"), wxBITMAP_TYPE_PNG));
+    boost::system::error_code ec;
+    boost::filesystem::path p = boost::dll::program_location(ec);
+    p = p.parent_path(); p.append(wxT("res")); p += boost::filesystem::path::preferred_separator;
+    wxString resDir(p.native());
+
+    tb->AddTool(kSpamID_ADD_STATION, wxT("Add"),       wxBitmap(resDir + wxT("add_layer_24.png"), wxBITMAP_TYPE_PNG));
+    tb->AddTool(kSpamID_DELETE_ENTITIES, wxT("Delete"), wxBitmap(resDir + wxT("remove_layer_24.png"), wxBITMAP_TYPE_PNG));
     tb->Realize();
 
     tb->Bind(wxEVT_TOOL, &ProjPanel::OnAddStation, this, kSpamID_ADD_STATION);

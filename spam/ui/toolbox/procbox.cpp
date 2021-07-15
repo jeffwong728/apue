@@ -1,7 +1,7 @@
 #include "procbox.h"
 #include <ui/spam.h>
 #include <ui/misc/spamutility.h>
-#include <ui/proc/basic.h>
+#include <ui/imgproc/basic.h>
 #include <ui/cv/cairocanvas.h>
 #include <wx/artprov.h>
 #include <wx/statline.h>
@@ -14,6 +14,7 @@ ProcBox::ProcBox(wxWindow* parent)
 : ToolBox(parent, kSpamID_TOOLPAGE_PROC, wxT("Process"), std::vector<wxString>(), kSpamID_TOOLBOX_PROC_GUARD - kSpamID_TOOLBOX_PROC_ENHANCEMENT, kSpamID_TOOLBOX_PROC_ENHANCEMENT)
 , edgeChannelChoice_(nullptr)
 , threshChannelChoice_(nullptr)
+, convertChannelChoice_(nullptr)
 , hist_(nullptr)
 {
     wxWindowID toolIds[] = {
@@ -21,7 +22,8 @@ ProcBox::ProcBox(wxWindow* parent)
         kSpamID_TOOLBOX_PROC_THRESHOLD,
         kSpamID_TOOLBOX_PROC_FILTER,
         kSpamID_TOOLBOX_PROC_EDGE,
-        kSpamID_TOOLBOX_PROC_PYRAMID
+        kSpamID_TOOLBOX_PROC_PYRAMID,
+        kSpamID_TOOLBOX_PROC_CONVERT
     };
 
     wxString   toolTips[] = {
@@ -29,7 +31,8 @@ ProcBox::ProcBox(wxWindow* parent)
         wxT("Image threshold"),
         wxT("Image filtering"),
         wxT("Image edge extraction"),
-        wxT("Construct image pyramid")
+        wxT("Construct image pyramid"),
+        wxT("Converts an image from one color space to another")
     };
 
     const SpamIconPurpose ip = kICON_PURPOSE_TOOLBOX;
@@ -38,7 +41,8 @@ ProcBox::ProcBox(wxWindow* parent)
         Spam::GetBitmap(ip, std::string("proc.threshold")),
         Spam::GetBitmap(ip, std::string("proc.filter")),
         Spam::GetBitmap(ip, std::string("proc.edge")),
-        Spam::GetBitmap(ip, std::string("proc.pyramid"))
+        Spam::GetBitmap(ip, std::string("proc.pyramid")),
+        Spam::GetBitmap(ip, std::string("proc.rgb"))
     };
 
     ToolBox::Init(toolIds, toolTips, toolIcons, WXSIZEOF(toolTips), 0, 0);
@@ -65,6 +69,7 @@ ProcBox::ProcBox(wxWindow* parent)
     iParams_[cp_ToolProcEdgeApertureSize] = 3;
     iParams_[cp_ToolProcEdgeCannyThresholdLow] = 10;
     iParams_[cp_ToolProcEdgeCannyThresholdHigh] = 25;
+    iParams_[cp_ToolProcConvertChannel] = 0;
 }
 
 ProcBox::~ProcBox()
@@ -119,6 +124,59 @@ void ProcBox::UpdateThresholdUI(const std::string &uuidTag, const boost::any &ro
     }
 }
 
+void ProcBox::UpdateConvertUI(const std::string &uuidTag, const boost::any &roi)
+{
+    cv::Mat srcImg;
+    uuidStation_ = uuidTag;
+    CairoCanvas *cav = Spam::FindCanvas(uuidStation_);
+    if (cav)
+    {
+        srcImg = cav->GetOriginalImage();
+        if ((1 == srcImg.channels() && 1 == convertChannelChoice_->GetCount()) ||
+            (3 == srcImg.channels() && 7 == convertChannelChoice_->GetCount()) ||
+            (4 == srcImg.channels() && 8 == convertChannelChoice_->GetCount()))
+        {
+            return;
+        }
+        else
+        {
+            convertChannelChoice_->Clear();
+        }
+
+        switch (srcImg.channels())
+        {
+        case 1:
+            convertChannelChoice_->Append(wxT("Gray"));
+            break;
+
+        case 3:
+            convertChannelChoice_->Append(wxT("Blue"));
+            convertChannelChoice_->Append(wxT("Green"));
+            convertChannelChoice_->Append(wxT("Red"));
+            convertChannelChoice_->Append(wxT("Gray"));
+            convertChannelChoice_->Append(wxT("Hue"));
+            convertChannelChoice_->Append(wxT("Lightness"));
+            convertChannelChoice_->Append(wxT("Saturation"));
+            break;
+
+        case 4:
+            convertChannelChoice_->Append(wxT("Blue"));
+            convertChannelChoice_->Append(wxT("Green"));
+            convertChannelChoice_->Append(wxT("Red"));
+            convertChannelChoice_->Append(wxT("Alpha"));
+            convertChannelChoice_->Append(wxT("Gray"));
+            convertChannelChoice_->Append(wxT("Hue"));
+            convertChannelChoice_->Append(wxT("Lightness"));
+            convertChannelChoice_->Append(wxT("Saturation"));
+            break;
+
+        default:
+            break;
+        }
+        convertChannelChoice_->Select(0);
+    }
+}
+
 void ProcBox::UpdateEdgeUI(const std::string &uuidTag, const boost::any &roi)
 {
     cv::Mat srcImg;
@@ -137,6 +195,7 @@ void ProcBox::UpdateUI(const int toolId, const std::string &uuidTag, const boost
     {
     case kSpamID_TOOLBOX_PROC_THRESHOLD: UpdateThresholdUI(uuidTag, params); break;
     case kSpamID_TOOLBOX_PROC_EDGE: UpdateEdgeUI(uuidTag, params); break;
+    case kSpamID_TOOLBOX_PROC_CONVERT: UpdateConvertUI(uuidTag, params); break;
     default: break;
     }
 }
@@ -150,7 +209,8 @@ wxPanel *ProcBox::GetOptionPanel(const int toolIndex, wxWindow *parent)
         &ProcBox::CreateThresholdOption,
         &ProcBox::CreateFilterOption,
         &ProcBox::CreateEdgeOption,
-        &ProcBox::CreatePyramidOption
+        &ProcBox::CreatePyramidOption,
+        &ProcBox::CreateConvertOption,
     };
 
     if (createOption[toolIndex])
@@ -186,6 +246,7 @@ ToolOptions ProcBox::GetToolOptions() const
     tos[cp_ToolProcEdgeApertureSize]            = iParams_.at(cp_ToolProcEdgeApertureSize);
     tos[cp_ToolProcEdgeCannyThresholdLow]       = iParams_.at(cp_ToolProcEdgeCannyThresholdLow);
     tos[cp_ToolProcEdgeCannyThresholdHigh]      = iParams_.at(cp_ToolProcEdgeCannyThresholdHigh);
+    tos[cp_ToolProcConvertChannel]              = std::max(0, convertChannelChoice_ ? convertChannelChoice_->GetSelection() : 0);
 
     return tos;
 }
@@ -205,6 +266,7 @@ void ProcBox::OnToolEnter(const ToolOptions &toolOpts)
         break;
 
     case kSpamID_TOOLBOX_PROC_PYRAMID:
+    case kSpamID_TOOLBOX_PROC_CONVERT:
         Spam::GetSelectionFilter()->Clear();
         Spam::GetSelectionFilter()->SetEntitySelectionMode(SpamEntitySelectionMode::kESM_BOX_SINGLE);
         Spam::GetSelectionFilter()->SetEntityOperation(SpamEntityOperation::kEO_GENERAL);
@@ -392,6 +454,25 @@ void ProcBox::OnEdgeChannelChanged(wxCommandEvent &e)
             {
                 ToolOptions tos = ProcBox::GetToolOptions();
                 tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_EDGE;
+                sig_OptionsChanged(tos);
+            }
+        }
+    }
+}
+
+void ProcBox::OnConvertChannelChanged(wxCommandEvent &e)
+{
+    auto cCtrl = dynamic_cast<wxChoice *>(e.GetEventObject());
+    if (cCtrl)
+    {
+        iParams_[cp_ToolProcConvertChannel] = cCtrl->GetSelection();
+        auto cParent = cCtrl->GetParent();
+        if (cParent)
+        {
+            if (cParent->TransferDataFromWindow())
+            {
+                ToolOptions tos = ProcBox::GetToolOptions();
+                tos[cp_ToolId] = kSpamID_TOOLBOX_PROC_CONVERT;
                 sig_OptionsChanged(tos);
             }
         }
@@ -632,6 +713,29 @@ wxPanel *ProcBox::CreateEdgeOption(wxWindow *parent)
 
     edgeTypeChoice->Bind(wxEVT_CHOICE, &ProcBox::OnEdgeTypeChanged, this);
     edgeChannelChoice_->Bind(wxEVT_CHOICE, &ProcBox::OnEdgeChannelChanged, this);
+
+    sizerRoot->Add(optSizer, wxSizerFlags().Expand());
+    panel->SetScrollRate(6, 6);
+    panel->SetVirtualSize(panel->GetBestSize());
+    panel->SetSizerAndFit(sizerRoot);
+    panel->TransferDataToWindow();
+
+    return panel;
+}
+
+wxPanel *ProcBox::CreateConvertOption(wxWindow *parent)
+{
+    auto panel = new wxScrolledWindow(parent, wxID_ANY);
+    wxSizer * const sizerRoot = new wxBoxSizer(wxVERTICAL);
+
+    auto optSizer = new wxFlexGridSizer(2, 2, 2);
+    optSizer->AddGrowableCol(1, 1);
+    optSizer->SetFlexibleDirection(wxHORIZONTAL);
+
+    convertChannelChoice_ = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, nullptr, 0L);
+    optSizer->Add(new wxStaticText(panel, wxID_ANY, wxT("Select Channel:")), wxSizerFlags().Right().CentreVertical().Border(wxLEFT));
+    optSizer->Add(convertChannelChoice_, wxSizerFlags(1).Border(wxRIGHT).Expand());
+    convertChannelChoice_->Bind(wxEVT_CHOICE, &ProcBox::OnConvertChannelChanged, this);
 
     sizerRoot->Add(optSizer, wxSizerFlags().Expand());
     panel->SetScrollRate(6, 6);

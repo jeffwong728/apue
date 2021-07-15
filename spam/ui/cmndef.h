@@ -116,6 +116,7 @@ enum
     kSpamID_TOOLPAGE_PROC,
     kSpamID_TOOLPAGE_MATCH,
     kSpamID_TOOLPAGE_MEASURE,
+    kSpamID_TOOLPAGE_IMGFLOW,
     kSpamID_TOOLPAGE_STYLE,
     kSpamID_TOOLPAGE_GUARD,
 
@@ -124,6 +125,7 @@ enum
     kSpamID_TOOLBOX_PROC,
     kSpamID_TOOLBOX_MATCH,
     kSpamID_TOOLBOX_MEASURE,
+    kSpamID_TOOLBOX_IMGFLOW,
     kSpamID_TOOLBOX_STYLE,
 
     kSpamID_TOOLBOX_PROBE_SELECT,
@@ -154,6 +156,7 @@ enum
     kSpamID_TOOLBOX_PROC_FILTER,
     kSpamID_TOOLBOX_PROC_EDGE,
     kSpamID_TOOLBOX_PROC_PYRAMID,
+    kSpamID_TOOLBOX_PROC_CONVERT,
     kSpamID_TOOLBOX_PROC_GUARD,
 
     kSpamID_TOOLBOX_NODE_MOVE,
@@ -202,6 +205,7 @@ enum SpamIconPurpose
     kICON_PURPOSE_TOOLBOX,
     kICON_PURPOSE_TOOLBAR,
     kICON_PURPOSE_CURSOR,
+    kICON_PURPOSE_BIG,
 
     kICON_PURPOSE_GUARD
 };
@@ -329,6 +333,7 @@ extern const std::string cp_ToolProcEdgeChannel;
 extern const std::string cp_ToolProcEdgeApertureSize;
 extern const std::string cp_ToolProcEdgeCannyThresholdLow;
 extern const std::string cp_ToolProcEdgeCannyThresholdHigh;
+extern const std::string cp_ToolProcConvertChannel;
 extern const std::string cp_ToolProbeRegionMask;
 extern const std::string cp_ThemeDarkMode;
 extern const std::string cp_Py3EditorStyle;

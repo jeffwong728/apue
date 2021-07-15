@@ -50,6 +50,7 @@ set(ui_core_SRCS
   toolbox/matchbox.cpp
   toolbox/geombox.cpp
   toolbox/procbox.cpp
+  toolbox/imgflowbox.cpp
   fsm/boxtool.cpp
   fsm/edittool.cpp
   fsm/booltool.cpp
@@ -66,7 +67,7 @@ set(ui_core_SRCS
   fsm/nodeedittool.cpp
   fsm/polygontool.cpp
   fsm/beziergontool.cpp
-  proc/basic.cpp
+  imgproc/basic.cpp
   scripting/pyrect.cpp
   scripting/pystation.cpp
   scripting/pyproject.cpp
@@ -75,6 +76,12 @@ set(ui_core_SRCS
   scripting/pydrawable.cpp
   scripting/pyellipse.cpp
   scripting/pyfixed.cpp
+  procflow/flowchart.cpp
+  procflow/stepbase.cpp
+  procflow/initstep.cpp
+  procflow/endstep.cpp
+  procflow/cvtstep.cpp
+  procflow/threshstep.cpp
 )
 
 set(ui_core_HEADERS 
@@ -131,6 +138,7 @@ set(ui_core_HEADERS
   toolbox/matchbox.h
   toolbox/geombox.h
   toolbox/procbox.h
+  toolbox/imgflowbox.h
   fsm/boxtool.h
   fsm/edittool.h
   fsm/booltool.h
@@ -148,7 +156,7 @@ set(ui_core_HEADERS
   fsm/beziergontool.h
   fsm/polygontool.h
   fsm/events.h
-  proc/basic.h
+  imgproc/basic.h
   scripting/pyrect.h
   scripting/pystation.h
   scripting/pyproject.h
@@ -157,6 +165,13 @@ set(ui_core_HEADERS
   scripting/pydrawable.h
   scripting/pyellipse.h
   scripting/pyfixed.h
+  procflow/flowchart.h
+  procflow/stepbase.h
+  procflow/initstep.h
+  procflow/endstep.h
+  procflow/stepfwd.h
+  procflow/cvtstep.h
+  procflow/threshstep.h
 )
 
 if(MSVC)

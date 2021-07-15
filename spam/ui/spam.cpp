@@ -2,7 +2,7 @@
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "spam.h"
 #include <wx/snglinst.h>
-#include <ui/proc/basic.h>
+#include <ui/imgproc/basic.h>
 #include <ui/toplevel/rootframe.h>
 #include <ui/projs/drawablenode.h>
 #include <boost/dll/runtime_symbol_info.hpp>
@@ -91,19 +91,21 @@ bool SpamApp::OnInit()
 
     const wxBitmapType    bmt    = wxBITMAP_TYPE_PNG;
     const SpamIconPurpose ipTBox = kICON_PURPOSE_TOOLBOX;
-    bitmaps_[ipTBox][bm_Box]            = wxBitmap(wxT("res/box.png"),              bmt);
-    bitmaps_[ipTBox][bm_Ellipse]        = wxBitmap(wxT("res/ellipse.png"),          bmt);
-    bitmaps_[ipTBox][bm_Polygon]        = wxBitmap(wxT("res/polygon.png"),          bmt);
-    bitmaps_[ipTBox][bm_Beziergon]      = wxBitmap(wxT("res/beziergon.png"),        bmt);
-    bitmaps_[ipTBox][bm_Line]           = wxBitmap(wxT("res/line.png"),             bmt);
-    bitmaps_[ipTBox][bm_Arc]            = wxBitmap(wxT("res/arc.png"),              bmt);
-    bitmaps_[ipTBox][bm_Zigzagline]     = wxBitmap(wxT("res/zigzagline.png"),       bmt);
-    bitmaps_[ipTBox][bm_Polyline]       = wxBitmap(wxT("res/polyline.png"),         bmt);
-    bitmaps_[ipTBox][bm_Bezierline]     = wxBitmap(wxT("res/bezierline.png"),       bmt);
+    p = boost::dll::program_location(ec); p = p.parent_path(); p.append(wxT("res")); p += boost::filesystem::path::preferred_separator;
+    wxString resDir(p.native());
+    bitmaps_[ipTBox][bm_Box]            = wxBitmap(resDir + wxT("box.png"),                 bmt);
+    bitmaps_[ipTBox][bm_Ellipse]        = wxBitmap(resDir + wxT("ellipse.png"),          bmt);
+    bitmaps_[ipTBox][bm_Polygon]        = wxBitmap(resDir + wxT("polygon.png"),          bmt);
+    bitmaps_[ipTBox][bm_Beziergon]      = wxBitmap(resDir + wxT("beziergon.png"),        bmt);
+    bitmaps_[ipTBox][bm_Line]           = wxBitmap(resDir + wxT("line.png"),             bmt);
+    bitmaps_[ipTBox][bm_Arc]            = wxBitmap(resDir + wxT("arc.png"),              bmt);
+    bitmaps_[ipTBox][bm_Zigzagline]     = wxBitmap(resDir + wxT("zigzagline.png"),       bmt);
+    bitmaps_[ipTBox][bm_Polyline]       = wxBitmap(resDir + wxT("polyline.png"),         bmt);
+    bitmaps_[ipTBox][bm_Bezierline]     = wxBitmap(resDir + wxT("bezierline.png"),       bmt);
 
     const SpamIconPurpose ipTBar = kICON_PURPOSE_TOOLBAR;
-    bitmaps_[ipTBar][bm_ImageImport]    = wxBitmap(wxT("res/import_layer_16.png"),  bmt);
-    bitmaps_[ipTBar][bm_ImageExport]    = wxBitmap(wxT("res/export_layer_16.png"),  bmt);
+    bitmaps_[ipTBar][bm_ImageImport]    = wxBitmap(resDir + wxT("import_layer_16.png"),  bmt);
+    bitmaps_[ipTBar][bm_ImageExport]    = wxBitmap(resDir + wxT("export_layer_16.png"),  bmt);
 
     GtkSettings *settings = gtk_settings_get_default();
     const int darkMode = SpamConfig::Get<bool>(cp_ThemeDarkMode, true);
@@ -191,7 +193,7 @@ wxBitmap SpamApp::GetBitmap(const SpamIconPurpose ip, const std::string &bmName)
 
             if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
             {
-                const int iconSizes[kICON_PURPOSE_GUARD] = { 22, 16, 24 };
+                const int iconSizes[kICON_PURPOSE_GUARD] = { 22, 16, 24, 32 };
                 GdkPixbuf *pixBuf = gdk_pixbuf_new_from_file_at_size(wxString(p.native()).ToUTF8().data(), iconSizes[ip], iconSizes[ip], nullptr);
                 if (pixBuf)
                 {

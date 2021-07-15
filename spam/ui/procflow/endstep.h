@@ -1,0 +1,10 @@
+#ifndef SPAM_UI_PROCFLOW_END_STEP_H
+#define SPAM_UI_PROCFLOW_END_STEP_H
+#include "stepbase.h"
+
+class EndStep : public StepBase
+{
+public:
+    EndStep();
+};
+#endif //SPAM_UI_PROCFLOW_END_STEP_H

@@ -74,7 +74,8 @@ public:
         kIPK_BINARY,
         kIPK_PYRAMID,
         kIPK_EDGE,
-        kIPK_FILTER
+        kIPK_FILTER,
+        kIPK_CONVERT
     };
 
     struct ImageProcData
@@ -163,6 +164,7 @@ public:
     void UpdateBinary(const Geom::Rect &roiBox, const int minGray, const int maxGray, const int channel);
     void UpdateFilter(const Geom::Rect &roiBox, const std::map<std::string, int> &iParams, const std::map<std::string, double> &fParams);
     void UpdateEdge(const Geom::Rect &roiBox, const std::map<std::string, int> &iParams, const std::map<std::string, double> &fParams);
+    void UpdateColorConvert(const Geom::Rect &roiBox, const std::map<std::string, int> &iParams, const std::map<std::string, double> &fParams);
     void RemoveImageProcessData();
 
 private:
@@ -195,11 +197,13 @@ private:
     void RenderEntities(Cairo::RefPtr<Cairo::Context> &cr, const std::vector<Geom::Rect> &invalidRects) const;
     void RenderPath(Cairo::RefPtr<Cairo::Context> &cr) const;
     void ConvertToDisplayMats(const std::vector<cv::Mat> &mats, std::vector<cv::Mat> &disMats);
+    cv::Mat GetSubImage(const Geom::Path &roi) const;
     cv::Mat GetImageToProcess(const cv::Mat &srcMat, const int channel);
     void ImageProcessBinary();
     void ImageProcessFilter();
     void ImageProcessPyramid();
     void ImageProcessEdge();
+    void ImageProcessConvert();
 
 private:
     void MoveAnchor(const wxSize &sViewport, const wxSize &disMatSize);

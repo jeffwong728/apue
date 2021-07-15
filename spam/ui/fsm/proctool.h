@@ -173,4 +173,59 @@ struct EdgeDraging : boost::statechart::simple_state<EdgeDraging, EdgeTool>
         boost::statechart::in_state_reaction<EvMouseMove, EdgeTool::BoxToolT, &EdgeTool::BoxToolT::ContinueBoxing>> reactions;
 };
 
+struct ColorConvertTool;
+struct ColorConvertIdle;
+struct ColorConvertDraging;
+using  ColorConvertBoxTool = BoxTool<ColorConvertTool, kSpamID_TOOLBOX_PROC_CONVERT>;
+
+struct ColorConvertTool : boost::statechart::simple_state<ColorConvertTool, Spamer, ColorConvertIdle>, ColorConvertBoxTool
+{
+    using BoxToolT = BoxToolImpl;
+    ColorConvertTool() : ColorConvertBoxTool(*this) {}
+    ~ColorConvertTool() {}
+
+    void OnOptionChanged(const EvToolOption &e);
+    void OnBoxingEnded(const EvBoxingEnded &e);
+    void OnImageClicked(const EvImageClicked &e);
+    void OnEntityClicked(const EvEntityClicked &e);
+    sc::result react(const EvToolQuit &e);
+    void BuildParameters(std::map<std::string, int> &iParams, std::map<std::string, double> &fParams);
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvReset, ColorConvertTool>,
+        boost::statechart::in_state_reaction<EvAppQuit, BoxToolT, &BoxToolT::QuitApp>,
+        boost::statechart::in_state_reaction<EvBoxingEnded, ColorConvertTool, &ColorConvertTool::OnBoxingEnded>,
+        boost::statechart::in_state_reaction<EvImageClicked, ColorConvertTool, &ColorConvertTool::OnImageClicked>,
+        boost::statechart::in_state_reaction<EvEntityClicked, ColorConvertTool, &ColorConvertTool::OnEntityClicked>,
+        boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
+        boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
+        boost::statechart::custom_reaction<EvToolQuit>> reactions;
+
+    ToolOptions toolOptions;
+    std::set<std::string> uuids;
+};
+
+struct ColorConvertIdle : boost::statechart::simple_state<ColorConvertIdle, ColorConvertTool>
+{
+    ColorConvertIdle() {}
+    ~ColorConvertIdle() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseDown, ColorConvertDraging, ColorConvertTool::BoxToolT, &ColorConvertTool::BoxToolT::StartBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, ColorConvertTool::BoxToolT, &ColorConvertTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvToolOption, ColorConvertTool, &ColorConvertTool::OnOptionChanged>,
+        boost::statechart::in_state_reaction<EvCanvasLeave, ColorConvertTool::BoxToolT, &ColorConvertTool::BoxToolT::LeaveCanvas>> reactions;
+};
+
+struct ColorConvertDraging : boost::statechart::simple_state<ColorConvertDraging, ColorConvertTool>
+{
+    ColorConvertDraging() {}
+    ~ColorConvertDraging() {}
+
+    typedef boost::mpl::list<
+        boost::statechart::transition<EvLMouseUp, ColorConvertIdle, ColorConvertTool::BoxToolT, &ColorConvertTool::BoxToolT::EndBoxing>,
+        boost::statechart::transition<EvReset, ColorConvertIdle, ColorConvertTool::BoxToolT, &ColorConvertTool::BoxToolT::ResetBoxing>,
+        boost::statechart::in_state_reaction<EvMouseMove, ColorConvertTool::BoxToolT, &ColorConvertTool::BoxToolT::ContinueBoxing>> reactions;
+};
+
 #endif //SPAM_UI_FSM_PROC_TOOL_H

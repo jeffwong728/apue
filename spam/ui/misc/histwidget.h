@@ -50,15 +50,15 @@ protected:
     void OnPaint(wxPaintEvent &e);
 
 protected:
+    bool InheritsBackgroundColour() const { return true; }
     wxSize DoGetBestSize() const wxOVERRIDE { return wxSize(150, 120); }
-    bool InheritsBackgroundColour()	const { return true; }
 
 private:
-    void SmoothProfile(std::vector<wxPoint> &pts) const;
     void DrawBackground(wxGCDC &dc) const;
     void DrawHistogram(wxGCDC &dc, const wxPoint *point=nullptr) const;
     void DrawCursors(wxGCDC &dc, const std::vector<CursorData> &curDatas) const;
     void DrawThumbs(wxGCDC &dc) const;
+    void SmoothProfile(std::vector<wxPoint> &pts) const;
 
 private:
     bool cursorVisible_{ false };

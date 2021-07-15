@@ -9,7 +9,7 @@
 #include <ui/projs/profilenode.h>
 #include <ui/cmds/geomcmd.h>
 #include <ui/cmds/transcmd.h>
-#include <ui/proc/basic.h>
+#include <ui/imgproc/basic.h>
 #include <wx/graphics.h>
 #include <wx/popupwin.h>
 #include <wx/artprov.h>
@@ -1442,6 +1442,20 @@ void CairoCanvas::UpdateEdge(const Geom::Rect &roiBox, const std::map<std::strin
     }
 }
 
+void CairoCanvas::UpdateColorConvert(const Geom::Rect &roiBox, const std::map<std::string, int> &iParams, const std::map<std::string, double> &fParams)
+{
+    imgProc_.ipKind = kIPK_CONVERT;
+    imgProc_.roi = Geom::Path(roiBox);
+    if (!disMat_.empty())
+    {
+        imgProc_.disMats.clear();
+        imgProc_.iParams = iParams;
+        imgProc_.fParams = fParams;
+        ImageProcessConvert();
+        Refresh(false);
+    }
+}
+
 void CairoCanvas::RemoveImageProcessData()
 {
     imgProc_.ipKind = kIPK_NONE;
@@ -2066,6 +2080,29 @@ void CairoCanvas::ConvertToDisplayMats(const std::vector<cv::Mat> &mats, std::ve
     }
 }
 
+cv::Mat CairoCanvas::GetSubImage(const Geom::Path &roi) const
+{
+    Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
+    Geom::OptRect ibox(0, 0, srcImg_.cols - 1, srcImg_.rows - 1);
+    vbox.intersectWith(ibox);
+
+    cv::Mat cropMat;
+    if (vbox && vbox->width() > 3. && vbox->height() > 3.)
+    {
+        const int t = cvRound(vbox->top());
+        const int b = cvRound(vbox->bottom());
+        const int l = cvRound(vbox->left());
+        const int r = cvRound(vbox->right());
+        cropMat = cv::Mat(srcImg_, cv::Range(t, b), cv::Range(l, r));
+    }
+    else
+    {
+        cropMat = srcImg_;
+    }
+
+    return cropMat;
+}
+
 cv::Mat CairoCanvas::GetImageToProcess(const cv::Mat &srcMat, const int channel)
 {
     cv::Mat procMat;
@@ -2114,24 +2151,7 @@ void CairoCanvas::ImageProcessBinary()
             itChannel->second >=0)
         {
             std::vector<cv::Mat> resImgs;
-            Geom::OptRect ibox(0, 0, srcImg_.cols - 1, srcImg_.rows - 1);
-            Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
-            vbox.intersectWith(ibox);
-
-            cv::Mat cropMat;
-            if (vbox && vbox->width() > 3. && vbox->height() > 3.)
-            {
-                const int t = cvRound(vbox->top());
-                const int b = cvRound(vbox->bottom());
-                const int l = cvRound(vbox->left());
-                const int r = cvRound(vbox->right());
-                cropMat = cv::Mat(srcImg_, cv::Range(t, b), cv::Range(l, r));
-            }
-            else
-            {
-                cropMat = srcImg_;
-            }
-
+            cv::Mat cropMat = GetSubImage(imgProc_.roi);
             cv::Mat procMat = GetImageToProcess(cropMat, itChannel->second);
             resImgs.push_back(BasicImgProc::Binarize(procMat, itMinGray->second, itMaxGray->second));
 
@@ -2152,24 +2172,8 @@ void CairoCanvas::ImageProcessFilter()
         if (itFilterType != imgProc_.iParams.end())
         {
             wxBusyCursor wait;
-            Geom::OptRect ibox(0, 0, srcImg_.cols - 1, srcImg_.rows - 1);
-            Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
-            vbox.intersectWith(ibox);
-
-            cv::Mat procMat, resImg;
-            if (vbox && vbox->width() > 3. && vbox->height() > 3.)
-            {
-                const int t = cvRound(vbox->top());
-                const int b = cvRound(vbox->bottom());
-                const int l = cvRound(vbox->left());
-                const int r = cvRound(vbox->right());
-                procMat = cv::Mat(srcImg_, cv::Range(t, b), cv::Range(l, r));
-            }
-            else
-            {
-                procMat = srcImg_;
-            }
-
+            cv::Mat resImg;
+            cv::Mat procMat = GetSubImage(imgProc_.roi);
             const int borderType = imgProc_.iParams[cp_ToolProcFilterBorderType];
             switch (itFilterType->second)
             {
@@ -2227,22 +2231,8 @@ void CairoCanvas::ImageProcessPyramid()
         if (itLevel != imgProc_.iParams.end() && itLevel->second > 1)
         {
             std::vector<cv::Mat> pyraImgs;
-            Geom::OptRect ibox(0, 0, srcImg_.cols-1, srcImg_.rows - 1);
-            Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
-            vbox.intersectWith(ibox);
-            if (vbox && vbox->width() > 3. && vbox->height() > 3.)
-            {
-                const int t = cvRound(vbox->top());
-                const int b = cvRound(vbox->bottom());
-                const int l = cvRound(vbox->left());
-                const int r = cvRound(vbox->right());
-                cv::Mat m(srcImg_, cv::Range(t, b), cv::Range(l, r));
-                cv::buildPyramid(m, pyraImgs, itLevel->second);
-            }
-            else
-            {
-                cv::buildPyramid(srcImg_, pyraImgs, itLevel->second);
-            }
+            cv::Mat cropImg = GetSubImage(imgProc_.roi);
+            cv::buildPyramid(cropImg, pyraImgs, itLevel->second);
 
             if (pyraImgs.size() > 1)
             {
@@ -2264,24 +2254,9 @@ void CairoCanvas::ImageProcessEdge()
         if (itEdgeType != imgProc_.iParams.end() && itEdgeChal != imgProc_.iParams.end())
         {
             wxBusyCursor wait;
-            Geom::OptRect ibox(0, 0, srcImg_.cols - 1, srcImg_.rows - 1);
-            Geom::OptRect vbox = Geom::bounds_fast(imgProc_.roi);
-            vbox.intersectWith(ibox);
 
-            cv::Mat cropMat, resImg;
-            if (vbox && vbox->width() > 3. && vbox->height() > 3.)
-            {
-                const int t = cvRound(vbox->top());
-                const int b = cvRound(vbox->bottom());
-                const int l = cvRound(vbox->left());
-                const int r = cvRound(vbox->right());
-                cropMat = cv::Mat(srcImg_, cv::Range(t, b), cv::Range(l, r));
-            }
-            else
-            {
-                cropMat = srcImg_;
-            }
-
+            cv::Mat resImg;
+            cv::Mat cropMat = GetSubImage(imgProc_.roi);
             cv::Mat procMat = GetImageToProcess(cropMat, itEdgeChal->second);
             const int threshLow  = imgProc_.iParams[cp_ToolProcEdgeCannyThresholdLow];
             const int threshHigh = imgProc_.iParams[cp_ToolProcEdgeCannyThresholdHigh];
@@ -2325,6 +2300,75 @@ void CairoCanvas::ImageProcessEdge()
     }
 }
 
+void CairoCanvas::ImageProcessConvert()
+{
+    if (kIPK_CONVERT == imgProc_.ipKind)
+    {
+        imgProc_.disMats.clear();
+        auto itConvChal = imgProc_.iParams.find(cp_ToolProcConvertChannel);
+        if (itConvChal != imgProc_.iParams.end())
+        {
+            wxBusyCursor wait;
+
+            cv::Mat resImg;
+            cv::Mat cropMat = GetSubImage(imgProc_.roi);
+            switch (cropMat.channels())
+            {
+            case 3:
+                if (0 <= itConvChal->second && itConvChal->second <= 2)
+                {
+                    std::vector<cv::Mat> cMats;
+                    cv::split(cropMat, cMats);
+                    resImg = cMats[itConvChal->second];
+                }
+                else if (4 <= itConvChal->second && itConvChal->second <= 6)
+                {
+                    cv::Mat hlsImg;
+                    cv::cvtColor(cropMat, hlsImg, cv::COLOR_BGR2HLS_FULL);
+                    std::vector<cv::Mat> cMats;
+                    cv::split(hlsImg, cMats);
+                    resImg = cMats[itConvChal->second-4];
+                }
+                else
+                {
+                    cv::cvtColor(cropMat, resImg, cv::COLOR_BGR2GRAY);
+                }
+                break;
+
+            case 4:
+                if (0 <= itConvChal->second && itConvChal->second <= 3)
+                {
+                    std::vector<cv::Mat> cMats;
+                    cv::split(cropMat, cMats);
+                    resImg = cMats[itConvChal->second];
+                }
+                else if (5 <= itConvChal->second && itConvChal->second <= 7)
+                {
+                    cv::Mat bgrImg, hlsImg;
+                    cv::cvtColor(cropMat, bgrImg, cv::COLOR_BGRA2BGR);
+                    cv::cvtColor(bgrImg, hlsImg, cv::COLOR_BGR2HLS_FULL);
+                    std::vector<cv::Mat> cMats;
+                    cv::split(hlsImg, cMats);
+                    resImg = cMats[itConvChal->second - 5];
+                }
+                else
+                {
+                    cv::cvtColor(cropMat, resImg, cv::COLOR_BGR2GRAY);
+                }
+                break;
+
+            default: break;
+            }
+
+            if (!resImg.empty())
+            {
+                std::vector<cv::Mat> resImgs(1, resImg);
+                ConvertToDisplayMats(resImgs, imgProc_.disMats);
+            }
+        }
+    }
+}
+
 void CairoCanvas::MoveAnchor(const wxSize &sViewport, const wxSize &disMatSize)
 {
     anchorX_ = std::max(0, (sViewport.GetWidth() - disMatSize.GetWidth()) / 2);
@@ -2355,6 +2399,7 @@ void CairoCanvas::ScaleShowImage(const wxSize &sToSize)
         case kIPK_PYRAMID: ImageProcessPyramid(); break;
         case kIPK_FILTER: ImageProcessFilter(); break;
         case kIPK_EDGE: ImageProcessEdge(); break;
+        case kIPK_CONVERT: ImageProcessConvert(); break;
         default: break;
         }
         Refresh(false);

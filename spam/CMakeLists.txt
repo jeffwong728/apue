@@ -143,6 +143,9 @@ get_target_property(sys_inc ICU::i18n INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(spam SYSTEM INTERFACE ${sys_inc})
 message(STATUS "VCPKG include directories: ${sys_inc}")
 
-file(COPY ${CMAKE_CURRENT_LIST_DIR}/res DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_command(TARGET spam POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_LIST_DIR}/res" "$<TARGET_FILE_DIR:spam>/res"
+    DEPENDS ${CMAKE_CURRENT_LIST_DIR}/res
+    COMMENT "Copying resources to bin directory")
 
 message(STATUS "Project will be installed to ${CMAKE_INSTALL_PREFIX}")

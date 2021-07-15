@@ -33,6 +33,7 @@ const std::string cp_ToolProcEdgeChannel                = std::string("spam.tool
 const std::string cp_ToolProcEdgeApertureSize           = std::string("spam.tool.process.edge.aperturesize");
 const std::string cp_ToolProcEdgeCannyThresholdLow      = std::string("spam.tool.process.edge.canny.threshold.low");
 const std::string cp_ToolProcEdgeCannyThresholdHigh     = std::string("spam.tool.process.edge.canny.threshold.high");
+const std::string cp_ToolProcConvertChannel             = std::string("spam.tool.process.convert.channel");
 const std::string cp_ToolProbeRegionMask                = std::string("spam.tool.probe.region.mask");
 const std::string cp_Py3EditorStyle                     = std::string("spam.py3editor.style");
 const std::string cp_Py3EditorRememberScriptPath        = std::string("spam.py3editor.scriptpath.remember");

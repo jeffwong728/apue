@@ -45,6 +45,7 @@ class RootFrame : public wxFrame
         kSpam_TOOLBOX_PROC,
         kSpam_TOOLBOX_MATCH,
         kSpam_TOOLBOX_STYLE,
+        kSpam_TOOLBOX_IMGFLOW,
 
         kSpam_TOOLBOX_GUARD
     };
@@ -115,6 +116,7 @@ private:
     void OnToolboxProc(wxCommandEvent& e);
     void OnToolboxMatch(wxCommandEvent& e);
     void OnToolboxStyle(wxCommandEvent& e);
+    void OnToolboxImgFlow(wxCommandEvent& e);
     void OnSelectEntity(const SPDrawableNodeVector &des);
     void OnImageBufferItemAdd(const ImageBufferItem &ibi);
     void OnImageBufferItemUpdate(const ImageBufferItem &ibi);
