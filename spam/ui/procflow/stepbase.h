@@ -24,6 +24,7 @@ public:
 
 public:
     void SetRect(const wxRect &rc) { posRect_ = rc; }
+    wxRect GetBoundingBox() const;
 
 private:
     std::string uuid_;

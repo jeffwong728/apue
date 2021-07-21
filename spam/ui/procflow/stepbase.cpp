@@ -35,3 +35,8 @@ void StepBase::Draw(wxGCDC &dc) const
     dc.DrawText(typeName_, posRect_.GetTopLeft() + wxPoint((posRect_.GetWidth() - htSize.GetWidth())/2, 2));
 }
 
+wxRect StepBase::GetBoundingBox() const
+{
+    const wxRect bbox(posRect_);
+    return bbox.Inflate(2, 2);
+}

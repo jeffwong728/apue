@@ -177,7 +177,7 @@ void RootFrame::CreateAuiPanes()
     tbBar->AddTool(kSpamID_TOOLBOX_GEOM, toolBoxLabels[kSpam_TOOLBOX_GEOM], wxArtProvider::GetBitmap(wxART_NEW), wxT("Geometry Tool"), wxITEM_CHECK);
     tbBar->AddTool(kSpamID_TOOLBOX_PROC, toolBoxLabels[kSpam_TOOLBOX_PROC], wxArtProvider::GetBitmap(wxART_NEW), wxT("Image Processing"), wxITEM_CHECK);
     tbBar->AddTool(kSpamID_TOOLBOX_MATCH, toolBoxLabels[kSpam_TOOLBOX_MATCH], wxArtProvider::GetBitmap(wxART_NEW), wxT("Pattern Match"), wxITEM_CHECK);
-    tbBar->AddTool(kSpamID_TOOLBOX_IMGFLOW, toolBoxLabels[kSpam_TOOLBOX_IMGFLOW], Spam::GetBitmap(kICON_PURPOSE_BIG, std::string("toolbox.steps")), wxT("Pipeline Processing"), wxITEM_CHECK);
+    tbBar->AddTool(kSpamID_TOOLBOX_IMGFLOW, toolBoxLabels[kSpam_TOOLBOX_IMGFLOW], wxArtProvider::GetBitmap(wxART_NEW), wxT("Pipeline Processing"), wxITEM_CHECK);
     tbBar->AddSeparator();
     tbBar->AddTool(kSpamID_TOOLBOX_STYLE, toolBoxLabels[kSpam_TOOLBOX_STYLE], wxArtProvider::GetBitmap(wxART_NEW), wxT("Geometry Style"), wxITEM_CHECK);
     tbBar->Realize();

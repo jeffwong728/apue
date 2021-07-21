@@ -9,9 +9,13 @@
 #include <wx/spinctrl.h>
 #include <tuple>
 #include <vector>
+#include <memory>
 #include <boost/signals2.hpp>
 
 class FlowChart;
+class wxImageList;
+class wxListEvent;
+class wxListView;
 namespace bs2 = boost::signals2;
 
 class ImgFlowBox : public wxPanel
@@ -23,6 +27,7 @@ public:
 public:
     void TransferDataToUI();
     void TransferDataFromUI();
+    void OnDragBegin(wxListEvent &e);
 
 private:
     void OnColorChanged(wxColourPickerEvent &e);
@@ -30,5 +35,7 @@ private:
 
 private:
     FlowChart *imgProcFlowChart_;
+    wxListView *toolsList_;
+    std::unique_ptr<wxImageList> basicToolImages_;
 };
 #endif //SPAM_UI_TOOLBOX_IMG_FLOW_BOX_H

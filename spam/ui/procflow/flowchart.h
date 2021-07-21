@@ -9,7 +9,7 @@
 
 class StepBase;
 
-class FlowChart : public wxScrolledCanvas
+class FlowChart : public wxControl
 {
 public:
     typedef boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> bs2_dummy_mutex;
@@ -19,17 +19,21 @@ public:
     FlowChart(wxWindow* parent);
 
 public:
+    void AppendStep(wxCoord x, wxCoord y, const wxString& stepType);
 
 protected:
     void OnEnterWindow(wxMouseEvent &e);
     void OnLeaveWindow(wxMouseEvent &e);
     void OnLeftMouseDown(wxMouseEvent &e);
     void OnLeftMouseUp(wxMouseEvent &e);
+    void OnRightMouseDown(wxMouseEvent &e);
+    void OnRightMouseUp(wxMouseEvent &e);
     void OnMouseMotion(wxMouseEvent &e);
+    void OnMouseWheel(wxMouseEvent &e);
     void OnPaint(wxPaintEvent &e);
 
 protected:
-    wxSize DoGetBestSize() const wxOVERRIDE { return wxSize(120, 300); }
+    wxSize DoGetBestSize() const wxOVERRIDE { return wxSize(300, 300); }
     bool InheritsBackgroundColour() const { return true; }
 
 private:
@@ -39,6 +43,8 @@ private:
     int gapX_{5};
     int gapY_{5};
     std::vector<SPStepBase> steps_;
+    wxAffineMatrix2D affMat_;
+    wxPoint lastPos_;
 
     wxDECLARE_NO_COPY_CLASS(FlowChart);
 };

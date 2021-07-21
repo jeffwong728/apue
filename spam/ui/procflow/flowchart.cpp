@@ -4,6 +4,7 @@
 #include <wx/display.h>
 #include <wx/graphics.h>
 #include <wx/dcbuffer.h>
+#include <wx/dnd.h>
 #include <algorithm>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
@@ -15,18 +16,38 @@
 #include "cvtstep.h"
 #include "threshstep.h"
 
+class DnDText : public wxTextDropTarget
+{
+public:
+    DnDText(FlowChart *pOwner) { m_pOwner = pOwner; }
+
+    virtual bool OnDropText(wxCoord x, wxCoord y, const wxString& text) wxOVERRIDE;
+
+private:
+    FlowChart *m_pOwner;
+};
+
+bool DnDText::OnDropText(wxCoord x, wxCoord y, const wxString& text)
+{
+    m_pOwner->AppendStep(x, y, text);
+    return true;
+}
+
 FlowChart::FlowChart(wxWindow* parent)
 {
-    wxScrolledCanvas::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_RAISED);
+    wxWindow::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_RAISED);
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     InheritAttributes();
 
-    Bind(wxEVT_ENTER_WINDOW, &FlowChart::OnEnterWindow,   this, wxID_ANY);
-    Bind(wxEVT_LEAVE_WINDOW, &FlowChart::OnLeaveWindow,   this, wxID_ANY);
-    Bind(wxEVT_LEFT_DOWN,    &FlowChart::OnLeftMouseDown, this, wxID_ANY);
-    Bind(wxEVT_LEFT_UP,      &FlowChart::OnLeftMouseUp,   this, wxID_ANY);
-    Bind(wxEVT_MOTION,       &FlowChart::OnMouseMotion,   this, wxID_ANY);
-    Bind(wxEVT_PAINT,        &FlowChart::OnPaint,         this, wxID_ANY);
+    Bind(wxEVT_ENTER_WINDOW, &FlowChart::OnEnterWindow,     this, wxID_ANY);
+    Bind(wxEVT_LEAVE_WINDOW, &FlowChart::OnLeaveWindow,     this, wxID_ANY);
+    Bind(wxEVT_LEFT_DOWN,    &FlowChart::OnLeftMouseDown,   this, wxID_ANY);
+    Bind(wxEVT_LEFT_UP,      &FlowChart::OnLeftMouseUp,     this, wxID_ANY);
+    Bind(wxEVT_RIGHT_DOWN,   &FlowChart::OnRightMouseDown,  this, wxID_ANY);
+    Bind(wxEVT_RIGHT_UP,     &FlowChart::OnRightMouseUp,    this, wxID_ANY);
+    Bind(wxEVT_MOTION,       &FlowChart::OnMouseMotion,     this, wxID_ANY);
+    Bind(wxEVT_MOUSEWHEEL,   &FlowChart::OnMouseWheel,      this, wxID_ANY);
+    Bind(wxEVT_PAINT,        &FlowChart::OnPaint,           this, wxID_ANY);
 
     std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create());
     if (gc)
@@ -39,13 +60,37 @@ FlowChart::FlowChart(wxWindow* parent)
         gapY_ = wxRound(height);
     }
 
-    steps_.push_back(std::make_shared<InitStep>());
-    steps_.push_back(std::make_shared<CvtStep>());
-    steps_.push_back(std::make_shared<ThreshStep>());
-    steps_.push_back(std::make_shared<EndStep>());
+    SetDropTarget(new DnDText(this));
+}
 
-    SetVirtualSize(wxSize(100, 240));
-    SetScrollRate(6, 6);
+void FlowChart::AppendStep(wxCoord x, wxCoord y, const wxString& stepType)
+{
+    bool needRefresh = true;
+    if (wxT("initstep") == stepType)
+    {
+        steps_.push_back(std::make_shared<InitStep>());
+    }
+    else if (wxT("endstep") == stepType)
+    {
+        steps_.push_back(std::make_shared<EndStep>());
+    }
+    else if (wxT("cvtstep") == stepType)
+    {
+        steps_.push_back(std::make_shared<CvtStep>());
+    }
+    else if (wxT("threshstep") == stepType)
+    {
+        steps_.push_back(std::make_shared<ThreshStep>());
+    }
+    else
+    {
+        needRefresh = false;
+    }
+
+    if (needRefresh)
+    {
+        Refresh(false);
+    }
 }
 
 void FlowChart::OnEnterWindow(wxMouseEvent &e)
@@ -58,6 +103,26 @@ void FlowChart::OnLeaveWindow(wxMouseEvent &e)
 
 void FlowChart::OnLeftMouseDown(wxMouseEvent &e)
 {
+    if (e.LeftIsDown() && e.RightIsDown())
+    {
+        affMat_ = wxAffineMatrix2D();
+        Refresh(false);
+    }
+}
+
+void FlowChart::OnRightMouseDown(wxMouseEvent &e)
+{
+    lastPos_ = e.GetPosition();
+    if (e.LeftIsDown() && e.RightIsDown())
+    {
+        affMat_ = wxAffineMatrix2D();
+        Refresh(false);
+    }
+}
+
+void FlowChart::OnRightMouseUp(wxMouseEvent &e)
+{
+
 }
 
 void FlowChart::OnLeftMouseUp(wxMouseEvent &e)
@@ -66,6 +131,25 @@ void FlowChart::OnLeftMouseUp(wxMouseEvent &e)
 
 void FlowChart::OnMouseMotion(wxMouseEvent &e)
 {
+    if (e.Dragging() && e.RightIsDown())
+    {
+        wxAffineMatrix2D invMat = affMat_;
+        invMat.Invert();
+        const auto deltaPos = invMat.TransformDistance(e.GetPosition() - lastPos_);
+        affMat_.Translate(deltaPos.m_x, deltaPos.m_y);
+        Refresh(false);
+    }
+    lastPos_ = e.GetPosition();
+}
+
+void FlowChart::OnMouseWheel(wxMouseEvent &e)
+{
+    const auto tPt = affMat_.TransformPoint(wxPoint2DDouble(e.GetPosition()));
+    affMat_.Translate(tPt.m_x, tPt.m_y);
+    const double s = e.GetWheelRotation() > 0 ? 1.1 : 0.9;
+    affMat_.Scale(s, s);
+    affMat_.Translate(-tPt.m_x, -tPt.m_y);
+    Refresh(false);
 }
 
 void FlowChart::OnPaint(wxPaintEvent&)
@@ -80,6 +164,7 @@ void FlowChart::OnPaint(wxPaintEvent&)
     dc.DrawRectangle(cRect);
 
     int y = 10;
+    gcdc.SetTransformMatrix(affMat_);
     for (SPStepBase &step : steps_)
     {
         step->SetRect(wxRect((cRect.GetWidth()-120)/2, y, 120, 70));

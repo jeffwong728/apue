@@ -74,7 +74,7 @@ sc::result NoToolIdle::react(const EvToolEnter &e)
     {
         return transit<EdgeTool>();
     }
-    else if (kSpamID_TOOLBOX_PROC_CONVERT)
+    else if (kSpamID_TOOLBOX_PROC_CONVERT == toolId)
     {
         return transit<ColorConvertTool>();
     }
