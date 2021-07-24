@@ -23,12 +23,16 @@ public:
     virtual void Draw(wxGCDC &dc) const;
 
 public:
-    void SetRect(const wxRect &rc) { posRect_ = rc; }
+    void SetRect(const wxRect &rc);
     wxRect GetBoundingBox() const;
 
 private:
+    virtual void DrawInternal(wxGCDC &dc) const;
+
+protected:
     std::string uuid_;
     wxString typeName_;
     wxRect posRect_;
+    wxSize htSize_;
 };
 #endif //SPAM_UI_PROCFLOW_STEP_BASE_H

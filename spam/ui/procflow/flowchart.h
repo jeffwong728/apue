@@ -8,18 +8,36 @@
 #include "stepfwd.h"
 
 class StepBase;
+struct FlowChartState;
+struct FlowChartContext;
 
 class FlowChart : public wxControl
 {
 public:
-    typedef boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex> bs2_dummy_mutex;
-    boost::signals2::signal_type<void(FlowChart *), bs2_dummy_mutex>::type sig_ThumbsMoved;
+    enum
+    {
+        kStateFreeIdle,
+        kStateFreeDraging,
+        kStateGuard
+    };
+
+    enum
+    {
+        kStateContextFree,
+        kStateContextGuard
+    };
 
 public:
     FlowChart(wxWindow* parent);
 
 public:
     void AppendStep(wxCoord x, wxCoord y, const wxString& stepType);
+    void SwitchState(const int newState);
+    void DrawRubberBand(const wxRect &oldRect, const wxRect &newRect);
+
+public:
+    void PointSelect(const wxPoint &pos);
+    void BoxSelect(const wxPoint &minPos, const wxPoint &maxPos);
 
 protected:
     void OnEnterWindow(wxMouseEvent &e);
@@ -45,6 +63,10 @@ private:
     std::vector<SPStepBase> steps_;
     wxAffineMatrix2D affMat_;
     wxPoint lastPos_;
+    FlowChartState *currentState_ = nullptr;
+    std::vector<std::unique_ptr<FlowChartState>> allStates_;
+    std::vector<std::unique_ptr<FlowChartContext>> allContexts_;
+    wxRect rubberBandBox_;
 
     wxDECLARE_NO_COPY_CLASS(FlowChart);
 };
