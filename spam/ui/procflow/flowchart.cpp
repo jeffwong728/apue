@@ -7,6 +7,9 @@
 #include <wx/dnd.h>
 #include <wx/log.h>
 #include <algorithm>
+#include <boost/graph/graph_traits.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/topological_sort.hpp>
 #pragma warning( push )
 #pragma warning( disable : 4819 4003 )
 #include <2geom/2geom.h>
@@ -63,6 +66,12 @@ struct FreeStateContext : public FlowChartContext
         lastPos = e.GetPosition();
     }
 
+    void StartEditing(wxMouseEvent &e)
+    {
+        anchorPos = e.GetPosition();
+        lastPos = e.GetPosition();
+    }
+
     void Draging(wxMouseEvent &e)
     {
         const wxPoint thisPos = e.GetPosition();
@@ -76,6 +85,17 @@ struct FreeStateContext : public FlowChartContext
         lastPos = thisPos;
     }
 
+    void Editing(wxMouseEvent &e)
+    {
+        const wxPoint thisPos = e.GetPosition();
+        if (currSelected)
+        {
+            currSelected->SetSelected();
+        }
+        flowChart->DoEditing(currSelected, anchorPos, lastPos, thisPos);
+        lastPos = thisPos;
+    }
+
     void EndDraging(wxMouseEvent &e)
     {
         const wxPoint thisPos = e.GetPosition();
@@ -83,12 +103,61 @@ struct FreeStateContext : public FlowChartContext
         const wxPoint oldMaxPos(std::max(anchorPos.x, lastPos.x), std::max(anchorPos.y, lastPos.y));
         const wxRect  oldRect(oldMinPos, oldMaxPos);
         flowChart->DrawRubberBand(oldRect, wxRect());
+
+        if (oldRect.GetWidth() < 2 && oldRect.GetHeight() < 2)
+        {
+            if (wxMOD_CONTROL == e.GetModifiers())
+            {
+                flowChart->TogglePointSelect(e.GetPosition());
+            }
+            else
+            {
+                flowChart->ExclusivePointSelect(e.GetPosition());
+            }
+        }
+        else
+        {
+            if (wxMOD_CONTROL == e.GetModifiers())
+            {
+                flowChart->ToggleBoxSelect(oldRect);
+            }
+            else
+            {
+                flowChart->ExclusiveBoxSelect(oldRect);
+            }
+        }
+
         lastPos = wxPoint();
         anchorPos = wxPoint();
+        currSelected.reset();
+    }
+
+    void EndEditing(wxMouseEvent &e)
+    {
+        const wxPoint oldMinPos(std::min(anchorPos.x, lastPos.x), std::min(anchorPos.y, lastPos.y));
+        const wxPoint oldMaxPos(std::max(anchorPos.x, lastPos.x), std::max(anchorPos.y, lastPos.y));
+        const wxRect  oldRect(oldMinPos, oldMaxPos);
+
+        if (oldRect.GetWidth() < 2 && oldRect.GetHeight() < 2)
+        {
+            if (wxMOD_CONTROL == e.GetModifiers())
+            {
+                flowChart->TogglePointSelect(e.GetPosition());
+            }
+            else
+            {
+                flowChart->ExclusivePointSelect(e.GetPosition());
+            }
+        }
+
+        lastPos = wxPoint();
+        anchorPos = wxPoint();
+        currSelected.reset();
     }
 
     wxPoint anchorPos;
     wxPoint lastPos;
+    SPStepBase currSelected;
 };
 
 struct FreeIdleState : public FlowChartState
@@ -97,13 +166,41 @@ struct FreeIdleState : public FlowChartState
     {
     }
 
-    void Enter() wxOVERRIDE { wxLogMessage(wxT("FreeIdleState Enter.")); }
+    void Enter() wxOVERRIDE
+    {
+        context->currSelected.reset();
+        wxLogMessage(wxT("FreeIdleState Enter."));
+    }
+
     void Exit() wxOVERRIDE { wxLogMessage(wxT("FreeIdleState Quit.")); }
 
     void OnLeftMouseDown(wxMouseEvent &e) wxOVERRIDE
     {
-        flowChart->SwitchState(FlowChart::kStateFreeDraging);
-        context->StartDraging(e);
+        context->currSelected.reset();
+        if (wxMOD_CONTROL != e.GetModifiers())
+        {
+            context->currSelected = flowChart->XORPointSelect(e.GetPosition());
+        }
+        else
+        {
+            context->currSelected = flowChart->GetSelect(e.GetPosition());
+        }
+
+        if (context->currSelected)
+        {
+            flowChart->SwitchState(FlowChart::kStateFreeEditing);
+            context->StartEditing(e);
+        }
+        else
+        {
+            flowChart->SwitchState(FlowChart::kStateFreeDraging);
+            context->StartDraging(e);
+        }
+    }
+
+    void OnMouseMove(wxMouseEvent &e)
+    {
+        flowChart->HighlightTest(e.GetPosition());
     }
 
     FreeStateContext *const context;
@@ -125,6 +222,28 @@ struct FreeDragingState : public FlowChartState
     void OnLeftMouseUp(wxMouseEvent &e) wxOVERRIDE
     {
         context->EndDraging(e);
+        flowChart->SwitchState(FlowChart::kStateFreeIdle);
+    }
+
+    FreeStateContext *const context;
+};
+
+struct FreeEditingState : public FlowChartState
+{
+    FreeEditingState(FlowChart *const chartCtrl, FreeStateContext *const ctx) : FlowChartState(chartCtrl), context(ctx)
+    {}
+
+    void Enter() wxOVERRIDE { wxLogMessage(wxT("FreeEditingState Enter.")); }
+    void Exit() wxOVERRIDE { wxLogMessage(wxT("FreeEditingState Quit.")); }
+
+    void OnMouseMove(wxMouseEvent &e) wxOVERRIDE
+    {
+        context->Editing(e);
+    }
+
+    void OnLeftMouseUp(wxMouseEvent &e) wxOVERRIDE
+    {
+        context->EndEditing(e);
         flowChart->SwitchState(FlowChart::kStateFreeIdle);
     }
 
@@ -163,6 +282,7 @@ FlowChart::FlowChart(wxWindow* parent)
     allContexts_[kStateContextFree] = std::make_unique<FreeStateContext>(this);
     allStates_[kStateFreeIdle] = std::make_unique<FreeIdleState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
     allStates_[kStateFreeDraging] = std::make_unique<FreeDragingState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
+    allStates_[kStateFreeEditing] = std::make_unique<FreeEditingState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
     currentState_ = allStates_[kStateFreeIdle].get();
     currentState_->Enter();
 
@@ -259,14 +379,228 @@ void FlowChart::DrawRubberBand(const wxRect &oldRect, const wxRect &newRect)
     }
 }
 
-void FlowChart::PointSelect(const wxPoint &pos)
+SPStepBase FlowChart::GetSelect(const wxPoint &pos)
 {
-
+    SPStepBase newSelected;
+    for (SPStepBase &step : steps_)
+    {
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        if (bbox.Contains(pos))
+        {
+            newSelected = step;
+            break;
+        }
+    }
+    return newSelected;
 }
 
-void FlowChart::BoxSelect(const wxPoint &minPos, const wxPoint &maxPos)
+bool FlowChart::AccumulatePointSelect(const wxPoint &pos)
 {
+    for (SPStepBase &step : steps_)
+    {
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        if (bbox.Contains(pos))
+        {
+            if (!step->IsSelected())
+            {
+                step->SetSelected();
+                const wxRect bbox = step->GetBoundingBox(affMat_);
+                Refresh(false, &bbox);
+            }
 
+            return true;
+        }
+    }
+
+    return false;
+}
+
+SPStepBase FlowChart::XORPointSelect(const wxPoint &pos)
+{
+    SPStepBase newSelected;
+    for (SPStepBase &step : steps_)
+    {
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        if (bbox.Contains(pos))
+        {
+            newSelected = step;
+            break;
+        }
+    }
+
+    if (!newSelected || (newSelected && newSelected->IsSelected()))
+    {
+        return newSelected;
+    }
+
+    for (SPStepBase &step : steps_)
+    {
+        if (step->IsSelected() && step != newSelected)
+        {
+            step->ClearSelected();
+            const wxRect bbox = step->GetBoundingBox(affMat_);
+            Refresh(false, &bbox);
+        }
+    }
+
+    if (newSelected && !newSelected->IsSelected())
+    {
+        newSelected->SetSelected();
+        const wxRect bbox = newSelected->GetBoundingBox(affMat_);
+        Refresh(false, &bbox);
+    }
+
+    return newSelected;
+}
+
+void FlowChart::ExclusivePointSelect(const wxPoint &pos)
+{
+    SPStepBase newSelected;
+    for (SPStepBase &step : steps_)
+    {
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        if (bbox.Contains(pos))
+        {
+            newSelected = step;
+            break;
+        }
+    }
+
+    for (SPStepBase &step : steps_)
+    {
+        if (step->IsSelected() && step != newSelected)
+        {
+            step->ClearSelected();
+            const wxRect bbox = step->GetBoundingBox(affMat_);
+            Refresh(false, &bbox);
+        }
+    }
+
+    if (newSelected && !newSelected->IsSelected())
+    {
+        newSelected->SetSelected();
+        const wxRect bbox = newSelected->GetBoundingBox(affMat_);
+        Refresh(false, &bbox);
+    }
+}
+
+void FlowChart::TogglePointSelect(const wxPoint &pos)
+{
+    for (SPStepBase &step : steps_)
+    {
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        if (bbox.Contains(pos))
+        {
+            step->ToggleSelected();
+            const wxRect bbox = step->GetBoundingBox(affMat_);
+            Refresh(false, &bbox);
+            break;
+        }
+    }
+}
+
+void FlowChart::ExclusiveBoxSelect(const wxRect &rcBox)
+{
+    for (SPStepBase &step : steps_)
+    {
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        const wxRect ibox = rcBox.Intersect(bbox);
+        if (step->IsSelected())
+        {
+            if (ibox.IsEmpty())
+            {
+                step->ClearSelected();
+                Refresh(false, &bbox);
+            }
+        }
+        else
+        {
+            if (!ibox.IsEmpty())
+            {
+                step->SetSelected();
+                Refresh(false, &bbox);
+            }
+        }
+    }
+}
+
+void FlowChart::ToggleBoxSelect(const wxRect &rcBox)
+{
+    for (SPStepBase &step : steps_)
+    {
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        const wxRect ibox = rcBox.Intersect(bbox);
+        if (!ibox.IsEmpty())
+        {
+            step->ToggleSelected();
+            Refresh(false, &bbox);
+        }
+    }
+}
+
+void FlowChart::HighlightTest(const wxPoint &pos)
+{
+    SPStepBase newHighLight;
+    SPStepBase oldHighLight;
+    for (SPStepBase &step : steps_)
+    {
+        if (step->IsHighlight())
+        {
+            oldHighLight = step;
+            break;
+        }
+    }
+
+    for (SPStepBase &step : steps_)
+    {
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        if (bbox.Contains(pos))
+        {
+            newHighLight = step;
+        }
+    }
+
+    if (newHighLight != oldHighLight)
+    {
+        if (oldHighLight)
+        {
+            oldHighLight->ClearHighlight();
+            const wxRect bbox = oldHighLight->GetBoundingBox(affMat_);
+            Refresh(false, &bbox);
+        }
+
+        if (newHighLight)
+        {
+            newHighLight->SetHighlight();
+            const wxRect bbox = newHighLight->GetBoundingBox(affMat_);
+            Refresh(false, &bbox);
+        }
+    }
+}
+
+void FlowChart::DoEditing(SPStepBase &cstep, const wxPoint &apos, const wxPoint &lpos, const wxPoint &cpos)
+{
+    wxAffineMatrix2D invMat = affMat_; invMat.Invert();
+    const wxPoint2DDouble deltaPos = invMat.TransformDistance(cpos - lpos);
+    const wxPoint dPt(wxRound(deltaPos.m_x), wxRound(deltaPos.m_y));
+    if (cstep && !cstep->IsSelected())
+    {
+        const wxRect obbox = cstep->GetBoundingBox(affMat_);
+        cstep->Translate(dPt);
+        const wxRect bbox = cstep->GetBoundingBox(affMat_).Union(obbox);
+        Refresh(false, &bbox);
+    }
+
+    for (SPStepBase &step : steps_)
+    {
+        if (step->IsSelected())
+        {
+            const wxRect obbox = step->GetBoundingBox(affMat_);
+            step->Translate(dPt);
+            const wxRect bbox = step->GetBoundingBox(affMat_).Union(obbox);
+            Refresh(false, &bbox);
+        }
+    }
 }
 
 void FlowChart::OnEnterWindow(wxMouseEvent &e)
@@ -323,12 +657,15 @@ void FlowChart::OnMouseMotion(wxMouseEvent &e)
 
 void FlowChart::OnMouseWheel(wxMouseEvent &e)
 {
-    const auto tPt = affMat_.TransformPoint(wxPoint2DDouble(e.GetPosition()));
-    affMat_.Translate(tPt.m_x, tPt.m_y);
-    const double s = e.GetWheelRotation() > 0 ? 1.1 : 0.9;
-    affMat_.Scale(s, s);
-    affMat_.Translate(-tPt.m_x, -tPt.m_y);
-    Refresh(false);
+    if (wxMOD_CONTROL == e.GetModifiers())
+    {
+        const auto tPt = affMat_.TransformPoint(wxPoint2DDouble(e.GetPosition()));
+        affMat_.Translate(tPt.m_x, tPt.m_y);
+        const double s = e.GetWheelRotation() > 0 ? 1.1 : 0.9;
+        affMat_.Scale(s, s);
+        affMat_.Translate(-tPt.m_x, -tPt.m_y);
+        Refresh(false);
+    }
 }
 
 void FlowChart::OnPaint(wxPaintEvent&)
@@ -362,6 +699,12 @@ void FlowChart::OnPaint(wxPaintEvent&)
 
     wxAffineMatrix2D idenMat;
     gcdc.SetTransformMatrix(idenMat);
+
+    for (SPStepBase &step : steps_)
+    {
+        step->DrawHandles(gcdc, affMat_);
+    }
+
     if (!rubberBandBox_.IsEmpty())
     {
         wxPen ruberPen(*wxLIGHT_GREY, 1, wxSOLID);

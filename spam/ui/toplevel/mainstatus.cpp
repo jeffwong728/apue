@@ -57,9 +57,15 @@ void MainStatus::SetTextStatus(const wxString &text)
 
 void MainStatus::SetBitmapStatus(const StatusIconType iconType, const wxString &text)
 {
-    wxBitmap statusBitmap = m_statbmp->GetBitmap();
     wxRect statusRect;
     GetFieldRect(Field_Text, statusRect);
+
+    if (statusRect.GetWidth() <= 0 || statusRect.GetHeight() <= 0)
+    {
+        return;
+    }
+
+    wxBitmap statusBitmap = m_statbmp->GetBitmap();
     if (!statusBitmap.IsOk() || (statusRect.GetSize() != statusBitmap.GetSize()))
     {
         statusBitmap.Create(statusRect.GetSize());

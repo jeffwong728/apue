@@ -8,6 +8,13 @@ class wxGCDC;
 
 class StepBase
 {
+    enum StepDisplayStatusFlag : uint64_t
+    {
+        kSDSF_SELECTED = 0x1,
+        kSDSF_HIGHLIGHT = 0x2,
+        kSDSF_ALL_FEATURES = 0xFFFFFFFFFFFFFFFF
+    };
+
 protected:
     StepBase(wxString &&typeName);
     StepBase(const wxString &typeName);
@@ -23,8 +30,19 @@ public:
     virtual void Draw(wxGCDC &dc) const;
 
 public:
+    void DrawHandles(wxGCDC &dc, const wxAffineMatrix2D &affMat) const;
     void SetRect(const wxRect &rc);
-    wxRect GetBoundingBox() const;
+    const wxRect GetBoundingBox() const;
+    const wxRect GetBoundingBox(const wxAffineMatrix2D &affMat) const;
+    void SetSelected() { statusFlags_ |= kSDSF_SELECTED; }
+    void ClearSelected() { statusFlags_ &= ~kSDSF_SELECTED; }
+    void ToggleSelected() { statusFlags_ ^= kSDSF_SELECTED; }
+    bool IsSelected() const { return statusFlags_ & kSDSF_SELECTED; }
+    void SetHighlight() { statusFlags_ |= kSDSF_HIGHLIGHT; }
+    void ClearHighlight() { statusFlags_ &= ~kSDSF_HIGHLIGHT; }
+    void ToggleHighlight() { statusFlags_ ^= kSDSF_HIGHLIGHT; }
+    bool IsHighlight() const { return statusFlags_ & kSDSF_HIGHLIGHT; }
+    void Translate(const wxPoint &dxy) { posRect_.Offset(dxy); }
 
 private:
     virtual void DrawInternal(wxGCDC &dc) const;
@@ -34,5 +52,6 @@ protected:
     wxString typeName_;
     wxRect posRect_;
     wxSize htSize_;
+    uint64_t statusFlags_{0};
 };
 #endif //SPAM_UI_PROCFLOW_STEP_BASE_H

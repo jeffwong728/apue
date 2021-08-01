@@ -35,13 +35,37 @@ void StepBase::Draw(wxGCDC &dc) const
     dc.SetFont(*wxNORMAL_FONT);
     wxPoint htLineOffset = wxPoint(0, htSize_.GetHeight() + 3);
 
-    wxPen outLinePen(wxColour(214, 219, 233), 2, wxPENSTYLE_SOLID);
+    wxPen outLinePen(IsHighlight() ? wxColour(0xF9, 0xA6, 0x02) : wxColour(214, 219, 233), 2, wxPENSTYLE_SOLID);
     dc.SetPen(outLinePen);
     dc.DrawLine(posRect_.GetTopLeft() + htLineOffset, posRect_.GetTopRight() + htLineOffset);
     dc.SetBrush(wxNullBrush);
     DrawInternal(dc);
-    dc.SetTextForeground(wxColour(214, 219, 233));
+    dc.SetTextForeground(IsHighlight() ? wxColour(0xF9, 0xA6, 0x02) : wxColour(214, 219, 233));
     dc.DrawText(typeName_, posRect_.GetTopLeft() + wxPoint((posRect_.GetWidth() - htSize_.GetWidth())/2, 2));
+}
+
+void StepBase::DrawHandles(wxGCDC &dc, const wxAffineMatrix2D &affMat) const
+{
+    if (IsSelected())
+    {
+        const wxSize offsetSize(-3, -3);
+        const wxSize handleSize(7, 7);
+        const wxPoint2DDouble minPt = affMat.TransformPoint(posRect_.GetLeftTop());
+        const wxPoint2DDouble maxPt = affMat.TransformPoint(posRect_.GetBottomRight());
+        const wxRect tbbox{ wxRound(minPt.m_x), wxRound(minPt.m_y), wxRound(maxPt.m_x - minPt.m_x), wxRound(maxPt.m_y - minPt.m_y) };
+        wxPen handlePen(wxColour(0xFF, 0x00, 0x00), 1, wxPENSTYLE_DOT);
+
+        dc.SetPen(handlePen);
+        dc.SetBrush(wxNullBrush);
+        dc.DrawRectangle(tbbox.GetTopLeft() + offsetSize, handleSize);
+        dc.DrawRectangle(tbbox.GetTopRight() + offsetSize, handleSize);
+        dc.DrawRectangle(tbbox.GetBottomLeft() + offsetSize, handleSize);
+        dc.DrawRectangle(tbbox.GetBottomRight() + offsetSize, handleSize);
+        dc.DrawRectangle((tbbox.GetTopLeft() + tbbox.GetTopRight()) / 2 + offsetSize, handleSize);
+        dc.DrawRectangle((tbbox.GetTopRight() + tbbox.GetBottomRight()) / 2 + offsetSize, handleSize);
+        dc.DrawRectangle((tbbox.GetBottomLeft() + tbbox.GetBottomRight()) / 2 + offsetSize, handleSize);
+        dc.DrawRectangle((tbbox.GetTopLeft() + tbbox.GetBottomLeft()) / 2 + offsetSize, handleSize);
+    }
 }
 
 void StepBase::DrawInternal(wxGCDC &dc) const
@@ -62,8 +86,17 @@ void StepBase::SetRect(const wxRect &rc)
     }
 }
 
-wxRect StepBase::GetBoundingBox() const
+const wxRect StepBase::GetBoundingBox() const
 {
     const wxRect bbox(posRect_);
-    return bbox.Inflate(2, 2);
+    return bbox.Inflate(3, 3);
 }
+
+const wxRect StepBase::GetBoundingBox(const wxAffineMatrix2D &affMat) const
+{
+    const wxPoint2DDouble minPt = affMat.TransformPoint(posRect_.GetLeftTop());
+    const wxPoint2DDouble maxPt = affMat.TransformPoint(posRect_.GetBottomRight());
+    const wxRect tbbox{ wxRound(minPt.m_x - 5), wxRound(minPt.m_y - 5), wxRound(maxPt.m_x - minPt.m_x + 11), wxRound(maxPt.m_y - minPt.m_y + 11) };
+    return tbbox;
+}
+

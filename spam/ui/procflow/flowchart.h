@@ -18,6 +18,7 @@ public:
     {
         kStateFreeIdle,
         kStateFreeDraging,
+        kStateFreeEditing,
         kStateGuard
     };
 
@@ -36,8 +37,15 @@ public:
     void DrawRubberBand(const wxRect &oldRect, const wxRect &newRect);
 
 public:
-    void PointSelect(const wxPoint &pos);
-    void BoxSelect(const wxPoint &minPos, const wxPoint &maxPos);
+    SPStepBase GetSelect(const wxPoint &pos);
+    bool AccumulatePointSelect(const wxPoint &pos);
+    SPStepBase XORPointSelect(const wxPoint &pos);
+    void ExclusivePointSelect(const wxPoint &pos);
+    void TogglePointSelect(const wxPoint &pos);
+    void ExclusiveBoxSelect(const wxRect &rcBox);
+    void ToggleBoxSelect(const wxRect &rcBox);
+    void HighlightTest(const wxPoint &pos);
+    void DoEditing(SPStepBase &step, const wxPoint &apos, const wxPoint &lpos, const wxPoint &cpos);
 
 protected:
     void OnEnterWindow(wxMouseEvent &e);
