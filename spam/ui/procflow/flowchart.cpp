@@ -379,6 +379,62 @@ void FlowChart::DrawRubberBand(const wxRect &oldRect, const wxRect &newRect)
     }
 }
 
+void FlowChart::AlignLeft()
+{
+    int minLeft = std::numeric_limits<int>::max();
+    for (SPStepBase &step : steps_)
+    {
+        if (step->IsSelected())
+        {
+            const int l = step->GetPositionRect().GetLeft();
+            minLeft = std::min(l, minLeft);
+        }
+    }
+
+    if (minLeft != std::numeric_limits<int>::max())
+    {
+        for (SPStepBase &step : steps_)
+        {
+            if (step->IsSelected())
+            {
+                const wxRect obbox = step->GetBoundingBox(affMat_);
+                const int l = step->GetPositionRect().GetLeft();
+                step->Translate(wxPoint(minLeft - l, 0));
+                const wxRect nbbox = step->GetBoundingBox(affMat_).Union(obbox);
+                Refresh(false, &nbbox);
+            }
+        }
+    }
+}
+
+void FlowChart::AlignVCenter()
+{
+    int minXCenter = std::numeric_limits<int>::max();
+    for (SPStepBase &step : steps_)
+    {
+        if (step->IsSelected())
+        {
+            const wxRect rc = step->GetPositionRect();
+            minXCenter = std::min((rc.GetLeft()+rc.GetRight())/2, minXCenter);
+        }
+    }
+
+    if (minXCenter != std::numeric_limits<int>::max())
+    {
+        for (SPStepBase &step : steps_)
+        {
+            if (step->IsSelected())
+            {
+                const wxRect obbox = step->GetBoundingBox(affMat_);
+                const wxRect rc = step->GetPositionRect();
+                step->Translate(wxPoint(minXCenter - (rc.GetLeft() + rc.GetRight()) / 2, 0));
+                const wxRect nbbox = step->GetBoundingBox(affMat_).Union(obbox);
+                Refresh(false, &nbbox);
+            }
+        }
+    }
+}
+
 SPStepBase FlowChart::GetSelect(const wxPoint &pos)
 {
     SPStepBase newSelected;

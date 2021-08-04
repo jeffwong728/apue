@@ -39,23 +39,30 @@ ImgFlowBox::ImgFlowBox(wxWindow* parent)
     styleSizer->Add(new wxStaticText(this, wxID_ANY, wxT("Category:")), wxSizerFlags().Left().CentreVertical().Border(wxLEFT));
     styleSizer->Add(catChoices, wxSizerFlags(1).Expand().HorzBorder());
 
-    auto toolBar = new wxToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_VERTICAL | wxTB_NODIVIDER);
+    auto chartSizer = new wxStaticBoxSizer(wxHORIZONTAL, this, wxT("Pipeline"));
+    auto toolBar = new wxToolBar(chartSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTB_VERTICAL | wxTB_NODIVIDER);
     toolBar->SetMargins(0, 0);
     toolBar->SetToolPacking(0);
     toolBar->SetToolSeparation(0);
     toolBar->SetToolBitmapSize(wxSize(22, 22));
-    toolBar->AddTool(9000000, wxT("Add"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.add")));
-    toolBar->AddTool(9000001, wxT("Run"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.play")));
-    toolBar->AddTool(9000002, wxT("Align Left"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.left")));
-    toolBar->AddTool(9000003, wxT("Align Top"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.top")));
-    toolBar->AddTool(9000004, wxT("Align Bottom"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.bottom")));
-    toolBar->AddTool(9000005, wxT("Align Right"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.right")));
-    toolBar->AddTool(9000006, wxT("Align Horizontal Center"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.hcenter")));
-    toolBar->AddTool(9000007, wxT("Align Vertical Center"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.vcenter")));
+    toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ADD, wxT("Add"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.add")));
+    toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_RUN, wxT("Run"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.play")));
+    toolBar->AddSeparator();
+    toolBar->AddRadioTool(kSpamID_TOOLBOX_FLOWCHART_POINTER, wxT("Select and Edit Steps"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.pointer.edit")));
+    toolBar->AddRadioTool(kSpamID_TOOLBOX_FLOWCHART_CONNECT, wxT("Connect Steps"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.pointer.connect")));
+    toolBar->AddSeparator();
+    toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ALIGN_LEFT, wxT("Align Left"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.left")));
+    toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ALIGN_TOP, wxT("Align Top"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.top")));
+    toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ALIGN_BOTTOM, wxT("Align Bottom"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.bottom")));
+    toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ALIGN_RIGHT, wxT("Align Right"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.right")));
+    toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ALIGN_HCENTER, wxT("Align Horizontal Center"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.hcenter")));
+    toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ALIGN_VCENTER, wxT("Align Vertical Center"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.vcenter")));
+    toolBar->ToggleTool(kSpamID_TOOLBOX_FLOWCHART_POINTER, true);
+    toolBar->Bind(wxEVT_TOOL, &ImgFlowBox::OnFlowChart, this, kSpamID_TOOLBOX_FLOWCHART_ADD, kSpamID_TOOLBOX_FLOWCHART_ALIGN_VCENTER);
     toolBar->Realize();
 
-    auto chartSizer = new wxStaticBoxSizer(wxHORIZONTAL, this, wxT("Pipeline"));
-    chartSizer->Add(new FlowChart(this), wxSizerFlags(1).Expand());
+    imgProcFlowChart_ = new FlowChart(chartSizer->GetStaticBox());
+    chartSizer->Add(imgProcFlowChart_, wxSizerFlags(1).Expand());
     chartSizer->Add(toolBar, wxSizerFlags(0).Expand());
 
     rootSizer->AddSpacer(5);
@@ -99,4 +106,20 @@ void ImgFlowBox::OnColorChanged(wxColourPickerEvent &e)
 void ImgFlowBox::OnStyleChanged(wxSpinEvent& e)
 {
     TransferDataFromUI();
+}
+
+void ImgFlowBox::OnFlowChart(wxCommandEvent &cmd)
+{
+    switch (cmd.GetId())
+    {
+    case kSpamID_TOOLBOX_FLOWCHART_ADD: break;
+    case kSpamID_TOOLBOX_FLOWCHART_RUN: break;
+    case kSpamID_TOOLBOX_FLOWCHART_ALIGN_LEFT: imgProcFlowChart_->AlignLeft(); break;
+    case kSpamID_TOOLBOX_FLOWCHART_ALIGN_TOP: break;
+    case kSpamID_TOOLBOX_FLOWCHART_ALIGN_BOTTOM: break;
+    case kSpamID_TOOLBOX_FLOWCHART_ALIGN_RIGHT: break;
+    case kSpamID_TOOLBOX_FLOWCHART_ALIGN_HCENTER: imgProcFlowChart_->AlignVCenter(); break;
+    case kSpamID_TOOLBOX_FLOWCHART_ALIGN_VCENTER: break;
+    default: break;
+    }
 }

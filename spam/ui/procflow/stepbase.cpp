@@ -28,6 +28,16 @@ StepBase::StepBase(const wxString &typeName)
     : uuid_(boost::uuids::to_string(boost::uuids::random_generator()()))
     , typeName_(typeName)
 {
+    std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create());
+    if (gc)
+    {
+        wxDouble width{ 0 };
+        wxDouble height{ 0 };
+        gc->SetFont(*wxNORMAL_FONT, *wxCYAN);
+        gc->GetTextExtent(typeName_, &width, &height);
+        htSize_.Set(wxRound(width), wxRound(height));
+        SetRect(wxRect());
+    }
 }
 
 void StepBase::Draw(wxGCDC &dc) const

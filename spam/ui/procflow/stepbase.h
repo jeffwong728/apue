@@ -8,11 +8,22 @@ class wxGCDC;
 
 class StepBase
 {
+public:
     enum StepDisplayStatusFlag : uint64_t
     {
         kSDSF_SELECTED = 0x1,
         kSDSF_HIGHLIGHT = 0x2,
         kSDSF_ALL_FEATURES = 0xFFFFFFFFFFFFFFFF
+    };
+
+    enum StepPortType : int
+    {
+        kSPT_NULL,
+        kSPT_MAT,
+        kSPT_REGION,
+        kSPT_AFF_MAT,
+        kSPT_ANY,
+        KSPT_GUARD
     };
 
 protected:
@@ -43,6 +54,15 @@ public:
     void ToggleHighlight() { statusFlags_ ^= kSDSF_HIGHLIGHT; }
     bool IsHighlight() const { return statusFlags_ & kSDSF_HIGHLIGHT; }
     void Translate(const wxPoint &dxy) { posRect_.Offset(dxy); }
+    const wxRect GetPositionRect() const { return posRect_; }
+
+public:
+    virtual const int GetInPortCount() const = 0;
+    virtual const int GetOutPortCount() const = 0;
+    virtual const int GetInPortDegree(const int portIndex) const = 0;
+    virtual const int GetOutPortDegree(const int portIndex) const = 0;
+    virtual const int GetInPortType(const int portIndex) const = 0;
+    virtual const int GetOutPortType(const int portIndex) const = 0;
 
 private:
     virtual void DrawInternal(wxGCDC &dc) const;

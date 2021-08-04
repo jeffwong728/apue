@@ -1,12 +1,30 @@
+button
+{
+    border-radius: 5px;
+}
+
+button:hover
+{
+    background : #58595b;
+}
+
+toolbar button
+{
+    padding: 2px;
+}
+
+toolbar separator
+{
+    margin: 2px;
+    background: #58595b;
+}
+
 button:checked
 {
-    border-top-color : #00FF00;
-    border-top-width : 2px 
-} 
+    background: #1e79c9;
+}
 
 toolbar button:checked
 {
-    border-top-width : 0px;
-    border-left-color : #00FF00;
-    border-left-width : 2px
+    background : #1e79c9;
 }

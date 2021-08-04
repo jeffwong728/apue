@@ -24,9 +24,9 @@
 
   </defs>
 <g id="node-type-smooth" inkscape:label="#node_smooth" transform="translate(45.01704,-175)">
-  <path d="M -44.41296,176.5635 C -44.94008,180.0159 -43.54193,185.457 -37.54193,185.457 -31.54193,185.457 -29.98307,179.8869 -30.45595,176.4345" id="path3254" inkscape:connector-curvature="0" sodipodi:nodetypes="csc" style="fill:none;stroke:#646464;stroke-width:1.0000002;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0"/>
+  <path d="M -44.41296,176.5635 C -44.94008,180.0159 -43.54193,185.457 -37.54193,185.457 -31.54193,185.457 -29.98307,179.8869 -30.45595,176.4345" id="path3254" inkscape:connector-curvature="0" sodipodi:nodetypes="csc" style="fill:none;stroke:#00FF00;stroke-width:1.0000002;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0"/>
   <rect height="16" id="rect3252" style="color:#000000;fill:none" width="16" x="-45" y="175"/>
-  <rect height="3.970665" id="use5742" style="color:#000000;fill:#6464ff;fill-opacity:0.3921569;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.0000004;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0" transform="matrix(1,0,0,1,0.0140001,-3.0535)" width="3.957493" x="-39.45749" y="186.5"/>
+  <rect height="3.970665" id="use5742" style="color:#000000;fill:#6464ff;fill-opacity:0.3921569;fill-rule:evenodd;stroke:#ff00ff;stroke-width:1.0000004;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:0" transform="matrix(1,0,0,1,0.0140001,-3.0535)" width="3.957493" x="-39.45749" y="186.5"/>
 </g>
 
 </svg>

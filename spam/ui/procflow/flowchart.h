@@ -37,6 +37,10 @@ public:
     void DrawRubberBand(const wxRect &oldRect, const wxRect &newRect);
 
 public:
+    void AlignLeft();
+    void AlignVCenter();
+
+public:
     SPStepBase GetSelect(const wxPoint &pos);
     bool AccumulatePointSelect(const wxPoint &pos);
     SPStepBase XORPointSelect(const wxPoint &pos);
