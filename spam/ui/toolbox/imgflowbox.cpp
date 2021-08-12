@@ -58,7 +58,11 @@ ImgFlowBox::ImgFlowBox(wxWindow* parent)
     toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ALIGN_HCENTER, wxT("Align Horizontal Center"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.hcenter")));
     toolBar->AddTool(kSpamID_TOOLBOX_FLOWCHART_ALIGN_VCENTER, wxT("Align Vertical Center"), Spam::GetBitmap(kICON_PURPOSE_TOOLBOX, std::string("proc.flowchart.align.vcenter")));
     toolBar->ToggleTool(kSpamID_TOOLBOX_FLOWCHART_POINTER, true);
-    toolBar->Bind(wxEVT_TOOL, &ImgFlowBox::OnFlowChart, this, kSpamID_TOOLBOX_FLOWCHART_ADD, kSpamID_TOOLBOX_FLOWCHART_ALIGN_VCENTER);
+    toolBar->Bind(wxEVT_TOOL, &ImgFlowBox::OnFlowChartAdd, this, kSpamID_TOOLBOX_FLOWCHART_ADD);
+    toolBar->Bind(wxEVT_TOOL, &ImgFlowBox::OnFlowChartRun, this, kSpamID_TOOLBOX_FLOWCHART_RUN);
+    toolBar->Bind(wxEVT_TOOL, &ImgFlowBox::OnFlowChartAlign, this, kSpamID_TOOLBOX_FLOWCHART_ALIGN_LEFT, kSpamID_TOOLBOX_FLOWCHART_ALIGN_VCENTER);
+    toolBar->Bind(wxEVT_TOOL, &ImgFlowBox::OnFlowChartMode, this, kSpamID_TOOLBOX_FLOWCHART_POINTER, kSpamID_TOOLBOX_FLOWCHART_CONNECT);
+
     toolBar->Realize();
 
     imgProcFlowChart_ = new FlowChart(chartSizer->GetStaticBox());
@@ -108,12 +112,36 @@ void ImgFlowBox::OnStyleChanged(wxSpinEvent& e)
     TransferDataFromUI();
 }
 
-void ImgFlowBox::OnFlowChart(wxCommandEvent &cmd)
+void ImgFlowBox::OnFlowChartAdd(wxCommandEvent &cmd)
+{
+
+}
+
+void ImgFlowBox::OnFlowChartRun(wxCommandEvent &cmd)
+{
+
+}
+
+void ImgFlowBox::OnFlowChartMode(wxCommandEvent &cmd)
+{
+    imgProcFlowChart_->ClearStatus();
+    switch (cmd.GetId())
+    {
+    case kSpamID_TOOLBOX_FLOWCHART_POINTER: 
+        imgProcFlowChart_->SwitchState(FlowChart::kStateFreeIdle);
+        break;
+    case kSpamID_TOOLBOX_FLOWCHART_CONNECT: 
+        imgProcFlowChart_->SwitchState(FlowChart::kStateConnectIdle);
+        imgProcFlowChart_->SetConnectionMarks();
+        break;
+    default: break;
+    }
+}
+
+void ImgFlowBox::OnFlowChartAlign(wxCommandEvent &cmd)
 {
     switch (cmd.GetId())
     {
-    case kSpamID_TOOLBOX_FLOWCHART_ADD: break;
-    case kSpamID_TOOLBOX_FLOWCHART_RUN: break;
     case kSpamID_TOOLBOX_FLOWCHART_ALIGN_LEFT: imgProcFlowChart_->AlignLeft(); break;
     case kSpamID_TOOLBOX_FLOWCHART_ALIGN_TOP: break;
     case kSpamID_TOOLBOX_FLOWCHART_ALIGN_BOTTOM: break;

@@ -21,6 +21,12 @@ list(APPEND r_libs glib-2.0)
 list(APPEND d_bins glib-2.dll)
 list(APPEND r_bins glib-2.dll)
 
+list(APPEND name_libs epoxy)
+list(APPEND d_libs epoxy)
+list(APPEND r_libs epoxy)
+list(APPEND d_bins epoxy-0.dll)
+list(APPEND r_bins epoxy-0.dll)
+
 list(APPEND name_libs gobject)
 list(APPEND d_libs gobject-2.0)
 list(APPEND r_libs gobject-2.0)

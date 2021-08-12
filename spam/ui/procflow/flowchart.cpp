@@ -250,6 +250,60 @@ struct FreeEditingState : public FlowChartState
     FreeStateContext *const context;
 };
 
+struct ConnectStateContext : public FlowChartContext
+{
+    ConnectStateContext(FlowChart *const chartCtrl) : FlowChartContext(chartCtrl) {}
+    wxPoint anchorPos;
+    wxPoint lastPos;
+    StepBase::Port srcPort;
+};
+
+struct ConnectIdleState : public FlowChartState
+{
+    ConnectIdleState(FlowChart *const chartCtrl, ConnectStateContext *const ctx) : FlowChartState(chartCtrl), context(ctx)
+    {
+    }
+
+    void Enter() wxOVERRIDE
+    {
+        context->srcPort.step.reset();
+        context->srcPort.index = -1;
+    }
+
+    void OnLeftMouseDown(wxMouseEvent &e) wxOVERRIDE
+    {
+        context->srcPort.step.reset();
+        context->srcPort.index = -1;
+    }
+
+    void OnMouseMove(wxMouseEvent &e)
+    {
+        flowChart->PortHighlightTest(e.GetPosition(), false);
+    }
+
+    ConnectStateContext *const context;
+};
+
+struct ConnectConnectingState : public FlowChartState
+{
+    ConnectConnectingState(FlowChart *const chartCtrl, ConnectStateContext *const ctx) : FlowChartState(chartCtrl), context(ctx)
+    {}
+
+    void OnMouseMove(wxMouseEvent &e) wxOVERRIDE
+    {
+    }
+
+    void OnLeftMouseUp(wxMouseEvent &e) wxOVERRIDE
+    {
+    }
+
+    void OnLeftMouseDown(wxMouseEvent &e) wxOVERRIDE
+    {
+    }
+
+    ConnectStateContext *const context;
+};
+
 FlowChart::FlowChart(wxWindow* parent)
 {
     wxWindow::Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_RAISED);
@@ -279,10 +333,13 @@ FlowChart::FlowChart(wxWindow* parent)
 
     allStates_.resize(kStateGuard);
     allContexts_.resize(kStateContextGuard);
-    allContexts_[kStateContextFree] = std::make_unique<FreeStateContext>(this);
-    allStates_[kStateFreeIdle] = std::make_unique<FreeIdleState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
-    allStates_[kStateFreeDraging] = std::make_unique<FreeDragingState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
-    allStates_[kStateFreeEditing] = std::make_unique<FreeEditingState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
+    allContexts_[kStateContextFree]     = std::make_unique<FreeStateContext>(this);
+    allContexts_[kStateContextConnect]  = std::make_unique<ConnectStateContext>(this);
+    allStates_[kStateFreeIdle]      = std::make_unique<FreeIdleState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
+    allStates_[kStateFreeDraging]   = std::make_unique<FreeDragingState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
+    allStates_[kStateFreeEditing]   = std::make_unique<FreeEditingState>(this, dynamic_cast<FreeStateContext*>(allContexts_[kStateContextFree].get()));
+    allStates_[kStateConnectIdle] = std::make_unique<ConnectIdleState>(this, dynamic_cast<ConnectStateContext*>(allContexts_[kStateContextConnect].get()));
+    allStates_[kStateConnectConnecting] = std::make_unique<ConnectConnectingState>(this, dynamic_cast<ConnectStateContext*>(allContexts_[kStateContextConnect].get()));
     currentState_ = allStates_[kStateFreeIdle].get();
     currentState_->Enter();
 
@@ -634,6 +691,101 @@ void FlowChart::HighlightTest(const wxPoint &pos)
     }
 }
 
+void FlowChart::PortHighlightTest(const wxPoint &pos, const bool expectInPort)
+{
+    SPStepBase newHighLight;
+    SPStepBase oldHighLight;
+    int oldPortIndex = -1;
+    bool oldIsInPort = false;
+    int newPortIndex = -1;
+    bool newIsInPort = false;
+
+    for (SPStepBase &step : steps_)
+    {
+        const auto [portIndex, portHighlight, portMatch, inPort] = step->GetPortStatus();
+        if (portHighlight)
+        {
+            oldHighLight = step;
+            oldPortIndex = portIndex;
+            oldIsInPort = inPort;
+            break;
+        }
+    }
+
+    for (SPStepBase &step : steps_)
+    {
+        for (int ii = 0; ii < step->GetInPortCount(); ++ii)
+        {
+            const wxRect bbox = step->GetInPortBoundingBox(ii, affMat_);
+            if (bbox.Contains(pos))
+            {
+                newHighLight = step;
+                newPortIndex = ii;
+                newIsInPort = true;
+                break;
+            }
+        }
+
+        if (newHighLight) break;
+
+        for (int ii = 0; ii < step->GetOutPortCount(); ++ii)
+        {
+            const wxRect bbox = step->GetOutPortBoundingBox(ii, affMat_);
+            if (bbox.Contains(pos))
+            {
+                newHighLight = step;
+                newPortIndex = ii;
+                newIsInPort = false;
+                break;
+            }
+        }
+
+        if (newHighLight) break;
+    }
+
+    if (newHighLight != oldHighLight || newPortIndex != newPortIndex || oldIsInPort != newIsInPort)
+    {
+        if (oldHighLight)
+        {
+            oldHighLight->ClearPortStatus();
+            const wxRect bbox = oldHighLight->GetBoundingBox(affMat_);
+            Refresh(false, &bbox);
+        }
+
+        if (newHighLight)
+        {
+            newHighLight->SetPortStatus(newPortIndex, newIsInPort, expectInPort == newIsInPort);
+            const wxRect bbox = newHighLight->GetBoundingBox(affMat_);
+            Refresh(false, &bbox);
+        }
+    }
+}
+
+void FlowChart::ClearStatus()
+{
+    for (SPStepBase &step : steps_)
+    {
+        if (step->IsSelected() || step->IsHighlight()  || step->IsConnectionMarks())
+        {
+            step->ClearSelected();
+            step->ClearHighlight();
+            step->ClearConnectionMarks();
+            const wxRect bbox = step->GetBoundingBox(affMat_);
+            Refresh(false, &bbox);
+        }
+    }
+}
+
+void FlowChart::SetConnectionMarks()
+{
+    for (SPStepBase &step : steps_)
+    {
+        step->SetConnectionMarks();
+        const wxRect bbox = step->GetBoundingBox(affMat_);
+        Refresh(false, &bbox);
+    }
+}
+
 void FlowChart::DoEditing(SPStepBase &cstep, const wxPoint &apos, const wxPoint &lpos, const wxPoint &cpos)
 {
     wxAffineMatrix2D invMat = affMat_; invMat.Invert();
@@ -759,6 +911,7 @@ void FlowChart::OnPaint(wxPaintEvent&)
     for (SPStepBase &step : steps_)
     {
         step->DrawHandles(gcdc, affMat_);
+        step->DrawConnectionMarks(gcdc, affMat_);
     }
 
     if (!rubberBandBox_.IsEmpty())

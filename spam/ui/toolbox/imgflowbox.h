@@ -32,7 +32,10 @@ public:
 private:
     void OnColorChanged(wxColourPickerEvent &e);
     void OnStyleChanged(wxSpinEvent& e);
-    void OnFlowChart(wxCommandEvent &cmd);
+    void OnFlowChartAdd(wxCommandEvent &cmd);
+    void OnFlowChartRun(wxCommandEvent &cmd);
+    void OnFlowChartAlign(wxCommandEvent &cmd);
+    void OnFlowChartMode(wxCommandEvent &cmd);
 
 private:
     FlowChart *imgProcFlowChart_;

@@ -19,12 +19,15 @@ public:
         kStateFreeIdle,
         kStateFreeDraging,
         kStateFreeEditing,
+        kStateConnectIdle,
+        kStateConnectConnecting,
         kStateGuard
     };
 
     enum
     {
         kStateContextFree,
+        kStateContextConnect,
         kStateContextGuard
     };
 
@@ -49,6 +52,9 @@ public:
     void ExclusiveBoxSelect(const wxRect &rcBox);
     void ToggleBoxSelect(const wxRect &rcBox);
     void HighlightTest(const wxPoint &pos);
+    void PortHighlightTest(const wxPoint &pos, const bool expectInPort);
+    void ClearStatus();
+    void SetConnectionMarks();
     void DoEditing(SPStepBase &step, const wxPoint &apos, const wxPoint &lpos, const wxPoint &cpos);
 
 protected:
