@@ -776,6 +776,11 @@ void RootFrame::OnUpdateUI(wxUpdateUIEvent& e)
     {
         switch (wItem.first)
         {
+        case spamID_VIEW_IMAGE:
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
+            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(stationNotebookName_).IsShown());
+            gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), FALSE);
+            break;
         case spamID_VIEW_PROJECT:
             gtk_check_menu_item_set_inconsistent(GTK_CHECK_MENU_ITEM(wItem.second), TRUE);
             gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(wItem.second), wxAuiMgr_.GetPane(projPanelName_).IsShown());
@@ -1377,6 +1382,16 @@ void RootFrame::view_project_cb(GtkWidget *widget, gpointer user_data)
     frame->wxAuiMgr_.Update();
 }
 
+void RootFrame::view_images_cb(GtkWidget *widget, gpointer user_data)
+{
+    if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    auto &pane = frame->wxAuiMgr_.GetPane(frame->stationNotebookName_);
+    bool v = pane.IsShown();
+    pane.Show(!v);
+    frame->wxAuiMgr_.Update();
+}
+
 void RootFrame::view_entity_cb(GtkWidget *widget, gpointer user_data)
 {
     if (gtk_check_menu_item_get_inconsistent(GTK_CHECK_MENU_ITEM(widget))) return;
@@ -1466,6 +1481,22 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_header_bar_set_title(GTK_HEADER_BAR(header_bar), "Spam");
     gtk_header_bar_set_has_subtitle(GTK_HEADER_BAR(header_bar), FALSE);
 
+    GtkWidget *bbox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_container_set_border_width(GTK_CONTAINER(bbox), 5);
+    gtk_style_context_add_class(gtk_widget_get_style_context(bbox), "linked");
+
+    gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_EXPAND);
+    gtk_box_set_spacing(GTK_BOX(bbox), 0);
+
+    GtkWidget *buttonImg = gtk_radio_button_new_with_label(nullptr, "Image");
+    gtk_toggle_button_set_mode(GTK_TOGGLE_BUTTON(buttonImg), false);
+    gtk_container_add(GTK_CONTAINER(bbox), buttonImg);
+
+    GtkWidget *buttonGra = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(buttonImg), "Graphics");
+    gtk_toggle_button_set_mode(GTK_TOGGLE_BUTTON(buttonGra), false);
+    gtk_container_add(GTK_CONTAINER(bbox), buttonGra);
+    gtk_header_bar_set_custom_title(GTK_HEADER_BAR(header_bar), bbox);
+
     GActionEntry win_entries[] = {
         { "about", activate_about, NULL, NULL, NULL },
         { "main", NULL, "s", "'pizza'", NULL },
@@ -1538,6 +1569,7 @@ void RootFrame::ReplaceTitleBar(void)
     GtkWidget *quitMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
     GtkWidget *viewMi = gtk_menu_item_new_with_label("View");
     GtkWidget *projMi = gtk_check_menu_item_new_with_label("Show Project Browser");
+    GtkWidget *imagMi = gtk_check_menu_item_new_with_label("Show Image Windows");
     GtkWidget *entZMi = gtk_check_menu_item_new_with_label("Show Entity Zone");
     GtkWidget *toolMi = gtk_check_menu_item_new_with_label("Show Toolbox");
     GtkWidget *logWMi = gtk_check_menu_item_new_with_label("Show Log Window");
@@ -1562,6 +1594,7 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), quitMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), projMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), imagMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), entZMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), toolMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(viewMenu), logWMi);
@@ -1609,6 +1642,7 @@ void RootFrame::ReplaceTitleBar(void)
     g_signal_connect(G_OBJECT(saveMi), "activate", G_CALLBACK(file_save_cb), this);
     g_signal_connect(G_OBJECT(saveAsMi), "activate", G_CALLBACK(file_save_as_cb), this);
     g_signal_connect(G_OBJECT(projMi), "toggled", G_CALLBACK(view_project_cb), this);
+    g_signal_connect(G_OBJECT(imagMi), "toggled", G_CALLBACK(view_images_cb), this);
     g_signal_connect(G_OBJECT(entZMi), "toggled", G_CALLBACK(view_entity_cb), this);
     g_signal_connect(G_OBJECT(toolMi), "toggled", G_CALLBACK(view_toolbox_cb), this);
     g_signal_connect(G_OBJECT(logWMi), "toggled", G_CALLBACK(view_log_cb), this);
@@ -1625,6 +1659,7 @@ void RootFrame::ReplaceTitleBar(void)
     widgets_.emplace_back(wxID_REDO, GTK_WIDGET(rdTb));
     widgets_.emplace_back(kSpamID_PY3_SCRIPT_PLAY, GTK_WIDGET(playTb));
     widgets_.emplace_back(spamID_VIEW_PROJECT, projMi);
+    widgets_.emplace_back(spamID_VIEW_IMAGE, imagMi);
     widgets_.emplace_back(spamID_VIEW_LOG, logWMi);
     widgets_.emplace_back(spamID_VIEW_CONSOLE, conWMi);
     widgets_.emplace_back(spamID_VIEW_PYEDITOR, pyEiMi);

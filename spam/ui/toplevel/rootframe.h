@@ -134,6 +134,7 @@ public:
     static void play_cb(GtkWidget *widget, gpointer user_data);
     static void help_about_cb(GtkWidget *widget, gpointer user_data);
     static void view_project_cb(GtkWidget *widget, gpointer user_data);
+    static void view_images_cb(GtkWidget *widget, gpointer user_data);
     static void view_entity_cb(GtkWidget *widget, gpointer user_data);
     static void view_toolbox_cb(GtkWidget *widget, gpointer user_data);
     static void view_log_cb(GtkWidget *widget, gpointer user_data);
