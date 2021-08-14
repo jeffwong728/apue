@@ -70,6 +70,17 @@ RootFrame::RootFrame()
     , selFilter_(std::make_unique<SelectionFilter>())
     , cavDirtRects_(std::make_unique<std::map<std::string, Geom::OptRect>>())
 {
+    imagePanesVisibilities_[stationNotebookName_] = false;
+    imagePanesVisibilities_[projPanelName_] = false;
+    imagePanesVisibilities_[imagesZonePanelName_] = false;
+    imagePanesVisibilities_[toolBoxBarName_] = false;
+    imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_PROBE]] = false;
+    imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_GEOM]] = false;
+    imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_PROC]] = false;
+    imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_MATCH]] = false;
+    imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_STYLE]] = false;
+    imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_IMGFLOW]] = false;
+
     SetGTKGlobalStyle();
     ReplaceTitleBar();
 #ifdef _MSC_VER
@@ -453,6 +464,29 @@ void RootFrame::SetImage(const int pageIndex, const cv::Mat &image)
             }
         }
     }
+}
+
+void RootFrame::SwitchMission(const bool toImage)
+{
+    if (toImage)
+    {
+        for (auto &paneItem : imagePanesVisibilities_)
+        {
+            auto &pane = wxAuiMgr_.GetPane(paneItem.first);
+            pane.Show(paneItem.second);
+        }
+    }
+    else
+    {
+        for (auto &paneItem : imagePanesVisibilities_)
+        {
+            auto &pane = wxAuiMgr_.GetPane(paneItem.first);
+            paneItem.second = pane.IsShown();
+            pane.Show(false);
+        }
+    }
+
+    wxAuiMgr_.Update();
 }
 
 void RootFrame::OnExit(wxCommandEvent& e)
@@ -1442,6 +1476,32 @@ void RootFrame::view_pyeditor_cb(GtkWidget *widget, gpointer user_data)
     frame->wxAuiMgr_.Update();
 }
 
+void RootFrame::mission_image_cb(GtkRadioButton* self, gpointer user_data)
+{
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(self)))
+    {
+        RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+        frame->SwitchMission(true);
+    }
+    else
+    {
+        RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+        frame->SwitchMission(false);
+    }
+}
+
+void RootFrame::mission_graphics_cb(GtkRadioButton* self, gpointer user_data)
+{
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(self)))
+    {
+        wxLogMessage(wxT("Graphics Mission Enter."));
+    }
+    else
+    {
+        wxLogMessage(wxT("Graphics Mission Exit."));
+    }
+}
+
 void RootFrame::preferences_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 {
     RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
@@ -1649,6 +1709,8 @@ void RootFrame::ReplaceTitleBar(void)
     g_signal_connect(G_OBJECT(conWMi), "toggled", G_CALLBACK(view_console_cb), this);
     g_signal_connect(G_OBJECT(pyEiMi), "toggled", G_CALLBACK(view_pyeditor_cb), this);
     g_signal_connect(G_OBJECT(abouMi), "activate", G_CALLBACK(help_about_cb), this);
+    g_signal_connect(G_OBJECT(buttonImg), "toggled", G_CALLBACK(mission_image_cb), this);
+    g_signal_connect(G_OBJECT(buttonGra), "toggled", G_CALLBACK(mission_graphics_cb), this);
 
     g_signal_connect(G_OBJECT(udTb), "clicked", G_CALLBACK(undo_cb), this);
     g_signal_connect(G_OBJECT(rdTb), "clicked", G_CALLBACK(redo_cb), this);

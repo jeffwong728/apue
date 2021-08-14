@@ -74,6 +74,7 @@ public:
     void SetStatusText(const wxString &text, int number = 0) wxOVERRIDE;
     void SetBitmapStatus(const StatusIconType iconType, const wxString &text);
     void SetImage(const int pageIndex, const cv::Mat &image);
+    void SwitchMission(const bool toImage);
 
 private:
     void OnHello(wxCommandEvent& e);
@@ -140,6 +141,8 @@ public:
     static void view_log_cb(GtkWidget *widget, gpointer user_data);
     static void view_console_cb(GtkWidget *widget, gpointer user_data);
     static void view_pyeditor_cb(GtkWidget *widget, gpointer user_data);
+    static void mission_image_cb(GtkRadioButton* self, gpointer user_data);
+    static void mission_graphics_cb(GtkRadioButton* self, gpointer user_data);
     static void preferences_cb(GSimpleAction *action, GVariant *parameter, gpointer user_data);
 
 private:
@@ -178,6 +181,8 @@ private:
     std::unique_ptr<Spamer> spamer_;
     std::unique_ptr<SelectionFilter> selFilter_;
     std::unique_ptr<std::map<std::string, Geom::OptRect>> cavDirtRects_;
+    std::map< wxString, bool> imagePanesVisibilities_;
+    std::map< wxString, bool> graphicsPanesVisibilities_;
 
 private:
     std::vector<std::pair<int, GtkWidget *>> widgets_;
