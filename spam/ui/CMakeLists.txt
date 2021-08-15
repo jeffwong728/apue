@@ -44,6 +44,7 @@ set(ui_core_SRCS
   toplevel/maintoolpane.cpp
   toplevel/projpanel.cpp
   toplevel/rootframe.cpp
+  toplevel/glpanel.cpp
   toolbox/stylebox.cpp
   toolbox/toolbox.cpp
   toolbox/probebox.cpp
@@ -132,6 +133,7 @@ set(ui_core_HEADERS
   toplevel/maintoolpane.h
   toplevel/projpanel.h
   toplevel/rootframe.h
+  toplevel/glpanel.h
   toolbox/stylebox.h
   toolbox/toolbox.h
   toolbox/probebox.h
@@ -212,6 +214,7 @@ IF (WIN32 AND MSVC)
   list(APPEND libs VCPKG::glib)
   list(APPEND libs VCPKG::gmodule)
   list(APPEND libs VCPKG::exif)
+  list(APPEND libs VCPKG::epoxy)
   list(APPEND libs TBB::tbb TBB::tbbmalloc)
   list(APPEND libs hdf5::hdf5_cpp-shared)
   list(APPEND libs hdf5::hdf5_hl_cpp-shared)

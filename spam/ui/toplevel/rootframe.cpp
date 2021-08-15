@@ -3,6 +3,7 @@
 #include "rootframe.h"
 #include "projpanel.h"
 #include "logpanel.h"
+#include "glpanel.h"
 #include "consolepanel.h"
 #include "pyeditor.h"
 #include "preferencesdlg.h"
@@ -60,6 +61,7 @@ RootFrame::RootFrame()
     , stationNotebookName_(wxT("station"))
     , projPanelName_(wxT("proj"))
     , logPanelName_(wxT("logPanel"))
+    , glPanelName_(wxT("glPanel"))
     , consolePanelName_(wxT("consolePanel"))
     , pyEditorName_(wxT("pyEditor"))
     , imagesZonePanelName_(wxT("imagesZone"))
@@ -80,6 +82,7 @@ RootFrame::RootFrame()
     imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_MATCH]] = false;
     imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_STYLE]] = false;
     imagePanesVisibilities_[toolBoxLabels[kSpam_TOOLBOX_IMGFLOW]] = false;
+    graphicsPanesVisibilities_[glPanelName_] = false;
 
     SetGTKGlobalStyle();
     ReplaceTitleBar();
@@ -206,6 +209,7 @@ void RootFrame::CreateAuiPanes()
     wxAuiMgr_.AddPane(new LogPanel(this), wxAuiPaneInfo().Name(logPanelName_).Left().Bottom().Caption("Log"));
     wxAuiMgr_.AddPane(new ConsolePanel(this), wxAuiPaneInfo().Name(consolePanelName_).Right().Bottom().Caption("Console"));
     wxAuiMgr_.AddPane(new ThumbnailPanel(this), wxAuiPaneInfo().Name(imagesZonePanelName_).Bottom().Bottom().Caption("Images Zone"));
+    wxAuiMgr_.AddPane(new GLPanel(this), wxAuiPaneInfo().Name(glPanelName_).Center().PaneBorder(false).CloseButton(false).CaptionVisible(false).Show(false));
 
     auto infoBox  = new ProbeBox(this);
     auto geomBox  = new GeomBox(this);
@@ -475,6 +479,12 @@ void RootFrame::SwitchMission(const bool toImage)
             auto &pane = wxAuiMgr_.GetPane(paneItem.first);
             pane.Show(paneItem.second);
         }
+
+        for (auto &paneItem : graphicsPanesVisibilities_)
+        {
+            auto &pane = wxAuiMgr_.GetPane(paneItem.first);
+            pane.Show(false);
+        }
     }
     else
     {
@@ -483,6 +493,12 @@ void RootFrame::SwitchMission(const bool toImage)
             auto &pane = wxAuiMgr_.GetPane(paneItem.first);
             paneItem.second = pane.IsShown();
             pane.Show(false);
+        }
+
+        for (auto &paneItem : graphicsPanesVisibilities_)
+        {
+            auto &pane = wxAuiMgr_.GetPane(paneItem.first);
+            pane.Show(true);
         }
     }
 

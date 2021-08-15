@@ -170,6 +170,7 @@ private:
     const wxString projPanelName_;
     const wxString pyEditorName_;
     const wxString logPanelName_;
+    const wxString glPanelName_;
     const wxString consolePanelName_;
     const wxString imagesZonePanelName_;
     const wxString toolBoxBarName_;
