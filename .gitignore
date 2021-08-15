@@ -22,3 +22,4 @@ config
 __pycache__
 reports
 /test/data
+/3rdparty/opencv_contrib

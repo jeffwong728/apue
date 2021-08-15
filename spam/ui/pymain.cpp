@@ -108,11 +108,11 @@ std::pair<std::string, bool> PyRunCommand(const std::string &strCmd)
         pybind11::object mainNamespace = mainModule.attr("__dict__");
         PyClearOutput();
         pybind11::object resultObj = pybind11::eval<pybind11::eval_single_statement>(strCmd.c_str(), mainNamespace);
-        const auto resultTypeStr = resultObj.get_type().str().cast<std::string>();
-        const auto noneTypeStr = pybind11::none().get_type().str().cast<std::string>();
+        const auto resultTypeStr = pybind11::str(resultObj.get_type()).cast<std::string>();
+        const auto noneTypeStr = pybind11::str(pybind11::none().get_type()).cast<std::string>();
         if (resultTypeStr != noneTypeStr)
         {
-            return std::make_pair(resultObj.str(), true);
+            return std::make_pair(pybind11::str(resultObj).cast<std::string>(), true);
         }
         else
         {
@@ -133,11 +133,11 @@ std::pair<std::string, bool> PyRunStrings(const std::string &strCmd)
         pybind11::object mainNamespace = mainModule.attr("__dict__");
         PyClearOutput();
         pybind11::object resultObj = pybind11::eval<pybind11::eval_statements>(strCmd.c_str(), mainNamespace);
-        const auto resultTypeStr = resultObj.get_type().str().cast<std::string>();
-        const auto noneTypeStr = pybind11::none().get_type().str().cast<std::string>();
+        const auto resultTypeStr = pybind11::str(resultObj.get_type()).cast<std::string>();
+        const auto noneTypeStr = pybind11::str(pybind11::none().get_type()).cast<std::string>();
         if (resultTypeStr != noneTypeStr)
         {
-            return std::make_pair(resultObj.str(), true);
+            return std::make_pair(pybind11::str(resultObj).cast<std::string>(), true);
         }
         else
         {

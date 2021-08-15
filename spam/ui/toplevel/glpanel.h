@@ -16,7 +16,7 @@ public:
 
 private:
     void OnSize(wxSizeEvent &e);
-    void GLPanel::OnPaint(wxPaintEvent& e);
+    void OnPaint(wxPaintEvent& e);
     void OnClear(wxCommandEvent &cmd);
     void OnSave(wxCommandEvent &cmd);
     void OnContextMenu(wxContextMenuEvent &evt);

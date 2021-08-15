@@ -226,6 +226,7 @@ ELSE()
   list(APPEND libs PkgConfig::CAIROMM)
   list(APPEND libs PkgConfig::GLIBMM)
   list(APPEND libs PkgConfig::SIGCPP)
+  list(APPEND libs PkgConfig::EPOXY)
 ENDIF()
 
 list(APPEND libs opencv_core)
