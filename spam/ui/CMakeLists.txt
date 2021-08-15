@@ -19,6 +19,7 @@ set(ui_core_SRCS
   misc/thumbnailctrl.cpp
   misc/spamutility.cpp
   misc/switchbtn.cpp
+  misc/gtkglareawidget.cpp
   projs/drawstyle.cpp
   projs/modelnode.cpp
   projs/nodefactory.cpp
@@ -107,6 +108,7 @@ set(ui_core_HEADERS
   misc/thumbnailctrl.h
   misc/spamutility.h
   misc/switchbtn.h
+  misc/gtkglareawidget.h
   projs/drawstyle.h
   projs/modelfwd.h
   projs/modelnode.h

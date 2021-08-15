@@ -7,6 +7,7 @@
 #include <ui/cmndef.h>
 #include <stack>
 #include <list>
+class wxGLAreaWidget;
 
 class GLPanel : public wxPanel
 {
@@ -16,12 +17,12 @@ public:
 
 private:
     void OnSize(wxSizeEvent &e);
-    void OnPaint(wxPaintEvent& e);
     void OnClear(wxCommandEvent &cmd);
     void OnSave(wxCommandEvent &cmd);
     void OnContextMenu(wxContextMenuEvent &evt);
+    void OnXYZAnglesChanged(wxCommandEvent& evt);
 
 private:
-    GtkWidget *box_;
+    wxGLAreaWidget *glCtrl_;
 };
 #endif //SPAM_UI_TOP_LEVEL_GL_PANEL_H

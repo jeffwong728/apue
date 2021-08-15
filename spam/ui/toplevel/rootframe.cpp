@@ -480,6 +480,8 @@ void RootFrame::SwitchMission(const bool toImage)
             pane.Show(paneItem.second);
         }
 
+        wxAuiMgr_.GetPane(stationNotebookName_).Show(true);
+
         for (auto &paneItem : graphicsPanesVisibilities_)
         {
             auto &pane = wxAuiMgr_.GetPane(paneItem.first);
