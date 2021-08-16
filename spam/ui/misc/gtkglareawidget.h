@@ -47,12 +47,22 @@ public:
     void GTKEnableEvents();
     void MoveWindow(int x, int y, int width, int height) { DoMoveWindow(x, y, width, height); }
 
+public:
+    void OnSize(wxSizeEvent &e);
+
 protected:
     virtual void DoApplyWidgetStyle(GtkRcStyle *style) wxOVERRIDE;
     virtual wxSize DoGetBestSize() const wxOVERRIDE;
 
 private:
+    GLuint LoadTexture();
+    void StartOrthogonal();
+    void EndOrthogonal();
+    void DrawBackground();
+
+private:
     static void init_buffers(GLuint *vao_out, GLuint *buffer_out);
+    static void init_bk_buffers(GLuint *vao_out, GLuint *buffer_out);
     static GLuint create_shader(int type, const char *src);
     static void init_shaders(const char *vertex_shader_code, const char *fragment_shader_code, GLuint *program_out, GLuint *mvp_out);
     static void compute_mvp(float *res, float  phi, float  theta, float  psi);
@@ -68,6 +78,9 @@ private:
     GLuint position_buffer = 0;
     GLuint program = 0;
     GLuint mvp_location = 0;
+    GLuint bk_texture = 0;
+    GLuint bk_position_buffer = 0;
+    GLuint bk_program = 0;
     float rotation_angles[N_AXIS] = { 0.0 };
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);

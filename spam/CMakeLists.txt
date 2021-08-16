@@ -19,6 +19,7 @@ ELSE()
 ENDIF()
 set(2Geom_DIR "$ENV{SPAM_ROOT_DIR}/install/lib2geom/lib/cmake/2Geom")
 
+find_package(OpenGL REQUIRED)
 find_package(2Geom REQUIRED)
 find_package(ICU REQUIRED i18n data io uc)
 find_package(Python3 REQUIRED COMPONENTS Development Interpreter)

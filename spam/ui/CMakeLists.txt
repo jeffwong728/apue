@@ -237,6 +237,7 @@ list(APPEND libs opencv_mvlab)
 list(APPEND libs Boost::filesystem)
 list(APPEND libs Boost::thread)
 list(APPEND libs 2Geom::2geom)
+list(APPEND libs OpenGL::GLU)
 
 target_link_libraries(ui_core PUBLIC ${libs})
 target_link_libraries(ui_core PRIVATE pybind11::embed)

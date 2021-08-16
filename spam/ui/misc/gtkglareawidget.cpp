@@ -1,9 +1,13 @@
 #include "wx/wxprec.h"
+#include <wx/wx.h>
+#include <wx/log.h>
 #include "gtkglareawidget.h"
 #include "wx/gtk/private.h"
 #include "wx/gtk/private/eventsdisabler.h"
 #include "wx/gtk/private/list.h"
+#include <opencv2/opencv.hpp>
 #include <epoxy/gl.h>
+#include <GL/glu.h>
 
 extern "C" {
 static void gtk_switchbutton_clicked_callback(GtkWidget *WXUNUSED(widget), GParamSpec *WXUNUSED(pspec), wxGLAreaWidget *cb)
@@ -60,6 +64,32 @@ static const char *fragment_shader_code_legacy =
 "  gl_FragColor = mix(vec4(1.0f, 0.85f, 0.35f, 1.0f), vec4(0.2f, 0.2, 0.2f, 1.0f), lerpVal);\n" \
 "}";
 
+static const char *bk_vs =
+"#version 330 core\n" \
+"layout(location = 0) in vec3 aPos;\n" \
+"layout(location = 1) in vec2 aTexCoord;\n" \
+"\n" \
+"out vec2 TexCoord;\n" \
+"\n" \
+"void main()\n" \
+"{\n" \
+"    gl_Position = vec4(aPos, 1.0);\n" \
+"    TexCoord = vec2(aTexCoord.x, aTexCoord.y);\n" \
+"}";
+
+static const char *bk_fs =
+"#version 330 core\n" \
+"out vec4 FragColor;\n" \
+"\n" \
+"in vec2 TexCoord;\n" \
+"\n" \
+"// texture sampler\n" \
+"uniform sampler2D texture1;\n" \
+"\n" \
+"void main()\n" \
+"{\n" \
+"    FragColor = texture(texture1, TexCoord);\n" \
+"}";
 
 wxIMPLEMENT_DYNAMIC_CLASS(wxGLAreaWidget, wxControl);
 
@@ -86,6 +116,8 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     m_parent->DoAddChild(this);
 
     PostCreation(size);
+
+    Bind(wxEVT_SIZE, &wxGLAreaWidget::OnSize, this, wxID_ANY);
 
     return true;
 }
@@ -116,6 +148,13 @@ bool wxGLAreaWidget::GetValue() const
     return gtk_switch_get_active(GTK_SWITCH(m_widget)) != 0;
 }
 
+void wxGLAreaWidget::OnSize(wxSizeEvent &e)
+{
+    const int w = e.GetSize().GetWidth();
+    const int h = e.GetSize().GetHeight();
+    glViewport(0, 0, w, h);
+}
+
 void wxGLAreaWidget::DoApplyWidgetStyle(GtkRcStyle *style)
 {
     GTKApplyStyle(m_widget, style);
@@ -144,7 +183,69 @@ void wxGLAreaWidget::DoApplyWidgetStyle(GtkRcStyle *style)
 
 wxSize wxGLAreaWidget::DoGetBestSize() const
 {
-    return wxSize(640, 480);
+    return wxSize(64, 48);
+}
+
+GLuint wxGLAreaWidget::LoadTexture()
+{
+    cv::Mat srcMat = cv::imread(cv::String("D:\\codes\\GLBackground.png"), cv::IMREAD_UNCHANGED), bkImg;
+    cv::cvtColor(srcMat, bkImg, cv::COLOR_BGR2RGB);
+
+    glGenTextures(1, &bk_texture);
+    glBindTexture(GL_TEXTURE_2D, bk_texture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    //even better quality, but this will do for now.
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    //to the edge of our shape. 
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    //Generate the texture
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bkImg.cols, bkImg.rows, 0, GL_RGB, GL_UNSIGNED_BYTE, bkImg.data);
+    return bk_texture; //return whether it was successful
+}
+
+void wxGLAreaWidget::StartOrthogonal()
+{
+    GtkAllocation rcAlloc;
+    gtk_widget_get_allocation(m_widget, &rcAlloc);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(-rcAlloc.width / 2, rcAlloc.width / 2, -rcAlloc.height / 2, rcAlloc.height / 2);
+    glMatrixMode(GL_MODELVIEW);
+}
+
+void wxGLAreaWidget::EndOrthogonal()
+{
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
+
+void wxGLAreaWidget::DrawBackground()
+{
+    glLoadIdentity();
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, bk_texture);
+    glUseProgram(bk_program);
+    glBindVertexArray(bk_position_buffer);
+
+    StartOrthogonal();
+
+    // texture width/height
+    glPushMatrix();
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glPopMatrix();
+
+    EndOrthogonal();
+    gluLookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    glUseProgram(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void wxGLAreaWidget::init_buffers(GLuint *vao_out, GLuint *buffer_out)
@@ -161,13 +262,62 @@ void wxGLAreaWidget::init_buffers(GLuint *vao_out, GLuint *buffer_out)
 
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 
     if (vao_out != NULL)
         *vao_out = vao;
 
     if (buffer_out != NULL)
         *buffer_out = buffer;
+}
+
+void wxGLAreaWidget::init_bk_buffers(GLuint *vao_out, GLuint *buffer_out)
+{
+    float vertices[] = {
+        // positions          // texture coords
+         1.0f,  1.0f, 0.0f,   1.0f, 1.0f, // top right
+         1.0f, -1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, // bottom left
+        -1.0f,  1.0f, 0.0f,   0.0f, 1.0f  // top left 
+    };
+
+    unsigned int indices[] = {
+        0, 1, 3, // first triangle
+        1, 2, 3  // second triangle
+    };
+
+    GLuint VBO, VAO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // texture coord attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    if (vao_out != NULL)
+        *vao_out = VAO;
+
+    if (buffer_out != NULL)
+        *buffer_out = VBO;
 }
 
 GLuint wxGLAreaWidget::create_shader(int type, const char *src)
@@ -192,7 +342,7 @@ GLuint wxGLAreaWidget::create_shader(int type, const char *src)
 
         g_warning("Compile failure in %s shader:\n%s",
             type == GL_VERTEX_SHADER ? "vertex" : "fragment",
-            buffer);
+            buffer.data());
 
         glDeleteShader(shader);
 
@@ -312,13 +462,9 @@ void wxGLAreaWidget::draw_triangle(wxGLAreaWidget *glArea)
     glUseProgram(glArea->program);
     glUniformMatrix4fv(glArea->mvp_location, 1, GL_FALSE, &mvp[0]);
 
-    glBindBuffer(GL_ARRAY_BUFFER, glArea->position_buffer);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
-
+    glBindVertexArray(glArea->position_buffer);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    glDisableVertexAttribArray(0);
     glUseProgram(0);
 }
 
@@ -354,7 +500,11 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
     init_buffers(&glArea->position_buffer, NULL);
+    init_bk_buffers(&glArea->bk_position_buffer, NULL);
     init_shaders(vertex, fragment, &glArea->program, &glArea->mvp_location);
+    init_shaders(bk_vs, bk_fs, &glArea->bk_program, NULL);
+
+    glArea->bk_texture = glArea->LoadTexture();
 }
 
 void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
@@ -371,11 +521,18 @@ void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
 
 gboolean wxGLAreaWidget::render_cb(GtkGLArea *area, GdkGLContext *context, gpointer user_data)
 {
-    glClearColor(0.5, 0.5, 0.5, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
+    wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
+    if (glArea->bk_texture)
+    {
+        glArea->DrawBackground();
+    }
+    else
+    {
+        glClearColor(0.5, 0.5, 0.5, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
 
     draw_triangle(reinterpret_cast<wxGLAreaWidget *>(user_data));
-
     glFlush();
 
     return TRUE;
