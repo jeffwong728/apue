@@ -13,20 +13,6 @@ GLPanel::GLPanel(wxWindow* parent)
     glCtrl_ = new wxGLAreaWidget(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
     sizerRoot->Add(glCtrl_, wxSizerFlags(1).Expand());
 
-    auto styleSizer = new wxFlexGridSizer(2, 2, 2);
-    styleSizer->AddGrowableCol(1, 1);
-    styleSizer->SetFlexibleDirection(wxHORIZONTAL);
-    styleSizer->Add(new wxStaticText(this, wxID_ANY, wxT("X axis:")), wxSizerFlags().CentreVertical().Border(wxLEFT));
-    styleSizer->Add(new wxSlider(this, kSpamID_GL_X_AXIS_ANGLE_SLIDER, 0, 0, 360, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL), wxSizerFlags(1).Expand());
-    styleSizer->Add(new wxStaticText(this, wxID_ANY, wxT("Y axis:")), wxSizerFlags().CentreVertical().Border(wxLEFT));
-    styleSizer->Add(new wxSlider(this, kSpamID_GL_Y_AXIS_ANGLE_SLIDER, 0, 0, 360, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL), wxSizerFlags(1).Expand());
-    styleSizer->Add(new wxStaticText(this, wxID_ANY, wxT("Z axis:")), wxSizerFlags().CentreVertical().Border(wxLEFT));
-    styleSizer->Add(new wxSlider(this, kSpamID_GL_Z_AXIS_ANGLE_SLIDER, 0, 0, 360, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL), wxSizerFlags(1).Expand());
-    sizerRoot->Add(styleSizer, wxSizerFlags().Expand());
-
-    Bind(wxEVT_SIZE, &GLPanel::OnSize, this, wxID_ANY);
-    Bind(wxEVT_SLIDER, &GLPanel::OnXYZAnglesChanged, this, kSpamID_GL_X_AXIS_ANGLE_SLIDER, kSpamID_GL_Z_AXIS_ANGLE_SLIDER);
-
     // Set sizer for the panel
     SetSizer(sizerRoot);
     GetSizer()->SetSizeHints(this);
@@ -35,11 +21,6 @@ GLPanel::GLPanel(wxWindow* parent)
 
 GLPanel::~GLPanel()
 {
-}
-
-void GLPanel::OnSize(wxSizeEvent &e)
-{
-    e.Skip();
 }
 
 void GLPanel::OnClear(wxCommandEvent &cmd)

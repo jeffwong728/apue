@@ -8,10 +8,25 @@
 #include <opencv2/opencv.hpp>
 #include <epoxy/gl.h>
 #include <GL/glu.h>
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
+
+glm::mat4 camera(float Translate, glm::vec2 const& Rotate)
+{
+    glm::mat4 Projection = glm::perspective(glm::pi<float>() * 0.25f, 4.0f / 3.0f, 0.1f, 100.f);
+    glm::mat4 View = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -Translate));
+    View = glm::rotate(View, Rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
+    View = glm::rotate(View, Rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+    return Projection * View * Model;
+}
 
 extern "C" {
 static void gtk_switchbutton_clicked_callback(GtkWidget *WXUNUSED(widget), GParamSpec *WXUNUSED(pspec), wxGLAreaWidget *cb)
 {
+    const glm::mat4 m = camera(1.f, glm::vec2(1.f, 0.5f));
+    std::cout << "matrix diagonal: " << m[0][0] << ", "
+        << m[1][1] << ", " << m[2][2] << ", " << m[3][3] << "\n";
 }
 }
 
@@ -53,7 +68,7 @@ static const char *fragment_shader_code_330 =
 "out vec4 outputColor;\n" \
 "void main() {\n" \
 "  float lerpVal = gl_FragCoord.y / 400.0f;\n" \
-"  outputColor = mix(vec4(1.0f, 0.85f, 0.35f, 1.0f), vec4(0.2f, 0.2f, 0.2f, 1.0f), lerpVal);\n" \
+"  outputColor = vec4(1.0f, 0.85f, 0.35f, 1.0f);\n" \
 "}";
 
 static const char *fragment_shader_code_legacy =
@@ -117,7 +132,14 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
 
     PostCreation(size);
 
-    Bind(wxEVT_SIZE, &wxGLAreaWidget::OnSize, this, wxID_ANY);
+    Bind(wxEVT_SIZE,        &wxGLAreaWidget::OnSize,            this, wxID_ANY);
+    Bind(wxEVT_MOTION,      &wxGLAreaWidget::OnMouseMotion,     this, wxID_ANY);
+    Bind(wxEVT_LEFT_DCLICK, &wxGLAreaWidget::OnMiddleUp,        this, wxID_ANY);
+    Bind(wxEVT_MIDDLE_DOWN, &wxGLAreaWidget::OnMiddleDown,      this, wxID_ANY);
+    Bind(wxEVT_LEFT_DOWN,   &wxGLAreaWidget::OnLeftMouseDown,   this, wxID_ANY);
+    Bind(wxEVT_LEFT_UP,     &wxGLAreaWidget::OnLeftMouseUp,     this, wxID_ANY);
+    Bind(wxEVT_RIGHT_DOWN,  &wxGLAreaWidget::OnRightMouseDown,  this, wxID_ANY);
+    Bind(wxEVT_RIGHT_UP,    &wxGLAreaWidget::OnRightMouseUp,    this, wxID_ANY);
 
     return true;
 }
@@ -153,6 +175,80 @@ void wxGLAreaWidget::OnSize(wxSizeEvent &e)
     const int w = e.GetSize().GetWidth();
     const int h = e.GetSize().GetHeight();
     glViewport(0, 0, w, h);
+}
+
+void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
+{
+    if (e.LeftIsDown() && e.RightIsDown())
+    {
+        rotation_angles[X_AXIS] = 0.f;
+        rotation_angles[Y_AXIS] = 0.f;
+        rotation_angles[Z_AXIS] = 0.f;
+        Refresh(false);
+    }
+}
+
+void wxGLAreaWidget::OnLeftMouseUp(wxMouseEvent &e)
+{
+
+}
+
+void wxGLAreaWidget::OnRightMouseDown(wxMouseEvent &e)
+{
+    if (e.LeftIsDown() && e.RightIsDown())
+    {
+        rotation_angles[X_AXIS] = 0.f;
+        rotation_angles[Y_AXIS] = 0.f;
+        rotation_angles[Z_AXIS] = 0.f;
+        Refresh(false);
+    }
+}
+
+void wxGLAreaWidget::OnRightMouseUp(wxMouseEvent &e)
+{
+
+}
+
+void wxGLAreaWidget::OnMiddleDown(wxMouseEvent &e)
+{
+    anchorPos_ = e.GetPosition();
+    lastPos_ = e.GetPosition();
+    anchor_angles[X_AXIS] = rotation_angles[X_AXIS];
+    anchor_angles[Y_AXIS] = rotation_angles[Y_AXIS];
+    anchor_angles[Z_AXIS] = rotation_angles[Z_AXIS];
+}
+
+void wxGLAreaWidget::OnMiddleUp(wxMouseEvent &e)
+{
+    anchorPos_ = wxPoint();
+    lastPos_ = wxPoint();
+    anchor_angles[X_AXIS] = 0.f;
+    anchor_angles[Y_AXIS] = 0.f;
+    anchor_angles[Z_AXIS] = 0.f;
+}
+
+void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
+{
+    if (e.Dragging() && e.MiddleIsDown())
+    {
+        const int dX = e.GetPosition().x - anchorPos_.x;
+        const int dY = e.GetPosition().y - anchorPos_.y;
+
+        rotation_angles[X_AXIS] = anchor_angles[X_AXIS] + dY * 1.f;
+        rotation_angles[Y_AXIS] = anchor_angles[Y_AXIS] + dX * 1.f;
+        if (rotation_angles[X_AXIS] > 360.f || rotation_angles[X_AXIS] < -360.0)
+        {
+            rotation_angles[X_AXIS] = 0.f;
+        }
+        if (rotation_angles[Y_AXIS] > 360.f || rotation_angles[Y_AXIS] < -360.0)
+        {
+            rotation_angles[Y_AXIS] = 0.f;
+        }
+        if (dX || dY)
+        {
+            Refresh(false);
+        }
+    }
 }
 
 void wxGLAreaWidget::DoApplyWidgetStyle(GtkRcStyle *style)
@@ -252,7 +348,11 @@ void wxGLAreaWidget::init_buffers(GLuint *vao_out, GLuint *buffer_out)
 {
     GLuint vao, buffer;
 
-    const GLfloat vertex_data[] = { 0.f, 0.5f, 0.f, 1.f, 0.5f, -0.366f, 0.f, 1.f, -0.5f, -0.366f, 0.f, 1.f };
+    const GLfloat vertex_data[] = {
+        0.f, 0.2f, 0.f, 1.f,
+        0.2f, -0.146f, 0.f, 1.f,
+        -0.2f, -0.146f, 0.f, 1.f
+    };
 
     /* we only use one VAO, so we always keep it bound */
     glGenVertexArrays(1, &vao);
@@ -309,9 +409,9 @@ void wxGLAreaWidget::init_bk_buffers(GLuint *vao_out, GLuint *buffer_out)
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     if (vao_out != NULL)
         *vao_out = VAO;
@@ -463,7 +563,7 @@ void wxGLAreaWidget::draw_triangle(wxGLAreaWidget *glArea)
     glUniformMatrix4fv(glArea->mvp_location, 1, GL_FALSE, &mvp[0]);
 
     glBindVertexArray(glArea->position_buffer);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawArrays(GL_LINE_LOOP, 0, 3);
 
     glUseProgram(0);
 }

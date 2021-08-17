@@ -79,6 +79,7 @@ endif()
 
 set(PYBIND11_NOPYTHON ON)
 include_directories(${CMAKE_CURRENT_LIST_DIR})
+add_subdirectory(glm)
 add_subdirectory(pybind11)
 add_subdirectory(cv_hdf)
 add_subdirectory(helper)

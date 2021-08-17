@@ -240,7 +240,7 @@ list(APPEND libs 2Geom::2geom)
 list(APPEND libs OpenGL::GLU)
 
 target_link_libraries(ui_core PUBLIC ${libs})
-target_link_libraries(ui_core PRIVATE pybind11::embed)
+target_link_libraries(ui_core PRIVATE pybind11::embed glm::glm)
 target_link_libraries(ui_core PUBLIC ${Python3_LIBRARY_RELEASE})
 target_include_directories(ui_core PUBLIC ${Python3_INCLUDE_DIRS})
 target_link_options(ui_core PUBLIC ${Python3_LINK_OPTIONS})

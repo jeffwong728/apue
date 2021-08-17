@@ -49,6 +49,13 @@ public:
 
 public:
     void OnSize(wxSizeEvent &e);
+    void OnLeftMouseDown(wxMouseEvent &e);
+    void OnLeftMouseUp(wxMouseEvent &e);
+    void OnRightMouseDown(wxMouseEvent &e);
+    void OnRightMouseUp(wxMouseEvent &e);
+    void OnMiddleDown(wxMouseEvent &e);
+    void OnMiddleUp(wxMouseEvent &e);
+    void OnMouseMotion(wxMouseEvent &e);
 
 protected:
     virtual void DoApplyWidgetStyle(GtkRcStyle *style) wxOVERRIDE;
@@ -82,6 +89,9 @@ private:
     GLuint bk_position_buffer = 0;
     GLuint bk_program = 0;
     float rotation_angles[N_AXIS] = { 0.0 };
+    float anchor_angles[N_AXIS] = { 0.0 };
+    wxPoint anchorPos_;
+    wxPoint lastPos_;
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);
 };
