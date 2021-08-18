@@ -72,7 +72,6 @@ private:
     static void init_bk_buffers(GLuint *vao_out, GLuint *buffer_out);
     static GLuint create_shader(int type, const char *src);
     static void init_shaders(const char *vertex_shader_code, const char *fragment_shader_code, GLuint *program_out, GLuint *mvp_out);
-    static void compute_mvp(float *res, float  phi, float  theta, float  psi);
     static void draw_triangle(wxGLAreaWidget *glArea);
     static void realize_cb(GtkWidget *widget, gpointer user_data);
     static void unrealize_cb(GtkWidget *widget, gpointer user_data);

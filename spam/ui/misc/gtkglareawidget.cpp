@@ -9,7 +9,8 @@
 #include <epoxy/gl.h>
 #include <GL/glu.h>
 #include <glm/glm.hpp>
-#include <glm/ext.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 glm::mat4 camera(float Translate, glm::vec2 const& Rotate)
 {
@@ -30,36 +31,18 @@ static void gtk_switchbutton_clicked_callback(GtkWidget *WXUNUSED(widget), GPara
 }
 }
 
-static const char *vertex_shader_code_gles =
-"attribute vec4 position;\n" \
-"uniform mat4 mvp;\n" \
-"void main() {\n" \
-"  gl_Position = mvp * position;\n" \
-"}";
-
-static const char *fragment_shader_code_gles =
-"precision mediump float;\n" \
-"void main() {\n" \
-"  float lerpVal = gl_FragCoord.y / 400.0;\n" \
-"  gl_FragColor = mix(vec4(1.0, 0.85, 0.35, 1.0), vec4(0.2, 0.2, 0.2, 1.0), lerpVal);\n" \
-"}";
 
 static const char *vertex_shader_code_330 =
 "#version 330\n" \
 "\n" \
-"layout(location = 0) in vec4 position;\n" \
-"uniform mat4 mvp;\n"
-"void main() {\n" \
-"  gl_Position = mvp * position;\n" \
-"}";
-
-static const char *vertex_shader_code_legacy =
-"#version 130\n" \
+"layout(location = 0) in vec3 aPos;\n" \
 "\n" \
-"attribute vec4 position;\n" \
-"uniform mat4 mvp;\n" \
+"uniform mat4 model;\n" \
+"uniform mat4 view;\n" \
+"uniform mat4 projection;\n" \
+"\n" \
 "void main() {\n" \
-"  gl_Position = mvp * position;\n" \
+"  gl_Position = projection * view * model * vec4(aPos, 1.0f);\n" \
 "}";
 
 static const char *fragment_shader_code_330 =
@@ -69,14 +52,6 @@ static const char *fragment_shader_code_330 =
 "void main() {\n" \
 "  float lerpVal = gl_FragCoord.y / 400.0f;\n" \
 "  outputColor = vec4(1.0f, 0.85f, 0.35f, 1.0f);\n" \
-"}";
-
-static const char *fragment_shader_code_legacy =
-"#version 130\n" \
-"\n" \
-"void main() {\n" \
-"  float lerpVal = gl_FragCoord.y / 400.0f;\n" \
-"  gl_FragColor = mix(vec4(1.0f, 0.85f, 0.35f, 1.0f), vec4(0.2f, 0.2, 0.2f, 1.0f), lerpVal);\n" \
 "}";
 
 static const char *bk_vs =
@@ -348,10 +323,43 @@ void wxGLAreaWidget::init_buffers(GLuint *vao_out, GLuint *buffer_out)
 {
     GLuint vao, buffer;
 
-    const GLfloat vertex_data[] = {
-        0.f, 0.2f, 0.f, 1.f,
-        0.2f, -0.146f, 0.f, 1.f,
-        -0.2f, -0.146f, 0.f, 1.f
+    float vertices[] = {
+        -0.2f, -0.2f, -0.2f,
+         0.2f, -0.2f, -0.2f,
+         0.2f,  0.2f, -0.2f,
+         0.2f,  0.2f, -0.2f,
+        -0.2f,  0.2f, -0.2f,
+        -0.2f, -0.2f, -0.2f,
+        -0.2f, -0.2f,  0.2f,
+         0.2f, -0.2f,  0.2f,
+         0.2f,  0.2f,  0.2f,
+         0.2f,  0.2f,  0.2f,
+        -0.2f,  0.2f,  0.2f,
+        -0.2f, -0.2f,  0.2f,
+        -0.2f,  0.2f,  0.2f,
+        -0.2f,  0.2f, -0.2f,
+        -0.2f, -0.2f, -0.2f,
+        -0.2f, -0.2f, -0.2f,
+        -0.2f, -0.2f,  0.2f,
+        -0.2f,  0.2f,  0.2f,
+         0.2f,  0.2f,  0.2f,
+         0.2f,  0.2f, -0.2f,
+         0.2f, -0.2f, -0.2f,
+         0.2f, -0.2f, -0.2f,
+         0.2f, -0.2f,  0.2f,
+         0.2f,  0.2f,  0.2f,
+        -0.2f, -0.2f, -0.2f,
+         0.2f, -0.2f, -0.2f,
+         0.2f, -0.2f,  0.2f,
+         0.2f, -0.2f,  0.2f,
+        -0.2f, -0.2f,  0.2f,
+        -0.2f, -0.2f, -0.2f,
+        -0.2f,  0.2f, -0.2f,
+         0.2f,  0.2f, -0.2f,
+         0.2f,  0.2f,  0.2f,
+         0.2f,  0.2f,  0.2f,
+        -0.2f,  0.2f,  0.2f,
+        -0.2f,  0.2f, -0.2f
     };
 
     /* we only use one VAO, so we always keep it bound */
@@ -359,13 +367,14 @@ void wxGLAreaWidget::init_buffers(GLuint *vao_out, GLuint *buffer_out)
     glBindVertexArray(vao);
 
     glGenBuffers(1, &buffer);
-
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     if (vao_out != NULL)
         *vao_out = vao;
@@ -515,55 +524,43 @@ out:
         *mvp_out = mvp;
 }
 
-void wxGLAreaWidget::compute_mvp(float *res, float  phi, float  theta, float  psi)
-{
-    float x = phi * (G_PI / 180.f);
-    float y = theta * (G_PI / 180.f);
-    float z = psi * (G_PI / 180.f);
-    float c1 = cosf(x), s1 = sinf(x);
-    float c2 = cosf(y), s2 = sinf(y);
-    float c3 = cosf(z), s3 = sinf(z);
-    float c3c2 = c3 * c2;
-    float s3c1 = s3 * c1;
-    float c3s2s1 = c3 * s2 * s1;
-    float s3s1 = s3 * s1;
-    float c3s2c1 = c3 * s2 * c1;
-    float s3c2 = s3 * c2;
-    float c3c1 = c3 * c1;
-    float s3s2s1 = s3 * s2 * s1;
-    float c3s1 = c3 * s1;
-    float s3s2c1 = s3 * s2 * c1;
-    float c2s1 = c2 * s1;
-    float c2c1 = c2 * c1;
-
-    res[0] = 1.f; res[4] = 0.f;  res[8] = 0.f; res[12] = 0.f;
-    res[1] = 0.f; res[5] = 1.f;  res[9] = 0.f; res[13] = 0.f;
-    res[2] = 0.f; res[6] = 0.f; res[10] = 1.f; res[14] = 0.f;
-    res[3] = 0.f; res[7] = 0.f; res[11] = 0.f; res[15] = 1.f;
-
-    res[0] = c3c2;  res[4] = s3c1 + c3s2s1;  res[8] = s3s1 - c3s2c1; res[12] = 0.f;
-    res[1] = -s3c2; res[5] = c3c1 - s3s2s1;  res[9] = c3s1 + s3s2c1; res[13] = 0.f;
-    res[2] = s2;    res[6] = -c2s1;         res[10] = c2c1;          res[14] = 0.f;
-    res[3] = 0.f;   res[7] = 0.f;           res[11] = 0.f;           res[15] = 1.f;
-}
-
 void wxGLAreaWidget::draw_triangle(wxGLAreaWidget *glArea)
 {
-    float mvp[16];
-
     g_assert(glArea->position_buffer != 0);
     g_assert(glArea->program != 0);
 
-    compute_mvp(mvp,
-        glArea->rotation_angles[X_AXIS],
-        glArea->rotation_angles[Y_AXIS],
-        glArea->rotation_angles[Z_AXIS]);
-
     glUseProgram(glArea->program);
-    glUniformMatrix4fv(glArea->mvp_location, 1, GL_FALSE, &mvp[0]);
+
+    GtkAllocation rcAlloc;
+    gtk_widget_get_allocation(glArea->m_widget, &rcAlloc);
+
+    float aspRatio = 1.f;
+    if (rcAlloc.height)
+    {
+        aspRatio = (rcAlloc.width + 0.f) / rcAlloc.height;
+    }
+
+    // create transformations
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 projection = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(glArea->rotation_angles[X_AXIS]), glm::vec3(1.f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(glArea->rotation_angles[Y_AXIS]), glm::vec3(0.0f, 1.f, 0.0f));
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    projection = glm::ortho(-aspRatio, aspRatio, -1.f, 1.f, 0.1f, 100.0f);
+    // retrieve the matrix uniform locations
+    GLuint modelLoc = glGetUniformLocation(glArea->program, "model");
+    GLuint viewLoc = glGetUniformLocation(glArea->program, "view");
+    GLuint projLoc = glGetUniformLocation(glArea->program, "projection");
+    // pass them to the shaders (3 different ways)
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
     glBindVertexArray(glArea->position_buffer);
-    glDrawArrays(GL_LINE_LOOP, 0, 3);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     glUseProgram(0);
 }
@@ -581,8 +578,7 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     context = gtk_gl_area_get_context(GTK_GL_AREA(widget));
     if (gdk_gl_context_get_use_es(context))
     {
-        vertex = vertex_shader_code_gles;
-        fragment = fragment_shader_code_gles;
+        return;
     }
     else
     {
@@ -593,8 +589,7 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
         }
         else
         {
-            vertex = vertex_shader_code_legacy;
-            fragment = fragment_shader_code_legacy;
+            return;
         }
     }
 
@@ -605,6 +600,7 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     init_shaders(bk_vs, bk_fs, &glArea->bk_program, NULL);
 
     glArea->bk_texture = glArea->LoadTexture();
+    glEnable(GL_DEPTH_TEST);
 }
 
 void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
@@ -629,7 +625,7 @@ gboolean wxGLAreaWidget::render_cb(GtkGLArea *area, GdkGLContext *context, gpoin
     else
     {
         glClearColor(0.5, 0.5, 0.5, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     draw_triangle(reinterpret_cast<wxGLAreaWidget *>(user_data));
