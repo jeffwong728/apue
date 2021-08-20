@@ -11,9 +11,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <imgui.h>
-#include <ui/toplevel/imgui_impl_gtk3.h>
-#include <ui/toplevel/imgui_impl_opengl3.h>
 
 glm::mat4 camera(float Translate, glm::vec2 const& Rotate)
 {
@@ -604,25 +601,10 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 
     glArea->bk_texture = glArea->LoadTexture();
     glEnable(GL_DEPTH_TEST);
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-    ImGui_ImplGtk3_Init(GTK_WIDGET(widget), true);
-    ImGui_ImplOpenGL3_Init("#version 130");
-
-    // Setup style
-    ImGui::StyleColorsDark();
 }
 
 void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
 {
-    // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGtk3_Shutdown();
-    ImGui::DestroyContext();
-
     gtk_gl_area_make_current(GTK_GL_AREA(widget));
 
     if (gtk_gl_area_get_error(GTK_GL_AREA(widget)) != NULL)
@@ -647,41 +629,5 @@ gboolean wxGLAreaWidget::render_cb(GtkGLArea *area, GdkGLContext *context, gpoin
     }
 
     draw_triangle(reinterpret_cast<wxGLAreaWidget *>(user_data));
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGtk3_NewFrame();
-    ImGui::NewFrame();
-
-    ImGui::Text("This is some useful text.");
-
-    static float f = 0.0f;
-    static int counter = 0;
-
-    static bool show_demo_window = true;
-    static bool show_another_window = false;
-
-    ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-    ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-    ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-    ImGui::Checkbox("Another Window", &show_another_window);
-
-    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-    //ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-    if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-        counter++;
-    ImGui::SameLine();
-    ImGui::Text("counter = %d", counter);
-
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::End();
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    glFlush();
-
-    gtk_gl_area_queue_render(area);
     return TRUE;
 }
