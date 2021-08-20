@@ -22,3 +22,6 @@
 [submodule "spam/glm"]
 	path = spam/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "spam/ui/imgui"]
+	path = spam/ui/imgui
+	url = https://github.com/ocornut/imgui.git

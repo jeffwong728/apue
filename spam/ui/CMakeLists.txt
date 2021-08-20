@@ -46,6 +46,8 @@ set(ui_core_SRCS
   toplevel/projpanel.cpp
   toplevel/rootframe.cpp
   toplevel/glpanel.cpp
+  toplevel/imgui_impl_gtk3.cpp
+  toplevel/imgui_impl_opengl3.cpp
   toolbox/stylebox.cpp
   toolbox/toolbox.cpp
   toolbox/probebox.cpp
@@ -84,6 +86,11 @@ set(ui_core_SRCS
   procflow/endstep.cpp
   procflow/cvtstep.cpp
   procflow/threshstep.cpp
+  imgui/imgui.cpp
+  imgui/imgui_demo.cpp
+  imgui/imgui_draw.cpp
+  imgui/imgui_tables.cpp
+  imgui/imgui_widgets.cpp
 )
 
 set(ui_core_HEADERS 
@@ -136,6 +143,8 @@ set(ui_core_HEADERS
   toplevel/projpanel.h
   toplevel/rootframe.h
   toplevel/glpanel.h
+  toplevel/imgui_impl_gtk3.h
+  toplevel/imgui_impl_opengl3.h
   toolbox/stylebox.h
   toolbox/toolbox.h
   toolbox/probebox.h
@@ -176,6 +185,9 @@ set(ui_core_HEADERS
   procflow/stepfwd.h
   procflow/cvtstep.h
   procflow/threshstep.h
+  imgui/imconfig.h
+  imgui/imgui.h
+  imgui/imgui_internal.h
 )
 
 if(MSVC)
@@ -243,6 +255,7 @@ target_link_libraries(ui_core PUBLIC ${libs})
 target_link_libraries(ui_core PRIVATE pybind11::embed glm::glm)
 target_link_libraries(ui_core PUBLIC ${Python3_LIBRARY_RELEASE})
 target_include_directories(ui_core PUBLIC ${Python3_INCLUDE_DIRS})
+target_include_directories(ui_core PUBLIC ${CMAKE_CURRENT_LIST_DIR}/imgui)
 target_link_options(ui_core PUBLIC ${Python3_LINK_OPTIONS})
 
 if(MSVC) 
@@ -253,7 +266,7 @@ endif()
 
 target_compile_options(ui_core PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
 target_compile_options(ui_core PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>)
-target_compile_definitions(ui_core PRIVATE BOOST_BIND_GLOBAL_PLACEHOLDERS)
+target_compile_definitions(ui_core PRIVATE BOOST_BIND_GLOBAL_PLACEHOLDERS IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
 
 target_include_directories(ui_core PRIVATE ${Boost_INCLUDE_DIR})
 target_include_directories(ui_core PRIVATE ${CMAKE_BINARY_DIR}/include)
