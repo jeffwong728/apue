@@ -5,6 +5,9 @@
 #include <wx/event.h>
 #include <wx/control.h>
 #include <gtk/gtk.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 typedef unsigned int GLuint;
 
 class wxGLAreaWidget: public wxControl
@@ -56,6 +59,9 @@ public:
     void OnMiddleDown(wxMouseEvent &e);
     void OnMiddleUp(wxMouseEvent &e);
     void OnMouseMotion(wxMouseEvent &e);
+    void OnMouseWheel(wxMouseEvent &e);
+    void OnSetFocus(wxFocusEvent &e);
+    void OnKillFocus(wxFocusEvent &e);
 
 protected:
     virtual void DoApplyWidgetStyle(GtkRcStyle *style) wxOVERRIDE;
@@ -66,6 +72,8 @@ private:
     void StartOrthogonal();
     void EndOrthogonal();
     void DrawBackground();
+    void pos(float *px, float *py, float *pz, const int x, const int y, const int *viewport) const;
+    static float vlen(float x, float y, float z) { return sqrt(x*x + y * y + z * z); }
 
 private:
     static void init_buffers(GLuint *vao_out, GLuint *buffer_out);
@@ -87,10 +95,20 @@ private:
     GLuint bk_texture = 0;
     GLuint bk_position_buffer = 0;
     GLuint bk_program = 0;
-    float rotation_angles[N_AXIS] = { 0.0 };
-    float anchor_angles[N_AXIS] = { 0.0 };
+    glm::mat4 norm_;
+    glm::mat4 modelview_;
+    glm::mat4 projection_;
     wxPoint anchorPos_;
     wxPoint lastPos_;
+    float top_ = 1.f;
+    float bottom_ = -1.f;
+    float left_ = -1.f;
+    float right_ = 1.f;
+    const float zNear_ = -10.f;
+    const float zFar_ = 10.f;
+    float dragPosX_ = 0.0;
+    float dragPosY_ = 0.0;
+    float dragPosZ_ = 0.0;
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);
 };

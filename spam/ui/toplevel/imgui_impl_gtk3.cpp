@@ -175,7 +175,6 @@ bool ImGui_ImplGtk3_Init(GtkWidget* gl_area, bool install_callbacks)
     g_clear_pointer(&g_GtkGlArea, g_object_unref);
 
     g_GtkGlArea = GTK_WIDGET(g_object_ref(gl_area));
-    gtk_widget_realize(g_GtkGlArea);
     gtk_widget_set_can_focus(g_GtkGlArea, TRUE);
     gtk_widget_grab_focus(g_GtkGlArea);
 
