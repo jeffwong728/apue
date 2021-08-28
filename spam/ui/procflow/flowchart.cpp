@@ -916,7 +916,7 @@ void FlowChart::OnPaint(wxPaintEvent&)
 
     if (!rubberBandBox_.IsEmpty())
     {
-        wxPen ruberPen(*wxLIGHT_GREY, 1, wxSOLID);
+        wxPen ruberPen(*wxLIGHT_GREY, 1, wxPENSTYLE_SOLID);
         gcdc.SetPen(ruberPen);
         gcdc.SetBrush(wxNullBrush);
         gcdc.DrawRectangle(rubberBandBox_);
