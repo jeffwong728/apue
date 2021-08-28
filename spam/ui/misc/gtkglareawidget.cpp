@@ -375,19 +375,18 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     vtkExternalOpenGLRenderer* ren = glArea->externalVTKWidget->AddRenderer();
     ren->SetPreserveGLCameraMatrices(false);
     ren->SetPreserveGLLights(false);
-    ren->AddActor(actor);
     ren->SetBackground(colors->GetColor3d("SlateGray").GetData());
 
     vtkNew<vtkAxesActor> axes;
     ren->AddActor(axes);
-    
+    ren->AddActor(actor);
+
     actor->RotateX(45.0);
     actor->RotateY(45.0);
     ren->ResetCamera();
     ren->GetActiveCamera()->Azimuth(45);
     ren->GetActiveCamera()->Elevation(-30);
     ren->GetActiveCamera()->Zoom(0.5);
-    renWin->AddRenderer(ren);
 }
 
 void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)

@@ -15,8 +15,8 @@
     },
     "cmake.preferredGenerators": ["Ninja"],
     "cmake.platform": "x64",
-    "cmake.buildDirectory" : "${env:SPAM_ROOT_DIR}/build/spam/${buildType}",
-    "cmake.installPrefix" : "${env:SPAM_ROOT_DIR}/install/spam",
+    "cmake.buildDirectory" : "${env:SPAM_ROOT_DIR}/jane/build/spam/${buildType}",
+    "cmake.installPrefix" : "${env:SPAM_ROOT_DIR}/jane/install/spam",
     "cmake.configureOnOpen": false,
     "cmake.configureEnvironment": {
       "VCPKG_DIR" : "${env:VCPKG_ROOT_DIR}/installed/x64-windows"

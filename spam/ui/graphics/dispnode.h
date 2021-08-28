@@ -7,11 +7,11 @@
 
 class GLDispNode
 {
+    struct this_is_private;
 public:
     static SPDispNode MakeNew(const WPDispNode &parent, const std::vector<glm::vec3> &vPositions, const std::vector<GLuint> &faceIdxs, const std::vector<GLuint> &edgeIdxs);
 
 public:
-    struct this_is_private;
     explicit GLDispNode(const this_is_private&, const WPDispNode &parent, const GLuint VBO, const GLuint VAO, const GLuint EBO);
     ~GLDispNode();
 

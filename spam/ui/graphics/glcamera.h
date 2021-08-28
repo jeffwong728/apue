@@ -4,11 +4,11 @@
 
 class GLCamera
 {
+    struct this_is_private;
 public:
     static SPGLCamera MakeNew();
 
 public:
-    struct this_is_private;
     explicit GLCamera(const this_is_private&);
     ~GLCamera();
 

@@ -4,11 +4,11 @@
 
 class GLTexture
 {
+    struct this_is_private;
 public:
     static SPGLTexture MakeNew(const boost::filesystem::path &textureFile);
 
 public:
-    struct this_is_private;
     explicit GLTexture(const this_is_private&, const GLuint textureId);
     ~GLTexture();
 
