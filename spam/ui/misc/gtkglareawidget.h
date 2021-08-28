@@ -10,6 +10,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <ui/graphics/glprog.h>
 #include <memory>
+#include <vtkSmartPointer.h>
+class ExternalVTKWidget;
 typedef unsigned int GLuint;
 
 class wxGLAreaWidget: public wxControl
@@ -108,6 +110,7 @@ private:
     float dragPosX_ = 0.0;
     float dragPosY_ = 0.0;
     float dragPosZ_ = 0.0;
+    vtkSmartPointer<ExternalVTKWidget> externalVTKWidget;
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);
 };

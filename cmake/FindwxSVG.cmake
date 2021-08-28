@@ -1,4 +1,4 @@
-set(wxSVG_DIR "$ENV{SPAM_ROOT_DIR}/install/wxSVG")
+set(wxSVG_DIR "$ENV{SPAM_ROOT_DIR}/jane/install/wxSVG")
 set(wxSVG_INCLUDE_DIR "${wxSVG_DIR}/include")
 
 set(name_static_libs)

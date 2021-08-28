@@ -10,6 +10,28 @@
 #include <GL/glu.h>
 #include <boost/filesystem.hpp>
 #include <boost/dll/runtime_symbol_info.hpp>
+#include <vtkNew.h>
+#include <vtkLight.h>
+#include <vtkActor.h>
+#include <vtkCamera.h>
+#include <vtkCubeSource.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkCallbackCommand.h>
+#include <vtkNamedColors.h>
+#include <vtkAxesActor.h>
+#include <ui/graphics/ExternalVTKWidget.h>
+#include <ui/graphics/vtkExternalOpenGLRenderWindow.h>
+
+//gl_FrontFacing
+//gl_PrimitiveID
+//vtkOpenGLPolyDataMapper::SetCameraShaderParameters
+
+namespace {
+void MakeCurrentCallback(vtkObject* vtkNotUsed(caller),
+    long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData))
+{
+}
+};
 
 wxIMPLEMENT_DYNAMIC_CLASS(wxGLAreaWidget, wxControl);
 
@@ -107,6 +129,7 @@ void wxGLAreaWidget::OnSize(wxSizeEvent &e)
     right_ = -left_;
 
     projection_ = glm::ortho(left_, right_, bottom_, top_, zNear_, zFar_);
+    if (externalVTKWidget) externalVTKWidget->GetRenderWindow()->SetSize(w, h);
 }
 
 void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
@@ -277,79 +300,21 @@ wxSize wxGLAreaWidget::DoGetBestSize() const
 
 GLuint wxGLAreaWidget::LoadTexture()
 {
-    boost::system::error_code ec;
-    boost::filesystem::path p = boost::dll::program_location(ec);
-    p = p.parent_path();
-    p.append(wxT("res")).append(wxT("Apex.png"));
-
     bk_texture = 0;
-    if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
-    {
-        cv::Mat srcMat = cv::imread(cv::String(wxString(p.native())), cv::IMREAD_COLOR), fImg, bkImg;
-        if (!srcMat.empty() && CV_8U == srcMat.depth())
-        {
-            cv::cvtColor(srcMat, fImg, cv::COLOR_BGR2RGB);
-            cv::flip(fImg, bkImg, 0);
-
-            glGenTextures(1, &bk_texture);
-            glBindTexture(GL_TEXTURE_2D, bk_texture);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-            //even better quality, but this will do for now.
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-            //to the edge of our shape. 
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-            //Generate the texture
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bkImg.cols, bkImg.rows, 0, GL_RGB, GL_UNSIGNED_BYTE, bkImg.data);
-        }
-    }
-
     return bk_texture;
 
 }
 
 void wxGLAreaWidget::StartOrthogonal()
 {
-    GtkAllocation rcAlloc;
-    gtk_widget_get_allocation(m_widget, &rcAlloc);
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    gluOrtho2D(-rcAlloc.width / 2, rcAlloc.width / 2, -rcAlloc.height / 2, rcAlloc.height / 2);
-    glMatrixMode(GL_MODELVIEW);
 }
 
 void wxGLAreaWidget::EndOrthogonal()
 {
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
 }
 
 void wxGLAreaWidget::DrawBackground()
 {
-    glLoadIdentity();
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, bk_texture);
-    bk_program->Use();
-    glBindVertexArray(bk_position_buffer);
-
-    StartOrthogonal();
-
-    // texture width/height
-    glPushMatrix();
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    glPopMatrix();
-
-    EndOrthogonal();
-    gluLookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-    bk_program->Reset();
-    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void wxGLAreaWidget::pos(float *px, float *py, float *pz, const int x, const int y, const int *viewport) const
@@ -364,126 +329,14 @@ void wxGLAreaWidget::pos(float *px, float *py, float *pz, const int x, const int
 
 void wxGLAreaWidget::init_buffers(GLuint *vao_out, GLuint *buffer_out)
 {
-    GLuint vao, buffer, EBO;
-
-    float vertices[] = {
-        -0.2f, -0.2f, -0.2f,
-         0.2f, -0.2f, -0.2f,
-         0.2f,  0.2f, -0.2f,
-         -0.2f,  0.2f, -0.2f,
-
-        -0.2f, -0.2f, 0.2f,
-         0.2f, -0.2f, 0.2f,
-         0.2f,  0.2f, 0.2f,
-         -0.2f,  0.2f, 0.2f
-    };
-
-    unsigned int indices[] = {
-        0, 1, 2, 0, 2, 3,
-        0, 1, 5, 0, 5, 4,
-        1, 2, 6, 1, 6, 5,
-        2, 6, 7, 2, 7, 3,
-        3, 7, 4, 3, 4, 0,
-        4, 5, 6, 4, 6, 7,
-        0, 1, 1, 2, 2, 3, 3, 0,
-        0, 4, 1, 5, 2, 6, 3, 7,
-        4, 5, 5, 6, 6, 7, 7, 4,
-        0, 1, 2, 3, 4, 5, 6, 7
-    };
-
-    /* we only use one VAO, so we always keep it bound */
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    if (vao_out != NULL)
-        *vao_out = vao;
-
-    if (buffer_out != NULL)
-        *buffer_out = buffer;
 }
 
 void wxGLAreaWidget::init_bk_buffers(GLuint *vao_out, GLuint *buffer_out)
 {
-    float vertices[] = {
-        // positions          // texture coords
-         1.0f,  1.0f, 0.0f,   1.0f, 1.0f, // top right
-         1.0f, -1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, // bottom left
-        -1.0f,  1.0f, 0.0f,   0.0f, 1.0f  // top left 
-    };
-
-    unsigned int indices[] = {
-        0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
-    };
-
-    GLuint VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // texture coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    if (vao_out != NULL)
-        *vao_out = VAO;
-
-    if (buffer_out != NULL)
-        *buffer_out = VBO;
 }
 
 void wxGLAreaWidget::draw_triangle(wxGLAreaWidget *glArea)
 {
-    g_assert(glArea->position_buffer != 0);
-
-    glArea->program->Use();
-    glArea->program->SetUniform("modelview", glArea->modelview_);
-    glArea->program->SetUniform("projection", glArea->projection_);
-
-    glm::vec4 faceColor{ 1.0f, 0.85f, 0.35f, 1.0f };
-    glm::vec4 edgeColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-    glm::vec4 vertColor{ 0.0f, 0.0f, 1.0f, 1.0f };
-
-    glBindVertexArray(glArea->position_buffer);
-    glArea->program->SetUniform("cColor", faceColor);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    glArea->program->SetUniform("cColor", edgeColor);
-    glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, (void*)(36*sizeof(unsigned int)));
-    glArea->program->SetUniform("cColor", vertColor);
-    glDrawElements(GL_POINTS, 8, GL_UNSIGNED_INT, (void*)(60 * sizeof(unsigned int)));
-
-    glArea->program->Reset();
 }
 
 void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
@@ -501,29 +354,40 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     }
 
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
-    init_buffers(&glArea->position_buffer, NULL);
-    init_bk_buffers(&glArea->bk_position_buffer, NULL);
+    glArea->externalVTKWidget = vtkSmartPointer<ExternalVTKWidget>::New();
+    auto renWin = glArea->externalVTKWidget->GetRenderWindow();
 
-    boost::system::error_code ec;
-    boost::filesystem::path p = boost::dll::program_location(ec);
-    p = p.parent_path().append(wxT("res")).append(wxT("glsl"));
+    renWin->AutomaticWindowPositionAndResizeOff();
+    renWin->SetUseExternalContent(false);
 
-    glArea->program = std::make_unique<GLProgram>();
-    glArea->bk_program = std::make_unique<GLProgram>();
+    assert(renWin != nullptr);
+    vtkNew<vtkCallbackCommand> callback;
+    callback->SetCallback(MakeCurrentCallback);
+    renWin->AddObserver(vtkCommand::WindowMakeCurrentEvent, callback);
 
-    glArea->program->AttachShaderFile(GL_VERTEX_SHADER, boost::filesystem::path(p).append(wxT("common_vert.glsl")));
-    glArea->program->AttachShaderFile(GL_FRAGMENT_SHADER, boost::filesystem::path(p).append(wxT("common_frag.glsl")));
-    glArea->bk_program->AttachShaderFile(GL_VERTEX_SHADER, boost::filesystem::path(p).append(wxT("background_vert.glsl")));
-    glArea->bk_program->AttachShaderFile(GL_FRAGMENT_SHADER, boost::filesystem::path(p).append(wxT("background_frag.glsl")));
+    vtkNew<vtkCubeSource> cs;
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputConnection(cs->GetOutputPort());
 
-    glArea->program->Build();
-    glArea->bk_program->Build();
+    vtkNew<vtkNamedColors> colors;
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    vtkExternalOpenGLRenderer* ren = glArea->externalVTKWidget->AddRenderer();
+    ren->SetPreserveGLCameraMatrices(false);
+    ren->SetPreserveGLLights(false);
+    ren->AddActor(actor);
+    ren->SetBackground(colors->GetColor3d("SlateGray").GetData());
 
-
-    glArea->bk_texture = glArea->LoadTexture();
-    glEnable(GL_DEPTH_TEST);
-    glPointSize(5.0f);
-    glLineWidth(1.0f);
+    vtkNew<vtkAxesActor> axes;
+    ren->AddActor(axes);
+    
+    actor->RotateX(45.0);
+    actor->RotateY(45.0);
+    ren->ResetCamera();
+    ren->GetActiveCamera()->Azimuth(45);
+    ren->GetActiveCamera()->Elevation(-30);
+    ren->GetActiveCamera()->Zoom(0.5);
+    renWin->AddRenderer(ren);
 }
 
 void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
@@ -534,22 +398,12 @@ void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
         return;
 
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
-    glDeleteBuffers(1, &glArea->position_buffer);
+    glArea->externalVTKWidget = nullptr;
 }
 
 gboolean wxGLAreaWidget::render_cb(GtkGLArea *area, GdkGLContext *context, gpointer user_data)
 {
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
-
-    glClearColor(0.5, 0.5, 0.5, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (glArea->bk_texture)
-    {
-        glDepthMask(GL_FALSE);
-        glArea->DrawBackground();
-        glDepthMask(GL_TRUE);
-    }
-
-    draw_triangle(reinterpret_cast<wxGLAreaWidget *>(user_data));
+    glArea->externalVTKWidget->GetRenderWindow()->Render();
     return TRUE;
 }
