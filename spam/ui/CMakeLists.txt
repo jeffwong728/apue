@@ -91,6 +91,16 @@ set(ui_core_SRCS
   imgui/imgui_draw.cpp
   imgui/imgui_tables.cpp
   imgui/imgui_widgets.cpp
+  graphics/glshader.cpp
+  graphics/glprog.cpp
+  graphics/glcamera.cpp
+  graphics/gltexture.cpp
+  graphics/dispnode.cpp
+  graphics/disptree.cpp
+  graphics/glsl/background_frag.glsl
+  graphics/glsl/background_vert.glsl
+  graphics/glsl/common_frag.glsl
+  graphics/glsl/common_vert.glsl
 )
 
 set(ui_core_HEADERS 
@@ -188,6 +198,13 @@ set(ui_core_HEADERS
   imgui/imconfig.h
   imgui/imgui.h
   imgui/imgui_internal.h
+  graphics/glfwd.h
+  graphics/glshader.h
+  graphics/glprog.h
+  graphics/glcamera.h
+  graphics/gltexture.h
+  graphics/dispnode.h
+  graphics/disptree.h
 )
 
 if(MSVC)
@@ -257,6 +274,9 @@ target_link_libraries(ui_core PUBLIC ${Python3_LIBRARY_RELEASE})
 target_include_directories(ui_core PUBLIC ${Python3_INCLUDE_DIRS})
 target_include_directories(ui_core PUBLIC ${CMAKE_CURRENT_LIST_DIR}/imgui)
 target_link_options(ui_core PUBLIC ${Python3_LINK_OPTIONS})
+
+target_link_libraries(ui_core PRIVATE ${VTK_LIBRARIES})
+vtk_module_autoinit(TARGETS ui_core MODULES ${VTK_LIBRARIES})
 
 if(MSVC) 
   target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS NOMINMAX VCL_NAMESPACE=vcl)

@@ -27,6 +27,13 @@ find_package(TBB CONFIG REQUIRED tbb tbbmalloc)
 find_package(double-conversion CONFIG REQUIRED)
 find_package(OpenCV REQUIRED core imgproc imgcodecs mvlab)
 find_package(Boost REQUIRED COMPONENTS locale system thread chrono filesystem unit_test_framework)
+find_package(VTK COMPONENTS vtkCommonCore vtkCommonColor vtkCommonDataModel vtkFiltersSources vtkIOLegacy vtkIOXML QUIET)
+
+if (NOT VTK_FOUND)
+  message("Skipping Config: ${VTK_NOT_FOUND_MESSAGE}")
+  return ()
+endif()
+message (STATUS "VTK_VERSION: ${VTK_VERSION}")
 
 set(HDF5_USE_STATIC_LIBRARIES OFF)
 IF (WIN32 AND MSVC)
@@ -150,5 +157,10 @@ add_custom_command(TARGET spam POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_LIST_DIR}/res" "$<TARGET_FILE_DIR:spam>/res"
     DEPENDS ${CMAKE_CURRENT_LIST_DIR}/res
     COMMENT "Copying resources to bin directory")
+
+add_custom_command(TARGET spam POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_LIST_DIR}/ui/graphics/glsl" "$<TARGET_FILE_DIR:spam>/res/glsl"
+    DEPENDS ${CMAKE_CURRENT_LIST_DIR}/ui/graphics/glsl
+    COMMENT "Copying GLSL shader files to res directory")
 
 message(STATUS "Project will be installed to ${CMAKE_INSTALL_PREFIX}")

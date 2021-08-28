@@ -8,6 +8,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <ui/graphics/glprog.h>
+#include <memory>
 typedef unsigned int GLuint;
 
 class wxGLAreaWidget: public wxControl
@@ -78,8 +80,6 @@ private:
 private:
     static void init_buffers(GLuint *vao_out, GLuint *buffer_out);
     static void init_bk_buffers(GLuint *vao_out, GLuint *buffer_out);
-    static GLuint create_shader(int type, const char *src);
-    static void init_shaders(const char *vertex_shader_code, const char *fragment_shader_code, GLuint *program_out, GLuint *mvp_out);
     static void draw_triangle(wxGLAreaWidget *glArea);
     static void realize_cb(GtkWidget *widget, gpointer user_data);
     static void unrealize_cb(GtkWidget *widget, gpointer user_data);
@@ -90,11 +90,10 @@ private:
 
 private:
     GLuint position_buffer = 0;
-    GLuint program = 0;
-    GLuint mvp_location = 0;
     GLuint bk_texture = 0;
     GLuint bk_position_buffer = 0;
-    GLuint bk_program = 0;
+    std::unique_ptr<GLProgram> program;
+    std::unique_ptr<GLProgram> bk_program;
     glm::mat4 norm_;
     glm::mat4 modelview_;
     glm::mat4 projection_;

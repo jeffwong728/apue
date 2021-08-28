@@ -11,75 +11,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/dll/runtime_symbol_info.hpp>
 
-glm::mat4 camera(float Translate, glm::vec2 const& Rotate)
-{
-    glm::mat4 Projection = glm::perspective(glm::pi<float>() * 0.25f, 4.0f / 3.0f, 0.1f, 100.f);
-    glm::mat4 View = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -Translate));
-    View = glm::rotate(View, Rotate.y, glm::vec3(-1.0f, 0.0f, 0.0f));
-    View = glm::rotate(View, Rotate.x, glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 Model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
-    return Projection * View * Model;
-}
-
-extern "C" {
-static void gtk_switchbutton_clicked_callback(GtkWidget *WXUNUSED(widget), GParamSpec *WXUNUSED(pspec), wxGLAreaWidget *cb)
-{
-    const glm::mat4 m = camera(1.f, glm::vec2(1.f, 0.5f));
-    std::cout << "matrix diagonal: " << m[0][0] << ", "
-        << m[1][1] << ", " << m[2][2] << ", " << m[3][3] << "\n";
-}
-}
-
-
-static const char *vertex_shader_code_330 =
-"#version 330\n" \
-"\n" \
-"layout(location = 0) in vec3 aPos;\n" \
-"\n" \
-"uniform mat4 modelview;\n" \
-"uniform mat4 projection;\n" \
-"\n" \
-"void main() {\n" \
-"  gl_Position = projection * modelview * vec4(aPos, 1.0f);\n" \
-"}";
-
-static const char *fragment_shader_code_330 =
-"#version 330\n" \
-"\n" \
-"uniform vec4 cColor;\n" \
-"out vec4 outputColor;\n" \
-"void main() {\n" \
-"  float lerpVal = gl_FragCoord.y / 400.0f;\n" \
-"  outputColor = cColor;\n" \
-"}";
-
-static const char *bk_vs =
-"#version 330 core\n" \
-"layout(location = 0) in vec3 aPos;\n" \
-"layout(location = 1) in vec2 aTexCoord;\n" \
-"\n" \
-"out vec2 TexCoord;\n" \
-"\n" \
-"void main()\n" \
-"{\n" \
-"    gl_Position = vec4(aPos, 1.0);\n" \
-"    TexCoord = vec2(aTexCoord.x, aTexCoord.y);\n" \
-"}";
-
-static const char *bk_fs =
-"#version 330 core\n" \
-"out vec4 FragColor;\n" \
-"\n" \
-"in vec2 TexCoord;\n" \
-"\n" \
-"// texture sampler\n" \
-"uniform sampler2D texture1;\n" \
-"\n" \
-"void main()\n" \
-"{\n" \
-"    FragColor = texture(texture1, TexCoord);\n" \
-"}";
-
 wxIMPLEMENT_DYNAMIC_CLASS(wxGLAreaWidget, wxControl);
 
 bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
@@ -95,13 +26,28 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
         return false;
     }
 
-    m_widget = gtk_gl_area_new();
+    m_widget = gtk_overlay_new();
     g_object_ref_sink(m_widget);
-    gtk_widget_add_events(m_widget, GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
 
-    g_signal_connect(m_widget, "realize", G_CALLBACK(realize_cb), this);
-    g_signal_connect(m_widget, "unrealize", G_CALLBACK(unrealize_cb), this);
-    g_signal_connect(m_widget, "render", G_CALLBACK(render_cb), this);
+    GtkWidget *glWidget = gtk_gl_area_new();
+    gtk_container_add(GTK_CONTAINER(m_widget), glWidget);
+    gtk_widget_add_events(glWidget, GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
+
+    g_signal_connect(glWidget, "realize", G_CALLBACK(realize_cb), this);
+    g_signal_connect(glWidget, "unrealize", G_CALLBACK(unrealize_cb), this);
+    g_signal_connect(glWidget, "render", G_CALLBACK(render_cb), this);
+
+    GtkWidget *expander = gtk_expander_new("Model Tree");
+    gtk_widget_set_halign(expander, GTK_ALIGN_START);
+    gtk_widget_set_valign(expander, GTK_ALIGN_START);
+    gtk_overlay_add_overlay(GTK_OVERLAY(m_widget), expander);
+
+    GtkWidget *entry = gtk_entry_new();
+    gtk_widget_set_opacity(entry, 0.6);
+    gtk_container_add(GTK_CONTAINER(expander), entry);
+
+    gtk_widget_show(glWidget);
+    gtk_widget_show_all(expander);
 
     m_parent->DoAddChild(this);
 
@@ -130,14 +76,10 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
 
 void wxGLAreaWidget::GTKDisableEvents()
 {
-    g_signal_handlers_block_by_func(m_widget,
-                                (gpointer)gtk_switchbutton_clicked_callback, this);
 }
 
 void wxGLAreaWidget::GTKEnableEvents()
 {
-    g_signal_handlers_unblock_by_func(m_widget,
-                                (gpointer)gtk_switchbutton_clicked_callback, this);
 }
 
 void wxGLAreaWidget::SetAxisAngleValue(const int axisIndex, const int angleVal)
@@ -165,7 +107,6 @@ void wxGLAreaWidget::OnSize(wxSizeEvent &e)
     right_ = -left_;
 
     projection_ = glm::ortho(left_, right_, bottom_, top_, zNear_, zFar_);
-
 }
 
 void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
@@ -395,7 +336,7 @@ void wxGLAreaWidget::DrawBackground()
     glLoadIdentity();
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, bk_texture);
-    glUseProgram(bk_program);
+    bk_program->Use();
     glBindVertexArray(bk_position_buffer);
 
     StartOrthogonal();
@@ -407,7 +348,7 @@ void wxGLAreaWidget::DrawBackground()
 
     EndOrthogonal();
     gluLookAt(0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-    glUseProgram(0);
+    bk_program->Reset();
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -522,170 +463,63 @@ void wxGLAreaWidget::init_bk_buffers(GLuint *vao_out, GLuint *buffer_out)
         *buffer_out = VBO;
 }
 
-GLuint wxGLAreaWidget::create_shader(int type, const char *src)
-{
-    GLuint shader;
-    int status;
-
-    shader = glCreateShader(type);
-    glShaderSource(shader, 1, &src, NULL);
-    glCompileShader(shader);
-
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-    if (status == GL_FALSE)
-    {
-        int log_len;
-        std::vector<char> buffer;
-
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_len);
-
-        buffer.resize(log_len + 1);
-        glGetShaderInfoLog(shader, log_len, NULL, buffer.data());
-
-        g_warning("Compile failure in %s shader:\n%s",
-            type == GL_VERTEX_SHADER ? "vertex" : "fragment",
-            buffer.data());
-
-        glDeleteShader(shader);
-
-        return 0;
-    }
-
-    return shader;
-}
-
-void wxGLAreaWidget::init_shaders(const char *vertex_shader_code, const char *fragment_shader_code, GLuint *program_out, GLuint *mvp_out)
-{
-    GLuint vertex, fragment;
-    GLuint program = 0;
-    GLuint mvp = 0;
-    int status;
-
-    vertex = create_shader(GL_VERTEX_SHADER, vertex_shader_code);
-    if (vertex == 0)
-    {
-        *program_out = 0;
-        return;
-    }
-
-    fragment = create_shader(GL_FRAGMENT_SHADER, fragment_shader_code);
-    if (fragment == 0)
-    {
-        glDeleteShader(vertex);
-        *program_out = 0;
-        return;
-    }
-
-    program = glCreateProgram();
-    glAttachShader(program, vertex);
-    glAttachShader(program, fragment);
-
-    glLinkProgram(program);
-
-    glGetProgramiv(program, GL_LINK_STATUS, &status);
-    if (status == GL_FALSE)
-    {
-        int log_len;
-        std::vector<char> buffer;
-
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_len);
-
-        buffer.resize(log_len + 1);
-        glGetProgramInfoLog(program, log_len, NULL, buffer.data());
-
-        g_warning("Linking failure:\n%s", buffer.data());
-
-        glDeleteProgram(program);
-        program = 0;
-
-        goto out;
-    }
-
-    mvp = glGetUniformLocation(program, "mvp");
-
-    glDetachShader(program, vertex);
-    glDetachShader(program, fragment);
-
-out:
-    glDeleteShader(vertex);
-    glDeleteShader(fragment);
-
-    if (program_out != NULL)
-        *program_out = program;
-
-    if (mvp_out != NULL)
-        *mvp_out = mvp;
-}
-
 void wxGLAreaWidget::draw_triangle(wxGLAreaWidget *glArea)
 {
     g_assert(glArea->position_buffer != 0);
-    g_assert(glArea->program != 0);
 
-    glUseProgram(glArea->program);
+    glArea->program->Use();
+    glArea->program->SetUniform("modelview", glArea->modelview_);
+    glArea->program->SetUniform("projection", glArea->projection_);
 
-    // create transformations
-    glm::mat4 modelview = glArea->modelview_;
-    glm::mat4 projection = glArea->projection_;
-
-    // retrieve the matrix uniform locations
-    GLuint modelViewLoc = glGetUniformLocation(glArea->program, "modelview");
-    GLuint projLoc = glGetUniformLocation(glArea->program, "projection");
-    GLuint colorLoc = glGetUniformLocation(glArea->program, "cColor");
-
-    glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, glm::value_ptr(modelview));
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-    GLfloat faceColor[] = { 1.0f, 0.85f, 0.35f, 1.0f };
-    GLfloat edgeColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    GLfloat vertColor[] = { 0.0f, 0.0f, 1.0f, 1.0f };
+    glm::vec4 faceColor{ 1.0f, 0.85f, 0.35f, 1.0f };
+    glm::vec4 edgeColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+    glm::vec4 vertColor{ 0.0f, 0.0f, 1.0f, 1.0f };
 
     glBindVertexArray(glArea->position_buffer);
-    //glUniform4fv(colorLoc, 1, faceColor);
-    //glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    glUniform4fv(colorLoc, 1, faceColor);
+    glArea->program->SetUniform("cColor", faceColor);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glArea->program->SetUniform("cColor", edgeColor);
     glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, (void*)(36*sizeof(unsigned int)));
-    glUniform4fv(colorLoc, 1, vertColor);
+    glArea->program->SetUniform("cColor", vertColor);
     glDrawElements(GL_POINTS, 8, GL_UNSIGNED_INT, (void*)(60 * sizeof(unsigned int)));
 
-    glUseProgram(0);
+    glArea->program->Reset();
 }
 
 void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 {
-    const char *fragment, *vertex;
-    GdkGLContext *context;
-
     gtk_gl_area_make_current(GTK_GL_AREA(widget));
     gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(widget), true);
 
     if (gtk_gl_area_get_error(GTK_GL_AREA(widget)) != NULL)
         return;
 
-    context = gtk_gl_area_get_context(GTK_GL_AREA(widget));
-    if (gdk_gl_context_get_use_es(context))
+    GdkGLContext *context = gtk_gl_area_get_context(GTK_GL_AREA(widget));
+    if (gdk_gl_context_get_use_es(context) || gdk_gl_context_is_legacy(context))
     {
         return;
-    }
-    else
-    {
-        if (!gdk_gl_context_is_legacy(context))
-        {
-            vertex = vertex_shader_code_330;
-            fragment = fragment_shader_code_330;
-        }
-        else
-        {
-            return;
-        }
     }
 
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
     init_buffers(&glArea->position_buffer, NULL);
     init_bk_buffers(&glArea->bk_position_buffer, NULL);
-    init_shaders(vertex, fragment, &glArea->program, &glArea->mvp_location);
-    init_shaders(bk_vs, bk_fs, &glArea->bk_program, NULL);
-    
+
+    boost::system::error_code ec;
+    boost::filesystem::path p = boost::dll::program_location(ec);
+    p = p.parent_path().append(wxT("res")).append(wxT("glsl"));
+
+    glArea->program = std::make_unique<GLProgram>();
+    glArea->bk_program = std::make_unique<GLProgram>();
+
+    glArea->program->AttachShaderFile(GL_VERTEX_SHADER, boost::filesystem::path(p).append(wxT("common_vert.glsl")));
+    glArea->program->AttachShaderFile(GL_FRAGMENT_SHADER, boost::filesystem::path(p).append(wxT("common_frag.glsl")));
+    glArea->bk_program->AttachShaderFile(GL_VERTEX_SHADER, boost::filesystem::path(p).append(wxT("background_vert.glsl")));
+    glArea->bk_program->AttachShaderFile(GL_FRAGMENT_SHADER, boost::filesystem::path(p).append(wxT("background_frag.glsl")));
+
+    glArea->program->Build();
+    glArea->bk_program->Build();
+
+
     glArea->bk_texture = glArea->LoadTexture();
     glEnable(GL_DEPTH_TEST);
     glPointSize(5.0f);
@@ -701,7 +535,6 @@ void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
 
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
     glDeleteBuffers(1, &glArea->position_buffer);
-    glDeleteProgram(glArea->program);
 }
 
 gboolean wxGLAreaWidget::render_cb(GtkGLArea *area, GdkGLContext *context, gpointer user_data)
