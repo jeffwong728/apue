@@ -72,17 +72,10 @@ protected:
     virtual wxSize DoGetBestSize() const wxOVERRIDE;
 
 private:
-    GLuint LoadTexture();
-    void StartOrthogonal();
-    void EndOrthogonal();
-    void DrawBackground();
     void pos(float *px, float *py, float *pz, const int x, const int y, const int *viewport) const;
     static float vlen(float x, float y, float z) { return sqrt(x*x + y * y + z * z); }
 
 private:
-    static void init_buffers(GLuint *vao_out, GLuint *buffer_out);
-    static void init_bk_buffers(GLuint *vao_out, GLuint *buffer_out);
-    static void draw_triangle(wxGLAreaWidget *glArea);
     static void realize_cb(GtkWidget *widget, gpointer user_data);
     static void unrealize_cb(GtkWidget *widget, gpointer user_data);
     static gboolean render_cb(GtkGLArea *area, GdkGLContext *context, gpointer user_data);

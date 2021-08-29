@@ -29,7 +29,8 @@ find_package(double-conversion CONFIG REQUIRED)
 find_package(OpenCV REQUIRED core imgproc imgcodecs mvlab)
 find_package(Boost REQUIRED COMPONENTS locale system thread chrono filesystem unit_test_framework)
 find_package(VTK COMPONENTS vtkCommonCore vtkCommonColor vtkCommonDataModel vtkFiltersSources vtkIOLegacy vtkIOXML
-                            vtkRenderingCore vtkRenderingFreeType vtkRenderingGL2PSOpenGL2 vtkRenderingOpenGL2 vtkRenderingAnnotation QUIET)
+                            vtkRenderingCore vtkRenderingFreeType vtkRenderingGL2PSOpenGL2 vtkRenderingOpenGL2
+                            vtkRenderingAnnotation vtkRenderingExternal QUIET)
 
 if (NOT VTK_FOUND)
   message("Skipping Config: ${VTK_NOT_FOUND_MESSAGE}")

@@ -101,11 +101,6 @@ set(ui_core_SRCS
   graphics/glsl/background_vert.glsl
   graphics/glsl/common_frag.glsl
   graphics/glsl/common_vert.glsl
-  graphics/ExternalVTKWidget.cxx
-  graphics/vtkExternalLight.cxx
-  graphics/vtkExternalOpenGLCamera.cxx
-  graphics/vtkExternalOpenGLRenderer.cxx
-  graphics/vtkExternalOpenGLRenderWindow.cxx
 )
 
 set(ui_core_HEADERS 
@@ -210,11 +205,6 @@ set(ui_core_HEADERS
   graphics/gltexture.h
   graphics/dispnode.h
   graphics/disptree.h
-  graphics/ExternalVTKWidget.h
-  graphics/vtkExternalLight.h
-  graphics/vtkExternalOpenGLCamera.h
-  graphics/vtkExternalOpenGLRenderer.h
-  graphics/vtkExternalOpenGLRenderWindow.h
 )
 
 if(MSVC)

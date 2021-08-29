@@ -17,10 +17,14 @@
 #include <vtkCubeSource.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkCallbackCommand.h>
+#include <vtkLogger.h>
 #include <vtkNamedColors.h>
 #include <vtkAxesActor.h>
-#include <ui/graphics/ExternalVTKWidget.h>
-#include <ui/graphics/vtkExternalOpenGLRenderWindow.h>
+#include <vtkSphereSource.h>
+#include <vtkCaptionActor2D.h>
+#include <vtkTextProperty.h>
+#include <ExternalVTKWidget.h>
+#include <vtkExternalOpenGLRenderWindow.h>
 
 //gl_FrontFacing
 //gl_PrimitiveID
@@ -54,6 +58,7 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     GtkWidget *glWidget = gtk_gl_area_new();
     gtk_container_add(GTK_CONTAINER(m_widget), glWidget);
     gtk_widget_add_events(glWidget, GDK_SCROLL_MASK | GDK_SMOOTH_SCROLL_MASK);
+    gtk_gl_area_set_required_version(GTK_GL_AREA(glWidget), 4, 5);
 
     g_signal_connect(glWidget, "realize", G_CALLBACK(realize_cb), this);
     g_signal_connect(glWidget, "unrealize", G_CALLBACK(unrealize_cb), this);
@@ -93,6 +98,8 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     modelview_ = norm_;
     projection_ = glm::mat4(1.0f);
 
+    vtkLogger::LogToFile("everything.log", vtkLogger::TRUNCATE, vtkLogger::VERBOSITY_INFO);
+
     return true;
 }
 
@@ -121,7 +128,6 @@ void wxGLAreaWidget::OnSize(wxSizeEvent &e)
 {
     const int w = e.GetSize().GetWidth();
     const int h = e.GetSize().GetHeight();
-    glViewport(0, 0, w, h);
 
     top_ = 1.f;
     bottom_ = -1.f;
@@ -298,25 +304,6 @@ wxSize wxGLAreaWidget::DoGetBestSize() const
     return wxSize(64, 48);
 }
 
-GLuint wxGLAreaWidget::LoadTexture()
-{
-    bk_texture = 0;
-    return bk_texture;
-
-}
-
-void wxGLAreaWidget::StartOrthogonal()
-{
-}
-
-void wxGLAreaWidget::EndOrthogonal()
-{
-}
-
-void wxGLAreaWidget::DrawBackground()
-{
-}
-
 void wxGLAreaWidget::pos(float *px, float *py, float *pz, const int x, const int y, const int *viewport) const
 {
     *px = (double)(x - viewport[0]) / (double)(viewport[2]);
@@ -327,22 +314,9 @@ void wxGLAreaWidget::pos(float *px, float *py, float *pz, const int x, const int
     *pz = zNear_;
 }
 
-void wxGLAreaWidget::init_buffers(GLuint *vao_out, GLuint *buffer_out)
-{
-}
-
-void wxGLAreaWidget::init_bk_buffers(GLuint *vao_out, GLuint *buffer_out)
-{
-}
-
-void wxGLAreaWidget::draw_triangle(wxGLAreaWidget *glArea)
-{
-}
-
 void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 {
     gtk_gl_area_make_current(GTK_GL_AREA(widget));
-    gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(widget), true);
 
     if (gtk_gl_area_get_error(GTK_GL_AREA(widget)) != NULL)
         return;
@@ -352,6 +326,10 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     {
         return;
     }
+
+    gint major = 0;
+    gint minor = 0;
+    gtk_gl_area_get_required_version(GTK_GL_AREA(widget), &major, &minor);
 
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
     glArea->externalVTKWidget = vtkSmartPointer<ExternalVTKWidget>::New();
@@ -365,28 +343,51 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     callback->SetCallback(MakeCurrentCallback);
     renWin->AddObserver(vtkCommand::WindowMakeCurrentEvent, callback);
 
-    vtkNew<vtkCubeSource> cs;
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputConnection(cs->GetOutputPort());
-
     vtkNew<vtkNamedColors> colors;
-    vtkNew<vtkActor> actor;
-    actor->SetMapper(mapper);
-    vtkExternalOpenGLRenderer* ren = glArea->externalVTKWidget->AddRenderer();
-    ren->SetPreserveGLCameraMatrices(false);
-    ren->SetPreserveGLLights(false);
-    ren->SetBackground(colors->GetColor3d("SlateGray").GetData());
+    std::array<unsigned char, 4> bkg{{26, 51, 102, 255}};
+    colors->SetColor("BkgColor", bkg.data());
+    vtkNew<vtkSphereSource> sphereSource;
+    sphereSource->SetCenter(0.0, 0.0, 0.0);
+    sphereSource->SetRadius(0.1);
+
+    // create a mapper
+    vtkNew<vtkPolyDataMapper> sphereMapper;
+    sphereMapper->SetInputConnection(sphereSource->GetOutputPort());
+
+    // create an actor
+    vtkNew<vtkActor> sphereActor;
+    sphereActor->SetMapper(sphereMapper);
+
+    // a renderer and render window
+    vtkNew<vtkOpenGLRenderer> renderer;
+    renWin->AddRenderer(renderer);
+
+    // add the actors to the scene
+    renderer->AddActor(sphereActor);
+    renderer->SetBackground(colors->GetColor3d("BkgColor").GetData());
 
     vtkNew<vtkAxesActor> axes;
-    ren->AddActor(axes);
-    ren->AddActor(actor);
+    axes->GetXAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
+    axes->GetYAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
+    axes->GetZAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
+    axes->SetAxisLabels(false);
+    renderer->AddActor(axes);
+    renderer->ResetCamera();
+    renderer->GetActiveCamera()->Azimuth(45);
+    renderer->GetActiveCamera()->Elevation(-30);
+    renderer->GetActiveCamera()->Zoom(0.5);
 
-    actor->RotateX(45.0);
-    actor->RotateY(45.0);
-    ren->ResetCamera();
-    ren->GetActiveCamera()->Azimuth(45);
-    ren->GetActiveCamera()->Elevation(-30);
-    ren->GetActiveCamera()->Zoom(0.5);
+    const wxString gtkMajorVersion(std::to_string(gtk_get_major_version()));
+    const wxString gtkMinorVersion(std::to_string(gtk_get_minor_version()));
+    const wxString gtkMicroVersion(std::to_string(gtk_get_micro_version()));
+    wxLogMessage(wxString("GTK Version: ") + gtkMajorVersion + wxString(wxT(".")) + gtkMinorVersion + wxString(wxT(".")) + gtkMicroVersion);
+
+    const wxString glVendor(reinterpret_cast<const char *>(glGetString(GL_VENDOR)));
+    const wxString glRenderer(reinterpret_cast<const char *>(glGetString(GL_RENDERER)));
+    const wxString glVersion(reinterpret_cast<const char *>(glGetString(GL_VERSION)));
+    wxLogMessage(wxString("OpenGL Vendor: ") + glVendor);
+    wxLogMessage(wxString("OpenGL Renderer: ") + glRenderer);
+    wxLogMessage(wxString("OpenGL Version: ") + glVersion);
 }
 
 void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
