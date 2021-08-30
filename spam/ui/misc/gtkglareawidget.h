@@ -12,6 +12,8 @@
 #include <memory>
 #include <vtkSmartPointer.h>
 class ExternalVTKWidget;
+class vtkExternalOpenGLCamera;
+class vtkOpenGLRenderer;
 typedef unsigned int GLuint;
 
 class wxGLAreaWidget: public wxControl
@@ -104,6 +106,8 @@ private:
     float dragPosY_ = 0.0;
     float dragPosZ_ = 0.0;
     vtkSmartPointer<ExternalVTKWidget> externalVTKWidget;
+    vtkSmartPointer<vtkExternalOpenGLCamera> bkCamera;
+    vtkSmartPointer<vtkOpenGLRenderer> axisRenderer;
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);
 };
