@@ -36,6 +36,7 @@
 #include <vtkExternalOpenGLRenderWindow.h>
 #include <vtkOpenGLRenderer.h>
 #include <vtkTransform.h>
+#include <vtkSTLReader.h>
 
 //gl_FrontFacing
 //gl_PrimitiveID
@@ -103,12 +104,6 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     Bind(wxEVT_KILL_FOCUS,  &wxGLAreaWidget::OnKillFocus,       this, wxID_ANY);
     Bind(wxEVT_MOUSEWHEEL,  &wxGLAreaWidget::OnMouseWheel,      this, wxID_ANY);
 
-    norm_ = glm::mat4(1.f);
-    norm_ = glm::rotate(norm_, glm::radians(45.f), glm::vec3(-1.0f, 0.0f, 0.0f));
-    norm_ = glm::rotate(norm_, glm::radians(45.f), glm::vec3(0.0f, 1.0f, 0.0f));
-    modelview_ = norm_;
-    projection_ = glm::mat4(1.0f);
-
     vtkLogger::LogToFile("everything.log", vtkLogger::TRUNCATE, vtkLogger::VERBOSITY_INFO);
 
     return true;
@@ -135,6 +130,29 @@ bool wxGLAreaWidget::GetValue() const
     return gtk_switch_get_active(GTK_SWITCH(m_widget)) != 0;
 }
 
+void wxGLAreaWidget::ImportSTL(const std::string &inputFilename)
+{
+    vtkNew<vtkSTLReader> reader;
+    reader->SetFileName(inputFilename.c_str());
+    reader->Update();
+
+    // Visualize
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputConnection(reader->GetOutputPort());
+
+    vtkNew<vtkActor> actor;
+    vtkNew<vtkNamedColors> colors;
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetDiffuse(1.0);
+    actor->GetProperty()->SetDiffuseColor(colors->GetColor3d("IndianRed").GetData());
+    actor->GetProperty()->SetSpecular(0.3);
+    actor->GetProperty()->SetSpecularPower(60.0);
+
+    rootRenderer->AddActor(actor);
+    rootRenderer->ResetCamera();
+    Refresh(false);
+}
+
 void wxGLAreaWidget::OnSize(wxSizeEvent &e)
 {
     const int w = e.GetSize().GetWidth();
@@ -146,66 +164,46 @@ void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
 {
     if (e.LeftIsDown() && e.RightIsDown())
     {
-        modelview_ = norm_;
+        rootRenderer->ResetCamera();
         Refresh(false);
     }
 
     lastPos_ = e.GetPosition();
-
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    pos(&dragPosX_, &dragPosY_, &dragPosZ_, lastPos_.x, lastPos_.y, viewport);
 }
 
 void wxGLAreaWidget::OnLeftMouseUp(wxMouseEvent &e)
 {
     lastPos_ = e.GetPosition();
-
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    pos(&dragPosX_, &dragPosY_, &dragPosZ_, lastPos_.x, lastPos_.y, viewport);
 }
 
 void wxGLAreaWidget::OnRightMouseDown(wxMouseEvent &e)
 {
     if (e.LeftIsDown() && e.RightIsDown())
     {
-        modelview_ = norm_;
+        rootRenderer->ResetCamera();
         Refresh(false);
     }
 
     anchorPos_ = e.GetPosition();
     lastPos_ = e.GetPosition();
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    pos(&dragPosX_, &dragPosY_, &dragPosZ_, lastPos_.x, lastPos_.y, viewport);
 }
 
 void wxGLAreaWidget::OnRightMouseUp(wxMouseEvent &e)
 {
     anchorPos_ = wxPoint();
     lastPos_ = wxPoint();
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    pos(&dragPosX_, &dragPosY_, &dragPosZ_, lastPos_.x, lastPos_.y, viewport);
 }
 
 void wxGLAreaWidget::OnMiddleDown(wxMouseEvent &e)
 {
     anchorPos_ = e.GetPosition();
     lastPos_ = e.GetPosition();
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    pos(&dragPosX_, &dragPosY_, &dragPosZ_, lastPos_.x, lastPos_.y, viewport);
 }
 
 void wxGLAreaWidget::OnMiddleUp(wxMouseEvent &e)
 {
     anchorPos_ = wxPoint();
     lastPos_ = wxPoint();
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    pos(&dragPosX_, &dragPosY_, &dragPosZ_, lastPos_.x, lastPos_.y, viewport);
 }
 
 void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
@@ -219,15 +217,27 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
 
     if (e.Dragging() && e.RightIsDown())
     {
-        float px, py, pz;
-        pos(&px, &py, &pz, x, y, viewport);
-        glm::mat4 m = glm::mat4(1.0f);
-        m = glm::translate(m, glm::vec3(px - dragPosX_, py - dragPosY_, pz - dragPosZ_));
-        modelview_ = m * modelview_;
+        double viewFocus[4], focalDepth, viewPoint[3];
+        double newPickPoint[4], oldPickPoint[4], motionVector[3];
 
-        dragPosX_ = px;
-        dragPosY_ = py;
-        dragPosZ_ = pz;
+        const int h = externalVTKWidget->GetRenderWindow()->GetSize()[1];
+        vtkCamera* camera = rootRenderer->GetActiveCamera();
+        camera->GetFocalPoint(viewFocus);
+        this->ComputeWorldToDisplay(rootRenderer, viewFocus[0], viewFocus[1], viewFocus[2], viewFocus);
+        focalDepth = viewFocus[2];
+
+        this->ComputeDisplayToWorld(rootRenderer, x, h - y, focalDepth, newPickPoint);
+        this->ComputeDisplayToWorld(rootRenderer, lastPos_.x, h - lastPos_.y, focalDepth, oldPickPoint);
+
+        motionVector[0] = oldPickPoint[0] - newPickPoint[0];
+        motionVector[1] = oldPickPoint[1] - newPickPoint[1];
+        motionVector[2] = oldPickPoint[2] - newPickPoint[2];
+
+        camera->GetFocalPoint(viewFocus);
+        camera->GetPosition(viewPoint);
+        camera->SetFocalPoint(motionVector[0] + viewFocus[0], motionVector[1] + viewFocus[1], motionVector[2] + viewFocus[2]);
+        camera->SetPosition(motionVector[0] + viewPoint[0], motionVector[1] + viewPoint[1], motionVector[2] + viewPoint[2]);
+        rootRenderer->UpdateLightsGeometryToFollowCamera();
 
         if (dx || dx)
         {
@@ -243,16 +253,23 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
         double delta_azimuth = -20.0 / size[0];
 
         double rxf = dx * delta_azimuth * 10.0;
-        double ryf = dy * delta_elevation * 10.0;
+        double ryf = dy * delta_elevation * -10.0;
 
         vtkCamera* camera = this->axisRenderer->GetActiveCamera();
         camera->Azimuth(rxf);
         camera->Elevation(ryf);
         camera->OrthogonalizeViewUp();
 
+        camera = this->rootRenderer->GetActiveCamera();
+        camera->Azimuth(rxf);
+        camera->Elevation(ryf);
+        camera->OrthogonalizeViewUp();
 
         this->axisRenderer->ResetCameraClippingRange();
         this->axisRenderer->UpdateLightsGeometryToFollowCamera();
+
+        this->rootRenderer->ResetCameraClippingRange();
+        this->rootRenderer->UpdateLightsGeometryToFollowCamera();
 
         if (dx || dx)
         {
@@ -266,7 +283,9 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
 void wxGLAreaWidget::OnMouseWheel(wxMouseEvent &e)
 {
     const float s = e.GetWheelRotation() > 0 ? 1.2f : 0.8f;
-    modelview_ = glm::scale(modelview_, glm::vec3(s, s, s));
+    vtkCamera* camera = this->rootRenderer->GetActiveCamera();
+    camera->SetParallelScale(camera->GetParallelScale() * s);
+    this->rootRenderer->UpdateLightsGeometryToFollowCamera();
     Refresh(false);
 }
 
@@ -311,14 +330,25 @@ wxSize wxGLAreaWidget::DoGetBestSize() const
     return wxSize(64, 48);
 }
 
-void wxGLAreaWidget::pos(float *px, float *py, float *pz, const int x, const int y, const int *viewport) const
+void wxGLAreaWidget::ComputeWorldToDisplay(vtkRenderer* ren, double x, double y, double z, double displayPt[3])
 {
-    *px = (double)(x - viewport[0]) / (double)(viewport[2]);
-    *py = (double)(y - viewport[1]) / (double)(viewport[3]);
+    ren->SetWorldPoint(x, y, z, 1.0);
+    ren->WorldToDisplay();
+    ren->GetDisplayPoint(displayPt);
+}
 
-    *px = left_ + (*px)*(right_ - left_);
-    *py = top_ + (*py)*(bottom_ - top_);
-    *pz = zNear_;
+void wxGLAreaWidget::ComputeDisplayToWorld(vtkRenderer* ren, double x, double y, double z, double worldPt[4])
+{
+    ren->SetDisplayPoint(x, y, z);
+    ren->DisplayToWorld();
+    ren->GetWorldPoint(worldPt);
+    if (worldPt[3])
+    {
+        worldPt[0] /= worldPt[3];
+        worldPt[1] /= worldPt[3];
+        worldPt[2] /= worldPt[3];
+        worldPt[3] = 1.0;
+    }
 }
 
 void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
@@ -344,7 +374,7 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     vtkNew<vtkCallbackCommand> callback;
     callback->SetCallback(MakeCurrentCallback);
     renWin->AddObserver(vtkCommand::WindowMakeCurrentEvent, callback);
-    renWin->SetNumberOfLayers(2);
+    renWin->SetNumberOfLayers(3);
 
     vtkNew<vtkPoints> points;
     points->InsertNextPoint(1.0, 1.0, 0.0);
@@ -412,12 +442,12 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     bkRenderer->SetLayer(0);
     bkRenderer->InteractiveOff();
 
-    glArea->bkCamera = vtkSmartPointer<vtkExternalOpenGLCamera>::New();
-    bkRenderer->SetActiveCamera(glArea->bkCamera);
+    auto bkCamera = vtkSmartPointer<vtkExternalOpenGLCamera>::New();
+    bkRenderer->SetActiveCamera(bkCamera);
     const auto vMat = glm::highp_dmat4(1.0);
     const auto pMat = glm::ortho(-1.0, 1.0, -1.0, 1.0, -10.0, 10.0);
-    glArea->bkCamera->SetViewTransformMatrix(glm::value_ptr(vMat));
-    glArea->bkCamera->SetProjectionTransformMatrix(glm::value_ptr(pMat));
+    bkCamera->SetViewTransformMatrix(glm::value_ptr(vMat));
+    bkCamera->SetProjectionTransformMatrix(glm::value_ptr(pMat));
     renWin->AddRenderer(bkRenderer);
 
     std::array<unsigned char, 4> bkg{{26, 51, 102, 255}};
@@ -432,10 +462,12 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 
     // create an actor
     vtkNew<vtkActor> sphereActor;
+    sphereActor->VisibilityOff();
     sphereActor->SetMapper(sphereMapper);
 
     // a renderer and render window
     glArea->axisRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
+    glArea->axisRenderer->GetActiveCamera()->ParallelProjectionOn();
     renWin->AddRenderer(glArea->axisRenderer);
     glArea->axisRenderer->SetLayer(1);
 
@@ -444,6 +476,7 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     glArea->axisRenderer->SetBackground(colors->GetColor3d("BkgColor").GetData());
 
     vtkNew<vtkAxesActor> axes;
+    axes->VisibilityOff();
     axes->GetXAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
     axes->GetYAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
     axes->GetZAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
@@ -453,7 +486,11 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     glArea->axisRenderer->GetActiveCamera()->Azimuth(45);
     glArea->axisRenderer->GetActiveCamera()->Elevation(-30);
     glArea->axisRenderer->GetActiveCamera()->Zoom(0.5);
-    glArea->axisRenderer->GetActiveCamera();
+
+    glArea->rootRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
+    glArea->rootRenderer->GetActiveCamera()->ParallelProjectionOn();
+    renWin->AddRenderer(glArea->rootRenderer);
+    glArea->rootRenderer->SetLayer(2);
 
     const wxString gtkMajorVersion(std::to_string(gtk_get_major_version()));
     const wxString gtkMinorVersion(std::to_string(gtk_get_minor_version()));
@@ -476,8 +513,9 @@ void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
         return;
 
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
-    glArea->bkCamera = nullptr;
+    glArea->axisRenderer = nullptr;
     glArea->externalVTKWidget = nullptr;
+    glArea->rootRenderer = nullptr;
 }
 
 gboolean wxGLAreaWidget::render_cb(GtkGLArea *area, GdkGLContext *context, gpointer user_data)

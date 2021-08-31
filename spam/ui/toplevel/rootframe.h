@@ -23,6 +23,7 @@ class DropImageEvent;
 class CVImagePanel;
 class CairoCanvas;
 class SelectionFilter;
+class wxGLAreaWidget;
 struct Spamer;
 
 namespace cv
@@ -65,6 +66,7 @@ public:
     void PlayScript();
     wxAuiNotebook *GetStationNotebook() const;
     ProjTreeModel *GetProjTreeModel();
+    wxGLAreaWidget *GetGLWidget() const;
     CairoCanvas *FindCanvasByUUID(const std::string &uuidTag) const;
     int FindImagePanelIndexByUUID(const std::string &uuidTag) const;
     void UpdateToolboxUI(const int toolboxId, const int toolId, const std::string &uuidTag, const boost::any &roi);
@@ -81,6 +83,7 @@ private:
     void OnExit(wxCommandEvent& e);
     void OnClose(wxCloseEvent& e);
     void OnLoadImage(wxCommandEvent& e);
+    void OnLoadModel(wxCommandEvent& e);
     void OnLoadPy3(wxCommandEvent& e);
     void OnAddStations(const SPModelNodeVector &stations);
     void OnDeleteStations(const SPModelNodeVector &stations);
@@ -127,6 +130,7 @@ public:
     static void file_export_image_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_import_py3_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_export_py3_cb(GtkWidget *menuitem, gpointer user_data);
+    static void file_import_model_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_quit_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_save_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_save_as_cb(GtkWidget *menuitem, gpointer user_data);

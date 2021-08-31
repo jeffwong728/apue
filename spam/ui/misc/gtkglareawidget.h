@@ -14,6 +14,7 @@
 class ExternalVTKWidget;
 class vtkExternalOpenGLCamera;
 class vtkOpenGLRenderer;
+class vtkRenderer;
 typedef unsigned int GLuint;
 
 class wxGLAreaWidget: public wxControl
@@ -57,6 +58,9 @@ public:
     void MoveWindow(int x, int y, int width, int height) { DoMoveWindow(x, y, width, height); }
 
 public:
+    void ImportSTL(const std::string &inputFilename);
+
+public:
     void OnSize(wxSizeEvent &e);
     void OnLeftMouseDown(wxMouseEvent &e);
     void OnLeftMouseUp(wxMouseEvent &e);
@@ -74,10 +78,8 @@ protected:
     virtual wxSize DoGetBestSize() const wxOVERRIDE;
 
 private:
-    void pos(float *px, float *py, float *pz, const int x, const int y, const int *viewport) const;
-    static float vlen(float x, float y, float z) { return sqrt(x*x + y * y + z * z); }
-
-private:
+    static void ComputeWorldToDisplay(vtkRenderer* ren, double x, double y, double z, double displayPt[3]);
+    static void ComputeDisplayToWorld(vtkRenderer* ren, double x, double y, double z, double worldPt[4]);
     static void realize_cb(GtkWidget *widget, gpointer user_data);
     static void unrealize_cb(GtkWidget *widget, gpointer user_data);
     static gboolean render_cb(GtkGLArea *area, GdkGLContext *context, gpointer user_data);
@@ -86,27 +88,10 @@ private:
     typedef wxControl base_type;
 
 private:
-    GLuint position_buffer = 0;
-    GLuint bk_texture = 0;
-    GLuint bk_position_buffer = 0;
-    std::unique_ptr<GLProgram> program;
-    std::unique_ptr<GLProgram> bk_program;
-    glm::mat4 norm_;
-    glm::mat4 modelview_;
-    glm::mat4 projection_;
     wxPoint anchorPos_;
     wxPoint lastPos_;
-    float top_ = 1.f;
-    float bottom_ = -1.f;
-    float left_ = -1.f;
-    float right_ = 1.f;
-    const float zNear_ = -10.f;
-    const float zFar_ = 10.f;
-    float dragPosX_ = 0.0;
-    float dragPosY_ = 0.0;
-    float dragPosZ_ = 0.0;
     vtkSmartPointer<ExternalVTKWidget> externalVTKWidget;
-    vtkSmartPointer<vtkExternalOpenGLCamera> bkCamera;
+    vtkSmartPointer<vtkOpenGLRenderer> rootRenderer;
     vtkSmartPointer<vtkOpenGLRenderer> axisRenderer;
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);

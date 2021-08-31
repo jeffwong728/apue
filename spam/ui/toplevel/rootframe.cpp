@@ -28,6 +28,7 @@
 #include <ui/toolbox/imgflowbox.h>
 #include <ui/misc/percentvalidator.h>
 #include <ui/misc/thumbnailctrl.h>
+#include <ui/misc/gtkglareawidget.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <wx/artprov.h>
@@ -331,6 +332,17 @@ ProjTreeModel *RootFrame::GetProjTreeModel()
     return nullptr;
 }
 
+wxGLAreaWidget *RootFrame::GetGLWidget() const
+{
+    auto glPanel = dynamic_cast<GLPanel *>(wxAuiMgr_.GetPane(glPanelName_).window);
+    if (glPanel)
+    {
+        return glPanel->GetGLWidget();
+    }
+
+    return nullptr;
+}
+
 CairoCanvas *RootFrame::FindCanvasByUUID(const std::string &uuidTag) const
 {
     auto stationNB = GetStationNotebook();
@@ -558,7 +570,7 @@ void RootFrame::OnHello(wxCommandEvent& event)
     }
 }
 
-void RootFrame::OnLoadImage(wxCommandEvent& event)
+void RootFrame::OnLoadImage(wxCommandEvent& WXUNUSED(e))
 {
     wxString wildCard{"PNG files (*.png)|*.png"};
     wildCard.Append("|JPEG files (*.jpg;*.jpeg)|*.jpg;*.jpeg");
@@ -597,6 +609,23 @@ void RootFrame::OnLoadImage(wxCommandEvent& event)
                     imageFileHistory_.AddFileToHistory(fullPath);
                 }
             }
+        }
+    }
+}
+
+void RootFrame::OnLoadModel(wxCommandEvent& WXUNUSED(e))
+{
+    wxString wildCard{ "Stereo lithography STL files (*.stl)|*.stl" };
+    wildCard.Append("|All files (*.*)|*.*");
+
+    wxFileDialog openFileDialog(this, wxT("Open model file"), "", "", wildCard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (openFileDialog.ShowModal() != wxID_CANCEL)
+    {
+        auto fullPath = std::string(openFileDialog.GetPath());
+        auto glWidget = GetGLWidget();
+        if (glWidget)
+        {
+            glWidget->ImportSTL(fullPath);
         }
     }
 }
@@ -1362,6 +1391,13 @@ void RootFrame::file_export_py3_cb(GtkWidget *menuitem, gpointer user_data)
     RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
 }
 
+void RootFrame::file_import_model_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    wxCommandEvent e;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    frame->OnLoadModel(e);
+}
+
 void RootFrame::file_quit_cb(GtkWidget *menuitem, gpointer user_data)
 {
     RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
@@ -1642,6 +1678,7 @@ void RootFrame::ReplaceTitleBar(void)
     GtkWidget *expoMi = gtk_image_menu_item_new_with_mnemonic("_Export Image...");
     GtkWidget *imPyMi = gtk_image_menu_item_new_with_mnemonic("_Open Python 3 Script...");
     GtkWidget *exPyMi = gtk_image_menu_item_new_with_mnemonic("_Save Python 3 Script...");
+    GtkWidget *modlMi = gtk_image_menu_item_new_with_mnemonic("Import _Model...");
     GtkWidget *saveMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE, accel_group);
     GtkWidget *saveAsMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE_AS, nullptr);
     GtkWidget *quitMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
@@ -1663,6 +1700,8 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), openMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), impoMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), expoMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), modlMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), imPyMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), exPyMi);
@@ -1686,6 +1725,7 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_widget_add_accelerator(newMi, "activate", accel_group, GDK_KEY_N, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(openMi, "activate", accel_group, GDK_KEY_O, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(impoMi, "activate", accel_group, GDK_KEY_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator(modlMi, "activate", accel_group, GDK_KEY_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(expoMi, "activate", accel_group, GDK_KEY_E, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(saveMi, "activate", accel_group, GDK_KEY_S, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(quitMi, "activate", accel_group, GDK_KEY_Q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
@@ -1714,6 +1754,7 @@ void RootFrame::ReplaceTitleBar(void)
 
     g_signal_connect(G_OBJECT(impoMi), "activate", G_CALLBACK(file_import_image_cb), this);
     g_signal_connect(G_OBJECT(expoMi), "activate", G_CALLBACK(file_export_image_cb), this);
+    g_signal_connect(G_OBJECT(modlMi), "activate", G_CALLBACK(file_import_model_cb), this);
     g_signal_connect(G_OBJECT(imPyMi), "activate", G_CALLBACK(file_import_py3_cb), this);
     g_signal_connect(G_OBJECT(exPyMi), "activate", G_CALLBACK(file_export_py3_cb), this);
     g_signal_connect(G_OBJECT(quitMi), "activate", G_CALLBACK(file_quit_cb), this);

@@ -15,6 +15,9 @@ public:
     GLPanel(wxWindow* parent);
     ~GLPanel();
 
+public:
+    wxGLAreaWidget *GetGLWidget() const { return glCtrl_; }
+
 private:
     void OnClear(wxCommandEvent &cmd);
     void OnSave(wxCommandEvent &cmd);
