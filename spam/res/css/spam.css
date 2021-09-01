@@ -34,3 +34,8 @@ toolbar button:checked
 {
     background : #1e79c9;
 }
+
+treeview:hover
+{
+    background : #ff8040;
+}

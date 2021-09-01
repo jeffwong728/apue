@@ -28,7 +28,7 @@
 #include <ui/toolbox/imgflowbox.h>
 #include <ui/misc/percentvalidator.h>
 #include <ui/misc/thumbnailctrl.h>
-#include <ui/misc/gtkglareawidget.h>
+#include <ui/graphics/gtkglareawidget.h>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <wx/artprov.h>

@@ -2,7 +2,7 @@
 #include <ui/spam.h>
 #include <wx/artprov.h>
 #include <wx/wrapsizer.h>
-#include <ui/misc/gtkglareawidget.h>
+#include <ui/graphics/gtkglareawidget.h>
 
 GLPanel::GLPanel(wxWindow* parent)
 : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)

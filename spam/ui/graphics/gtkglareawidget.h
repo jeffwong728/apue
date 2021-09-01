@@ -93,6 +93,7 @@ private:
     vtkSmartPointer<ExternalVTKWidget> externalVTKWidget;
     vtkSmartPointer<vtkOpenGLRenderer> rootRenderer;
     vtkSmartPointer<vtkOpenGLRenderer> axisRenderer;
+    SPGLModelTreeView modelTreeView_;
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);
 };

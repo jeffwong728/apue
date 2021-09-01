@@ -2,6 +2,7 @@
 #include <wx/wx.h>
 #include <wx/log.h>
 #include "gtkglareawidget.h"
+#include "glmodeltree.h"
 #include "wx/gtk/private.h"
 #include "wx/gtk/private/eventsdisabler.h"
 #include "wx/gtk/private/list.h"
@@ -76,17 +77,19 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     g_signal_connect(glWidget, "unrealize", G_CALLBACK(unrealize_cb), this);
     g_signal_connect(glWidget, "render", G_CALLBACK(render_cb), this);
 
-    GtkWidget *expander = gtk_expander_new("Model Tree");
-    gtk_widget_set_halign(expander, GTK_ALIGN_START);
-    gtk_widget_set_valign(expander, GTK_ALIGN_START);
-    gtk_overlay_add_overlay(GTK_OVERLAY(m_widget), expander);
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, FALSE);
+    gtk_widget_set_halign(box, GTK_ALIGN_START);
+    gtk_widget_set_valign(box, GTK_ALIGN_START);
+    gtk_overlay_add_overlay(GTK_OVERLAY(m_widget), box);
 
-    GtkWidget *entry = gtk_entry_new();
-    gtk_widget_set_opacity(entry, 0.6);
-    gtk_container_add(GTK_CONTAINER(expander), entry);
+    modelTreeView_ = GLModelTreeView::MakeNew();
+    GtkWidget *expander = gtk_expander_new("Model Tree");
+    gtk_expander_set_resize_toplevel(GTK_EXPANDER(expander), TRUE);
+    gtk_container_add(GTK_CONTAINER(expander), modelTreeView_->GetWidget());
+    gtk_container_add(GTK_CONTAINER(box), expander);
 
     gtk_widget_show(glWidget);
-    gtk_widget_show_all(expander);
+    gtk_widget_show_all(box);
 
     m_parent->DoAddChild(this);
 

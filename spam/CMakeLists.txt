@@ -131,7 +131,7 @@ else()
     message(FATAL_ERROR "glib-compile-resources NOT found. Stop generate.")
 endif()
 
-target_sources(spam PRIVATE ${GLIB_RESOURCES_CPP} menus.ui ${GLIB_RESOURCES_XML})
+target_sources(spam PRIVATE ${GLIB_RESOURCES_CPP} menus.ui ${GLIB_RESOURCES_XML} res/css/spam.css)
 
 if(WIN32)
     target_sources(spam PRIVATE spam.rc)

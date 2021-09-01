@@ -19,7 +19,6 @@ set(ui_core_SRCS
   misc/thumbnailctrl.cpp
   misc/spamutility.cpp
   misc/switchbtn.cpp
-  misc/gtkglareawidget.cpp
   projs/drawstyle.cpp
   projs/modelnode.cpp
   projs/nodefactory.cpp
@@ -97,6 +96,8 @@ set(ui_core_SRCS
   graphics/gltexture.cpp
   graphics/dispnode.cpp
   graphics/disptree.cpp
+  graphics/glmodeltree.cpp
+  graphics/gtkglareawidget.cpp
   graphics/glsl/background_frag.glsl
   graphics/glsl/background_vert.glsl
   graphics/glsl/common_frag.glsl
@@ -125,7 +126,6 @@ set(ui_core_HEADERS
   misc/thumbnailctrl.h
   misc/spamutility.h
   misc/switchbtn.h
-  misc/gtkglareawidget.h
   projs/drawstyle.h
   projs/modelfwd.h
   projs/modelnode.h
@@ -205,6 +205,8 @@ set(ui_core_HEADERS
   graphics/gltexture.h
   graphics/dispnode.h
   graphics/disptree.h
+  graphics/glmodeltree.h
+  graphics/gtkglareawidget.h
 )
 
 if(MSVC)
