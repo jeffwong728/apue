@@ -32,6 +32,9 @@ public:
     const GtkWidget *GetWidget() const { return mainView_; }
 
 private:
+    static void on_row_activated(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data);
+
+private:
     struct this_is_private
     {
         explicit this_is_private(int) {}

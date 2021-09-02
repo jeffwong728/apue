@@ -77,14 +77,16 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     g_signal_connect(glWidget, "unrealize", G_CALLBACK(unrealize_cb), this);
     g_signal_connect(glWidget, "render", G_CALLBACK(render_cb), this);
 
-    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, FALSE);
+    GtkWidget *box = gtk_search_bar_new();
+    gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(box), TRUE);
+    gtk_search_bar_set_show_close_button(GTK_SEARCH_BAR(box), FALSE);
     gtk_widget_set_halign(box, GTK_ALIGN_START);
     gtk_widget_set_valign(box, GTK_ALIGN_START);
     gtk_overlay_add_overlay(GTK_OVERLAY(m_widget), box);
 
     modelTreeView_ = GLModelTreeView::MakeNew();
     GtkWidget *expander = gtk_expander_new("Model Tree");
-    gtk_expander_set_resize_toplevel(GTK_EXPANDER(expander), TRUE);
+    gtk_expander_set_resize_toplevel(GTK_EXPANDER(expander), FALSE);
     gtk_container_add(GTK_CONTAINER(expander), modelTreeView_->GetWidget());
     gtk_container_add(GTK_CONTAINER(box), expander);
 
