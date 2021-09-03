@@ -4,13 +4,13 @@
 #include <vtkNew.h>
 #include <vtkNamedColors.h>
 
-SPGLModelTreeView GLModelTreeView::MakeNew()
+SPGLModelTreeView GLModelTreeView::MakeNew(const wxWindow *const parent)
 {
-    return std::make_shared<GLModelTreeView>(this_is_private{ 0 });
+    return std::make_shared<GLModelTreeView>(this_is_private{ 0 }, parent);
 }
 
-GLModelTreeView::GLModelTreeView(const this_is_private&)
-    : treeView_(nullptr), model_(nullptr), mainView_(nullptr)
+GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const parent)
+    : treeView_(nullptr), model_(nullptr), mainView_(nullptr), parent_(parent)
 {
     GtkTreeIter iter, child_iter;
     model_ = gtk_tree_store_new(NUM_COLUMNS, G_TYPE_STRING, G_TYPE_BOOLEAN, G_TYPE_STRING, GDK_TYPE_PIXBUF);
@@ -71,9 +71,18 @@ GLModelTreeView::~GLModelTreeView()
 {
 }
 
+bool GLModelTreeView::color_eq(const GdkRGBA *c1, const GdkRGBA *c2)
+{
+    return static_cast<int>(c1->red * 255) == static_cast<int>(c2->red * 255) &&
+        static_cast<int>(c1->green * 255) == static_cast<int>(c2->green * 255) &&
+        static_cast<int>(c1->blue * 255) == static_cast<int>(c2->blue * 255) &&
+        static_cast<int>(c1->alpha * 255) == static_cast<int>(c2->alpha * 255);
+}
+
 void GLModelTreeView::on_row_activated(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data)
 {
     GtkTreeModel *model = gtk_tree_view_get_model(tree_view);
+    GLModelTreeView *myself = (GLModelTreeView *)user_data;
 
     GtkTreeIter iter;
     if (gtk_tree_model_get_iter(model, &iter, path))
@@ -81,8 +90,74 @@ void GLModelTreeView::on_row_activated(GtkTreeView *tree_view, GtkTreePath *path
         auto tree_path_str  = gtk_tree_path_to_string(path);
         auto name = wxString(gtk_tree_view_column_get_title(column));
         auto rowPath = wxString(tree_path_str);
+        myself->lastSelRowPath_.assign(tree_path_str);
         g_free(tree_path_str);
 
         wxLogMessage(rowPath.Append(wxT(", Column ")).Append(name).Append(wxT(" Clicked")));
+
+        if (wxT("Color") == name)
+        {
+            GdkPixbuf *pixbuf = nullptr;
+            gtk_tree_model_get(model, &iter, ENTITY_COLOR, &pixbuf, -1);
+            if (pixbuf)
+            {
+                guchar *pixels = gdk_pixbuf_get_pixels(pixbuf);
+                if (pixels)
+                {
+                    GdkRGBA color{ 0 };
+                    color.red = pixels[0] / 255.0;
+                    color.green = pixels[1] / 255.0;
+                    color.blue = pixels[2] / 255.0;
+                    color.alpha = pixels[3] / 255.0;
+                    GtkWidget *dialog = gtk_color_chooser_dialog_new("Select a color", GTK_WINDOW(myself->parent_->GetParent()->m_widget));
+                    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+                    gtk_color_chooser_set_use_alpha(GTK_COLOR_CHOOSER(dialog), TRUE);
+                    g_object_set(dialog, "show-editor", FALSE, NULL);
+                    gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(dialog), &color);
+                    g_signal_connect(dialog, "response", G_CALLBACK(on_color_dialog_response), user_data);
+                    gtk_widget_show_all(dialog);
+                }
+                g_object_unref(pixbuf);
+            }
+        }
     }
+}
+
+void GLModelTreeView::on_color_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data)
+{
+    if (response_id == GTK_RESPONSE_OK) {
+        GdkRGBA color{1.0, 1.0, 1.0, 1.0 };
+        gtk_color_chooser_get_rgba(GTK_COLOR_CHOOSER(dialog), &color);
+
+        GtkTreeIter iter;
+        GLModelTreeView *myself = (GLModelTreeView *)user_data;
+        GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(myself->treeView_));
+        if (gtk_tree_model_get_iter_from_string(model, &iter, myself->lastSelRowPath_.c_str()))
+        {
+            GdkPixbuf *pixbuf = nullptr;
+            gtk_tree_model_get(model, &iter, ENTITY_COLOR, &pixbuf, -1);
+            if (pixbuf)
+            {
+                guchar *pixels = gdk_pixbuf_get_pixels(pixbuf);
+                if (pixels)
+                {
+                    GdkRGBA mycolor{ 0 };
+                    mycolor.red = pixels[0] / 255.0;
+                    mycolor.green = pixels[1] / 255.0;
+                    mycolor.blue = pixels[2] / 255.0;
+                    mycolor.alpha = pixels[3] / 255.0;
+
+                    if (!color_eq(&color, &mycolor))
+                    {
+                        guint32 pixel = ((gint)(color.red * 255) << 24 | ((gint)(color.green*255)) << 16 | ((gint)(color.blue*255)) << 8 | ((gint)(color.alpha*255)));
+                        gdk_pixbuf_fill(pixbuf, pixel);
+                    }
+                }
+
+                g_object_unref(pixbuf);
+            }
+        }
+    }
+
+    gtk_widget_destroy(GTK_WIDGET(dialog));
 }

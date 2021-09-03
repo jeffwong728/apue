@@ -98,6 +98,7 @@ set(ui_core_SRCS
   graphics/disptree.cpp
   graphics/glmodeltree.cpp
   graphics/gtkglareawidget.cpp
+  graphics/LinearCellDemo.cxx
   graphics/glsl/background_frag.glsl
   graphics/glsl/background_vert.glsl
   graphics/glsl/common_frag.glsl

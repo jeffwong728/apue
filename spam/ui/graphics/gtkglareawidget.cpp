@@ -84,7 +84,7 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     gtk_widget_set_valign(box, GTK_ALIGN_START);
     gtk_overlay_add_overlay(GTK_OVERLAY(m_widget), box);
 
-    modelTreeView_ = GLModelTreeView::MakeNew();
+    modelTreeView_ = GLModelTreeView::MakeNew(parent);
     GtkWidget *expander = gtk_expander_new("Model Tree");
     gtk_expander_set_resize_toplevel(GTK_EXPANDER(expander), FALSE);
     gtk_container_add(GTK_CONTAINER(expander), modelTreeView_->GetWidget());
@@ -257,8 +257,8 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
         double delta_elevation = -20.0 / size[1];
         double delta_azimuth = -20.0 / size[0];
 
-        double rxf = dx * delta_azimuth * 10.0;
-        double ryf = dy * delta_elevation * -10.0;
+        double rxf = dx * delta_azimuth * 20.0;
+        double ryf = dy * delta_elevation * -20.0;
 
         vtkCamera* camera = this->axisRenderer->GetActiveCamera();
         camera->Azimuth(rxf);
@@ -355,6 +355,8 @@ void wxGLAreaWidget::ComputeDisplayToWorld(vtkRenderer* ren, double x, double y,
         worldPt[3] = 1.0;
     }
 }
+
+extern int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, const int index);
 
 void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 {
@@ -494,6 +496,10 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 
     glArea->rootRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
     glArea->rootRenderer->GetActiveCamera()->ParallelProjectionOn();
+    add_LinearCellDemo(renWin, glArea->rootRenderer, 12);
+    glArea->rootRenderer->ResetCamera();
+    glArea->rootRenderer->GetActiveCamera()->Azimuth(30);
+    glArea->rootRenderer->GetActiveCamera()->Elevation(-30);
     renWin->AddRenderer(glArea->rootRenderer);
     glArea->rootRenderer->SetLayer(2);
 
