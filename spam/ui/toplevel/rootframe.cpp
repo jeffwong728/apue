@@ -1791,21 +1791,13 @@ void RootFrame::ReplaceTitleBar(void)
 
 void RootFrame::SetGTKGlobalStyle(void)
 {
-    boost::system::error_code ec;
-    boost::filesystem::path p = boost::dll::program_location(ec);
-    p = p.parent_path();
-    p.append(wxT("res")).append(wxT("css")).append(wxT("spam.css"));
-    if (boost::filesystem::exists(p, ec) && boost::filesystem::is_regular_file(p, ec))
-    {
-
-        GError *error = 0;
-        GtkCssProvider *provider = gtk_css_provider_new();
-        GdkDisplay *display = gdk_display_get_default();
-        GdkScreen *screen = gdk_display_get_default_screen(display);
-        gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-        gtk_css_provider_load_from_file(GTK_CSS_PROVIDER(provider), g_file_new_for_path(wxString(p.native()).ToUTF8()), &error);
-        g_object_unref(provider);
-    }
+    GError *error = 0;
+    GtkCssProvider *provider = gtk_css_provider_new();
+    GdkDisplay *display = gdk_display_get_default();
+    GdkScreen *screen = gdk_display_get_default_screen(display);
+    gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    gtk_css_provider_load_from_resource(GTK_CSS_PROVIDER(provider), "/org/mvlab/spam/res/css/spam.css");
+    g_object_unref(provider);
 }
 
 wxAuiNotebook *RootFrame::CreateStationNotebook()

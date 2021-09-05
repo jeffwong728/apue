@@ -2,5 +2,11 @@
 <gresources>
   <gresource prefix="/org/mvlab/spam">
     <file preprocess="xml-stripblanks">menus.ui</file>
+    <file compressed="true">res/css/spam.css</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/assembly.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/part.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/solid.body.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/eye.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/vertex.svg</file>
   </gresource>
 </gresources>
