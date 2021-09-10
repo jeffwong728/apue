@@ -84,6 +84,7 @@ private:
     void OnClose(wxCloseEvent& e);
     void OnLoadImage(wxCommandEvent& e);
     void OnLoadModel(wxCommandEvent& e);
+    void OnCloseModel(wxCommandEvent& e);
     void OnLoadPy3(wxCommandEvent& e);
     void OnAddStations(const SPModelNodeVector &stations);
     void OnDeleteStations(const SPModelNodeVector &stations);
@@ -131,6 +132,7 @@ public:
     static void file_import_py3_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_export_py3_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_import_model_cb(GtkWidget *menuitem, gpointer user_data);
+    static void file_close_model_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_quit_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_save_cb(GtkWidget *menuitem, gpointer user_data);
     static void file_save_as_cb(GtkWidget *menuitem, gpointer user_data);

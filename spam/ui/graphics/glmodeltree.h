@@ -1,7 +1,9 @@
 #ifndef SPAM_UI_GRAPHICS_GL_MODEL_TREE_VIEW_H
 #define SPAM_UI_GRAPHICS_GL_MODEL_TREE_VIEW_H
 #include "glfwd.h"
-#include <gtk/gtk.h>
+#include <boost/signals2.hpp>
+#include <vtkNamedColors.h>
+namespace bs2 = boost::signals2;
 class wxWindow;
 
 class GLModelTreeView
@@ -15,6 +17,8 @@ class GLModelTreeView
         ENTITY_SHOW_VERTEX,
         ENTITY_COLOR,
         ENTITY_TYPE,
+        ENTITY_GUID_PART_1,
+        ENTITY_GUID_PART_2,
 
         NUM_COLUMNS
     };
@@ -29,6 +33,12 @@ class GLModelTreeView
     };
 
     struct this_is_private;
+
+public:
+    typedef bs2::keywords::mutex_type<bs2::dummy_mutex> bs2_dummy_mutex;
+    bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<vtkColor4d>&), bs2_dummy_mutex>::type sig_ColorChanged;
+    bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_VisibilityChanged;
+
 public:
     static SPGLModelTreeView MakeNew(const wxWindow *const parent);
 
@@ -43,12 +53,13 @@ public:
 public:
     GtkWidget *GetWidget() { return mainView_; }
     const GtkWidget *GetWidget() const { return mainView_; }
+    void AddPart(const std::string &partName, const SPDispNodes &dispNodes);
 
 private:
     static bool color_eq(const GdkRGBA *c1, const GdkRGBA *c2);
     static void on_row_activated(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data);
     static void on_color_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
-    static void on_visibility_toggled(GtkCellRendererToggle *celltoggle, gchar *path_string, GtkTreeView *tree_view);
+    static void on_visibility_toggled(GtkCellRendererToggle *celltoggle, gchar *path_string, gpointer data);
     static void on_representation_changed(GtkCellRendererText *cell, const gchar *path_string, const gchar *new_text, gpointer data);
     static void on_add_part(GtkWidget *menuitem, gpointer userdata);
     static void on_add_assembly(GtkWidget *menuitem, gpointer userdata);
@@ -57,7 +68,7 @@ private:
 
 private:
     static void view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gpointer userdata);
-    static void set_children_visibility(GtkTreeModel* model, GtkTreeIter* iterParent, const gboolean visible);
+    static void set_children_visibility(GtkTreeModel* model, GtkTreeIter* iterParent, const gboolean visible, std::vector<GLGUID> &guids);
     static gboolean TreeModelForeachFunc(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data);
 
 private:

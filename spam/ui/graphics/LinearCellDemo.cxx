@@ -33,6 +33,7 @@
 #include <vtkVertex.h>
 #include <vtkVoxel.h>
 #include <vtkWedge.h>
+#include <vtkDataSetSurfaceFilter.h>
 
 #include <cstdlib>
 #include <string>
@@ -119,11 +120,16 @@ int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, const int
           auto mapper = vtkSmartPointer<vtkDataSetMapper>::New();
           auto actor = vtkSmartPointer<vtkActor>::New();
 
-          mapper->SetInputData(uGrids[i]);
+          vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+          surfaceFilter->SetNonlinearSubdivisionLevel(1);
+          surfaceFilter->SetInputData(uGrids[i]);
+          surfaceFilter->Update();
+
+          mapper->SetInputData(surfaceFilter->GetOutput());
           actor->SetMapper(mapper);
-          actor->GetProperty()->SetShading(false);
+          actor->GetProperty()->SetRepresentationToWireframe();
           actor->GetProperty()->SetColor(colors->GetColor3d("Yellow").GetData());
-          actor->GetProperty()->EdgeVisibilityOn();
+          actor->GetProperty()->EdgeVisibilityOff();
           actor->GetProperty()->SetEdgeColor(colors->GetColor3d("Black").GetData());
           actor->GetProperty()->SetLineWidth(1.5);
           actor->GetProperty()->SetOpacity(1.0);
@@ -133,6 +139,7 @@ int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, const int
           actor->GetProperty()->SetSpecular(0.6);
           actor->GetProperty()->SetSpecularColor(1.0, 1.0, 1.0);
           actor->GetProperty()->SetSpecularPower(100.0);
+          actor->VisibilityOn();
           renderer->AddViewProp(actor);
 
           auto textMapper = vtkSmartPointer<vtkTextMapper>::New();
@@ -140,13 +147,15 @@ int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, const int
           textMapper->SetInput(titles[i].c_str());
           textActor->SetMapper(textMapper);
           textActor->SetPosition(50, 10);
+          textActor->VisibilityOn();
           renderer->AddViewProp(textActor);
 
           // Label the points
           vtkSmartPointer<vtkLabeledDataMapper> labelMapper = vtkSmartPointer<vtkLabeledDataMapper>::New();
-          labelMapper->SetInputData(uGrids[i]);
+          labelMapper->SetInputData(surfaceFilter->GetOutput());
           vtkSmartPointer<vtkActor2D> labelActor = vtkSmartPointer<vtkActor2D>::New();
           labelActor->SetMapper(labelMapper);
+          labelActor->VisibilityOff();
           renderer->AddViewProp(labelActor);
       }
   }

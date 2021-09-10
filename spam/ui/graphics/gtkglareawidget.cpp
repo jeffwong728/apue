@@ -1,6 +1,7 @@
 #include "wx/wxprec.h"
 #include <wx/wx.h>
 #include <wx/log.h>
+#include "dispnode.h"
 #include "gtkglareawidget.h"
 #include "glmodeltree.h"
 #include "wx/gtk/private.h"
@@ -38,15 +39,41 @@
 #include <vtkOpenGLRenderer.h>
 #include <vtkTransform.h>
 #include <vtkSTLReader.h>
+#include <vtkGenericDataObjectReader.h>
+#include <vtkPolyData.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkDataSetMapper.h>
+#include <vtkXMLGenericDataObjectReader.h>
+#include <vtkOBBTree.h>
 
 //gl_FrontFacing
 //gl_PrimitiveID
 //vtkOpenGLPolyDataMapper::SetCameraShaderParameters
+//VTK_ENABLE_KITS
 
 namespace {
 void MakeCurrentCallback(vtkObject* vtkNotUsed(caller),
-    long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData))
+    long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData))
 {
+    GtkWidget *widget = (GtkWidget *)clientData;
+    GdkGLContext *context = gtk_gl_area_get_context(GTK_GL_AREA(widget));
+    GdkGLContext *ccontext = gdk_gl_context_get_current();
+    if (context != ccontext)
+    {
+        gtk_gl_area_make_current(GTK_GL_AREA(widget));
+        GError *e = gtk_gl_area_get_error(GTK_GL_AREA(widget));
+        if (e) wxLogMessage(wxString(e->message));
+    }
+}
+
+void IsCurrentCallback(vtkObject* vtkNotUsed(caller),
+    long unsigned int vtkNotUsed(eventId), void* clientData, void* callData)
+{
+    GtkWidget *widget = (GtkWidget *)clientData;
+    GdkGLContext *context = gtk_gl_area_get_context(GTK_GL_AREA(widget));
+    GdkGLContext *ccontext = gdk_gl_context_get_current();
+    bool& cstatus = *reinterpret_cast<bool*>(callData);
+    cstatus = context == ccontext;
 }
 };
 
@@ -109,6 +136,10 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     Bind(wxEVT_KILL_FOCUS,  &wxGLAreaWidget::OnKillFocus,       this, wxID_ANY);
     Bind(wxEVT_MOUSEWHEEL,  &wxGLAreaWidget::OnMouseWheel,      this, wxID_ANY);
 
+    modelTreeView_->sig_ColorChanged.connect(std::bind(&wxGLAreaWidget::OnColorChanged, this, std::placeholders::_1, std::placeholders::_2));
+    modelTreeView_->sig_VisibilityChanged.connect(std::bind(&wxGLAreaWidget::OnVisibilityChanged, this, std::placeholders::_1, std::placeholders::_2));
+
+    colors_->GetColorNames(colorNames_);
     vtkLogger::LogToFile("everything.log", vtkLogger::TRUNCATE, vtkLogger::VERBOSITY_INFO);
 
     return true;
@@ -141,20 +172,102 @@ void wxGLAreaWidget::ImportSTL(const std::string &inputFilename)
     reader->SetFileName(inputFilename.c_str());
     reader->Update();
 
-    // Visualize
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputConnection(reader->GetOutputPort());
+    SPDispNodes newDispNodes = GLDispNode::MakeNew(reader->GetOutput(), rootRenderer);
+    if (!newDispNodes.empty())
+    {
+        const auto numColors = colors_->GetNumberOfColors();
+        for (const auto &newDispNode : newDispNodes)
+        {
+            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            allActors_[newDispNode->GetGUID()] = newDispNode;
+        }
+        boost::filesystem::path p(inputFilename);
+        modelTreeView_->AddPart(p.filename().string(), newDispNodes);
+        rootRenderer->ResetCamera();
+        Refresh(false);
+    }
+}
 
-    vtkNew<vtkActor> actor;
-    vtkNew<vtkNamedColors> colors;
-    actor->SetMapper(mapper);
-    actor->GetProperty()->SetDiffuse(1.0);
-    actor->GetProperty()->SetDiffuseColor(colors->GetColor3d("IndianRed").GetData());
-    actor->GetProperty()->SetSpecular(0.3);
-    actor->GetProperty()->SetSpecularPower(60.0);
+void wxGLAreaWidget::ImportVTK(const std::string &inputFilename)
+{
+    vtkNew<vtkGenericDataObjectReader> reader;
+    reader->SetFileName(inputFilename.c_str());
+    reader->Update();
 
-    rootRenderer->AddActor(actor);
-    rootRenderer->ResetCamera();
+    SPDispNodes newDispNodes;
+    if (reader->IsFilePolyData())
+    {
+        newDispNodes = GLDispNode::MakeNew(reader->GetPolyDataOutput(), rootRenderer);
+    }
+    else if (reader->IsFileUnstructuredGrid())
+    {
+        newDispNodes = GLDispNode::MakeNew(reader->GetUnstructuredGridOutput(), rootRenderer);
+    }
+    else
+    {
+        wxMessageBox(wxString(wxT("Don't know how to read this vtk file")), wxString(wxT("Import Failed")));
+    }
+
+    if (!newDispNodes.empty())
+    {
+        const auto numColors = colors_->GetNumberOfColors();
+        for (const auto &newDispNode : newDispNodes)
+        {
+            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++)%numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            allActors_[newDispNode->GetGUID()] = newDispNode;
+        }
+        boost::filesystem::path p(inputFilename);
+        modelTreeView_->AddPart(p.filename().string(), newDispNodes);
+        rootRenderer->ResetCamera();
+        Refresh(false);
+    }
+}
+
+void wxGLAreaWidget::ImportVTU(const std::string &inputFilename)
+{
+    vtkNew<vtkXMLGenericDataObjectReader> reader;
+    reader->SetFileName(inputFilename.c_str());
+    reader->Update();
+
+    SPDispNodes newDispNodes;
+    if (reader->GetPolyDataOutput())
+    {
+        newDispNodes = GLDispNode::MakeNew(reader->GetPolyDataOutput(), rootRenderer);
+    }
+    else if (reader->GetUnstructuredGridOutput())
+    {
+        newDispNodes = GLDispNode::MakeNew(reader->GetUnstructuredGridOutput(), rootRenderer);
+    }
+    else
+    {
+        wxMessageBox(wxString(wxT("Don't know how to read this vtk file")), wxString(wxT("Import Failed")));
+    }
+
+    if (!newDispNodes.empty())
+    {
+        const auto numColors = colors_->GetNumberOfColors();
+        for (const auto &newDispNode : newDispNodes)
+        {
+            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            allActors_[newDispNode->GetGUID()] = newDispNode;
+        }
+        boost::filesystem::path p(inputFilename);
+        modelTreeView_->AddPart(p.filename().string(), newDispNodes);
+        rootRenderer->ResetCamera();
+        Refresh(false);
+    }
+}
+
+void wxGLAreaWidget::CloseModel()
+{
+    rootRenderer->RemoveAllViewProps();
+    allActors_.clear();
     Refresh(false);
 }
 
@@ -304,6 +417,50 @@ void wxGLAreaWidget::OnKillFocus(wxFocusEvent &e)
     wxLogMessage(wxT("wxGLAreaWidget::OnKillFocus."));
 }
 
+void wxGLAreaWidget::OnColorChanged(const std::vector<GLGUID> &guids, const std::vector<vtkColor4d> &newColors)
+{
+    bool needRefresh = false;
+    if (guids.size() == newColors.size())
+    {
+        for (std::vector<GLGUID>::size_type n=0; n < guids.size(); ++n)
+        {
+            auto it = allActors_.find(guids[n]);
+            if (it != allActors_.end())
+            {
+                it->second->SetCellColor(newColors[n].GetData());
+                needRefresh = true;
+            }
+        }
+    }
+
+    if (needRefresh)
+    {
+        Refresh(false);
+    }
+}
+
+void wxGLAreaWidget::OnVisibilityChanged(const std::vector<GLGUID> &guids, const std::vector<int> &visibles)
+{
+    bool needRefresh = false;
+    if (guids.size() == visibles.size())
+    {
+        for (std::vector<GLGUID>::size_type n = 0; n < guids.size(); ++n)
+        {
+            auto it = allActors_.find(guids[n]);
+            if (it != allActors_.end())
+            {
+                it->second->SetVisible(visibles[n]);
+                needRefresh = true;
+            }
+        }
+    }
+
+    if (needRefresh)
+    {
+        Refresh(false);
+    }
+}
+
 void wxGLAreaWidget::DoApplyWidgetStyle(GtkRcStyle *style)
 {
     GTKApplyStyle(m_widget, style);
@@ -377,10 +534,16 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 
     renWin->AutomaticWindowPositionAndResizeOff();
     renWin->SetUseExternalContent(false);
+    renWin->SetSupportsOpenGL(true);
+    renWin->SetIsDirect(true);
 
-    vtkNew<vtkCallbackCommand> callback;
-    callback->SetCallback(MakeCurrentCallback);
-    renWin->AddObserver(vtkCommand::WindowMakeCurrentEvent, callback);
+    vtkNew<vtkCallbackCommand> mcCallback, icCallback;
+    mcCallback->SetClientData(widget);
+    mcCallback->SetCallback(MakeCurrentCallback);
+    renWin->AddObserver(vtkCommand::WindowMakeCurrentEvent, mcCallback);
+    icCallback->SetClientData(widget);
+    icCallback->SetCallback(IsCurrentCallback);
+    renWin->AddObserver(vtkCommand::WindowIsCurrentEvent, icCallback);
     renWin->SetNumberOfLayers(3);
 
     vtkNew<vtkPoints> points;

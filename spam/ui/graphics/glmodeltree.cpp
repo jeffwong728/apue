@@ -1,4 +1,5 @@
 #include "glmodeltree.h"
+#include "dispnode.h"
 #include <wx/wxprec.h>
 #include <wx/wx.h>
 #include <vtkNew.h>
@@ -12,7 +13,7 @@ SPGLModelTreeView GLModelTreeView::MakeNew(const wxWindow *const parent)
 GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const parent)
     : treeView_(nullptr), model_(nullptr), mainView_(nullptr), parent_(parent)
 {
-    model_ = gtk_tree_store_new(NUM_COLUMNS, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_BOOLEAN, GDK_TYPE_PIXBUF, G_TYPE_INT);
+    model_ = gtk_tree_store_new(NUM_COLUMNS, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_BOOLEAN, GDK_TYPE_PIXBUF, G_TYPE_INT, G_TYPE_UINT64, G_TYPE_UINT64);
 
     vtkNew<vtkNamedColors> colors;
     vtkNew<vtkStringArray> colorNames;
@@ -86,7 +87,7 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
     g_object_unref(pixbuf);
     gtk_widget_show(image);
     gtk_tree_view_column_set_widget(column, image);
-    g_signal_connect(renderer, "toggled", G_CALLBACK(on_visibility_toggled), treeView_);
+    g_signal_connect(renderer, "toggled", G_CALLBACK(on_visibility_toggled), this);
 
     GtkTreeIter iter;
     renderer = gtk_cell_renderer_combo_new();
@@ -116,7 +117,7 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
     gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(mainView_), GTK_SHADOW_ETCHED_IN);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(mainView_), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
     gtk_container_add(GTK_CONTAINER(mainView_), treeView_);
-    gtk_widget_set_size_request(mainView_, 480, 600);
+    gtk_widget_set_size_request(mainView_, 480, 300);
 
     g_signal_connect(treeView_, "row-activated", G_CALLBACK(on_row_activated), this);
     g_signal_connect(treeView_, "button-press-event", G_CALLBACK(on_button_pressed), this);
@@ -128,6 +129,32 @@ GLModelTreeView::~GLModelTreeView()
     g_object_unref(assemPixBuf);
     g_object_unref(partPixBuf);
     g_object_unref(bodyPixBuf);
+}
+
+void GLModelTreeView::AddPart(const std::string &partName, const SPDispNodes &dispNodes)
+{
+    GtkTreeIter itModel;
+    GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(treeView_));
+    if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(model), &itModel))
+    {
+        GtkTreeIter itPart;
+        gtk_tree_store_append(GTK_TREE_STORE(model), &itPart, &itModel);
+        gtk_tree_store_set(GTK_TREE_STORE(model), &itPart, ENTITY_NAME, partName.c_str(), ENTITY_ICON, partPixBuf, ENTITY_VISIBILITY, TRUE, ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, ENTITY_TYPE_PART, -1);
+        for (const SPDispNode &dispNode : dispNodes)
+        {
+            const vtkColor4ub color = dispNode->GetColor();
+            const std::string bodyName = dispNode->GetName();
+            const GLGUID bodyGUID = dispNode->GetGUID();
+            guint32 pixel = ((gint)(color.GetRed()) << 24 | ((gint)(color.GetGreen())) << 16 | ((gint)(color.GetBlue())) << 8 | ((gint)(color.GetAlpha())));
+            GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, 13, 13);
+            gdk_pixbuf_fill(pixbuf, pixel);
+            GtkTreeIter itBody;
+            gtk_tree_store_append(GTK_TREE_STORE(model), &itBody, &itPart);
+            gtk_tree_store_set(GTK_TREE_STORE(model), &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, bodyPixBuf, ENTITY_VISIBILITY, TRUE,
+                ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, ENTITY_TYPE_SOLID_BODY, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
+            g_object_unref(pixbuf);
+        }
+    }
 }
 
 bool GLModelTreeView::color_eq(const GdkRGBA *c1, const GdkRGBA *c2)
@@ -210,6 +237,16 @@ void GLModelTreeView::on_color_dialog_response(GtkDialog *dialog, gint response_
                     {
                         guint32 pixel = ((gint)(color.red * 255) << 24 | ((gint)(color.green*255)) << 16 | ((gint)(color.blue*255)) << 8 | ((gint)(color.alpha*255)));
                         gdk_pixbuf_fill(pixbuf, pixel);
+
+                        guint64 part1 = 0;
+                        guint64 part2 = 0;
+                        gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+                        gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+                        std::vector<GLGUID> guids;
+                        guids.emplace_back(part1, part2);
+                        std::vector<vtkColor4d> colors;
+                        colors.emplace_back(color.red, color.green, color.blue);
+                        myself->sig_ColorChanged(guids, colors);
                     }
                 }
 
@@ -221,9 +258,11 @@ void GLModelTreeView::on_color_dialog_response(GtkDialog *dialog, gint response_
     gtk_widget_destroy(GTK_WIDGET(dialog));
 }
 
-void GLModelTreeView::on_visibility_toggled(GtkCellRendererToggle *celltoggle, gchar *path_string, GtkTreeView *tree_view)
+void GLModelTreeView::on_visibility_toggled(GtkCellRendererToggle *celltoggle, gchar *path_string, gpointer data)
 {
     GtkTreeIter iter;
+    GLModelTreeView *myself = (GLModelTreeView *)data;
+    GtkTreeView *tree_view = GTK_TREE_VIEW(myself->treeView_);
     GtkTreeModel *model = gtk_tree_view_get_model(tree_view);
     GtkTreePath *path = gtk_tree_path_new_from_string(path_string);
     gtk_tree_model_get_iter(model, &iter, path);
@@ -232,7 +271,18 @@ void GLModelTreeView::on_visibility_toggled(GtkCellRendererToggle *celltoggle, g
     gboolean active = FALSE;
     gtk_tree_model_get(GTK_TREE_MODEL(model), &iter, ENTITY_VISIBILITY, &active, -1);
     gtk_tree_store_set(GTK_TREE_STORE(model), &iter, ENTITY_VISIBILITY, !active, -1);
-    set_children_visibility(model, &iter, !active);
+
+    guint64 part1 = 0;
+    guint64 part2 = 0;
+    std::vector<GLGUID> guids;
+    gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+    gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+    guids.emplace_back(part1, part2);
+
+    set_children_visibility(model, &iter, !active, guids);
+
+    std::vector<int> visibles(guids.size(), !active);
+    myself->sig_VisibilityChanged(guids, visibles);
 }
 
 void GLModelTreeView::on_representation_changed(GtkCellRendererText *cell, const gchar *path_string, const gchar *new_text, gpointer data)
@@ -356,18 +406,26 @@ void GLModelTreeView::view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gp
     }
 }
 
-void GLModelTreeView::set_children_visibility(GtkTreeModel* model, GtkTreeIter* iterParent, const gboolean visible)
+void GLModelTreeView::set_children_visibility(GtkTreeModel* model, GtkTreeIter* iterParent, const gboolean visible, std::vector<GLGUID> &guids)
 {
     GtkTreeIter  iter;
     if (gtk_tree_model_iter_children(model, &iter, iterParent))
     {
+        guint64 part1 = 0;
+        guint64 part2 = 0;
         gtk_tree_store_set(GTK_TREE_STORE(model), &iter, ENTITY_VISIBILITY, visible, -1);
-        set_children_visibility(model, &iter, visible);
+        gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+        gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+        guids.emplace_back(part1, part2);
+        set_children_visibility(model, &iter, visible, guids);
 
         while (gtk_tree_model_iter_next(model, &iter))
         {
             gtk_tree_store_set(GTK_TREE_STORE(model), &iter, ENTITY_VISIBILITY, visible, -1);
-            set_children_visibility(model, &iter, visible);
+            gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+            gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+            guids.emplace_back(part1, part2);
+            set_children_visibility(model, &iter, visible, guids);
         }
     }
 }

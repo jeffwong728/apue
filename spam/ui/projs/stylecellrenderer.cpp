@@ -12,7 +12,7 @@ wxString StyleCellRenderer::GetDefaultType()
 bool StyleCellRenderer::Render(wxRect rect, wxDC *dc, int WXUNUSED(state))
 {
     wxBrush brush(drawStyle_.fillColor_);
-    wxPen   pen(drawStyle_.strokeColor_, static_cast<int>(drawStyle_.strokeWidth_));
+    wxPen   pen(drawStyle_.strokeColor_);
 
     wxGraphicsContext *gc = wxGraphicsContext::CreateFromUnknownDC(*dc);
     if (gc)

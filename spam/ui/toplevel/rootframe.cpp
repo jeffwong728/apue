@@ -616,6 +616,8 @@ void RootFrame::OnLoadImage(wxCommandEvent& WXUNUSED(e))
 void RootFrame::OnLoadModel(wxCommandEvent& WXUNUSED(e))
 {
     wxString wildCard{ "Stereo lithography STL files (*.stl)|*.stl" };
+    wildCard.Append("|VTK Formats (*.vtp;*.vtu)|*.vtp;*.vtu");
+    wildCard.Append("|Legacy VTK Formats (*.vtk)|*.vtk");
     wildCard.Append("|All files (*.*)|*.*");
 
     wxFileDialog openFileDialog(this, wxT("Open model file"), "", "", wildCard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
@@ -625,8 +627,28 @@ void RootFrame::OnLoadModel(wxCommandEvent& WXUNUSED(e))
         auto glWidget = GetGLWidget();
         if (glWidget)
         {
-            glWidget->ImportSTL(fullPath);
+            if (0 == openFileDialog.GetFilterIndex())
+            {
+                glWidget->ImportSTL(fullPath);
+            }
+            else if (1 == openFileDialog.GetFilterIndex())
+            {
+                glWidget->ImportVTU(fullPath);
+            }
+            else
+            {
+                glWidget->ImportVTK(fullPath);
+            }
         }
+    }
+}
+
+void RootFrame::OnCloseModel(wxCommandEvent& WXUNUSED(e))
+{
+    auto glWidget = GetGLWidget();
+    if (glWidget)
+    {
+        glWidget->CloseModel();
     }
 }
 
@@ -1398,6 +1420,13 @@ void RootFrame::file_import_model_cb(GtkWidget *menuitem, gpointer user_data)
     frame->OnLoadModel(e);
 }
 
+void RootFrame::file_close_model_cb(GtkWidget *menuitem, gpointer user_data)
+{
+    wxCommandEvent e;
+    RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
+    frame->OnCloseModel(e);
+}
+
 void RootFrame::file_quit_cb(GtkWidget *menuitem, gpointer user_data)
 {
     RootFrame *frame = reinterpret_cast<RootFrame *>(user_data);
@@ -1679,6 +1708,7 @@ void RootFrame::ReplaceTitleBar(void)
     GtkWidget *imPyMi = gtk_image_menu_item_new_with_mnemonic("_Open Python 3 Script...");
     GtkWidget *exPyMi = gtk_image_menu_item_new_with_mnemonic("_Save Python 3 Script...");
     GtkWidget *modlMi = gtk_image_menu_item_new_with_mnemonic("Import _Model...");
+    GtkWidget *closMi = gtk_image_menu_item_new_with_mnemonic("_Close Model...");
     GtkWidget *saveMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE, accel_group);
     GtkWidget *saveAsMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_SAVE_AS, nullptr);
     GtkWidget *quitMi = gtk_image_menu_item_new_from_stock(GTK_STOCK_QUIT, accel_group);
@@ -1702,6 +1732,7 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), expoMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), modlMi);
+    gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), closMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), gtk_separator_menu_item_new());
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), imPyMi);
     gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), exPyMi);
@@ -1725,7 +1756,8 @@ void RootFrame::ReplaceTitleBar(void)
     gtk_widget_add_accelerator(newMi, "activate", accel_group, GDK_KEY_N, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(openMi, "activate", accel_group, GDK_KEY_O, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(impoMi, "activate", accel_group, GDK_KEY_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
-    gtk_widget_add_accelerator(modlMi, "activate", accel_group, GDK_KEY_I, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator(modlMi, "activate", accel_group, GDK_KEY_M, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator(closMi, "activate", accel_group, GDK_KEY_C, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(expoMi, "activate", accel_group, GDK_KEY_E, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(saveMi, "activate", accel_group, GDK_KEY_S, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_add_accelerator(quitMi, "activate", accel_group, GDK_KEY_Q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
@@ -1755,6 +1787,7 @@ void RootFrame::ReplaceTitleBar(void)
     g_signal_connect(G_OBJECT(impoMi), "activate", G_CALLBACK(file_import_image_cb), this);
     g_signal_connect(G_OBJECT(expoMi), "activate", G_CALLBACK(file_export_image_cb), this);
     g_signal_connect(G_OBJECT(modlMi), "activate", G_CALLBACK(file_import_model_cb), this);
+    g_signal_connect(G_OBJECT(closMi), "activate", G_CALLBACK(file_close_model_cb), this);
     g_signal_connect(G_OBJECT(imPyMi), "activate", G_CALLBACK(file_import_py3_cb), this);
     g_signal_connect(G_OBJECT(exPyMi), "activate", G_CALLBACK(file_export_py3_cb), this);
     g_signal_connect(G_OBJECT(quitMi), "activate", G_CALLBACK(file_quit_cb), this);
