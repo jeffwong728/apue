@@ -38,6 +38,8 @@ public:
     typedef bs2::keywords::mutex_type<bs2::dummy_mutex> bs2_dummy_mutex;
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<vtkColor4d>&), bs2_dummy_mutex>::type sig_ColorChanged;
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_VisibilityChanged;
+    bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_ShowNodeChanged;
+    bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_RepresentationChanged;
 
 public:
     static SPGLModelTreeView MakeNew(const wxWindow *const parent);
@@ -53,6 +55,7 @@ public:
 public:
     GtkWidget *GetWidget() { return mainView_; }
     const GtkWidget *GetWidget() const { return mainView_; }
+    void CloseModel();
     void AddPart(const std::string &partName, const SPDispNodes &dispNodes);
 
 private:
@@ -60,6 +63,7 @@ private:
     static void on_row_activated(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data);
     static void on_color_dialog_response(GtkDialog *dialog, gint response_id, gpointer user_data);
     static void on_visibility_toggled(GtkCellRendererToggle *celltoggle, gchar *path_string, gpointer data);
+    static void on_node_toggled(GtkCellRendererToggle *celltoggle, gchar *path_string, gpointer data);
     static void on_representation_changed(GtkCellRendererText *cell, const gchar *path_string, const gchar *new_text, gpointer data);
     static void on_add_part(GtkWidget *menuitem, gpointer userdata);
     static void on_add_assembly(GtkWidget *menuitem, gpointer userdata);
@@ -69,6 +73,7 @@ private:
 private:
     static void view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gpointer userdata);
     static void set_children_visibility(GtkTreeModel* model, GtkTreeIter* iterParent, const gboolean visible, std::vector<GLGUID> &guids);
+    static void set_children_node(GtkTreeModel* model, GtkTreeIter* iterParent, const gboolean visible, std::vector<GLGUID> &guids);
     static gboolean TreeModelForeachFunc(GtkTreeModel* model, GtkTreePath* path, GtkTreeIter* iter, gpointer data);
 
 private:

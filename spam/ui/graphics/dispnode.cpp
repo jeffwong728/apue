@@ -128,7 +128,7 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ugSo
     if (ugSource)
     {
         vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
-        surfaceFilter->SetNonlinearSubdivisionLevel(1);
+        surfaceFilter->SetNonlinearSubdivisionLevel(0);
         surfaceFilter->SetInputData(ugSource);
         surfaceFilter->Update();
 
@@ -182,6 +182,30 @@ void GLDispNode::SetVisible(const int visible)
     }
 }
 
+void GLDispNode::ShowNode(const int visible)
+{
+    if (actor_)
+    {
+        actor_->GetProperty()->SetVertexVisibility(visible);
+        actor_->GetProperty()->SetEdgeVisibility(visible);
+    }
+}
+
+void GLDispNode::SetRepresentation(const int rep)
+{
+    if (actor_)
+    {
+        if (VTK_WIREFRAME == rep)
+        {
+            actor_->GetProperty()->SetRepresentationToWireframe();
+        }
+        else
+        {
+            actor_->GetProperty()->SetRepresentationToSurface();
+        }
+    }
+}
+
 void GLDispNode::SetCellColor(const double *c)
 {
     if (actor_)
@@ -227,15 +251,15 @@ void GLDispNode::SetDefaultDisplay()
         DisplayEntityType::kDET_POLYS == type_ ||
         DisplayEntityType::kDET_STRIPS == type_)
     {
-        actor_->GetProperty()->VertexVisibilityOn();
-        actor_->GetProperty()->EdgeVisibilityOn();
+        actor_->GetProperty()->EdgeVisibilityOff();
+        actor_->GetProperty()->VertexVisibilityOff();
     }
 
     actor_->GetProperty()->SetDiffuse(1.0);
     actor_->GetProperty()->SetSpecular(0.3);
     actor_->GetProperty()->SetSpecularPower(60.0);
     actor_->GetProperty()->SetOpacity(1.0);
-    actor_->GetProperty()->SetLineWidth(1.5);
+    actor_->GetProperty()->SetLineWidth(1.f);
     actor_->GetProperty()->SetPointSize(5);
 
     renderer_->AddActor(actor_);

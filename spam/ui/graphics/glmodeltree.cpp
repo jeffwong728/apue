@@ -4,6 +4,8 @@
 #include <wx/wx.h>
 #include <vtkNew.h>
 #include <vtkNamedColors.h>
+#include <vtkProperty.h>
+#include <string_view>
 
 SPGLModelTreeView GLModelTreeView::MakeNew(const wxWindow *const parent)
 {
@@ -108,6 +110,7 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
     g_object_unref(pixbuf);
     gtk_widget_show(image);
     gtk_tree_view_column_set_widget(column, image);
+    g_signal_connect(renderer, "toggled", G_CALLBACK(on_node_toggled), this);
 
     renderer = gtk_cell_renderer_pixbuf_new();
     gtk_tree_view_insert_column_with_attributes(GTK_TREE_VIEW(treeView_), -1, "Color", renderer, "pixbuf", ENTITY_COLOR, NULL);
@@ -129,6 +132,20 @@ GLModelTreeView::~GLModelTreeView()
     g_object_unref(assemPixBuf);
     g_object_unref(partPixBuf);
     g_object_unref(bodyPixBuf);
+}
+
+void GLModelTreeView::CloseModel()
+{
+    GtkTreeIter itModel;
+    GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(treeView_));
+    if (gtk_tree_model_get_iter_first(model, &itModel))
+    {
+        GtkTreeIter itChild;
+        while (gtk_tree_model_iter_children(model, &itChild, &itModel))
+        {
+            gtk_tree_store_remove(GTK_TREE_STORE(model), &itChild);
+        }
+    }
 }
 
 void GLModelTreeView::AddPart(const std::string &partName, const SPDispNodes &dispNodes)
@@ -285,6 +302,33 @@ void GLModelTreeView::on_visibility_toggled(GtkCellRendererToggle *celltoggle, g
     myself->sig_VisibilityChanged(guids, visibles);
 }
 
+void GLModelTreeView::on_node_toggled(GtkCellRendererToggle *celltoggle, gchar *path_string, gpointer data)
+{
+    GtkTreeIter iter;
+    GLModelTreeView *myself = (GLModelTreeView *)data;
+    GtkTreeView *tree_view = GTK_TREE_VIEW(myself->treeView_);
+    GtkTreeModel *model = gtk_tree_view_get_model(tree_view);
+    GtkTreePath *path = gtk_tree_path_new_from_string(path_string);
+    gtk_tree_model_get_iter(model, &iter, path);
+    gtk_tree_path_free(path);
+
+    gboolean active = FALSE;
+    gtk_tree_model_get(GTK_TREE_MODEL(model), &iter, ENTITY_SHOW_VERTEX, &active, -1);
+    gtk_tree_store_set(GTK_TREE_STORE(model), &iter, ENTITY_SHOW_VERTEX, !active, -1);
+
+    guint64 part1 = 0;
+    guint64 part2 = 0;
+    std::vector<GLGUID> guids;
+    gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+    gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+    guids.emplace_back(part1, part2);
+
+    set_children_node(model, &iter, !active, guids);
+
+    std::vector<int> visibles(guids.size(), !active);
+    myself->sig_ShowNodeChanged(guids, visibles);
+}
+
 void GLModelTreeView::on_representation_changed(GtkCellRendererText *cell, const gchar *path_string, const gchar *new_text, gpointer data)
 {
     GtkTreeIter iter;
@@ -293,6 +337,25 @@ void GLModelTreeView::on_representation_changed(GtkCellRendererText *cell, const
     GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(myself->treeView_));
     gtk_tree_model_get_iter(model, &iter, path);
     gtk_tree_store_set(GTK_TREE_STORE(model), &iter, ENTITY_DISPLAY_MODE, new_text, -1);
+
+    guint64 part1 = 0;
+    guint64 part2 = 0;
+    std::vector<GLGUID> guids;
+    gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+    gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+    guids.emplace_back(part1, part2);
+
+    std::vector<int> reps;
+    if (std::string_view("Wireframe") == std::string_view(new_text))
+    {
+        reps.push_back(VTK_WIREFRAME);
+    }
+    else
+    {
+        reps.push_back(VTK_SURFACE);
+    }
+
+    myself->sig_RepresentationChanged(guids, reps);
 }
 
 void GLModelTreeView::on_add_part(GtkWidget *menuitem, gpointer userdata)
@@ -426,6 +489,30 @@ void GLModelTreeView::set_children_visibility(GtkTreeModel* model, GtkTreeIter* 
             gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
             guids.emplace_back(part1, part2);
             set_children_visibility(model, &iter, visible, guids);
+        }
+    }
+}
+
+void GLModelTreeView::set_children_node(GtkTreeModel* model, GtkTreeIter* iterParent, const gboolean visible, std::vector<GLGUID> &guids)
+{
+    GtkTreeIter  iter;
+    if (gtk_tree_model_iter_children(model, &iter, iterParent))
+    {
+        guint64 part1 = 0;
+        guint64 part2 = 0;
+        gtk_tree_store_set(GTK_TREE_STORE(model), &iter, ENTITY_SHOW_VERTEX, visible, -1);
+        gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+        gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+        guids.emplace_back(part1, part2);
+        set_children_node(model, &iter, visible, guids);
+
+        while (gtk_tree_model_iter_next(model, &iter))
+        {
+            gtk_tree_store_set(GTK_TREE_STORE(model), &iter, ENTITY_SHOW_VERTEX, visible, -1);
+            gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+            gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+            guids.emplace_back(part1, part2);
+            set_children_node(model, &iter, visible, guids);
         }
     }
 }

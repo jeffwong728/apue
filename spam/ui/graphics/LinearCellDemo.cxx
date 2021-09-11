@@ -16,7 +16,7 @@
 #include <vtkTextMapper.h>
 #include <vtkTextProperty.h>
 #include <vtkUnstructuredGrid.h>
-
+#include <vtkPolyDataMapper.h>
 #include <vtkHexagonalPrism.h>
 #include <vtkHexahedron.h>
 #include <vtkLine.h>
@@ -120,12 +120,7 @@ int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, const int
           auto mapper = vtkSmartPointer<vtkDataSetMapper>::New();
           auto actor = vtkSmartPointer<vtkActor>::New();
 
-          vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
-          surfaceFilter->SetNonlinearSubdivisionLevel(1);
-          surfaceFilter->SetInputData(uGrids[i]);
-          surfaceFilter->Update();
-
-          mapper->SetInputData(surfaceFilter->GetOutput());
+          mapper->SetInputData(uGrids[i]);
           actor->SetMapper(mapper);
           actor->GetProperty()->SetRepresentationToWireframe();
           actor->GetProperty()->SetColor(colors->GetColor3d("Yellow").GetData());
@@ -152,7 +147,7 @@ int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, const int
 
           // Label the points
           vtkSmartPointer<vtkLabeledDataMapper> labelMapper = vtkSmartPointer<vtkLabeledDataMapper>::New();
-          labelMapper->SetInputData(surfaceFilter->GetOutput());
+          labelMapper->SetInputData(uGrids[i]);
           vtkSmartPointer<vtkActor2D> labelActor = vtkSmartPointer<vtkActor2D>::New();
           labelActor->SetMapper(labelMapper);
           labelActor->VisibilityOff();

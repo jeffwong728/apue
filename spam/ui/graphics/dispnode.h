@@ -36,6 +36,8 @@ public:
     const vtkColor4ub GetColor() const;
     const std::string GetName() const;
     void SetVisible(const int visible);
+    void ShowNode(const int visible);
+    void SetRepresentation(const int rep);
     void SetCellColor(const double *c);
     void SetEdgeColor(const double *c);
     void SetNodeColor(const double *c);

@@ -54,6 +54,7 @@
 #include <boost/container/static_vector.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/dll/runtime_symbol_info.hpp>
+#include <vtksys/SystemTools.hxx>
 extern std::pair<std::string, bool> PyRunFile(const std::string &strFullPath);
 
 RootFrame::RootFrame()
@@ -618,6 +619,8 @@ void RootFrame::OnLoadModel(wxCommandEvent& WXUNUSED(e))
     wxString wildCard{ "Stereo lithography STL files (*.stl)|*.stl" };
     wildCard.Append("|VTK Formats (*.vtp;*.vtu)|*.vtp;*.vtu");
     wildCard.Append("|Legacy VTK Formats (*.vtk)|*.vtk");
+    wildCard.Append("|Wavefront OBJ file (*.obj)|*.obj");
+    wildCard.Append("|PLY files (*.ply)|*.ply");
     wildCard.Append("|All files (*.*)|*.*");
 
     wxFileDialog openFileDialog(this, wxT("Open model file"), "", "", wildCard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
@@ -627,17 +630,30 @@ void RootFrame::OnLoadModel(wxCommandEvent& WXUNUSED(e))
         auto glWidget = GetGLWidget();
         if (glWidget)
         {
-            if (0 == openFileDialog.GetFilterIndex())
+            std::string extension = vtksys::SystemTools::GetFilenameLastExtension(fullPath);
+            if (extension == ".ply")
             {
-                glWidget->ImportSTL(fullPath);
+                glWidget->ImportPLY(fullPath);
             }
-            else if (1 == openFileDialog.GetFilterIndex())
+            else if (extension == ".vtp" || extension == ".vtu")
             {
                 glWidget->ImportVTU(fullPath);
             }
-            else
+            else if (extension == ".obj")
+            {
+                glWidget->ImportOBJ(fullPath);
+            }
+            else if (extension == ".stl")
+            {
+                glWidget->ImportSTL(fullPath);
+            }
+            else if (extension == ".vtk")
             {
                 glWidget->ImportVTK(fullPath);
+            }
+            else
+            {
+                wxMessageBox(wxString(wxT("Don't know how to read this file")), wxString(wxT("Import Failed")));
             }
         }
     }

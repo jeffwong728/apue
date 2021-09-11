@@ -64,6 +64,8 @@ public:
     void ImportSTL(const std::string &inputFilename);
     void ImportVTK(const std::string &inputFilename);
     void ImportVTU(const std::string &inputFilename);
+    void ImportOBJ(const std::string &inputFilename);
+    void ImportPLY(const std::string &inputFilename);
     void CloseModel();
 
 public:
@@ -80,6 +82,8 @@ public:
     void OnKillFocus(wxFocusEvent &e);
     void OnColorChanged(const std::vector<GLGUID> &guids, const std::vector<vtkColor4d> &newColors);
     void OnVisibilityChanged(const std::vector<GLGUID> &guids, const std::vector<int> &visibles);
+    void OnShowNodeChanged(const std::vector<GLGUID> &guids, const std::vector<int> &visibles);
+    void OnRepresentationChanged(const std::vector<GLGUID> &guids, const std::vector<int> &reps);
 
 protected:
     virtual void DoApplyWidgetStyle(GtkRcStyle *style) wxOVERRIDE;

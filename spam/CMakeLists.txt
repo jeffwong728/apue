@@ -30,7 +30,7 @@ find_package(OpenCV REQUIRED core imgproc imgcodecs mvlab)
 find_package(Boost REQUIRED COMPONENTS locale system thread chrono filesystem unit_test_framework)
 find_package(VTK COMPONENTS vtkCommonCore vtkCommonColor vtkCommonDataModel vtkFiltersSources vtkIOLegacy vtkIOXML
                             vtkRenderingCore vtkRenderingFreeType vtkRenderingGL2PSOpenGL2 vtkRenderingOpenGL2
-                            vtkRenderingAnnotation vtkRenderingExternal vtkIOImage vtkIOGeometry vtkRenderingLabel
+                            vtkRenderingAnnotation vtkRenderingExternal vtkIOImage vtkIOGeometry vtkIOPLY vtkRenderingLabel
                             vtkFiltersCore vtkFiltersExtraction vtkFiltersGeneral vtkFiltersGeometry vtkFiltersHybrid vtkFiltersSources QUIET)
 
 if (NOT VTK_FOUND)
@@ -38,6 +38,7 @@ if (NOT VTK_FOUND)
   return ()
 endif()
 message (STATUS "VTK_VERSION: ${VTK_VERSION}")
+message (STATUS "${VTK_LIBRARIES}")
 
 set(HDF5_USE_STATIC_LIBRARIES OFF)
 IF (WIN32 AND MSVC)
