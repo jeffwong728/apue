@@ -21,13 +21,21 @@ class GLDispNode;
 class GLDispTree;
 class GLModelTreeView;
 
-enum class DisplayEntityType
+enum DisplayEntityType
 {
     kDET_VERTS = 0,
     kDET_LINES = 1,
     kDET_POLYS = 2,
     kDET_STRIPS = 3,
     kDET_NUMCATS = 4
+};
+
+enum PrimGeomShape
+{
+    kPGS_BOX = 0,
+    kPGS_SPHERE = 1,
+    kPGS_CYLINDER = 2,
+    kPGS_GUARD
 };
 
 struct GLGUID

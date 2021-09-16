@@ -40,6 +40,7 @@ public:
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_VisibilityChanged;
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_ShowNodeChanged;
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_RepresentationChanged;
+    bs2::signal_type<void(const GLGUID, const int), bs2_dummy_mutex>::type sig_AddGeomBody;
 
 public:
     static SPGLModelTreeView MakeNew(const wxWindow *const parent);
@@ -57,6 +58,10 @@ public:
     const GtkWidget *GetWidget() const { return mainView_; }
     void CloseModel();
     void AddPart(const std::string &partName, const SPDispNodes &dispNodes);
+    void AddGeomBody(const GLGUID &partGUID, const SPDispNode &spGeomBody);
+
+private:
+    gboolean FindPart(const GLGUID &partGUID, GtkTreeIter *iter);
 
 private:
     static bool color_eq(const GdkRGBA *c1, const GdkRGBA *c2);
@@ -67,6 +72,8 @@ private:
     static void on_representation_changed(GtkCellRendererText *cell, const gchar *path_string, const gchar *new_text, gpointer data);
     static void on_add_part(GtkWidget *menuitem, gpointer userdata);
     static void on_add_assembly(GtkWidget *menuitem, gpointer userdata);
+    static void on_add_geom_body(GtkWidget *menuitem, gpointer userdata);
+    static void on_add_vtk_cell(GtkWidget *menuitem, gpointer userdata);
     static gboolean on_popup_menu(GtkWidget *treeview, gpointer userdata);
     static gboolean on_button_pressed(GtkWidget *treeview, GdkEventButton *e, gpointer userdata);
 

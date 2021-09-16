@@ -35,6 +35,18 @@
 #include <vtkWedge.h>
 #include <vtkDataSetSurfaceFilter.h>
 
+// VIS includes
+#include <IVtkOCC_Shape.hxx>
+#include <IVtkTools_ShapeDataSource.hxx>
+#include <IVtkTools_ShapeObject.hxx>
+#include <IVtkTools_ShapePicker.hxx>
+#include <IVtkTools_SubPolyDataFilter.hxx>
+
+// OCCT includes
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <TColStd_MapIteratorOfPackedMapOfInteger.hxx>
+#include <TColStd_PackedMapOfInteger.hxx>
+
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -59,6 +71,35 @@ vtkSmartPointer<vtkUnstructuredGrid> MakeWedge();
 vtkSmartPointer<vtkUnstructuredGrid> MakePyramid();
 vtkSmartPointer<vtkUnstructuredGrid> MakePentagonalPrism();
 vtkSmartPointer<vtkUnstructuredGrid> MakeHexagonalPrism();
+}
+
+int add_BoxDemo(vtkRenderWindow *renWin, vtkRenderer *renderer)
+{
+    const auto aShape = BRepPrimAPI_MakeBox(60, 80, 90).Shape();
+    IVtkOCC_Shape::Handle aShapeImpl = new IVtkOCC_Shape(aShape);
+
+    vtkSmartPointer<IVtkTools_ShapeDataSource> aDS = vtkSmartPointer<IVtkTools_ShapeDataSource>::New();
+    aDS->SetShape(aShapeImpl);
+
+    vtkSmartPointer<vtkPolyDataMapper> aMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+
+    vtkSmartPointer<vtkNamedColors> colors = vtkSmartPointer<vtkNamedColors>::New();
+    aMapper->SetInputConnection(aDS->GetOutputPort());
+    vtkSmartPointer<vtkActor> aActor = vtkSmartPointer<vtkActor>::New();
+    aActor->GetProperty()->SetLineWidth(1.5);
+    aActor->GetProperty()->SetOpacity(1.0);
+    aActor->GetProperty()->SetPointSize(5);
+    aActor->GetProperty()->SetSpecular(0.6);
+    aActor->GetProperty()->SetSpecularColor(1.0, 1.0, 1.0);
+    aActor->GetProperty()->SetSpecularPower(100.0);
+    aActor->GetProperty()->SetColor(colors->GetColor3d("Yellow").GetData());
+    aActor->GetProperty()->SetEdgeColor(colors->GetColor3d("Black").GetData());
+    aActor->VisibilityOn();
+
+    aActor->SetMapper(aMapper);
+    renderer->AddViewProp(aActor);
+
+    return 0;
 }
 
 int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, const int index)

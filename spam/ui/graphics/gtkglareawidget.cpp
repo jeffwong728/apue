@@ -13,6 +13,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <vtkNew.h>
+#include <vtkMath.h>
 #include <vtkLight.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
@@ -47,6 +48,23 @@
 #include <vtkDataSetMapper.h>
 #include <vtkXMLGenericDataObjectReader.h>
 #include <vtkOBBTree.h>
+#include <vtkRenderer.h>
+#include <vtkTextActor.h>
+#ifdef M_PI
+#undef M_PI
+#endif
+// VIS includes
+#include <IVtkOCC_Shape.hxx>
+#include <IVtkTools_ShapeDataSource.hxx>
+#include <IVtkTools_ShapeObject.hxx>
+#include <IVtkTools_ShapePicker.hxx>
+#include <IVtkTools_SubPolyDataFilter.hxx>
+
+// OCCT includes
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakeSphere.hxx>
+#include <TColStd_MapIteratorOfPackedMapOfInteger.hxx>
+#include <TColStd_PackedMapOfInteger.hxx>
 
 //gl_FrontFacing
 //gl_PrimitiveID
@@ -138,6 +156,7 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     Bind(wxEVT_KILL_FOCUS,  &wxGLAreaWidget::OnKillFocus,       this, wxID_ANY);
     Bind(wxEVT_MOUSEWHEEL,  &wxGLAreaWidget::OnMouseWheel,      this, wxID_ANY);
 
+    modelTreeView_->sig_AddGeomBody.connect(std::bind(&wxGLAreaWidget::OnAddGeomBody, this, std::placeholders::_1, std::placeholders::_2));
     modelTreeView_->sig_ColorChanged.connect(std::bind(&wxGLAreaWidget::OnColorChanged, this, std::placeholders::_1, std::placeholders::_2));
     modelTreeView_->sig_VisibilityChanged.connect(std::bind(&wxGLAreaWidget::OnVisibilityChanged, this, std::placeholders::_1, std::placeholders::_2));
     modelTreeView_->sig_ShowNodeChanged.connect(std::bind(&wxGLAreaWidget::OnShowNodeChanged, this, std::placeholders::_1, std::placeholders::_2));
@@ -328,7 +347,10 @@ void wxGLAreaWidget::OnSize(wxSizeEvent &e)
 {
     const int w = e.GetSize().GetWidth();
     const int h = e.GetSize().GetHeight();
-    if (externalVTKWidget) externalVTKWidget->GetRenderWindow()->SetSize(w, h);
+    if (externalVTKWidget)
+    {
+        externalVTKWidget->GetRenderWindow()->SetSize(w, h);
+    }
 }
 
 void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
@@ -383,8 +405,6 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
     const int y = e.GetPosition().y;
     const int dx = x - lastPos_.x;
     const int dy = y - lastPos_.y;
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
 
     if (e.Dragging() && e.RightIsDown())
     {
@@ -425,6 +445,9 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
 
         double rxf = dx * delta_azimuth * 20.0;
         double ryf = dy * delta_elevation * -20.0;
+
+        const int w = externalVTKWidget->GetRenderWindow()->GetSize()[0];
+        const int h = externalVTKWidget->GetRenderWindow()->GetSize()[1];
 
         vtkCamera* camera = this->axisRenderer->GetActiveCamera();
         camera->Azimuth(rxf);
@@ -468,6 +491,42 @@ void wxGLAreaWidget::OnSetFocus(wxFocusEvent &e)
 void wxGLAreaWidget::OnKillFocus(wxFocusEvent &e)
 {
     wxLogMessage(wxT("wxGLAreaWidget::OnKillFocus."));
+}
+
+void wxGLAreaWidget::OnAddGeomBody(const GLGUID &partGuid, const int geomShape)
+{
+    vtkSmartPointer<IVtkTools_ShapeDataSource> aDS = vtkSmartPointer<IVtkTools_ShapeDataSource>::New();
+    if (kPGS_SPHERE == geomShape)
+    {
+        const auto aShape = BRepPrimAPI_MakeBox(60, 80, 90).Shape();
+        IVtkOCC_Shape::Handle aShapeImpl = new IVtkOCC_Shape(aShape);
+        aDS->SetShape(aShapeImpl);
+    }
+    else
+    {
+        const auto aShape = BRepPrimAPI_MakeSphere(30.0, vtkMath::RadiansFromDegrees(30.0)).Shape();
+        IVtkOCC_Shape::Handle aShapeImpl = new IVtkOCC_Shape(aShape);
+        aDS->SetShape(aShapeImpl);
+    }
+
+    aDS->Update();
+
+    SPDispNodes newDispNodes = GLDispNode::MakeNew(aDS->GetOutput(), rootRenderer);
+    if (!newDispNodes.empty())
+    {
+        const auto numColors = colors_->GetNumberOfColors();
+        for (const auto &newDispNode : newDispNodes)
+        {
+            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            allActors_[newDispNode->GetGUID()] = newDispNode;
+            modelTreeView_->AddGeomBody(partGuid, newDispNode);
+        }
+
+        rootRenderer->ResetCamera();
+        Refresh(false);
+    }
 }
 
 void wxGLAreaWidget::OnColorChanged(const std::vector<GLGUID> &guids, const std::vector<vtkColor4d> &newColors)
@@ -589,6 +648,31 @@ wxSize wxGLAreaWidget::DoGetBestSize() const
     return wxSize(64, 48);
 }
 
+void wxGLAreaWidget::PositionAxis(const int oldx, const int oldy, const int newx, const int newy)
+{
+    double viewFocus[4], focalDepth, viewPoint[3];
+    double newPickPoint[4], oldPickPoint[4], motionVector[3];
+
+    const int h = externalVTKWidget->GetRenderWindow()->GetSize()[1];
+    vtkCamera* camera = axisRenderer->GetActiveCamera();
+    camera->GetFocalPoint(viewFocus);
+    this->ComputeWorldToDisplay(axisRenderer, viewFocus[0], viewFocus[1], viewFocus[2], viewFocus);
+    focalDepth = viewFocus[2];
+
+    this->ComputeDisplayToWorld(axisRenderer, newx, newy, focalDepth, newPickPoint);
+    this->ComputeDisplayToWorld(axisRenderer, oldx, oldy, focalDepth, oldPickPoint);
+
+    motionVector[0] = oldPickPoint[0] - newPickPoint[0];
+    motionVector[1] = oldPickPoint[1] - newPickPoint[1];
+    motionVector[2] = oldPickPoint[2] - newPickPoint[2];
+
+    camera->GetFocalPoint(viewFocus);
+    camera->GetPosition(viewPoint);
+    camera->SetFocalPoint(motionVector[0] + viewFocus[0], motionVector[1] + viewFocus[1], motionVector[2] + viewFocus[2]);
+    camera->SetPosition(motionVector[0] + viewPoint[0], motionVector[1] + viewPoint[1], motionVector[2] + viewPoint[2]);
+    axisRenderer->UpdateLightsGeometryToFollowCamera();
+}
+
 void wxGLAreaWidget::ComputeWorldToDisplay(vtkRenderer* ren, double x, double y, double z, double displayPt[3])
 {
     ren->SetWorldPoint(x, y, z, 1.0);
@@ -610,6 +694,7 @@ void wxGLAreaWidget::ComputeDisplayToWorld(vtkRenderer* ren, double x, double y,
     }
 }
 
+extern int add_BoxDemo(vtkRenderWindow *renWin, vtkRenderer *renderer);
 extern int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, const int index);
 
 void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
@@ -628,6 +713,9 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
     glArea->externalVTKWidget = vtkSmartPointer<ExternalVTKWidget>::New();
     auto renWin = glArea->externalVTKWidget->GetRenderWindow();
+    const int w = gtk_widget_get_allocated_width(widget);
+    const int h = gtk_widget_get_allocated_height(widget);
+    glArea->externalVTKWidget->GetRenderWindow()->SetSize(w, h);
 
     renWin->AutomaticWindowPositionAndResizeOff();
     renWin->SetUseExternalContent(false);
@@ -721,7 +809,7 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     colors->SetColor("BkgColor", bkg.data());
     vtkNew<vtkSphereSource> sphereSource;
     sphereSource->SetCenter(0.0, 0.0, 0.0);
-    sphereSource->SetRadius(0.1);
+    sphereSource->SetRadius(0.15);
 
     // create a mapper
     vtkNew<vtkPolyDataMapper> sphereMapper;
@@ -729,39 +817,41 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 
     // create an actor
     vtkNew<vtkActor> sphereActor;
-    sphereActor->VisibilityOff();
+    sphereActor->VisibilityOn();
     sphereActor->SetMapper(sphereMapper);
 
     // a renderer and render window
     glArea->axisRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
     glArea->axisRenderer->GetActiveCamera()->ParallelProjectionOn();
     renWin->AddRenderer(glArea->axisRenderer);
-    glArea->axisRenderer->SetLayer(1);
+    glArea->axisRenderer->SetLayer(2);
 
     // add the actors to the scene
     glArea->axisRenderer->AddActor(sphereActor);
     glArea->axisRenderer->SetBackground(colors->GetColor3d("BkgColor").GetData());
 
     vtkNew<vtkAxesActor> axes;
-    axes->VisibilityOff();
+    axes->VisibilityOn();
     axes->GetXAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
     axes->GetYAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
     axes->GetZAxisCaptionActor2D()->GetCaptionTextProperty()->SetFontSize(12);
-    axes->SetAxisLabels(false);
+    axes->GetXAxisCaptionActor2D()->GetTextActor()->SetTextScaleModeToNone();
+    axes->GetYAxisCaptionActor2D()->GetTextActor()->SetTextScaleModeToNone();
+    axes->GetZAxisCaptionActor2D()->GetTextActor()->SetTextScaleModeToNone();
+    axes->SetAxisLabels(true);
     glArea->axisRenderer->AddActor(axes);
     glArea->axisRenderer->ResetCamera();
     glArea->axisRenderer->GetActiveCamera()->Azimuth(45);
     glArea->axisRenderer->GetActiveCamera()->Elevation(-30);
-    glArea->axisRenderer->GetActiveCamera()->Zoom(0.5);
+    glArea->axisRenderer->GetActiveCamera()->Zoom(1.5);
+    glArea->axisRenderer->SetViewport(0.0, 0.0, 80.0/w, 80.0/h);
 
     glArea->rootRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
     glArea->rootRenderer->GetActiveCamera()->ParallelProjectionOn();
-    //add_LinearCellDemo(renWin, glArea->rootRenderer, 12);
-    glArea->rootRenderer->ResetCamera();
     glArea->rootRenderer->GetActiveCamera()->Azimuth(30);
     glArea->rootRenderer->GetActiveCamera()->Elevation(-30);
     renWin->AddRenderer(glArea->rootRenderer);
-    glArea->rootRenderer->SetLayer(2);
+    glArea->rootRenderer->SetLayer(1);
 
     const wxString gtkMajorVersion(std::to_string(gtk_get_major_version()));
     const wxString gtkMinorVersion(std::to_string(gtk_get_minor_version()));

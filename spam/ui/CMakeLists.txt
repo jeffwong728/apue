@@ -281,6 +281,9 @@ target_link_options(ui_core PUBLIC ${Python3_LINK_OPTIONS})
 target_link_libraries(ui_core PRIVATE ${VTK_LIBRARIES})
 vtk_module_autoinit(TARGETS ui_core MODULES ${VTK_LIBRARIES})
 
+target_include_directories(ui_core PRIVATE ${OpenCASCADE_INCLUDE_DIR})
+target_link_libraries(ui_core PRIVATE ${OpenCASCADE_LIBRARIES})
+
 if(MSVC) 
   target_compile_definitions(ui_core PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS NOMINMAX VCL_NAMESPACE=vcl)
   target_compile_definitions(ui_core PRIVATE BOOST_PYTHON_NO_LIB BOOST_PYTHON_STATIC_MODULE PY_MAJOR_VERSION=3 PY_MINOR_VERSION=8) #BOOST_DEBUG_PYTHON

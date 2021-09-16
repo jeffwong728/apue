@@ -80,6 +80,7 @@ public:
     void OnMouseWheel(wxMouseEvent &e);
     void OnSetFocus(wxFocusEvent &e);
     void OnKillFocus(wxFocusEvent &e);
+    void OnAddGeomBody(const GLGUID &partGuid, const int geomShape);
     void OnColorChanged(const std::vector<GLGUID> &guids, const std::vector<vtkColor4d> &newColors);
     void OnVisibilityChanged(const std::vector<GLGUID> &guids, const std::vector<int> &visibles);
     void OnShowNodeChanged(const std::vector<GLGUID> &guids, const std::vector<int> &visibles);
@@ -88,6 +89,9 @@ public:
 protected:
     virtual void DoApplyWidgetStyle(GtkRcStyle *style) wxOVERRIDE;
     virtual wxSize DoGetBestSize() const wxOVERRIDE;
+
+private:
+    void PositionAxis(const int oldx, const int oldy, const int newx, const int newy);
 
 private:
     static void ComputeWorldToDisplay(vtkRenderer* ren, double x, double y, double z, double displayPt[3]);
