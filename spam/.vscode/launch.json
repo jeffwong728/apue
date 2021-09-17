@@ -8,18 +8,26 @@
     "name": "(gdb) Launch",
     "type": "cppdbg",
     "request": "launch",
-    "program": "${env:SPAM_ROOT_DIR}/build/spam/${command:cmake.buildType}/spam",
+    "program": "${env:SPAM_ROOT_DIR}/jane/build/spam/${command:cmake.buildType}/spam",
     "args": [],
     "stopAtEntry": false,
-    "cwd": "${env:SPAM_ROOT_DIR}/build/spam/${command:cmake.buildType}",
-    "environment": [],
+    "cwd": "${env:SPAM_ROOT_DIR}/jane/build/spam/${command:cmake.buildType}",
+    "environment": [{"name":"LD_LIBRARY_PATH", "value":"${env:SPAM_ROOT_DIR}/occt/install/lib"}],
     "externalConsole": false,
     "MIMode": "gdb",
+    "logging": {
+      "engineLogging": true
+    },
     "setupCommands": [
         {
             "description": "Enable pretty-printing for gdb",
             "text": "-enable-pretty-printing",
             "ignoreFailures": true
+        },
+        {
+          "description": "Additional libs for gdb",
+          "text": "set environment LD_LIBRARY_PATH=${env:SPAM_ROOT_DIR}/occt/install/lib:$LD_LIBRARY_PATH",
+          "ignoreFailures": false
         }
     ]
   },

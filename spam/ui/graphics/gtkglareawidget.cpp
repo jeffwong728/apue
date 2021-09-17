@@ -51,7 +51,7 @@
 #include <vtkRenderer.h>
 #include <vtkTextActor.h>
 #include <vtksys/SystemTools.hxx>
-#ifdef M_PI
+#if defined(M_PI) && defined(_WIN32)
 #undef M_PI
 #endif
 // VIS includes
