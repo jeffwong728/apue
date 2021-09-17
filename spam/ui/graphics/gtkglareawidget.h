@@ -61,11 +61,11 @@ public:
     void MoveWindow(int x, int y, int width, int height) { DoMoveWindow(x, y, width, height); }
 
 public:
-    void ImportSTL(const std::string &inputFilename);
-    void ImportVTK(const std::string &inputFilename);
-    void ImportVTU(const std::string &inputFilename);
-    void ImportOBJ(const std::string &inputFilename);
-    void ImportPLY(const std::string &inputFilename);
+    void ImportSTL(const GLGUID &parentGuid, const std::string &inputFilename);
+    void ImportVTK(const GLGUID &parentGuid, const std::string &inputFilename);
+    void ImportVTU(const GLGUID &parentGuid, const std::string &inputFilename);
+    void ImportOBJ(const GLGUID &parentGuid, const std::string &inputFilename);
+    void ImportPLY(const GLGUID &parentGuid, const std::string &inputFilename);
     void CloseModel();
 
 public:
@@ -85,6 +85,8 @@ public:
     void OnVisibilityChanged(const std::vector<GLGUID> &guids, const std::vector<int> &visibles);
     void OnShowNodeChanged(const std::vector<GLGUID> &guids, const std::vector<int> &visibles);
     void OnRepresentationChanged(const std::vector<GLGUID> &guids, const std::vector<int> &reps);
+    void OnEntitiesDeleted(const std::vector<GLGUID> &guids);
+    void OnImportModel(const GLGUID &parentGuid);
 
 protected:
     virtual void DoApplyWidgetStyle(GtkRcStyle *style) wxOVERRIDE;
@@ -98,6 +100,7 @@ private:
     static void ComputeDisplayToWorld(vtkRenderer* ren, double x, double y, double z, double worldPt[4]);
     static void realize_cb(GtkWidget *widget, gpointer user_data);
     static void unrealize_cb(GtkWidget *widget, gpointer user_data);
+    static GdkGLContext* create_context_cb( GtkGLArea* self, gpointer user_data);
     static gboolean render_cb(GtkGLArea *area, GdkGLContext *context, gpointer user_data);
 
 private:

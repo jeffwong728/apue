@@ -50,6 +50,7 @@
 #include <vtkOBBTree.h>
 #include <vtkRenderer.h>
 #include <vtkTextActor.h>
+#include <vtksys/SystemTools.hxx>
 #ifdef M_PI
 #undef M_PI
 #endif
@@ -95,6 +96,56 @@ void IsCurrentCallback(vtkObject* vtkNotUsed(caller),
     bool& cstatus = *reinterpret_cast<bool*>(callData);
     cstatus = context == ccontext;
 }
+
+void EPOXY_CALLSPEC glDebugOutput(GLenum source,
+    GLenum type,
+    unsigned int id,
+    GLenum severity,
+    GLsizei length,
+    const char *message,
+    const void *userParam)
+{
+    if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
+
+    std::ostringstream oss;
+    oss << "---------------" << std::endl;
+    oss << "Debug message (" << id << "): " << message << std::endl;
+
+    switch (source)
+    {
+    case GL_DEBUG_SOURCE_API:             oss << "Source: API"; break;
+    case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   oss << "Source: Window System"; break;
+    case GL_DEBUG_SOURCE_SHADER_COMPILER: oss << "Source: Shader Compiler"; break;
+    case GL_DEBUG_SOURCE_THIRD_PARTY:     oss << "Source: Third Party"; break;
+    case GL_DEBUG_SOURCE_APPLICATION:     oss << "Source: Application"; break;
+    case GL_DEBUG_SOURCE_OTHER:           oss << "Source: Other"; break;
+    } oss << std::endl;
+
+    switch (type)
+    {
+    case GL_DEBUG_TYPE_ERROR:               oss << "Type: Error"; break;
+    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: oss << "Type: Deprecated Behaviour"; break;
+    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  oss << "Type: Undefined Behaviour"; break;
+    case GL_DEBUG_TYPE_PORTABILITY:         oss << "Type: Portability"; break;
+    case GL_DEBUG_TYPE_PERFORMANCE:         oss << "Type: Performance"; break;
+    case GL_DEBUG_TYPE_MARKER:              oss << "Type: Marker"; break;
+    case GL_DEBUG_TYPE_PUSH_GROUP:          oss << "Type: Push Group"; break;
+    case GL_DEBUG_TYPE_POP_GROUP:           oss << "Type: Pop Group"; break;
+    case GL_DEBUG_TYPE_OTHER:               oss << "Type: Other"; break;
+    } oss << std::endl;
+
+    switch (severity)
+    {
+    case GL_DEBUG_SEVERITY_HIGH:         oss << "Severity: high"; break;
+    case GL_DEBUG_SEVERITY_MEDIUM:       oss << "Severity: medium"; break;
+    case GL_DEBUG_SEVERITY_LOW:          oss << "Severity: low"; break;
+    case GL_DEBUG_SEVERITY_NOTIFICATION: oss << "Severity: notification"; break;
+    } oss << std::endl;
+    oss << std::endl;
+
+    wxLogMessage(wxString(oss.str()));
+}
+
 };
 
 wxIMPLEMENT_DYNAMIC_CLASS(wxGLAreaWidget, wxControl);
@@ -123,6 +174,7 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     g_signal_connect(glWidget, "realize", G_CALLBACK(realize_cb), this);
     g_signal_connect(glWidget, "unrealize", G_CALLBACK(unrealize_cb), this);
     g_signal_connect(glWidget, "render", G_CALLBACK(render_cb), this);
+    g_signal_connect(glWidget, "create-context", G_CALLBACK(create_context_cb), this);
 
     GtkWidget *box = gtk_search_bar_new();
     gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(box), TRUE);
@@ -161,6 +213,8 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     modelTreeView_->sig_VisibilityChanged.connect(std::bind(&wxGLAreaWidget::OnVisibilityChanged, this, std::placeholders::_1, std::placeholders::_2));
     modelTreeView_->sig_ShowNodeChanged.connect(std::bind(&wxGLAreaWidget::OnShowNodeChanged, this, std::placeholders::_1, std::placeholders::_2));
     modelTreeView_->sig_RepresentationChanged.connect(std::bind(&wxGLAreaWidget::OnRepresentationChanged, this, std::placeholders::_1, std::placeholders::_2));
+    modelTreeView_->sig_EntitiesDeleted.connect(std::bind(&wxGLAreaWidget::OnEntitiesDeleted, this, std::placeholders::_1));
+    modelTreeView_->sig_ImportModel.connect(std::bind(&wxGLAreaWidget::OnImportModel, this, std::placeholders::_1));
 
     colors_->GetColorNames(colorNames_);
     vtkLogger::LogToFile("everything.log", vtkLogger::TRUNCATE, vtkLogger::VERBOSITY_INFO);
@@ -189,7 +243,7 @@ bool wxGLAreaWidget::GetValue() const
     return gtk_switch_get_active(GTK_SWITCH(m_widget)) != 0;
 }
 
-void wxGLAreaWidget::ImportSTL(const std::string &inputFilename)
+void wxGLAreaWidget::ImportSTL(const GLGUID &parentGuid, const std::string &inputFilename)
 {
     vtkNew<vtkSTLReader> reader;
     reader->SetFileName(inputFilename.c_str());
@@ -207,13 +261,13 @@ void wxGLAreaWidget::ImportSTL(const std::string &inputFilename)
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
-        modelTreeView_->AddPart(p.filename().string(), newDispNodes);
+        modelTreeView_->AddPart(parentGuid, p.filename().string(), newDispNodes);
         rootRenderer->ResetCamera();
         Refresh(false);
     }
 }
 
-void wxGLAreaWidget::ImportVTK(const std::string &inputFilename)
+void wxGLAreaWidget::ImportVTK(const GLGUID &parentGuid, const std::string &inputFilename)
 {
     vtkNew<vtkGenericDataObjectReader> reader;
     reader->SetFileName(inputFilename.c_str());
@@ -244,13 +298,13 @@ void wxGLAreaWidget::ImportVTK(const std::string &inputFilename)
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
-        modelTreeView_->AddPart(p.filename().string(), newDispNodes);
+        modelTreeView_->AddPart(parentGuid, p.filename().string(), newDispNodes);
         rootRenderer->ResetCamera();
         Refresh(false);
     }
 }
 
-void wxGLAreaWidget::ImportVTU(const std::string &inputFilename)
+void wxGLAreaWidget::ImportVTU(const GLGUID &parentGuid, const std::string &inputFilename)
 {
     vtkNew<vtkXMLGenericDataObjectReader> reader;
     reader->SetFileName(inputFilename.c_str());
@@ -281,13 +335,13 @@ void wxGLAreaWidget::ImportVTU(const std::string &inputFilename)
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
-        modelTreeView_->AddPart(p.filename().string(), newDispNodes);
+        modelTreeView_->AddPart(parentGuid, p.filename().string(), newDispNodes);
         rootRenderer->ResetCamera();
         Refresh(false);
     }
 }
 
-void wxGLAreaWidget::ImportOBJ(const std::string &inputFilename)
+void wxGLAreaWidget::ImportOBJ(const GLGUID &parentGuid, const std::string &inputFilename)
 {
     vtkNew<vtkOBJReader> reader;
     reader->SetFileName(inputFilename.c_str());
@@ -305,13 +359,13 @@ void wxGLAreaWidget::ImportOBJ(const std::string &inputFilename)
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
-        modelTreeView_->AddPart(p.filename().string(), newDispNodes);
+        modelTreeView_->AddPart(parentGuid, p.filename().string(), newDispNodes);
         rootRenderer->ResetCamera();
         Refresh(false);
     }
 }
 
-void wxGLAreaWidget::ImportPLY(const std::string &inputFilename)
+void wxGLAreaWidget::ImportPLY(const GLGUID &parentGuid, const std::string &inputFilename)
 {
     vtkNew<vtkPLYReader> reader;
     reader->SetFileName(inputFilename.c_str());
@@ -329,7 +383,7 @@ void wxGLAreaWidget::ImportPLY(const std::string &inputFilename)
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
-        modelTreeView_->AddPart(p.filename().string(), newDispNodes);
+        modelTreeView_->AddPart(parentGuid, p.filename().string(), newDispNodes);
         rootRenderer->ResetCamera();
         Refresh(false);
     }
@@ -617,6 +671,66 @@ void wxGLAreaWidget::OnRepresentationChanged(const std::vector<GLGUID> &guids, c
     }
 }
 
+void wxGLAreaWidget::OnEntitiesDeleted(const std::vector<GLGUID> &guids)
+{
+    bool needRefresh = false;
+    for (const GLGUID &guid : guids)
+    {
+        auto it = allActors_.find(guid);
+        if (it != allActors_.end())
+        {
+            needRefresh = true;
+            allActors_.erase(it);
+        }
+    }
+
+    if (needRefresh)
+    {
+        Refresh(false);
+    }
+}
+
+void wxGLAreaWidget::OnImportModel(const GLGUID &parentGuid)
+{
+    wxString wildCard{ "Stereo lithography STL files (*.stl)|*.stl" };
+    wildCard.Append("|VTK Formats (*.vtp;*.vtu)|*.vtp;*.vtu");
+    wildCard.Append("|Legacy VTK Formats (*.vtk)|*.vtk");
+    wildCard.Append("|Wavefront OBJ file (*.obj)|*.obj");
+    wildCard.Append("|PLY files (*.ply)|*.ply");
+    wildCard.Append("|All files (*.*)|*.*");
+
+    wxFileDialog openFileDialog(this, wxT("Open model file"), "", "", wildCard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (openFileDialog.ShowModal() != wxID_CANCEL)
+    {
+        auto fullPath = std::string(openFileDialog.GetPath());
+        std::string extension = vtksys::SystemTools::GetFilenameLastExtension(fullPath);
+        if (extension == ".ply")
+        {
+            this->ImportPLY(parentGuid, fullPath);
+        }
+        else if (extension == ".vtp" || extension == ".vtu")
+        {
+            this->ImportVTU(parentGuid, fullPath);
+        }
+        else if (extension == ".obj")
+        {
+            this->ImportOBJ(parentGuid, fullPath);
+        }
+        else if (extension == ".stl")
+        {
+            this->ImportSTL(parentGuid, fullPath);
+        }
+        else if (extension == ".vtk")
+        {
+            this->ImportVTK(parentGuid, fullPath);
+        }
+        else
+        {
+            wxMessageBox(wxString(wxT("Don't know how to read this file")), wxString(wxT("Import Failed")));
+        }
+    }
+}
+
 void wxGLAreaWidget::DoApplyWidgetStyle(GtkRcStyle *style)
 {
     GTKApplyStyle(m_widget, style);
@@ -699,15 +813,24 @@ extern int add_LinearCellDemo(vtkRenderWindow *renWin, vtkRenderer *renderer, co
 
 void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 {
+    GdkGLContext *context = gtk_gl_area_get_context(GTK_GL_AREA(widget));
+    if (gdk_gl_context_get_use_es(context) || gdk_gl_context_is_legacy(context))
+    {
+        return;
+    }
+
     gtk_gl_area_make_current(GTK_GL_AREA(widget));
 
     if (gtk_gl_area_get_error(GTK_GL_AREA(widget)) != NULL)
         return;
 
-    GdkGLContext *context = gtk_gl_area_get_context(GTK_GL_AREA(widget));
-    if (gdk_gl_context_get_use_es(context) || gdk_gl_context_is_legacy(context))
+    if (gdk_gl_context_get_debug_enabled(context))
     {
-        return;
+        wxLogMessage(wxString("GDK GL Context Debug Enabled"));
+    }
+    else
+    {
+        wxLogMessage(wxString("GDK GL Context Debug Disabled"));
     }
 
     wxGLAreaWidget *glArea = reinterpret_cast<wxGLAreaWidget *>(user_data);
@@ -864,6 +987,20 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     wxLogMessage(wxString("OpenGL Vendor: ") + glVendor);
     wxLogMessage(wxString("OpenGL Renderer: ") + glRenderer);
     wxLogMessage(wxString("OpenGL Version: ") + glVersion);
+
+    int flags = 0; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
+    {
+        wxLogMessage(wxString("OpenGL Debug Context Enabled"));
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(glDebugOutput, nullptr);
+        glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_ERROR, GL_DEBUG_SEVERITY_HIGH, 0, nullptr, GL_TRUE);
+    }
+    else
+    {
+        wxLogMessage(wxString("OpenGL Debug Context Disabled"));
+    }
 }
 
 void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
@@ -877,6 +1014,37 @@ void wxGLAreaWidget::unrealize_cb(GtkWidget *widget, gpointer user_data)
     glArea->axisRenderer = nullptr;
     glArea->externalVTKWidget = nullptr;
     glArea->rootRenderer = nullptr;
+}
+
+GdkGLContext* wxGLAreaWidget::create_context_cb(GtkGLArea* self, gpointer user_data)
+{
+    GError *error = nullptr;
+    GdkGLContext *context = gdk_window_create_gl_context(gtk_widget_get_window(GTK_WIDGET(self)), &error);
+    if (error)
+    {
+        gtk_gl_area_set_error(self, error);
+        g_clear_object(&context);
+        g_clear_error(&error);
+        return nullptr;
+    }
+
+#ifdef __WXDEBUG__
+    gdk_gl_context_set_debug_enabled(context, TRUE);
+#endif
+
+    gdk_gl_context_set_use_es(context, FALSE);
+    gdk_gl_context_set_required_version(context, 4, 5);
+
+    gdk_gl_context_realize(context, &error);
+    if (error)
+    {
+        gtk_gl_area_set_error(self, error);
+        g_clear_object(&context);
+        g_clear_error(&error);
+        return nullptr;
+    }
+
+    return context;
 }
 
 gboolean wxGLAreaWidget::render_cb(GtkGLArea *area, GdkGLContext *context, gpointer user_data)

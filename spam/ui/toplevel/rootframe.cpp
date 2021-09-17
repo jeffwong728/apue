@@ -616,46 +616,11 @@ void RootFrame::OnLoadImage(wxCommandEvent& WXUNUSED(e))
 
 void RootFrame::OnLoadModel(wxCommandEvent& WXUNUSED(e))
 {
-    wxString wildCard{ "Stereo lithography STL files (*.stl)|*.stl" };
-    wildCard.Append("|VTK Formats (*.vtp;*.vtu)|*.vtp;*.vtu");
-    wildCard.Append("|Legacy VTK Formats (*.vtk)|*.vtk");
-    wildCard.Append("|Wavefront OBJ file (*.obj)|*.obj");
-    wildCard.Append("|PLY files (*.ply)|*.ply");
-    wildCard.Append("|All files (*.*)|*.*");
-
-    wxFileDialog openFileDialog(this, wxT("Open model file"), "", "", wildCard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-    if (openFileDialog.ShowModal() != wxID_CANCEL)
+    auto glWidget = GetGLWidget();
+    if (glWidget)
     {
-        auto fullPath = std::string(openFileDialog.GetPath());
-        auto glWidget = GetGLWidget();
-        if (glWidget)
-        {
-            std::string extension = vtksys::SystemTools::GetFilenameLastExtension(fullPath);
-            if (extension == ".ply")
-            {
-                glWidget->ImportPLY(fullPath);
-            }
-            else if (extension == ".vtp" || extension == ".vtu")
-            {
-                glWidget->ImportVTU(fullPath);
-            }
-            else if (extension == ".obj")
-            {
-                glWidget->ImportOBJ(fullPath);
-            }
-            else if (extension == ".stl")
-            {
-                glWidget->ImportSTL(fullPath);
-            }
-            else if (extension == ".vtk")
-            {
-                glWidget->ImportVTK(fullPath);
-            }
-            else
-            {
-                wxMessageBox(wxString(wxT("Don't know how to read this file")), wxString(wxT("Import Failed")));
-            }
-        }
+        const GLGUID guid(0, 0);
+        glWidget->OnImportModel(guid);
     }
 }
 

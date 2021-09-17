@@ -25,11 +25,12 @@ class GLModelTreeView
 
     enum
     {
-        ENTITY_TYPE_MODEL,
-        ENTITY_TYPE_ASSEMBLY,
-        ENTITY_TYPE_PART,
-        ENTITY_TYPE_SOLID_BODY,
-        NUM_ENTITY_TYPES
+        ENTITY_TYPE_INVALID = 0,
+        ENTITY_TYPE_MODEL = 1,
+        ENTITY_TYPE_ASSEMBLY = 2,
+        ENTITY_TYPE_PART = 3,
+        ENTITY_TYPE_SOLID_BODY = 4,
+        ENTITY_TYPE_GUARD
     };
 
     struct this_is_private;
@@ -40,6 +41,8 @@ public:
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_VisibilityChanged;
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_ShowNodeChanged;
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_RepresentationChanged;
+    bs2::signal_type<void(const std::vector<GLGUID>&), bs2_dummy_mutex>::type sig_EntitiesDeleted;
+    bs2::signal_type<void(const GLGUID), bs2_dummy_mutex>::type sig_ImportModel;
     bs2::signal_type<void(const GLGUID, const int), bs2_dummy_mutex>::type sig_AddGeomBody;
 
 public:
@@ -57,11 +60,12 @@ public:
     GtkWidget *GetWidget() { return mainView_; }
     const GtkWidget *GetWidget() const { return mainView_; }
     void CloseModel();
-    void AddPart(const std::string &partName, const SPDispNodes &dispNodes);
+    void AddPart(const GLGUID &parentGuid, const std::string &partName, const SPDispNodes &dispNodes);
     void AddGeomBody(const GLGUID &partGUID, const SPDispNode &spGeomBody);
 
 private:
-    gboolean FindPart(const GLGUID &partGUID, GtkTreeIter *iter);
+    const gint FindEntity(const GLGUID &partGUID, GtkTreeIter *iter);
+    void GetAllChildrenGUIDs(GtkTreeIter *const itParent, const gboolean includeParent, std::vector<GLGUID> &guids);
 
 private:
     static bool color_eq(const GdkRGBA *c1, const GdkRGBA *c2);
@@ -74,6 +78,9 @@ private:
     static void on_add_assembly(GtkWidget *menuitem, gpointer userdata);
     static void on_add_geom_body(GtkWidget *menuitem, gpointer userdata);
     static void on_add_vtk_cell(GtkWidget *menuitem, gpointer userdata);
+    static void on_delete_self(GtkWidget *menuitem, gpointer userdata);
+    static void on_delete_children(GtkWidget *menuitem, gpointer userdata);
+    static void on_import_model(GtkWidget *menuitem, gpointer userdata);
     static gboolean on_popup_menu(GtkWidget *treeview, gpointer userdata);
     static gboolean on_button_pressed(GtkWidget *treeview, GdkEventButton *e, gpointer userdata);
 

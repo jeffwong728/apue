@@ -145,6 +145,7 @@ GLDispNode::GLDispNode(const this_is_private&, const DisplayEntityType type)
 
 GLDispNode::~GLDispNode()
 {
+    renderer_->RemoveActor(actor_);
 }
 
 const vtkColor4ub GLDispNode::GetColor() const
