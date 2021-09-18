@@ -970,8 +970,9 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     glArea->axisRenderer->SetViewport(0.0, 0.0, 80.0/w, 80.0/h);
 
     glArea->rootRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
+    glArea->rootRenderer->ResetCamera(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
     glArea->rootRenderer->GetActiveCamera()->ParallelProjectionOn();
-    glArea->rootRenderer->GetActiveCamera()->Azimuth(30);
+    glArea->rootRenderer->GetActiveCamera()->Azimuth(45);
     glArea->rootRenderer->GetActiveCamera()->Elevation(-30);
     renWin->AddRenderer(glArea->rootRenderer);
     glArea->rootRenderer->SetLayer(1);

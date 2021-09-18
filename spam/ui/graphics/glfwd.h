@@ -38,6 +38,23 @@ enum PrimGeomShape
     kPGS_GUARD
 };
 
+enum GraphicsEntityType
+{
+    kENTITY_TYPE_INVALID = 0,
+    kENTITY_TYPE_MODEL = 1,
+    kENTITY_TYPE_ASSEMBLY = 2,
+    kENTITY_TYPE_PART = 3,
+    kENTITY_TYPE_ACORN_BODY = 4,
+    kENTITY_TYPE_WIRE_BODY = 5,
+    kENTITY_TYPE_SHEET_BODY = 6,
+    kENTITY_TYPE_SOLID_BODY = 7,
+    kENTITY_TYPE_0D_MESH = 8,
+    kENTITY_TYPE_1D_MESH = 9,
+    kENTITY_TYPE_2D_MESH = 10,
+    kENTITY_TYPE_3D_MESH = 11,
+    kENTITY_TYPE_GUARD
+};
+
 struct GLGUID
 {
     const guint64 part1;

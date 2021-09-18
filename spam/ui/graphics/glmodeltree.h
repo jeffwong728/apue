@@ -23,16 +23,6 @@ class GLModelTreeView
         NUM_COLUMNS
     };
 
-    enum
-    {
-        ENTITY_TYPE_INVALID = 0,
-        ENTITY_TYPE_MODEL = 1,
-        ENTITY_TYPE_ASSEMBLY = 2,
-        ENTITY_TYPE_PART = 3,
-        ENTITY_TYPE_SOLID_BODY = 4,
-        ENTITY_TYPE_GUARD
-    };
-
     struct this_is_private;
 
 public:

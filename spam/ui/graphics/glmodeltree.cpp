@@ -30,7 +30,7 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
     GtkTreeIter itModel;
     const GLGUID modelGUID = GLGUID::MakeNew();
     gtk_tree_store_append(model_, &itModel, NULL);
-    gtk_tree_store_set(model_, &itModel, ENTITY_NAME, "Model", ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, ENTITY_TYPE_MODEL, ENTITY_GUID_PART_1, modelGUID.part1, ENTITY_GUID_PART_2, modelGUID.part2, -1);
+    gtk_tree_store_set(model_, &itModel, ENTITY_NAME, "Model", ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, kENTITY_TYPE_MODEL, ENTITY_GUID_PART_1, modelGUID.part1, ENTITY_GUID_PART_2, modelGUID.part2, -1);
 
     for (int ass=0; ass<2; ++ass)
     {
@@ -39,7 +39,7 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
         assemName += std::to_string(ass);
         const GLGUID assmGUID = GLGUID::MakeNew();
         gtk_tree_store_append(model_, &itAssem, &itModel);
-        gtk_tree_store_set(model_, &itAssem, ENTITY_NAME, assemName.c_str(), ENTITY_ICON, assemPixBuf, ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, ENTITY_TYPE_ASSEMBLY, ENTITY_GUID_PART_1, assmGUID.part1, ENTITY_GUID_PART_2, assmGUID.part2, -1);
+        gtk_tree_store_set(model_, &itAssem, ENTITY_NAME, assemName.c_str(), ENTITY_ICON, assemPixBuf, ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, kENTITY_TYPE_ASSEMBLY, ENTITY_GUID_PART_1, assmGUID.part1, ENTITY_GUID_PART_2, assmGUID.part2, -1);
         for (int pat=0; pat<3; ++pat)
         {
             GtkTreeIter itPart;
@@ -47,7 +47,7 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
             partName += std::to_string(pat);
             const GLGUID partGUID = GLGUID::MakeNew();
             gtk_tree_store_append(model_, &itPart, &itAssem);
-            gtk_tree_store_set(model_, &itPart, ENTITY_NAME, partName.c_str(), ENTITY_ICON, partPixBuf, ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, ENTITY_TYPE_PART, ENTITY_GUID_PART_1, partGUID.part1, ENTITY_GUID_PART_2, partGUID.part2, -1);
+            gtk_tree_store_set(model_, &itPart, ENTITY_NAME, partName.c_str(), ENTITY_ICON, partPixBuf, ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, kENTITY_TYPE_PART, ENTITY_GUID_PART_1, partGUID.part1, ENTITY_GUID_PART_2, partGUID.part2, -1);
             for (int i = 1; i <= 5; ++i)
             {
                 std::string bodyName("Body ");
@@ -59,7 +59,7 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
                 gdk_pixbuf_fill(pixbuf, pixel);
                 GtkTreeIter itBody;
                 gtk_tree_store_append(model_, &itBody, &itPart);
-                gtk_tree_store_set(model_, &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, bodyPixBuf, ENTITY_VISIBILITY, FALSE, ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, ENTITY_TYPE_SOLID_BODY, -1);
+                gtk_tree_store_set(model_, &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, bodyPixBuf, ENTITY_VISIBILITY, FALSE, ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, kENTITY_TYPE_SOLID_BODY, -1);
                 g_object_unref(pixbuf);
             }
         }
@@ -158,18 +158,18 @@ void GLModelTreeView::AddPart(const GLGUID &parentGuid, const std::string &partN
     GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(treeView_));
 
     gint parentType = FindEntity(parentGuid, &itParent);
-    if (ENTITY_TYPE_MODEL != parentType && ENTITY_TYPE_ASSEMBLY != parentType)
+    if (kENTITY_TYPE_MODEL != parentType && kENTITY_TYPE_ASSEMBLY != parentType)
     {
         parentType = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(model), &itParent);
     }
 
-    if (ENTITY_TYPE_MODEL == parentType || ENTITY_TYPE_ASSEMBLY == parentType)
+    if (kENTITY_TYPE_MODEL == parentType || kENTITY_TYPE_ASSEMBLY == parentType)
     {
         GtkTreeIter itPart;
         gtk_tree_store_append(GTK_TREE_STORE(model), &itPart, &itParent);
         const GLGUID entityGUID = GLGUID::MakeNew();
         gtk_tree_store_set(GTK_TREE_STORE(model), &itPart, ENTITY_NAME, partName.c_str(), ENTITY_ICON, partPixBuf,
-            ENTITY_VISIBILITY, TRUE, ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, ENTITY_TYPE_PART,
+            ENTITY_VISIBILITY, TRUE, ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, kENTITY_TYPE_PART,
             ENTITY_GUID_PART_1, entityGUID.part1, ENTITY_GUID_PART_2, entityGUID.part2, -1);
         for (const SPDispNode &dispNode : dispNodes)
         {
@@ -182,7 +182,7 @@ void GLModelTreeView::AddPart(const GLGUID &parentGuid, const std::string &partN
             GtkTreeIter itBody;
             gtk_tree_store_append(GTK_TREE_STORE(model), &itBody, &itPart);
             gtk_tree_store_set(GTK_TREE_STORE(model), &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, bodyPixBuf, ENTITY_VISIBILITY, TRUE,
-                ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, ENTITY_TYPE_SOLID_BODY, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
+                ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, kENTITY_TYPE_SOLID_BODY, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
             g_object_unref(pixbuf);
         }
     }
@@ -191,7 +191,7 @@ void GLModelTreeView::AddPart(const GLGUID &parentGuid, const std::string &partN
 void GLModelTreeView::AddGeomBody(const GLGUID &partGUID, const SPDispNode &spGeomBody)
 {
     GtkTreeIter itPart;
-    if (spGeomBody && ENTITY_TYPE_PART == FindEntity(partGUID, &itPart))
+    if (spGeomBody && kENTITY_TYPE_PART == FindEntity(partGUID, &itPart))
     {
         GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(treeView_));
         const vtkColor4ub color = spGeomBody->GetColor();
@@ -203,7 +203,7 @@ void GLModelTreeView::AddGeomBody(const GLGUID &partGUID, const SPDispNode &spGe
         GtkTreeIter itBody;
         gtk_tree_store_append(GTK_TREE_STORE(model), &itBody, &itPart);
         gtk_tree_store_set(GTK_TREE_STORE(model), &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, bodyPixBuf, ENTITY_VISIBILITY, TRUE,
-            ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, ENTITY_TYPE_SOLID_BODY, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
+            ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, kENTITY_TYPE_SOLID_BODY, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
         g_object_unref(pixbuf);
     }
 }
@@ -246,7 +246,7 @@ const gint GLModelTreeView::FindEntity(const GLGUID &partGUID, GtkTreeIter *iter
         }
     }
 
-    return ENTITY_TYPE_INVALID;
+    return kENTITY_TYPE_INVALID;
 }
 
 void GLModelTreeView::GetAllChildrenGUIDs(GtkTreeIter *const itParent, const gboolean includeParent, std::vector<GLGUID> &guids)
@@ -483,7 +483,7 @@ void GLModelTreeView::on_add_part(GtkWidget *menuitem, gpointer userdata)
         const GLGUID entityGUID = GLGUID::MakeNew();
         gtk_tree_store_append(GTK_TREE_STORE(model), &itPart, &itParent);
         gtk_tree_store_set(GTK_TREE_STORE(model), &itPart, ENTITY_NAME, partName.c_str(), ENTITY_ICON, myself->partPixBuf,
-            ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, ENTITY_TYPE_PART, ENTITY_GUID_PART_1, entityGUID.part1, ENTITY_GUID_PART_2, entityGUID.part2, -1);
+            ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, kENTITY_TYPE_PART, ENTITY_GUID_PART_1, entityGUID.part1, ENTITY_GUID_PART_2, entityGUID.part2, -1);
     }
 }
 
@@ -500,7 +500,7 @@ void GLModelTreeView::on_add_assembly(GtkWidget *menuitem, gpointer userdata)
         const GLGUID entityGUID = GLGUID::MakeNew();
         gtk_tree_store_append(GTK_TREE_STORE(model), &itAssem, &itParent);
         gtk_tree_store_set(GTK_TREE_STORE(model), &itAssem, ENTITY_NAME, assemName.c_str(), ENTITY_ICON, myself->assemPixBuf,
-            ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, ENTITY_TYPE_ASSEMBLY, ENTITY_GUID_PART_1, entityGUID.part1, ENTITY_GUID_PART_2, entityGUID.part2, -1);
+            ENTITY_DISPLAY_MODE, "Surface", ENTITY_TYPE, kENTITY_TYPE_ASSEMBLY, ENTITY_GUID_PART_1, entityGUID.part1, ENTITY_GUID_PART_2, entityGUID.part2, -1);
     }
 }
 
@@ -518,7 +518,7 @@ void GLModelTreeView::on_add_geom_body(GtkWidget *menuitem, gpointer userdata)
         gtk_tree_model_get(model, &itPart, ENTITY_TYPE, &eType, -1);
         gtk_tree_model_get(model, &itPart, ENTITY_GUID_PART_1, &part1, -1);
         gtk_tree_model_get(model, &itPart, ENTITY_GUID_PART_2, &part2, -1);
-        if (ENTITY_TYPE_PART == eType)
+        if (kENTITY_TYPE_PART == eType)
         {
             const GLGUID partGUID{ part1 , part2 };
             std::string_view label(gtk_menu_item_get_label(GTK_MENU_ITEM(menuitem)));
@@ -644,11 +644,11 @@ void GLModelTreeView::view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gp
         gtk_tree_model_get(model, &iter, ENTITY_TYPE, &eType, -1);
     }
 
-    if (eType >= ENTITY_TYPE_MODEL && eType < ENTITY_TYPE_GUARD)
+    if (eType >= kENTITY_TYPE_MODEL && eType < kENTITY_TYPE_GUARD)
     {
         GtkWidget *menuitem = nullptr;
         GtkWidget *menu = gtk_menu_new();
-        if (ENTITY_TYPE_MODEL == eType || ENTITY_TYPE_ASSEMBLY == eType)
+        if (kENTITY_TYPE_MODEL == eType || kENTITY_TYPE_ASSEMBLY == eType)
         {
             menuitem = gtk_menu_item_new_with_label("Add Assembly");
             g_signal_connect(menuitem, "activate", G_CALLBACK(on_add_assembly), userdata);
@@ -663,7 +663,7 @@ void GLModelTreeView::view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gp
         }
 
         bool hasDelete = false;
-        if (ENTITY_TYPE_MODEL != eType)
+        if (kENTITY_TYPE_MODEL != eType)
         {
             menuitem = gtk_menu_item_new_with_label("Delete");
             g_signal_connect(menuitem, "activate", G_CALLBACK(on_delete_self), userdata);
@@ -685,7 +685,7 @@ void GLModelTreeView::view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gp
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
         }
 
-        if (ENTITY_TYPE_MODEL == eType || ENTITY_TYPE_ASSEMBLY == eType)
+        if (kENTITY_TYPE_MODEL == eType || kENTITY_TYPE_ASSEMBLY == eType)
         {
             menuitem = gtk_menu_item_new_with_label("Import Model");
             g_signal_connect(menuitem, "activate", G_CALLBACK(on_import_model), userdata);
@@ -702,7 +702,7 @@ void GLModelTreeView::view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gp
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
         }
 
-        if (ENTITY_TYPE_PART == eType)
+        if (kENTITY_TYPE_PART == eType)
         {
             menuitem = gtk_separator_menu_item_new();
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
