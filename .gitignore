@@ -9,6 +9,7 @@ config
 /spam/unittest/idata
 /spam/ensmallen
 /spam/armadillo
+/spam/.VSCodeCounter
 /apex/.github
 /apex/doc
 /apex/samples
