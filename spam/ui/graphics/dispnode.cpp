@@ -1,7 +1,14 @@
 #include "dispnode.h"
+#include "disp0dmesh.h"
+#include "disp1dmesh.h"
+#include "disp2dmesh.h"
+#include "disp3dmesh.h"
+#include <wx/log.h>
 #include <numeric>
 #include <algorithm>
 #include <epoxy/gl.h>
+#include <vtkCellType.h>
+#include <vtkGenericCell.h>
 #include <vtkProperty.h>
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
@@ -18,35 +25,23 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, co
         const vtkIdType numCells = pdSource->GetNumberOfCells();
         if (numCells == numVerts)
         {
-            auto dispNode = std::make_shared<GLDispNode>(this_is_private{ 0 }, DisplayEntityType::kDET_VERTS);
-            dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = pdSource;
-            dispNode->SetDefaultDisplay();
-            dispNodes.push_back(std::move(dispNode));
+            SPDispNodes spDispNodes = GL0DMeshNode::MakeNew(pdSource, renderer);
+            dispNodes.insert(dispNodes.end(), spDispNodes.cbegin(), spDispNodes.cend());
         }
         else if (numCells == numLines)
         {
-            auto dispNode = std::make_shared<GLDispNode>(this_is_private{ 0 }, DisplayEntityType::kDET_LINES);
-            dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = pdSource;
-            dispNode->SetDefaultDisplay();
-            dispNodes.push_back(std::move(dispNode));
+            SPDispNodes spDispNodes = GL1DMeshNode::MakeNew(pdSource, renderer);
+            dispNodes.insert(dispNodes.end(), spDispNodes.cbegin(), spDispNodes.cend());
         }
         else if (numCells == numPolys)
         {
-            auto dispNode = std::make_shared<GLDispNode>(this_is_private{ 0 }, DisplayEntityType::kDET_POLYS);
-            dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = pdSource;
-            dispNode->SetDefaultDisplay();
-            dispNodes.push_back(std::move(dispNode));
+            SPDispNodes spDispNodes = GL2DMeshNode::MakeNew(pdSource, renderer);
+            dispNodes.insert(dispNodes.end(), spDispNodes.cbegin(), spDispNodes.cend());
         }
         else if (numCells == numStrips)
         {
-            auto dispNode = std::make_shared<GLDispNode>(this_is_private{ 0 }, DisplayEntityType::kDET_STRIPS);
-            dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = pdSource;
-            dispNode->SetDefaultDisplay();
-            dispNodes.push_back(std::move(dispNode));
+            SPDispNodes spDispNodes = GL2DMeshNode::MakeNew(pdSource, renderer);
+            dispNodes.insert(dispNodes.end(), spDispNodes.cbegin(), spDispNodes.cend());
         }
         else
         {
@@ -57,14 +52,13 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, co
                 idList->SetNumberOfIds(numVerts);
                 std::iota(idList->begin(), idList->end(), 0);
 
-                auto dispNode = std::make_shared<GLDispNode>(this_is_private{ 0 }, DisplayEntityType::kDET_VERTS);
-                dispNode->renderer_ = renderer;
-                dispNode->poly_data_ = vtkSmartPointer<vtkPolyData>::New();
-                dispNode->poly_data_->SetVerts(cells);
-                dispNode->poly_data_->GetVerts()->AllocateExact(numVerts, pdSource->GetVerts()->GetNumberOfConnectivityIds());
-                dispNode->poly_data_->CopyCells(pdSource, idList);
-                dispNode->SetDefaultDisplay();
-                dispNodes.push_back(std::move(dispNode));
+                auto polyData = vtkSmartPointer<vtkPolyData>::New();
+                polyData->SetVerts(cells);
+                polyData->GetVerts()->AllocateExact(numVerts, pdSource->GetVerts()->GetNumberOfConnectivityIds());
+                polyData->CopyCells(pdSource, idList);
+
+                SPDispNodes spDispNodes = GL0DMeshNode::MakeNew(polyData, renderer);
+                dispNodes.insert(dispNodes.end(), spDispNodes.cbegin(), spDispNodes.cend());
             }
 
             if (numLines)
@@ -74,14 +68,13 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, co
                 idList->SetNumberOfIds(numLines);
                 std::iota(idList->begin(), idList->end(), numVerts);
 
-                auto dispNode = std::make_shared<GLDispNode>(this_is_private{ 0 }, DisplayEntityType::kDET_LINES);
-                dispNode->renderer_ = renderer;
-                dispNode->poly_data_ = vtkSmartPointer<vtkPolyData>::New();
-                dispNode->poly_data_->SetLines(cells);
-                dispNode->poly_data_->GetLines()->AllocateExact(numLines, pdSource->GetLines()->GetNumberOfConnectivityIds());
-                dispNode->poly_data_->CopyCells(pdSource, idList);
-                dispNode->SetDefaultDisplay();
-                dispNodes.push_back(std::move(dispNode));
+                auto polyData = vtkSmartPointer<vtkPolyData>::New();
+                polyData->SetLines(cells);
+                polyData->GetLines()->AllocateExact(numLines, pdSource->GetLines()->GetNumberOfConnectivityIds());
+                polyData->CopyCells(pdSource, idList);
+
+                SPDispNodes spDispNodes = GL1DMeshNode::MakeNew(polyData, renderer);
+                dispNodes.insert(dispNodes.end(), spDispNodes.cbegin(), spDispNodes.cend());
             }
 
             if (numPolys)
@@ -91,14 +84,13 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, co
                 idList->SetNumberOfIds(numPolys);
                 std::iota(idList->begin(), idList->end(), numVerts + numLines);
 
-                auto dispNode = std::make_shared<GLDispNode>(this_is_private{ 0 }, DisplayEntityType::kDET_POLYS);
-                dispNode->renderer_ = renderer;
-                dispNode->poly_data_ = vtkSmartPointer<vtkPolyData>::New();
-                dispNode->poly_data_->SetPolys(cells);
-                dispNode->poly_data_->GetPolys()->AllocateExact(numPolys, pdSource->GetPolys()->GetNumberOfConnectivityIds());
-                dispNode->poly_data_->CopyCells(pdSource, idList);
-                dispNode->SetDefaultDisplay();
-                dispNodes.push_back(std::move(dispNode));
+                auto polyData = vtkSmartPointer<vtkPolyData>::New();
+                polyData->SetPolys(cells);
+                polyData->GetPolys()->AllocateExact(numPolys, pdSource->GetPolys()->GetNumberOfConnectivityIds());
+                polyData->CopyCells(pdSource, idList);
+
+                SPDispNodes spDispNodes = GL2DMeshNode::MakeNew(polyData, renderer);
+                dispNodes.insert(dispNodes.end(), spDispNodes.cbegin(), spDispNodes.cend());
             }
 
             if (numStrips)
@@ -108,14 +100,13 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, co
                 idList->SetNumberOfIds(numStrips);
                 std::iota(idList->begin(), idList->end(), numVerts + numLines + numPolys);
 
-                auto dispNode = std::make_shared<GLDispNode>(this_is_private{ 0 }, DisplayEntityType::kDET_STRIPS);
-                dispNode->renderer_ = renderer;
-                dispNode->poly_data_ = vtkSmartPointer<vtkPolyData>::New();
-                dispNode->poly_data_->SetStrips(cells);
-                dispNode->poly_data_->GetStrips()->AllocateExact(numStrips, pdSource->GetStrips()->GetNumberOfConnectivityIds());
-                dispNode->poly_data_->CopyCells(pdSource, idList);
-                dispNode->SetDefaultDisplay();
-                dispNodes.push_back(std::move(dispNode));
+                auto polyData = vtkSmartPointer<vtkPolyData>::New();
+                polyData->SetStrips(cells);
+                polyData->GetStrips()->AllocateExact(numStrips, pdSource->GetStrips()->GetNumberOfConnectivityIds());
+                polyData->CopyCells(pdSource, idList);
+
+                SPDispNodes spDispNodes = GL2DMeshNode::MakeNew(polyData, renderer);
+                dispNodes.insert(dispNodes.end(), spDispNodes.cbegin(), spDispNodes.cend());
             }
         }
     }
@@ -127,18 +118,64 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ugSo
 {
     if (ugSource)
     {
-        vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
-        surfaceFilter->SetNonlinearSubdivisionLevel(0);
-        surfaceFilter->SetInputData(ugSource);
-        surfaceFilter->Update();
+        vtkNew<vtkCellTypes> cellTypes;
+        ugSource->GetCellTypes(cellTypes);
 
-        return GLDispNode::MakeNew(surfaceFilter->GetOutput(), renderer);
+        int num0Ds = 0;
+        int num1Ds = 0;
+        int num2Ds = 0;
+        int num3Ds = 0;
+        wxString typesInfo(wxT("UG Cell Types: ["));
+        for (vtkIdType cellId =0; cellId < cellTypes->GetNumberOfTypes(); ++cellId)
+        {
+            const auto cellType = cellTypes->GetCellType(cellId);
+            std::string cellTypeVal = std::to_string(cellType);
+            std::string cellTypeName(vtkCellTypes::GetClassNameFromTypeId(cellType));
+
+            if (cellId)
+            {
+                typesInfo += wxT(", (");
+            }
+            else
+            {
+                typesInfo += wxT("(");
+            }
+
+            typesInfo += cellTypeVal;
+            typesInfo += wxT(", ");
+            typesInfo += cellTypeName;
+            typesInfo += wxT(")");
+
+            if (VTK_TRIANGLE == cellType ||
+                VTK_QUAD == cellType ||
+                VTK_QUADRATIC_TRIANGLE == cellType ||
+                VTK_QUADRATIC_QUAD == cellType)
+            {
+                num2Ds += 1;
+            }
+        }
+
+        typesInfo += wxT("]");
+        wxLogMessage(typesInfo);
+
+        if (num2Ds == cellTypes->GetNumberOfTypes())
+        {
+            return GL2DMeshNode::MakeNew(ugSource, renderer);
+        }
+        else
+        {
+            vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+            surfaceFilter->SetNonlinearSubdivisionLevel(0);
+            surfaceFilter->SetInputData(ugSource);
+            surfaceFilter->Update();
+            return GLDispNode::MakeNew(surfaceFilter->GetOutput(), renderer);
+        }
     }
 
     return SPDispNodes();
 }
 
-GLDispNode::GLDispNode(const this_is_private&, const DisplayEntityType type)
+GLDispNode::GLDispNode(const this_is_private&, const GraphicsEntityType type)
     : guid_(GLGUID::MakeNew()), type_(type)
 {
 }
@@ -167,10 +204,10 @@ const std::string GLDispNode::GetName() const
 {
     switch (type_)
     {
-    case DisplayEntityType::kDET_VERTS: return std::string("Node");
-    case DisplayEntityType::kDET_LINES: return std::string("Curve");
-    case DisplayEntityType::kDET_POLYS: return std::string("Surface");
-    case DisplayEntityType::kDET_STRIPS: return std::string("Surface");
+    case kENTITY_TYPE_0D_MESH: return std::string("Node");
+    case kENTITY_TYPE_1D_MESH: return std::string("Curve");
+    case kENTITY_TYPE_2D_MESH: return std::string("Surface");
+    case kENTITY_TYPE_3D_MESH: return std::string("Surface");
     default: return std::string("Unknown");
     }
 }
@@ -217,8 +254,7 @@ void GLDispNode::SetCellColor(const double *c)
 
 void GLDispNode::SetEdgeColor(const double *c)
 {
-    if (DisplayEntityType::kDET_POLYS == type_ ||
-        DisplayEntityType::kDET_STRIPS == type_)
+    if (kENTITY_TYPE_2D_MESH == type_ || kENTITY_TYPE_3D_MESH == type_)
     {
         if (actor_)
         {
@@ -229,39 +265,13 @@ void GLDispNode::SetEdgeColor(const double *c)
 
 void GLDispNode::SetNodeColor(const double *c)
 {
-    if (DisplayEntityType::kDET_LINES == type_ ||
-        DisplayEntityType::kDET_POLYS == type_ ||
-        DisplayEntityType::kDET_STRIPS == type_)
+    if (kENTITY_TYPE_1D_MESH == type_ ||
+        kENTITY_TYPE_2D_MESH == type_ ||
+        kENTITY_TYPE_3D_MESH == type_)
     {
         if (actor_)
         {
             actor_->GetProperty()->SetVertexColor(c);
         }
     }
-}
-
-void GLDispNode::SetDefaultDisplay()
-{
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(poly_data_);
-
-    actor_ = vtkSmartPointer<vtkActor>::New();
-    actor_->SetMapper(mapper);
-
-    if (DisplayEntityType::kDET_LINES == type_ ||
-        DisplayEntityType::kDET_POLYS == type_ ||
-        DisplayEntityType::kDET_STRIPS == type_)
-    {
-        actor_->GetProperty()->EdgeVisibilityOff();
-        actor_->GetProperty()->VertexVisibilityOff();
-    }
-
-    actor_->GetProperty()->SetDiffuse(1.0);
-    actor_->GetProperty()->SetSpecular(0.3);
-    actor_->GetProperty()->SetSpecularPower(60.0);
-    actor_->GetProperty()->SetOpacity(1.0);
-    actor_->GetProperty()->SetLineWidth(1.f);
-    actor_->GetProperty()->SetPointSize(5);
-
-    renderer_->AddActor(actor_);
 }

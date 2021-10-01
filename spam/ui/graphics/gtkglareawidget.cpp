@@ -50,6 +50,7 @@
 #include <vtkOBBTree.h>
 #include <vtkRenderer.h>
 #include <vtkTextActor.h>
+#include <vtkSMPTools.h>
 #include <vtksys/SystemTools.hxx>
 #if defined(M_PI) && defined(_WIN32)
 #undef M_PI
@@ -217,6 +218,8 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     modelTreeView_->sig_ImportModel.connect(std::bind(&wxGLAreaWidget::OnImportModel, this, std::placeholders::_1));
 
     colors_->GetColorNames(colorNames_);
+    wxLogMessage(vtkSMPTools::GetBackend());
+    vtkSMPTools::SetBackend("Sequential");
     vtkLogger::LogToFile("everything.log", vtkLogger::TRUNCATE, vtkLogger::VERBOSITY_INFO);
 
     return true;

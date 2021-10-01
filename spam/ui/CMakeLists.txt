@@ -95,6 +95,10 @@ set(ui_core_SRCS
   graphics/glcamera.cpp
   graphics/gltexture.cpp
   graphics/dispnode.cpp
+  graphics/disp0dmesh.cpp
+  graphics/disp1dmesh.cpp
+  graphics/disp2dmesh.cpp
+  graphics/disp3dmesh.cpp
   graphics/disptree.cpp
   graphics/glmodeltree.cpp
   graphics/gtkglareawidget.cpp
@@ -205,6 +209,10 @@ set(ui_core_HEADERS
   graphics/glcamera.h
   graphics/gltexture.h
   graphics/dispnode.h
+  graphics/disp0dmesh.h
+  graphics/disp1dmesh.h
+  graphics/disp2dmesh.h
+  graphics/disp3dmesh.h
   graphics/disptree.h
   graphics/glmodeltree.h
   graphics/gtkglareawidget.h

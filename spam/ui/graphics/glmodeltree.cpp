@@ -176,13 +176,14 @@ void GLModelTreeView::AddPart(const GLGUID &parentGuid, const std::string &partN
             const vtkColor4ub color = dispNode->GetColor();
             const std::string bodyName = dispNode->GetName();
             const GLGUID bodyGUID = dispNode->GetGUID();
+            const gint entityType = dispNode->GetEntityType();
             guint32 pixel = ((gint)(color.GetRed()) << 24 | ((gint)(color.GetGreen())) << 16 | ((gint)(color.GetBlue())) << 8 | ((gint)(color.GetAlpha())));
             GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, 13, 13);
             gdk_pixbuf_fill(pixbuf, pixel);
             GtkTreeIter itBody;
             gtk_tree_store_append(GTK_TREE_STORE(model), &itBody, &itPart);
             gtk_tree_store_set(GTK_TREE_STORE(model), &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, bodyPixBuf, ENTITY_VISIBILITY, TRUE,
-                ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, kENTITY_TYPE_SOLID_BODY, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
+                ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, entityType, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
             g_object_unref(pixbuf);
         }
     }
@@ -197,13 +198,14 @@ void GLModelTreeView::AddGeomBody(const GLGUID &partGUID, const SPDispNode &spGe
         const vtkColor4ub color = spGeomBody->GetColor();
         const std::string bodyName = spGeomBody->GetName();
         const GLGUID bodyGUID = spGeomBody->GetGUID();
+        const gint entityType = spGeomBody->GetEntityType();
         guint32 pixel = ((gint)(color.GetRed()) << 24 | ((gint)(color.GetGreen())) << 16 | ((gint)(color.GetBlue())) << 8 | ((gint)(color.GetAlpha())));
         GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, 13, 13);
         gdk_pixbuf_fill(pixbuf, pixel);
         GtkTreeIter itBody;
         gtk_tree_store_append(GTK_TREE_STORE(model), &itBody, &itPart);
         gtk_tree_store_set(GTK_TREE_STORE(model), &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, bodyPixBuf, ENTITY_VISIBILITY, TRUE,
-            ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, kENTITY_TYPE_SOLID_BODY, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
+            ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, entityType, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
         g_object_unref(pixbuf);
     }
 }
@@ -460,7 +462,11 @@ void GLModelTreeView::on_representation_changed(GtkCellRendererText *cell, const
     std::vector<int> reps;
     if (std::string_view("Wireframe") == std::string_view(new_text))
     {
-        reps.push_back(VTK_WIREFRAME);
+        reps.push_back(kGREP_VTK_WIREFRAME);
+    }
+    else if (std::string_view("Surface With Edges") == std::string_view(new_text))
+    {
+        reps.push_back(kGREP_SURFACE_WITH_EDGE);
     }
     else
     {

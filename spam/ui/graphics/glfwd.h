@@ -10,6 +10,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <gtk/gtk.h>
+#include <vtkProperty.h>
 
 typedef unsigned int GLuint;
 typedef unsigned int GLenum;
@@ -20,15 +21,6 @@ class GLTexture;
 class GLDispNode;
 class GLDispTree;
 class GLModelTreeView;
-
-enum DisplayEntityType
-{
-    kDET_VERTS = 0,
-    kDET_LINES = 1,
-    kDET_POLYS = 2,
-    kDET_STRIPS = 3,
-    kDET_NUMCATS = 4
-};
 
 enum PrimGeomShape
 {
@@ -53,6 +45,16 @@ enum GraphicsEntityType
     kENTITY_TYPE_2D_MESH = 10,
     kENTITY_TYPE_3D_MESH = 11,
     kENTITY_TYPE_GUARD
+};
+
+enum GraphicsRepresentation
+{
+    kGREP_VTK_POINTS = VTK_POINTS,
+    kGREP_VTK_WIREFRAME = VTK_WIREFRAME,
+    kGREP_VTK_SURFACE = VTK_SURFACE,
+    kGREP_SURFACE_WITH_EDGE,
+
+    kGREP_GUARD
 };
 
 struct GLGUID
