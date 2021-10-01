@@ -6,6 +6,10 @@
     <file compressed="true" preprocess="xml-stripblanks">res/model/assembly.svg</file>
     <file compressed="true" preprocess="xml-stripblanks">res/model/part.svg</file>
     <file compressed="true" preprocess="xml-stripblanks">res/model/solid.body.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/mesh.0d.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/mesh.1d.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/mesh.2d.svg</file>
+    <file compressed="true" preprocess="xml-stripblanks">res/model/mesh.3d.svg</file>
     <file compressed="true" preprocess="xml-stripblanks">res/model/eye.svg</file>
     <file compressed="true" preprocess="xml-stripblanks">res/model/vertex.svg</file>
   </gresource>

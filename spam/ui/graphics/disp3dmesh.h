@@ -35,6 +35,13 @@ protected:
     {
         explicit this_is_private(int) {}
     };
+
+private:
+    void CreateElementEdgeActor();
+
+private:
+    vtkSmartPointer<vtkPolyData> elem_edge_poly_data_;
+    vtkSmartPointer<vtkActor> elem_edge_actor_;
 };
 
 #endif // SPAM_UI_GRAPHICS_GL_3D_MESH_NODE_H

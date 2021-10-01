@@ -95,6 +95,10 @@ private:
     GdkPixbuf *assemPixBuf = nullptr;
     GdkPixbuf * partPixBuf = nullptr;
     GdkPixbuf * bodyPixBuf = nullptr;
+    GdkPixbuf * mesh0dPixBuf = nullptr;
+    GdkPixbuf * mesh1dPixBuf = nullptr;
+    GdkPixbuf * mesh2dPixBuf = nullptr;
+    GdkPixbuf * mesh3dPixBuf = nullptr;
 };
 
 #endif // SPAM_UI_GRAPHICS_GL_MODEL_TREE_VIEW_H

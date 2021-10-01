@@ -153,6 +153,16 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ugSo
             {
                 num2Ds += 1;
             }
+
+            if (VTK_TETRA == cellType ||
+                VTK_HEXAHEDRON == cellType ||
+                VTK_WEDGE == cellType ||
+                VTK_QUADRATIC_TETRA == cellType ||
+                VTK_QUADRATIC_HEXAHEDRON == cellType ||
+                VTK_QUADRATIC_WEDGE == cellType)
+            {
+                num3Ds += 1;
+            }
         }
 
         typesInfo += wxT("]");
@@ -161,6 +171,10 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ugSo
         if (num2Ds == cellTypes->GetNumberOfTypes())
         {
             return GL2DMeshNode::MakeNew(ugSource, renderer);
+        }
+        else if (num3Ds == cellTypes->GetNumberOfTypes())
+        {
+            return GL3DMeshNode::MakeNew(ugSource, renderer);
         }
         else
         {
@@ -205,9 +219,9 @@ const std::string GLDispNode::GetName() const
     switch (type_)
     {
     case kENTITY_TYPE_0D_MESH: return std::string("Node");
-    case kENTITY_TYPE_1D_MESH: return std::string("Curve");
-    case kENTITY_TYPE_2D_MESH: return std::string("Surface");
-    case kENTITY_TYPE_3D_MESH: return std::string("Surface");
+    case kENTITY_TYPE_1D_MESH: return std::string("Curve Mesh");
+    case kENTITY_TYPE_2D_MESH: return std::string("Surface Mesh");
+    case kENTITY_TYPE_3D_MESH: return std::string("Solid Mesh");
     default: return std::string("Unknown");
     }
 }

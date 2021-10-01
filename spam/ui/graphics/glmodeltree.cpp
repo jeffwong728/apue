@@ -26,6 +26,10 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
     assemPixBuf = gdk_pixbuf_new_from_resource_at_scale("/org/mvlab/spam/res/model/assembly.svg", 16, 16, TRUE, nullptr);
     partPixBuf = gdk_pixbuf_new_from_resource_at_scale("/org/mvlab/spam/res/model/part.svg", 16, 16, TRUE, nullptr);
     bodyPixBuf = gdk_pixbuf_new_from_resource_at_scale("/org/mvlab/spam/res/model/solid.body.svg", 16, 16, TRUE, nullptr);
+    mesh0dPixBuf = gdk_pixbuf_new_from_resource_at_scale("/org/mvlab/spam/res/model/mesh.0d.svg", 16, 16, TRUE, nullptr);
+    mesh1dPixBuf = gdk_pixbuf_new_from_resource_at_scale("/org/mvlab/spam/res/model/mesh.1d.svg", 16, 16, TRUE, nullptr);
+    mesh2dPixBuf = gdk_pixbuf_new_from_resource_at_scale("/org/mvlab/spam/res/model/mesh.2d.svg", 16, 16, TRUE, nullptr);
+    mesh3dPixBuf = gdk_pixbuf_new_from_resource_at_scale("/org/mvlab/spam/res/model/mesh.3d.svg", 16, 16, TRUE, nullptr);
 
     GtkTreeIter itModel;
     const GLGUID modelGUID = GLGUID::MakeNew();
@@ -136,6 +140,10 @@ GLModelTreeView::~GLModelTreeView()
     g_object_unref(assemPixBuf);
     g_object_unref(partPixBuf);
     g_object_unref(bodyPixBuf);
+    g_object_unref(mesh0dPixBuf);
+    g_object_unref(mesh1dPixBuf);
+    g_object_unref(mesh2dPixBuf);
+    g_object_unref(mesh3dPixBuf);
 }
 
 void GLModelTreeView::CloseModel()
@@ -182,7 +190,16 @@ void GLModelTreeView::AddPart(const GLGUID &parentGuid, const std::string &partN
             gdk_pixbuf_fill(pixbuf, pixel);
             GtkTreeIter itBody;
             gtk_tree_store_append(GTK_TREE_STORE(model), &itBody, &itPart);
-            gtk_tree_store_set(GTK_TREE_STORE(model), &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, bodyPixBuf, ENTITY_VISIBILITY, TRUE,
+            GdkPixbuf *typeIcon = bodyPixBuf;
+            switch (entityType)
+            {
+            case kENTITY_TYPE_0D_MESH: typeIcon = mesh0dPixBuf; break;
+            case kENTITY_TYPE_1D_MESH: typeIcon = mesh1dPixBuf; break;
+            case kENTITY_TYPE_2D_MESH: typeIcon = mesh2dPixBuf; break;
+            case kENTITY_TYPE_3D_MESH: typeIcon = mesh3dPixBuf; break;
+            default: break;
+            }
+            gtk_tree_store_set(GTK_TREE_STORE(model), &itBody, ENTITY_NAME, bodyName.c_str(), ENTITY_ICON, typeIcon, ENTITY_VISIBILITY, TRUE,
                 ENTITY_DISPLAY_MODE, "Surface", ENTITY_COLOR, pixbuf, ENTITY_TYPE, entityType, ENTITY_GUID_PART_1, bodyGUID.part1, ENTITY_GUID_PART_2, bodyGUID.part2, -1);
             g_object_unref(pixbuf);
         }
