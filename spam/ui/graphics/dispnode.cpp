@@ -146,6 +146,16 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ugSo
             typesInfo += cellTypeName;
             typesInfo += wxT(")");
 
+            if (VTK_VERTEX == cellType)
+            {
+                num0Ds += 1;
+            }
+
+            if (VTK_LINE == cellType)
+            {
+                num1Ds += 1;
+            }
+
             if (VTK_TRIANGLE == cellType ||
                 VTK_QUAD == cellType ||
                 VTK_QUADRATIC_TRIANGLE == cellType ||
@@ -168,7 +178,15 @@ SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ugSo
         typesInfo += wxT("]");
         wxLogMessage(typesInfo);
 
-        if (num2Ds == cellTypes->GetNumberOfTypes())
+        if (num0Ds == cellTypes->GetNumberOfTypes())
+        {
+            return GL0DMeshNode::MakeNew(ugSource, renderer);
+        }
+        else if (num1Ds == cellTypes->GetNumberOfTypes())
+        {
+            return GL1DMeshNode::MakeNew(ugSource, renderer);
+        }
+        else if (num2Ds == cellTypes->GetNumberOfTypes())
         {
             return GL2DMeshNode::MakeNew(ugSource, renderer);
         }

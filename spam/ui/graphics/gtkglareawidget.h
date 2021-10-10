@@ -112,6 +112,7 @@ private:
     vtkSmartPointer<ExternalVTKWidget> externalVTKWidget;
     vtkSmartPointer<vtkOpenGLRenderer> rootRenderer;
     vtkSmartPointer<vtkOpenGLRenderer> axisRenderer;
+    vtkSmartPointer<vtkOpenGLRenderer> boxRenderer;
     std::map<GLGUID, SPDispNode> allActors_;
     SPGLModelTreeView modelTreeView_;
     vtkNew<vtkNamedColors> colors_;

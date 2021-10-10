@@ -31,16 +31,9 @@ SPDispNodes GL0DMeshNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ug
     if (ugSource)
     {
         vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
-        surfaceFilter->SetNonlinearSubdivisionLevel(0);
+        surfaceFilter->SetNonlinearSubdivisionLevel(1);
         surfaceFilter->SetInputData(ugSource);
         surfaceFilter->Update();
-
-        vtkNew<vtkCellTypes> cellTypes;
-        ugSource->GetCellTypes(cellTypes);
-        for (vtkIdType cellId = 0; cellId < cellTypes->GetNumberOfTypes(); ++cellId)
-        {
-            const auto cellType = cellTypes->GetCellType(cellId);
-        }
 
         return GL0DMeshNode::MakeNew(surfaceFilter->GetOutput(), renderer);
     }

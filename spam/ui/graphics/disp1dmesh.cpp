@@ -31,7 +31,7 @@ SPDispNodes GL1DMeshNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ug
     if (ugSource)
     {
         vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
-        surfaceFilter->SetNonlinearSubdivisionLevel(0);
+        surfaceFilter->SetNonlinearSubdivisionLevel(1);
         surfaceFilter->SetInputData(ugSource);
         surfaceFilter->Update();
 

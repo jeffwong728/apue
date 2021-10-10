@@ -980,6 +980,8 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     renWin->AddRenderer(glArea->rootRenderer);
     glArea->rootRenderer->SetLayer(1);
 
+    glArea->boxRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
+
     const wxString gtkMajorVersion(std::to_string(gtk_get_major_version()));
     const wxString gtkMinorVersion(std::to_string(gtk_get_minor_version()));
     const wxString gtkMicroVersion(std::to_string(gtk_get_micro_version()));
