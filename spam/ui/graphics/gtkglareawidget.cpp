@@ -16,9 +16,11 @@
 #include <vtkMath.h>
 #include <vtkLight.h>
 #include <vtkActor.h>
+#include <vtkActor2D.h>
 #include <vtkCamera.h>
 #include <vtkCubeSource.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkPolyDataMapper2D.h>
 #include <vtkCallbackCommand.h>
 #include <vtkLogger.h>
 #include <vtkNamedColors.h>
@@ -34,6 +36,7 @@
 #include <vtkImageReader2Factory.h>
 #include <vtkTexture.h>
 #include <vtkProperty.h>
+#include <vtkProperty2D.h>
 #include <ExternalVTKWidget.h>
 #include <vtkExternalOpenGLCamera.h>
 #include <vtkExternalOpenGLRenderWindow.h>
@@ -51,6 +54,7 @@
 #include <vtkRenderer.h>
 #include <vtkTextActor.h>
 #include <vtkSMPTools.h>
+#include <vtkCoordinate.h>
 #include <vtksys/SystemTools.hxx>
 #if defined(M_PI) && defined(_WIN32)
 #undef M_PI
@@ -418,12 +422,15 @@ void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
         Refresh(false);
     }
 
+    anchorPos_ = e.GetPosition();
     lastPos_ = e.GetPosition();
 }
 
 void wxGLAreaWidget::OnLeftMouseUp(wxMouseEvent &e)
 {
+    boxActor->VisibilityOff();
     lastPos_ = e.GetPosition();
+    Refresh(false);
 }
 
 void wxGLAreaWidget::OnRightMouseDown(wxMouseEvent &e)
@@ -526,6 +533,12 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
         {
             Refresh(false);
         }
+    }
+
+    if (e.Dragging() && e.LeftIsDown())
+    {
+        DrawBox(e.GetPosition());
+        Refresh(false);
     }
 
     lastPos_ = e.GetPosition();
@@ -790,6 +803,38 @@ void wxGLAreaWidget::PositionAxis(const int oldx, const int oldy, const int newx
     axisRenderer->UpdateLightsGeometryToFollowCamera();
 }
 
+void wxGLAreaWidget::DrawBox(const wxPoint &cPos)
+{
+    const int w = externalVTKWidget->GetRenderWindow()->GetSize()[0];
+    const int h = externalVTKWidget->GetRenderWindow()->GetSize()[1];
+    const int l = std::min(anchorPos_.x, cPos.x);
+    const int r = std::max(anchorPos_.x, cPos.x);
+    const int t = std::min(h - anchorPos_.y, h - cPos.y);
+    const int b = std::max(h - anchorPos_.y, h - cPos.y);
+    wxPoint points[4] = { wxPoint(l, t), wxPoint(r, t), wxPoint(r, b), wxPoint(l, b) };
+
+    vtkNew<vtkPoints> pdPoints;
+    for (int i = 0; i < 4; ++i)
+    {
+        pdPoints->InsertNextPoint(points[i].x, points[i].y, 0);
+    }
+    vtkNew<vtkCellArray> pdCells;
+    for (int i = 0; i < 4; ++i)
+    {
+        vtkIdType line[2] = { i, (i + 1) % 4 };
+        pdCells->InsertNextCell(2, line);
+    }
+    vtkNew<vtkPolyData> polydata;
+    polydata->SetPoints(pdPoints);
+    polydata->SetLines(pdCells);
+    polydata->Modified();
+
+    boxActor->GetMapper()->SetInputDataObject(polydata);
+    boxRenderer->AddActor2D(boxActor);
+    boxActor->VisibilityOn();
+}
+
+
 void wxGLAreaWidget::ComputeWorldToDisplay(vtkRenderer* ren, double x, double y, double z, double displayPt[3])
 {
     ren->SetWorldPoint(x, y, z, 1.0);
@@ -855,7 +900,7 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     icCallback->SetClientData(widget);
     icCallback->SetCallback(IsCurrentCallback);
     renWin->AddObserver(vtkCommand::WindowIsCurrentEvent, icCallback);
-    renWin->SetNumberOfLayers(3);
+    renWin->SetNumberOfLayers(4);
 
     vtkNew<vtkPoints> points;
     points->InsertNextPoint(1.0, 1.0, 0.0);
@@ -981,6 +1026,19 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     glArea->rootRenderer->SetLayer(1);
 
     glArea->boxRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
+    glArea->boxActor = vtkSmartPointer<vtkActor2D>::New();
+
+    vtkSmartPointer<vtkCoordinate> coordinateIns = vtkSmartPointer<vtkCoordinate>::New();
+    coordinateIns->SetCoordinateSystemToDisplay();
+
+    vtkSmartPointer<vtkPolyDataMapper2D> mapper2D = vtkSmartPointer<vtkPolyDataMapper2D>::New();
+    mapper2D->SetTransformCoordinate(coordinateIns);
+    glArea->boxActor->GetProperty()->SetColor(1.0, 0.0, 1.0);
+    glArea->boxActor->GetProperty()->SetLineWidth(1.0);
+    glArea->boxActor->SetMapper(mapper2D);
+    glArea->boxRenderer->ResetCamera();
+    renWin->AddRenderer(glArea->boxRenderer);
+    glArea->boxRenderer->SetLayer(3);
 
     const wxString gtkMajorVersion(std::to_string(gtk_get_major_version()));
     const wxString gtkMinorVersion(std::to_string(gtk_get_minor_version()));

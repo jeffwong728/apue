@@ -18,6 +18,7 @@ class vtkExternalOpenGLCamera;
 class vtkOpenGLRenderer;
 class vtkRenderer;
 class vtkActor;
+class vtkActor2D;
 typedef unsigned int GLuint;
 
 class wxGLAreaWidget: public wxControl
@@ -94,6 +95,7 @@ protected:
 
 private:
     void PositionAxis(const int oldx, const int oldy, const int newx, const int newy);
+    void DrawBox(const wxPoint &cPos);
 
 private:
     static void ComputeWorldToDisplay(vtkRenderer* ren, double x, double y, double z, double displayPt[3]);
@@ -113,6 +115,7 @@ private:
     vtkSmartPointer<vtkOpenGLRenderer> rootRenderer;
     vtkSmartPointer<vtkOpenGLRenderer> axisRenderer;
     vtkSmartPointer<vtkOpenGLRenderer> boxRenderer;
+    vtkSmartPointer<vtkActor2D> boxActor;
     std::map<GLGUID, SPDispNode> allActors_;
     SPGLModelTreeView modelTreeView_;
     vtkNew<vtkNamedColors> colors_;

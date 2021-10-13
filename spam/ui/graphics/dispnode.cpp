@@ -307,3 +307,8 @@ void GLDispNode::SetNodeColor(const double *c)
         }
     }
 }
+
+bool GLDispNode::Select3DCells(vtkPlanes *frustum)
+{
+    return false;
+}

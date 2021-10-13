@@ -13,6 +13,7 @@
 #include <vtkOpenGLRenderer.h>
 #include <vtkNamedColors.h>
 class vtkProp;
+class vtkPlanes;
 
 class GLDispNode
 {
@@ -43,6 +44,9 @@ public:
     virtual void SetCellColor(const double *c);
     virtual void SetEdgeColor(const double *c);
     virtual void SetNodeColor(const double *c);
+
+public:
+    virtual bool Select3DCells(vtkPlanes *frustum);
 
 protected:
     virtual void SetDefaultDisplay() = 0;

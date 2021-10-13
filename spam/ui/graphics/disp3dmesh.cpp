@@ -2,10 +2,13 @@
 #include <numeric>
 #include <algorithm>
 #include <epoxy/gl.h>
+#include <vtkPlanes.h>
+#include <vtkAreaPicker.h>
 #include <vtkProperty.h>
 #include <vtkExtractEdges.h>
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
+#include <vtkExtractSelectedFrustum.h>
 
 SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -240,6 +243,11 @@ void GL3DMeshNode::SetNodeColor(const double *c)
     {
         elem_edge_actor_->GetProperty()->SetVertexColor(c);
     }
+}
+
+bool GL3DMeshNode::Select3DCells(vtkPlanes *frustum)
+{
+    return false;
 }
 
 void GL3DMeshNode::SetDefaultDisplay()
