@@ -4,6 +4,7 @@
 
 class GL1DMeshNode : public GLDispNode
 {
+protected:
     struct this_is_private;
 public:
     static SPDispNodes MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer);
