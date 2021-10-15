@@ -12,6 +12,8 @@
 #include <vtkProperty.h>
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
+#include <vtkXMLPolyDataWriter.h>
+#include <vtksys/SystemTools.hxx>
 
 SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -308,7 +310,30 @@ void GLDispNode::SetNodeColor(const double *c)
     }
 }
 
+bool GLDispNode::Select2DCells(vtkPlanes *frustum)
+{
+    return false;
+}
+
 bool GLDispNode::Select3DCells(vtkPlanes *frustum)
 {
     return false;
+}
+
+bool GLDispNode::ExportVTK(const std::string &dir)
+{
+    if (poly_data_)
+    {
+        std::vector<std::string> components{ dir, GetName() };
+        std::string filePath = vtksys::SystemTools::JoinPath(components);
+        filePath.append(".vtp");
+
+        vtkNew<vtkXMLPolyDataWriter> writer;
+        writer->SetFileName(filePath.c_str());
+        writer->SetInputData(poly_data_);
+        writer->SetDataModeToAscii();
+        writer->Write();
+    }
+
+    return true;
 }

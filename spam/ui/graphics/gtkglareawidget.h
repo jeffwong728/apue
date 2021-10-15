@@ -88,6 +88,7 @@ public:
     void OnRepresentationChanged(const std::vector<GLGUID> &guids, const std::vector<int> &reps);
     void OnEntitiesDeleted(const std::vector<GLGUID> &guids);
     void OnImportModel(const GLGUID &parentGuid);
+    void OnExportBody(const GLGUID &parentGuid);
 
 protected:
     virtual void DoApplyWidgetStyle(GtkRcStyle *style) wxOVERRIDE;

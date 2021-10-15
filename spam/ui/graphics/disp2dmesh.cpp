@@ -1,12 +1,21 @@
 #include "disp2dmesh.h"
+#include <ui/spam.h>
 #include <numeric>
 #include <algorithm>
 #include <epoxy/gl.h>
+#include <vtkFloatArray.h>
+#include <vtkSignedCharArray.h>
 #include <vtkCellType.h>
+#include <vtkPlanes.h>
+#include <vtkAreaPicker.h>
 #include <vtkProperty.h>
+#include <vtkLookupTable.h>
 #include <vtkExtractEdges.h>
+#include <vtkCellData.h>
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
+#include <vtkExtractSelectedFrustum.h>
+#include <vtkSelectionNode.h>
 
 SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -203,6 +212,11 @@ void GL2DMeshNode::SetCellColor(const double *c)
     if (actor_)
     {
         actor_->GetProperty()->SetDiffuseColor(c);
+        vtkLookupTable *lut = vtkLookupTable::SafeDownCast(mapper_->GetLookupTable());
+        if (lut)
+        {
+            lut->SetTableValue(0, c);
+        }
     }
 
     if (kGREP_VTK_WIREFRAME == representation_ && elem_edge_actor_)
@@ -237,13 +251,58 @@ void GL2DMeshNode::SetNodeColor(const double *c)
     }
 }
 
+bool GL2DMeshNode::Select2DCells(vtkPlanes *frustum)
+{
+    vtkNew<vtkExtractSelectedFrustum> extractor;
+    extractor->SetInputData(poly_data_);
+    extractor->PreserveTopologyOn();
+    extractor->SetFrustum(frustum);
+    extractor->Update();
+
+    vtkFloatArray *colorIndexs = vtkFloatArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
+    if (colorIndexs && colorIndexs->GetNumberOfTuples())
+    {
+        colorIndexs->FillValue(0);
+        colorIndexs->Modified();
+    }
+
+    int numSelected = 0;
+    vtkPolyData *selPolyData = vtkPolyData::SafeDownCast(extractor->GetOutput());
+    if (selPolyData)
+    {
+        vtkSignedCharArray *cellInsidedness = vtkSignedCharArray::SafeDownCast(selPolyData->GetCellData()->GetArray("vtkInsidedness"));
+        if (cellInsidedness)
+        {
+            const vtkIdType numInsidedness = cellInsidedness->GetNumberOfTuples();
+            if (colorIndexs && colorIndexs->GetNumberOfTuples() && numInsidedness == colorIndexs->GetNumberOfTuples())
+            {
+                for (vtkIdType cc = 0; cc < numInsidedness; ++cc)
+                {
+                    if (cellInsidedness->GetValue(cc) > 0)
+                    {
+                        colorIndexs->SetValue(cc, 1);
+                        numSelected += 1;
+                    }
+                }
+
+                colorIndexs->Modified();
+            }
+        }
+    }
+
+    const wxString numSelStr(std::to_string(numSelected));
+    Spam::SetStatus(StatusIconType::kSIT_NONE, wxString(wxT("Selected ")) + numSelStr + wxString(wxT(" 2D cells")));
+
+    return false;
+}
+
 void GL2DMeshNode::SetDefaultDisplay()
 {
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(poly_data_);
+    mapper_ = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper_->SetInputData(poly_data_);
 
     actor_ = vtkSmartPointer<vtkActor>::New();
-    actor_->SetMapper(mapper);
+    actor_->SetMapper(mapper_);
 
     actor_->GetProperty()->SetDiffuse(1.0);
     actor_->GetProperty()->SetSpecular(0.3);
@@ -252,6 +311,20 @@ void GL2DMeshNode::SetDefaultDisplay()
     actor_->GetProperty()->SetLineWidth(1.f);
     actor_->GetProperty()->SetPointSize(5);
 
+    vtkSmartPointer<vtkNamedColors> colors = vtkSmartPointer<vtkNamedColors>::New();
+    vtkSmartPointer<vtkFloatArray> colorIndexs = vtkSmartPointer<vtkFloatArray>::New();
+    vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
+    lut->SetNumberOfTableValues(2);
+    lut->Build();
+    lut->SetTableValue(0, colors->GetColor4d("Wheat").GetData());
+    lut->SetTableValue(1, colors->GetColor4d("Banana").GetData());
+    mapper_->SetScalarRange(0, 1);
+    mapper_->SetLookupTable(lut);
+
+    colorIndexs->SetNumberOfTuples(poly_data_->GetNumberOfCells());
+    colorIndexs->FillValue(0);
+
+    poly_data_->GetCellData()->SetScalars(colorIndexs);
     renderer_->AddActor(actor_);
 }
 

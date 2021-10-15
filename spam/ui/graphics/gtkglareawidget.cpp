@@ -55,6 +55,7 @@
 #include <vtkTextActor.h>
 #include <vtkSMPTools.h>
 #include <vtkCoordinate.h>
+#include <vtkAreaPicker.h>
 #include <vtksys/SystemTools.hxx>
 #if defined(M_PI) && defined(_WIN32)
 #undef M_PI
@@ -220,6 +221,7 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     modelTreeView_->sig_RepresentationChanged.connect(std::bind(&wxGLAreaWidget::OnRepresentationChanged, this, std::placeholders::_1, std::placeholders::_2));
     modelTreeView_->sig_EntitiesDeleted.connect(std::bind(&wxGLAreaWidget::OnEntitiesDeleted, this, std::placeholders::_1));
     modelTreeView_->sig_ImportModel.connect(std::bind(&wxGLAreaWidget::OnImportModel, this, std::placeholders::_1));
+    modelTreeView_->sig_ExportBody.connect(std::bind(&wxGLAreaWidget::OnExportBody, this, std::placeholders::_1));
 
     colors_->GetColorNames(colorNames_);
     wxLogMessage(vtkSMPTools::GetBackend());
@@ -262,9 +264,9 @@ void wxGLAreaWidget::ImportSTL(const GLGUID &parentGuid, const std::string &inpu
         const auto numColors = colors_->GetNumberOfColors();
         for (const auto &newDispNode : newDispNodes)
         {
-            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
-            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
-            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            newDispNode->SetCellColor(colors_->GetColor4d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor4d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor4d("Blue").GetData());
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
@@ -299,9 +301,9 @@ void wxGLAreaWidget::ImportVTK(const GLGUID &parentGuid, const std::string &inpu
         const auto numColors = colors_->GetNumberOfColors();
         for (const auto &newDispNode : newDispNodes)
         {
-            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++)%numColors)).GetData());
-            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
-            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            newDispNode->SetCellColor(colors_->GetColor4d(colorNames_->GetValue((colorIndex_++)%numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor4d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor4d("Blue").GetData());
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
@@ -336,9 +338,9 @@ void wxGLAreaWidget::ImportVTU(const GLGUID &parentGuid, const std::string &inpu
         const auto numColors = colors_->GetNumberOfColors();
         for (const auto &newDispNode : newDispNodes)
         {
-            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
-            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
-            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            newDispNode->SetCellColor(colors_->GetColor4d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor4d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor4d("Blue").GetData());
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
@@ -360,9 +362,9 @@ void wxGLAreaWidget::ImportOBJ(const GLGUID &parentGuid, const std::string &inpu
         const auto numColors = colors_->GetNumberOfColors();
         for (const auto &newDispNode : newDispNodes)
         {
-            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
-            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
-            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            newDispNode->SetCellColor(colors_->GetColor4d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor4d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor4d("Blue").GetData());
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
@@ -384,9 +386,9 @@ void wxGLAreaWidget::ImportPLY(const GLGUID &parentGuid, const std::string &inpu
         const auto numColors = colors_->GetNumberOfColors();
         for (const auto &newDispNode : newDispNodes)
         {
-            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
-            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
-            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            newDispNode->SetCellColor(colors_->GetColor4d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor4d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor4d("Blue").GetData());
             allActors_[newDispNode->GetGUID()] = newDispNode;
         }
         boost::filesystem::path p(inputFilename);
@@ -430,6 +432,26 @@ void wxGLAreaWidget::OnLeftMouseUp(wxMouseEvent &e)
 {
     boxActor->VisibilityOff();
     lastPos_ = e.GetPosition();
+
+    const int w = externalVTKWidget->GetRenderWindow()->GetSize()[0];
+    const int h = externalVTKWidget->GetRenderWindow()->GetSize()[1];
+    const int x0 = std::min(anchorPos_.x, lastPos_.x);
+    const int x1 = std::max(anchorPos_.x, lastPos_.x);
+    const int y0 = std::min(h - anchorPos_.y, h - lastPos_.y);
+    const int y1 = std::max(h - anchorPos_.y, h - lastPos_.y);
+
+    vtkNew<vtkAreaPicker> aPicker;
+    aPicker->SetRenderer(rootRenderer);
+    aPicker->SetPickCoords(x0, y0, x1, y1);
+    aPicker->PickFromListOn();
+    aPicker->Pick();
+    vtkPlanes *frustum = aPicker->GetFrustum();
+
+    for (auto &actorItem : allActors_)
+    {
+        actorItem.second->Select2DCells(frustum);
+    }
+
     Refresh(false);
 }
 
@@ -587,9 +609,9 @@ void wxGLAreaWidget::OnAddGeomBody(const GLGUID &partGuid, const int geomShape)
         const auto numColors = colors_->GetNumberOfColors();
         for (const auto &newDispNode : newDispNodes)
         {
-            newDispNode->SetCellColor(colors_->GetColor3d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
-            newDispNode->SetEdgeColor(colors_->GetColor3d("Black").GetData());
-            newDispNode->SetNodeColor(colors_->GetColor3d("Blue").GetData());
+            newDispNode->SetCellColor(colors_->GetColor4d(colorNames_->GetValue((colorIndex_++) % numColors)).GetData());
+            newDispNode->SetEdgeColor(colors_->GetColor4d("Black").GetData());
+            newDispNode->SetNodeColor(colors_->GetColor4d("Blue").GetData());
             allActors_[newDispNode->GetGUID()] = newDispNode;
             modelTreeView_->AddGeomBody(partGuid, newDispNode);
         }
@@ -743,6 +765,23 @@ void wxGLAreaWidget::OnImportModel(const GLGUID &parentGuid)
         else
         {
             wxMessageBox(wxString(wxT("Don't know how to read this file")), wxString(wxT("Import Failed")));
+        }
+    }
+}
+
+void wxGLAreaWidget::OnExportBody(const GLGUID &parentGuid)
+{
+    auto it = allActors_.find(parentGuid);
+    if (it != allActors_.end())
+    {
+        wxDirDialog dirDlg;
+        wxString dirHome;
+        wxGetHomeDir(&dirHome);
+        wxDirDialog dialog(this, "Export Directory", dirHome, wxDD_DEFAULT_STYLE & ~wxDD_DIR_MUST_EXIST);
+        if (dialog.ShowModal() == wxID_OK)
+        {
+            const auto dirPath = std::string(dialog.GetPath());
+            it->second->ExportVTK(dirPath);
         }
     }
 }
@@ -999,7 +1038,7 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
 
     // add the actors to the scene
     glArea->axisRenderer->AddActor(sphereActor);
-    glArea->axisRenderer->SetBackground(colors->GetColor3d("BkgColor").GetData());
+    glArea->axisRenderer->SetBackground(colors->GetColor4d("BkgColor").GetData());
 
     vtkNew<vtkAxesActor> axes;
     axes->VisibilityOn();

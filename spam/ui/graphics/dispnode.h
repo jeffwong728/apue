@@ -12,6 +12,7 @@
 #include <vtkUnstructuredGrid.h>
 #include <vtkOpenGLRenderer.h>
 #include <vtkNamedColors.h>
+#include <vtkFloatArray.h>
 class vtkProp;
 class vtkPlanes;
 
@@ -46,7 +47,9 @@ public:
     virtual void SetNodeColor(const double *c);
 
 public:
+    virtual bool Select2DCells(vtkPlanes *frustum);
     virtual bool Select3DCells(vtkPlanes *frustum);
+    virtual bool ExportVTK(const std::string &dir);
 
 protected:
     virtual void SetDefaultDisplay() = 0;
@@ -63,6 +66,7 @@ protected:
     vtkWeakPointer<vtkOpenGLRenderer> renderer_;
     vtkSmartPointer<vtkPolyData> poly_data_;
     vtkSmartPointer<vtkActor> actor_;
+    vtkSmartPointer<vtkPolyDataMapper> mapper_;
     int representation_{ kGREP_VTK_SURFACE };
 };
 

@@ -33,6 +33,7 @@ public:
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_RepresentationChanged;
     bs2::signal_type<void(const std::vector<GLGUID>&), bs2_dummy_mutex>::type sig_EntitiesDeleted;
     bs2::signal_type<void(const GLGUID), bs2_dummy_mutex>::type sig_ImportModel;
+    bs2::signal_type<void(const GLGUID), bs2_dummy_mutex>::type sig_ExportBody;
     bs2::signal_type<void(const GLGUID, const int), bs2_dummy_mutex>::type sig_AddGeomBody;
 
 public:
@@ -71,6 +72,7 @@ private:
     static void on_delete_self(GtkWidget *menuitem, gpointer userdata);
     static void on_delete_children(GtkWidget *menuitem, gpointer userdata);
     static void on_import_model(GtkWidget *menuitem, gpointer userdata);
+    static void on_export_body(GtkWidget *menuitem, gpointer userdata);
     static gboolean on_popup_menu(GtkWidget *treeview, gpointer userdata);
     static gboolean on_button_pressed(GtkWidget *treeview, GdkEventButton *e, gpointer userdata);
 

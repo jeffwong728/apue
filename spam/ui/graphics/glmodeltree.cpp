@@ -627,6 +627,26 @@ void GLModelTreeView::on_import_model(GtkWidget *menuitem, gpointer userdata)
     }
 }
 
+void GLModelTreeView::on_export_body(GtkWidget *menuitem, gpointer userdata)
+{
+    GtkTreeIter itParent;
+    GtkTreeModel *model = nullptr;
+    GLModelTreeView *myself = (GLModelTreeView *)userdata;
+    GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(myself->treeView_));
+    if (gtk_tree_selection_get_selected(selection, &model, &itParent))
+    {
+        gint eType = -1;
+        guint64 part1 = 0;
+        guint64 part2 = 0;
+        gtk_tree_model_get(model, &itParent, ENTITY_TYPE, &eType, -1);
+        gtk_tree_model_get(model, &itParent, ENTITY_GUID_PART_1, &part1, -1);
+        gtk_tree_model_get(model, &itParent, ENTITY_GUID_PART_2, &part2, -1);
+
+        const GLGUID guid(part1, part2);
+        myself->sig_ExportBody(guid);
+    }
+}
+
 gboolean GLModelTreeView::on_popup_menu(GtkWidget *treeview, gpointer userdata)
 {
     view_popup_menu(treeview, NULL, userdata);
@@ -754,6 +774,19 @@ void GLModelTreeView::view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gp
 
             menuitem = gtk_menu_item_new_with_label("Add VTK Cell");
             gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), cellSubMenu);
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+        }
+
+        if (kENTITY_TYPE_0D_MESH == eType ||
+            kENTITY_TYPE_1D_MESH == eType ||
+            kENTITY_TYPE_2D_MESH == eType ||
+            kENTITY_TYPE_3D_MESH == eType)
+        {
+            menuitem = gtk_separator_menu_item_new();
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
+
+            menuitem = gtk_menu_item_new_with_label("Export");
+            g_signal_connect(menuitem, "activate", G_CALLBACK(on_export_body), userdata);
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
         }
 
