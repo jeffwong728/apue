@@ -324,8 +324,7 @@ bool GLDispNode::ExportVTK(const std::string &dir)
 {
     if (poly_data_)
     {
-        std::vector<std::string> components{ dir, GetName() };
-        std::string filePath = vtksys::SystemTools::JoinPath(components);
+        std::string filePath = dir + boost::filesystem::path::preferred_separator + GetName();
         filePath.append(".vtp");
 
         vtkNew<vtkXMLPolyDataWriter> writer;

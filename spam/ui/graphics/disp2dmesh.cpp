@@ -30,6 +30,7 @@ SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, 
             auto dispNode = std::make_shared<GL2DMeshNode>(this_is_private{ 0 });
             dispNode->renderer_ = renderer;
             dispNode->poly_data_ = pdSource;
+            dispNode->CreateElementEdgeActor();
             dispNode->SetDefaultDisplay();
             dispNodes.push_back(std::move(dispNode));
         }
@@ -317,7 +318,7 @@ void GL2DMeshNode::SetDefaultDisplay()
     lut->SetNumberOfTableValues(2);
     lut->Build();
     lut->SetTableValue(0, colors->GetColor4d("Wheat").GetData());
-    lut->SetTableValue(1, colors->GetColor4d("Banana").GetData());
+    lut->SetTableValue(1, colors->GetColor4d("DarkOrange").GetData());
     mapper_->SetScalarRange(0, 1);
     mapper_->SetLookupTable(lut);
 
@@ -348,6 +349,7 @@ void GL2DMeshNode::CreateElementEdgeActor()
     elem_edge_actor_->GetProperty()->SetOpacity(1.0);
     elem_edge_actor_->GetProperty()->SetLineWidth(1.5f);
     elem_edge_actor_->GetProperty()->SetPointSize(5);
+    elem_edge_actor_->VisibilityOff();
 
     renderer_->AddActor(elem_edge_actor_);
 }

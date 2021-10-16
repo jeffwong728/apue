@@ -1,6 +1,7 @@
 #include "wx/wxprec.h"
 #include <wx/wx.h>
 #include <wx/log.h>
+#include <wx/filefn.h> 
 #include "dispnode.h"
 #include "gtkglareawidget.h"
 #include "glmodeltree.h"
@@ -55,6 +56,8 @@
 #include <vtkTextActor.h>
 #include <vtkSMPTools.h>
 #include <vtkCoordinate.h>
+#include <vtkPointPicker.h>
+#include <vtkCellPicker.h>
 #include <vtkAreaPicker.h>
 #include <vtksys/SystemTools.hxx>
 #if defined(M_PI) && defined(_WIN32)
@@ -430,7 +433,7 @@ void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
 
 void wxGLAreaWidget::OnLeftMouseUp(wxMouseEvent &e)
 {
-    boxActor->VisibilityOff();
+    rubberBoxActor->VisibilityOff();
     lastPos_ = e.GetPosition();
 
     const int w = externalVTKWidget->GetRenderWindow()->GetSize()[0];
@@ -559,7 +562,7 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
 
     if (e.Dragging() && e.LeftIsDown())
     {
-        DrawBox(e.GetPosition());
+        DrawRubberBox(e.GetPosition());
         Refresh(false);
     }
 
@@ -774,13 +777,17 @@ void wxGLAreaWidget::OnExportBody(const GLGUID &parentGuid)
     auto it = allActors_.find(parentGuid);
     if (it != allActors_.end())
     {
+        if (!wxDirExists(lastExportDir_))
+        {
+            wxGetHomeDir(&lastExportDir_);
+        }
+
         wxDirDialog dirDlg;
-        wxString dirHome;
-        wxGetHomeDir(&dirHome);
-        wxDirDialog dialog(this, "Export Directory", dirHome, wxDD_DEFAULT_STYLE & ~wxDD_DIR_MUST_EXIST);
+        wxDirDialog dialog(this, "Export Directory", lastExportDir_, wxDD_DEFAULT_STYLE & ~wxDD_DIR_MUST_EXIST);
         if (dialog.ShowModal() == wxID_OK)
         {
-            const auto dirPath = std::string(dialog.GetPath());
+            lastExportDir_ = dialog.GetPath();
+            const auto dirPath = std::string(lastExportDir_);
             it->second->ExportVTK(dirPath);
         }
     }
@@ -842,7 +849,7 @@ void wxGLAreaWidget::PositionAxis(const int oldx, const int oldy, const int newx
     axisRenderer->UpdateLightsGeometryToFollowCamera();
 }
 
-void wxGLAreaWidget::DrawBox(const wxPoint &cPos)
+void wxGLAreaWidget::DrawRubberBox(const wxPoint &cPos)
 {
     const int w = externalVTKWidget->GetRenderWindow()->GetSize()[0];
     const int h = externalVTKWidget->GetRenderWindow()->GetSize()[1];
@@ -868,9 +875,9 @@ void wxGLAreaWidget::DrawBox(const wxPoint &cPos)
     polydata->SetLines(pdCells);
     polydata->Modified();
 
-    boxActor->GetMapper()->SetInputDataObject(polydata);
-    boxRenderer->AddActor2D(boxActor);
-    boxActor->VisibilityOn();
+    rubberBoxActor->GetMapper()->SetInputDataObject(polydata);
+    rubberBoxRenderer->AddActor2D(rubberBoxActor);
+    rubberBoxActor->VisibilityOn();
 }
 
 
@@ -1064,20 +1071,20 @@ void wxGLAreaWidget::realize_cb(GtkWidget *widget, gpointer user_data)
     renWin->AddRenderer(glArea->rootRenderer);
     glArea->rootRenderer->SetLayer(1);
 
-    glArea->boxRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
-    glArea->boxActor = vtkSmartPointer<vtkActor2D>::New();
+    glArea->rubberBoxRenderer = vtkSmartPointer<vtkOpenGLRenderer>::New();
+    glArea->rubberBoxActor = vtkSmartPointer<vtkActor2D>::New();
 
     vtkSmartPointer<vtkCoordinate> coordinateIns = vtkSmartPointer<vtkCoordinate>::New();
     coordinateIns->SetCoordinateSystemToDisplay();
 
     vtkSmartPointer<vtkPolyDataMapper2D> mapper2D = vtkSmartPointer<vtkPolyDataMapper2D>::New();
     mapper2D->SetTransformCoordinate(coordinateIns);
-    glArea->boxActor->GetProperty()->SetColor(1.0, 0.0, 1.0);
-    glArea->boxActor->GetProperty()->SetLineWidth(1.0);
-    glArea->boxActor->SetMapper(mapper2D);
-    glArea->boxRenderer->ResetCamera();
-    renWin->AddRenderer(glArea->boxRenderer);
-    glArea->boxRenderer->SetLayer(3);
+    glArea->rubberBoxActor->GetProperty()->SetColor(1.0, 0.0, 1.0);
+    glArea->rubberBoxActor->GetProperty()->SetLineWidth(1.0);
+    glArea->rubberBoxActor->SetMapper(mapper2D);
+    glArea->rubberBoxRenderer->ResetCamera();
+    renWin->AddRenderer(glArea->rubberBoxRenderer);
+    glArea->rubberBoxRenderer->SetLayer(3);
 
     const wxString gtkMajorVersion(std::to_string(gtk_get_major_version()));
     const wxString gtkMinorVersion(std::to_string(gtk_get_minor_version()));
