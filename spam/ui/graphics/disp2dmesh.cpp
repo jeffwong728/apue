@@ -5,6 +5,7 @@
 #include <epoxy/gl.h>
 #include <vtkFloatArray.h>
 #include <vtkSignedCharArray.h>
+#include <vtkIdTypeArray.h>
 #include <vtkCellType.h>
 #include <vtkPlanes.h>
 #include <vtkAreaPicker.h>
@@ -16,6 +17,7 @@
 #include <vtkUnstructuredGridGeometryFilter.h>
 #include <vtkExtractSelectedFrustum.h>
 #include <vtkSelectionNode.h>
+#include <vtkPolyDataNormals.h>
 
 SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -27,9 +29,12 @@ SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, 
         const vtkIdType numCells = pdSource->GetNumberOfCells();
         if (numCells == numPolys || numCells == numStrips)
         {
+            vtkNew<vtkPolyDataNormals> normalsFilter;
+            normalsFilter->SetInputData(pdSource);
+            normalsFilter->Update();
             auto dispNode = std::make_shared<GL2DMeshNode>(this_is_private{ 0 });
             dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = pdSource;
+            dispNode->poly_data_ = normalsFilter->GetOutput();
             dispNode->CreateElementEdgeActor();
             dispNode->SetDefaultDisplay();
             dispNodes.push_back(std::move(dispNode));
@@ -58,14 +63,19 @@ SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ug
         }
 
         vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+        surfaceFilter->SetPassThroughCellIds(true);
+        surfaceFilter->SetPassThroughPointIds(true);
         surfaceFilter->SetNonlinearSubdivisionLevel(1);
         surfaceFilter->SetInputData(ugSource);
-        surfaceFilter->Update();
+
+        vtkNew<vtkPolyDataNormals> normalsFilter;
+        normalsFilter->SetInputConnection(surfaceFilter->GetOutputPort());
+        normalsFilter->Update();
 
         SPDispNodes dispNodes;
         auto dispNode = std::make_shared<GL2DMeshNode>(this_is_private{ 0 });
         dispNode->renderer_ = renderer;
-        dispNode->poly_data_ = surfaceFilter->GetOutput();
+        dispNode->poly_data_ = normalsFilter->GetOutput();
         dispNode->SetDefaultDisplay();
 
         vtkNew<vtkExtractEdges> extractEdges;
@@ -252,49 +262,9 @@ void GL2DMeshNode::SetNodeColor(const double *c)
     }
 }
 
-bool GL2DMeshNode::Select2DCells(vtkPlanes *frustum)
+vtkIdType GL2DMeshNode::Select2DCells(vtkPlanes *frustum)
 {
-    vtkNew<vtkExtractSelectedFrustum> extractor;
-    extractor->SetInputData(poly_data_);
-    extractor->PreserveTopologyOn();
-    extractor->SetFrustum(frustum);
-    extractor->Update();
-
-    vtkFloatArray *colorIndexs = vtkFloatArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
-    if (colorIndexs && colorIndexs->GetNumberOfTuples())
-    {
-        colorIndexs->FillValue(0);
-        colorIndexs->Modified();
-    }
-
-    int numSelected = 0;
-    vtkPolyData *selPolyData = vtkPolyData::SafeDownCast(extractor->GetOutput());
-    if (selPolyData)
-    {
-        vtkSignedCharArray *cellInsidedness = vtkSignedCharArray::SafeDownCast(selPolyData->GetCellData()->GetArray("vtkInsidedness"));
-        if (cellInsidedness)
-        {
-            const vtkIdType numInsidedness = cellInsidedness->GetNumberOfTuples();
-            if (colorIndexs && colorIndexs->GetNumberOfTuples() && numInsidedness == colorIndexs->GetNumberOfTuples())
-            {
-                for (vtkIdType cc = 0; cc < numInsidedness; ++cc)
-                {
-                    if (cellInsidedness->GetValue(cc) > 0)
-                    {
-                        colorIndexs->SetValue(cc, 1);
-                        numSelected += 1;
-                    }
-                }
-
-                colorIndexs->Modified();
-            }
-        }
-    }
-
-    const wxString numSelStr(std::to_string(numSelected));
-    Spam::SetStatus(StatusIconType::kSIT_NONE, wxString(wxT("Selected ")) + numSelStr + wxString(wxT(" 2D cells")));
-
-    return false;
+    return SelectFacets(frustum);
 }
 
 void GL2DMeshNode::SetDefaultDisplay()

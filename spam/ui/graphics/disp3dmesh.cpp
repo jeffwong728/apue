@@ -9,6 +9,9 @@
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
 #include <vtkExtractSelectedFrustum.h>
+#include <vtkPolyDataNormals.h>
+#include <vtkLookupTable.h>
+#include <vtkCellData.h>
 
 SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -19,9 +22,12 @@ SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, 
         const vtkIdType numCells = pdSource->GetNumberOfCells();
         if (numCells == numPolys)
         {
+            vtkNew<vtkPolyDataNormals> normalsFilter;
+            normalsFilter->SetInputData(pdSource);
+            normalsFilter->Update();
             auto dispNode = std::make_shared<GL3DMeshNode>(this_is_private{ 0 });
             dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = pdSource;
+            dispNode->poly_data_ = normalsFilter->GetOutput();;
             dispNode->SetDefaultDisplay();
             dispNodes.push_back(std::move(dispNode));
         }
@@ -51,22 +57,28 @@ SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ug
         }
 
         vtkSmartPointer<vtkUnstructuredGridGeometryFilter> geoFilter = vtkSmartPointer<vtkUnstructuredGridGeometryFilter>::New();
+        geoFilter->SetPassThroughCellIds(true);
+        geoFilter->SetPassThroughPointIds(true);
         geoFilter->SetInputData(ugSource);
-        geoFilter->Update();
 
         vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
         surfaceFilter->SetNonlinearSubdivisionLevel(1);
-        surfaceFilter->SetInputData(geoFilter->GetOutputDataObject(0));
-        surfaceFilter->Update();
+        surfaceFilter->SetPassThroughCellIds(false);
+        surfaceFilter->SetPassThroughPointIds(false);
+        surfaceFilter->SetInputConnection(geoFilter->GetOutputPort(0));
+
+        vtkNew<vtkPolyDataNormals> normalsFilter;
+        normalsFilter->SetInputConnection(surfaceFilter->GetOutputPort());
+        normalsFilter->Update();
 
         SPDispNodes dispNodes;
         auto dispNode = std::make_shared<GL3DMeshNode>(this_is_private{ 0 });
         dispNode->renderer_ = renderer;
-        dispNode->poly_data_ = surfaceFilter->GetOutput();
+        dispNode->poly_data_ = normalsFilter->GetOutput();
         dispNode->SetDefaultDisplay();
 
         vtkNew<vtkExtractEdges> extractEdges;
-        extractEdges->SetInputData(geoFilter->GetOutputDataObject(0));
+        extractEdges->SetInputConnection(geoFilter->GetOutputPort(0));
         extractEdges->Update();
 
         dispNode->elem_edge_poly_data_ = extractEdges->GetOutput();
@@ -211,6 +223,11 @@ void GL3DMeshNode::SetCellColor(const double *c)
     if (actor_)
     {
         actor_->GetProperty()->SetDiffuseColor(c);
+        vtkLookupTable *lut = vtkLookupTable::SafeDownCast(mapper_->GetLookupTable());
+        if (lut)
+        {
+            lut->SetTableValue(0, c);
+        }
     }
 
     if (kGREP_VTK_WIREFRAME == representation_ && elem_edge_actor_)
@@ -245,18 +262,18 @@ void GL3DMeshNode::SetNodeColor(const double *c)
     }
 }
 
-bool GL3DMeshNode::Select3DCells(vtkPlanes *frustum)
+vtkIdType GL3DMeshNode::Select3DCells(vtkPlanes *frustum)
 {
-    return false;
+    return SelectFacets(frustum);
 }
 
 void GL3DMeshNode::SetDefaultDisplay()
 {
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(poly_data_);
+    mapper_ = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper_->SetInputData(poly_data_);
 
     actor_ = vtkSmartPointer<vtkActor>::New();
-    actor_->SetMapper(mapper);
+    actor_->SetMapper(mapper_);
 
     actor_->GetProperty()->SetDiffuse(1.0);
     actor_->GetProperty()->SetSpecular(0.3);
@@ -265,6 +282,20 @@ void GL3DMeshNode::SetDefaultDisplay()
     actor_->GetProperty()->SetLineWidth(1.f);
     actor_->GetProperty()->SetPointSize(5);
 
+    vtkSmartPointer<vtkNamedColors> colors = vtkSmartPointer<vtkNamedColors>::New();
+    vtkSmartPointer<vtkFloatArray> colorIndexs = vtkSmartPointer<vtkFloatArray>::New();
+    vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
+    lut->SetNumberOfTableValues(2);
+    lut->Build();
+    lut->SetTableValue(0, colors->GetColor4d("Wheat").GetData());
+    lut->SetTableValue(1, colors->GetColor4d("DarkOrange").GetData());
+    mapper_->SetScalarRange(0, 1);
+    mapper_->SetLookupTable(lut);
+
+    colorIndexs->SetNumberOfTuples(poly_data_->GetNumberOfCells());
+    colorIndexs->FillValue(0);
+
+    poly_data_->GetCellData()->SetScalars(colorIndexs);
     renderer_->AddActor(actor_);
 }
 

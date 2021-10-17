@@ -450,12 +450,15 @@ void wxGLAreaWidget::OnLeftMouseUp(wxMouseEvent &e)
     aPicker->Pick();
     vtkPlanes *frustum = aPicker->GetFrustum();
 
+    vtkIdType numSelStatusChanged = 0;
     for (auto &actorItem : allActors_)
     {
-        actorItem.second->Select2DCells(frustum);
+        numSelStatusChanged += actorItem.second->Select2DCells(frustum);
+        numSelStatusChanged += actorItem.second->Select3DCells(frustum);
     }
 
     Refresh(false);
+    wxLogMessage(wxString(wxT("There are "))<<numSelStatusChanged<< wxString(wxT(" cells selection status changed")));
 }
 
 void wxGLAreaWidget::OnRightMouseDown(wxMouseEvent &e)

@@ -47,12 +47,15 @@ public:
     virtual void SetNodeColor(const double *c);
 
 public:
-    virtual bool Select2DCells(vtkPlanes *frustum);
-    virtual bool Select3DCells(vtkPlanes *frustum);
+    virtual vtkIdType Select2DCells(vtkPlanes *frustum);
+    virtual vtkIdType Select3DCells(vtkPlanes *frustum);
     virtual bool ExportVTK(const std::string &dir);
 
 protected:
     virtual void SetDefaultDisplay() = 0;
+
+protected:
+    vtkIdType SelectFacets(vtkPlanes *frustum);
 
 protected:
     struct this_is_private 

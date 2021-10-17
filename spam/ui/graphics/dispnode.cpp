@@ -4,15 +4,21 @@
 #include "disp2dmesh.h"
 #include "disp3dmesh.h"
 #include <wx/log.h>
+#include <ui/spam.h>
 #include <numeric>
 #include <algorithm>
 #include <epoxy/gl.h>
 #include <vtkCellType.h>
 #include <vtkGenericCell.h>
+#include <vtkCellData.h>
+#include <vtkFloatArray.h>
+#include <vtkSignedCharArray.h>
+#include <vtkIdTypeArray.h>
 #include <vtkProperty.h>
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
 #include <vtkXMLPolyDataWriter.h>
+#include <vtkExtractSelectedFrustum.h>
 #include <vtksys/SystemTools.hxx>
 
 SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
@@ -310,14 +316,14 @@ void GLDispNode::SetNodeColor(const double *c)
     }
 }
 
-bool GLDispNode::Select2DCells(vtkPlanes *frustum)
+vtkIdType GLDispNode::Select2DCells(vtkPlanes *frustum)
 {
-    return false;
+    return 0;
 }
 
-bool GLDispNode::Select3DCells(vtkPlanes *frustum)
+vtkIdType GLDispNode::Select3DCells(vtkPlanes *frustum)
 {
-    return false;
+    return 0;
 }
 
 bool GLDispNode::ExportVTK(const std::string &dir)
@@ -335,4 +341,105 @@ bool GLDispNode::ExportVTK(const std::string &dir)
     }
 
     return true;
+}
+
+vtkIdType GLDispNode::SelectFacets(vtkPlanes *frustum)
+{
+    vtkNew<vtkExtractSelectedFrustum> extractor;
+    extractor->SetInputData(poly_data_);
+    extractor->PreserveTopologyOn();
+    extractor->SetFrustum(frustum);
+    extractor->Update();
+
+    vtkIdType numSelected = 0;
+    vtkIdType numSelStatusChanged = 0;
+    vtkPolyData *selPolyData = vtkPolyData::SafeDownCast(extractor->GetOutput());
+    vtkFloatArray *colorIndexs = vtkFloatArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
+    if (selPolyData)
+    {
+        vtkSignedCharArray *cellInsidedness = vtkSignedCharArray::SafeDownCast(selPolyData->GetCellData()->GetArray("vtkInsidedness"));
+        if (cellInsidedness)
+        {
+            const vtkIdType numInsidedness = cellInsidedness->GetNumberOfTuples();
+            if (colorIndexs && colorIndexs->GetNumberOfTuples() && numInsidedness == colorIndexs->GetNumberOfTuples())
+            {
+                vtkIdTypeArray *cellIds = vtkIdTypeArray::SafeDownCast(selPolyData->GetCellData()->GetArray("vtkOriginalCellIds"));
+                for (vtkIdType cc = 0; cc < numInsidedness; ++cc)
+                {
+                    if (cellInsidedness->GetValue(cc) < 0)
+                    {
+                        if (colorIndexs->GetValue(cc) > 0.f)
+                        {
+                            colorIndexs->SetValue(cc, 0);
+                            numSelStatusChanged += 1;
+                        }
+                    }
+                }
+                for (vtkIdType cc = 0; cc < numInsidedness; ++cc)
+                {
+                    if (cellInsidedness->GetValue(cc) > 0)
+                    {
+                        if (colorIndexs->GetValue(cc) < 1.f)
+                        {
+                            colorIndexs->SetValue(cc, 1);
+                            numSelStatusChanged += 1;
+                        }
+
+                        if (cellIds)
+                        {
+                            const vtkIdType cellId = cellIds->GetValue(cc);
+                            for (vtkIdType kk = cc - 1; kk >= 0 && cellId == cellIds->GetValue(kk); --kk)
+                            {
+                                if (colorIndexs->GetValue(kk) < 1.f)
+                                {
+                                    colorIndexs->SetValue(kk, 1);
+                                    numSelStatusChanged += 1;
+                                }
+                            }
+
+                            for (vtkIdType kk = cc + 1; kk < numInsidedness && cellId == cellIds->GetValue(kk); ++kk)
+                            {
+                                if (colorIndexs->GetValue(kk) < 1.f)
+                                {
+                                    colorIndexs->SetValue(kk, 1);
+                                    numSelStatusChanged += 1;
+                                }
+                            }
+                        }
+
+                        numSelected += 1;
+                    }
+                }
+
+                if (numSelStatusChanged > 0)
+                {
+                    colorIndexs->Modified();
+                }
+
+                const wxString numSelStr(std::to_string(numSelected));
+                Spam::SetStatus(StatusIconType::kSIT_NONE, wxString(wxT("Selected ")) + numSelStr + wxString(wxT(" 2D cells")));
+
+                return numSelStatusChanged;
+            }
+        }
+    }
+
+    if (colorIndexs)
+    {
+        const vtkIdType numcolorIndexs = colorIndexs->GetNumberOfTuples();
+        for (vtkIdType cc = 0; cc < numcolorIndexs; ++cc)
+        {
+            if (colorIndexs->GetValue(cc) > 0)
+            {
+                colorIndexs->SetValue(cc, 0);
+                numSelStatusChanged += 1;
+            }
+        }
+        if (numSelStatusChanged > 0)
+        {
+            colorIndexs->Modified();
+        }
+    }
+
+    return numSelStatusChanged;
 }
