@@ -334,7 +334,7 @@ const vtkIdType GLDispNode::HighlightCell(const vtkIdType facetId)
             colorIndexs->Modified();
         }
     }
-    else
+    else if (facetId == -1)
     {
         const vtkIdType numColorIndexs = colorIndexs->GetNumberOfTuples();
         for (vtkIdType cc = 0; cc < numColorIndexs; ++cc)
@@ -343,6 +343,24 @@ const vtkIdType GLDispNode::HighlightCell(const vtkIdType facetId)
             {
             case kCell_Color_Index_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Normal); numSelStatusChanged += 1; break;
             case kCell_Color_Index_Selected_And_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Selected); numSelStatusChanged += 1; break;
+            default: break;
+            }
+        }
+
+        if (numSelStatusChanged > 0)
+        {
+            colorIndexs->Modified();
+        }
+    }
+    else
+    {
+        const vtkIdType numColorIndexs = colorIndexs->GetNumberOfTuples();
+        for (vtkIdType cc = 0; cc < numColorIndexs; ++cc)
+        {
+            switch (colorIndexs->GetValue(cc))
+            {
+            case kCell_Color_Index_Normal: colorIndexs->SetValue(cc, kCell_Color_Index_Highlight); numSelStatusChanged += 1; break;
+            case kCell_Color_Index_Selected: colorIndexs->SetValue(cc, kCell_Color_Index_Selected_And_Highlight); numSelStatusChanged += 1; break;
             default: break;
             }
         }

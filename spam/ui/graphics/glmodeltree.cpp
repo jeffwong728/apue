@@ -683,27 +683,60 @@ gboolean GLModelTreeView::on_button_pressed(GtkWidget *treeview, GdkEventButton 
 
 gboolean GLModelTreeView::on_mouse_move(GtkWidget *treeview, GdkEventMotion *e, gpointer userdata)
 {
-    wxLogMessage(wxString(wxT("Mouse moved {")) << e->x << wxString(wxT(", ")) << e->y <<wxString(wxT("}")));
+    gint eType = -1;
+    guint64 part1 = 0;
+    guint64 part2 = 0;
+    GLModelTreeView *myself = (GLModelTreeView *)userdata;
     if (e->window == gtk_tree_view_get_bin_window(GTK_TREE_VIEW(treeview)))
     {
         GtkTreePath *path;
-        if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), (gint)e->x, (gint)e->y, &path, NULL, NULL, NULL))
+        if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), (gint)e->x, (gint)e->y, &path, NULL, NULL, NULL) && path)
         {
+            GtkTreeIter iter;
+            GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(treeview));
+            if (gtk_tree_model_get_iter(model, &iter, path))
+            {
+                gtk_tree_model_get(model, &iter, ENTITY_TYPE, &eType, -1);
+                gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
+                gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+            }
             gtk_tree_path_free(path);
         }
     }
+
+    if (myself->highlightGUIDPart1_ != part1 || myself->highlightGUIDPart2_ != part2)
+    {
+        const GLGUID oldGUID(myself->highlightGUIDPart1_, myself->highlightGUIDPart2_);
+        const GLGUID newGUID(part1, part2);
+        myself->sig_HighlightChanged(oldGUID, newGUID);
+        myself->highlightGUIDPart1_ = part1;
+        myself->highlightGUIDPart2_ = part2;
+    }
+
     return GDK_EVENT_PROPAGATE;
 }
 
 gboolean GLModelTreeView::on_mouse_enter(GtkWidget *treeview, GdkEventCrossing *e, gpointer user_data)
 {
     wxLogMessage(wxString(wxT("Mouse entered")));
+    GLModelTreeView *myself = (GLModelTreeView *)user_data;
+    myself->highlightGUIDPart1_ = 0;
+    myself->highlightGUIDPart2_ = 0;
     return GDK_EVENT_PROPAGATE;
 }
 
 gboolean GLModelTreeView::on_mouse_leave(GtkWidget* self, GdkEventCrossing *e, gpointer user_data)
 {
     wxLogMessage(wxString(wxT("Mouse leaved")));
+    GLModelTreeView *myself = (GLModelTreeView *)user_data;
+    if (myself->highlightGUIDPart1_ && myself->highlightGUIDPart1_)
+    {
+        const GLGUID oldGUID(myself->highlightGUIDPart1_, myself->highlightGUIDPart2_);
+        const GLGUID newGUID(0, 0);
+        myself->sig_HighlightChanged(oldGUID, newGUID);
+    }
+    myself->highlightGUIDPart1_ = 0;
+    myself->highlightGUIDPart2_ = 0;
     return GDK_EVENT_PROPAGATE;
 }
 

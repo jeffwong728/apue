@@ -228,6 +228,7 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     modelTreeView_->sig_EntitiesDeleted.connect(std::bind(&wxGLAreaWidget::OnEntitiesDeleted, this, std::placeholders::_1));
     modelTreeView_->sig_ImportModel.connect(std::bind(&wxGLAreaWidget::OnImportModel, this, std::placeholders::_1));
     modelTreeView_->sig_ExportBody.connect(std::bind(&wxGLAreaWidget::OnExportBody, this, std::placeholders::_1));
+    modelTreeView_->sig_HighlightChanged.connect(std::bind(&wxGLAreaWidget::OnHighlightChanged, this, std::placeholders::_1, std::placeholders::_2));
 
     colors_->GetColorNames(colorNames_);
     wxLogMessage(vtkSMPTools::GetBackend());
@@ -792,6 +793,26 @@ void wxGLAreaWidget::OnEntitiesDeleted(const std::vector<GLGUID> &guids)
 
     if (needRefresh)
     {
+        Refresh(false);
+    }
+}
+
+void wxGLAreaWidget::OnHighlightChanged(const GLGUID &oldGuid, const GLGUID &newGuid)
+{
+    auto itOld = allActors_.find(oldGuid);
+    auto itNew = allActors_.find(newGuid);
+    vtkIdType numSelStatusChanged = 0;
+    if (itOld != allActors_.end())
+    {
+        numSelStatusChanged += itOld->second->HighlightCell(-1);
+    }
+    if (itNew != allActors_.end())
+    {
+        numSelStatusChanged += itNew->second->HighlightCell(-2);
+    }
+    if (numSelStatusChanged)
+    {
+        wxLogMessage(wxString(wxT("")) << numSelStatusChanged << wxString(wxT("facets highlight status changed")));
         Refresh(false);
     }
 }
