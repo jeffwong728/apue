@@ -10,6 +10,7 @@
 #include <vtkPlanes.h>
 #include <vtkAreaPicker.h>
 #include <vtkProperty.h>
+#include <vtkFieldData.h>
 #include <vtkLookupTable.h>
 #include <vtkExtractEdges.h>
 #include <vtkCellData.h>
@@ -18,6 +19,8 @@
 #include <vtkExtractSelectedFrustum.h>
 #include <vtkSelectionNode.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkTypeUInt64Array.h>
+#include <vtkCellLocator.h>
 
 SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -283,13 +286,15 @@ void GL2DMeshNode::SetDefaultDisplay()
     actor_->GetProperty()->SetPointSize(5);
 
     vtkSmartPointer<vtkNamedColors> colors = vtkSmartPointer<vtkNamedColors>::New();
-    vtkSmartPointer<vtkFloatArray> colorIndexs = vtkSmartPointer<vtkFloatArray>::New();
+    vtkSmartPointer<vtkIntArray> colorIndexs = vtkSmartPointer<vtkIntArray>::New();
     vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
-    lut->SetNumberOfTableValues(2);
+    lut->SetNumberOfTableValues(4);
     lut->Build();
     lut->SetTableValue(0, colors->GetColor4d("Wheat").GetData());
     lut->SetTableValue(1, colors->GetColor4d("DarkOrange").GetData());
-    mapper_->SetScalarRange(0, 1);
+    lut->SetTableValue(2, colors->GetColor4d("Gold").GetData());
+    lut->SetTableValue(3, colors->GetColor4d("Orange").GetData());
+    mapper_->SetScalarRange(0, 3);
     mapper_->SetLookupTable(lut);
 
     colorIndexs->SetNumberOfTuples(poly_data_->GetNumberOfCells());
@@ -297,6 +302,18 @@ void GL2DMeshNode::SetDefaultDisplay()
 
     poly_data_->GetCellData()->SetScalars(colorIndexs);
     renderer_->AddActor(actor_);
+
+    vtkNew<vtkTypeUInt64Array> guids;
+    guids->SetName("GUID_TAG");
+    guids->SetNumberOfComponents(2);
+    guids->SetNumberOfTuples(1);
+    guids->SetValue(0, guid_.part1);
+    guids->SetValue(1, guid_.part2);
+    poly_data_->GetFieldData()->AddArray(guids);
+
+    cell_loc_ = vtkSmartPointer<vtkCellLocator>::New();
+    cell_loc_->SetDataSet(poly_data_);
+    cell_loc_->Update();
 }
 
 void GL2DMeshNode::CreateElementEdgeActor()

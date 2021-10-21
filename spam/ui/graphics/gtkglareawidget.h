@@ -13,6 +13,7 @@
 #include <memory>
 #include <vtkSmartPointer.h>
 #include <vtkNamedColors.h>
+#include <vtkDataSet.h>
 class ExternalVTKWidget;
 class vtkExternalOpenGLCamera;
 class vtkOpenGLRenderer;
@@ -97,6 +98,7 @@ protected:
 private:
     void PositionAxis(const int oldx, const int oldy, const int newx, const int newy);
     void DrawRubberBox(const wxPoint &cPos);
+    void RemoveApexArrays(vtkDataSet *ds);
 
 private:
     static void ComputeWorldToDisplay(vtkRenderer* ren, double x, double y, double z, double displayPt[3]);

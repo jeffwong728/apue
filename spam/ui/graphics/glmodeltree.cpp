@@ -133,6 +133,11 @@ GLModelTreeView::GLModelTreeView(const this_is_private&, const wxWindow *const p
     g_signal_connect(treeView_, "row-activated", G_CALLBACK(on_row_activated), this);
     g_signal_connect(treeView_, "button-press-event", G_CALLBACK(on_button_pressed), this);
     g_signal_connect(treeView_, "popup-menu", G_CALLBACK(on_popup_menu), this);
+    g_signal_connect(treeView_, "motion-notify-event", G_CALLBACK(on_mouse_move), this);
+    g_signal_connect(treeView_, "enter-notify-event", G_CALLBACK(on_mouse_enter), this);
+    g_signal_connect(treeView_, "leave-notify-event", G_CALLBACK(on_mouse_leave), this);
+
+    gtk_widget_set_events(treeView_, GDK_POINTER_MOTION_MASK | GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK);
 }
 
 GLModelTreeView::~GLModelTreeView()
@@ -655,7 +660,7 @@ gboolean GLModelTreeView::on_popup_menu(GtkWidget *treeview, gpointer userdata)
 
 gboolean GLModelTreeView::on_button_pressed(GtkWidget *treeview, GdkEventButton *e, gpointer userdata)
 {
-    if (e->type == GDK_BUTTON_PRESS && e->button == 3)
+    if (e->type == GDK_BUTTON_PRESS && e->button == GDK_BUTTON_SECONDARY)
     {
         GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
         if (gtk_tree_selection_count_selected_rows(selection) <= 1)
@@ -673,6 +678,32 @@ gboolean GLModelTreeView::on_button_pressed(GtkWidget *treeview, GdkEventButton 
         return GDK_EVENT_STOP;
     }
 
+    return GDK_EVENT_PROPAGATE;
+}
+
+gboolean GLModelTreeView::on_mouse_move(GtkWidget *treeview, GdkEventMotion *e, gpointer userdata)
+{
+    wxLogMessage(wxString(wxT("Mouse moved {")) << e->x << wxString(wxT(", ")) << e->y <<wxString(wxT("}")));
+    if (e->window == gtk_tree_view_get_bin_window(GTK_TREE_VIEW(treeview)))
+    {
+        GtkTreePath *path;
+        if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeview), (gint)e->x, (gint)e->y, &path, NULL, NULL, NULL))
+        {
+            gtk_tree_path_free(path);
+        }
+    }
+    return GDK_EVENT_PROPAGATE;
+}
+
+gboolean GLModelTreeView::on_mouse_enter(GtkWidget *treeview, GdkEventCrossing *e, gpointer user_data)
+{
+    wxLogMessage(wxString(wxT("Mouse entered")));
+    return GDK_EVENT_PROPAGATE;
+}
+
+gboolean GLModelTreeView::on_mouse_leave(GtkWidget* self, GdkEventCrossing *e, gpointer user_data)
+{
+    wxLogMessage(wxString(wxT("Mouse leaved")));
     return GDK_EVENT_PROPAGATE;
 }
 

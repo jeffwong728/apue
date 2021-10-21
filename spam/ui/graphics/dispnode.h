@@ -13,6 +13,7 @@
 #include <vtkOpenGLRenderer.h>
 #include <vtkNamedColors.h>
 #include <vtkFloatArray.h>
+#include <vtkCellLocator.h>
 class vtkProp;
 class vtkPlanes;
 
@@ -36,10 +37,14 @@ public:
     const GLGUID GetGUID() { return guid_; }
     const GLGUID GetGUID() const { return guid_; }
     const int GetEntityType() const { return type_; }
+    vtkCellLocator *GetCellLocator() const { return cell_loc_; }
 
     const vtkColor4ub GetColor() const;
     const std::string GetName() const;
     void SetVisible(const int visible);
+    const vtkIdType GetCellId(const vtkIdType facetId);
+    const vtkIdType GetHighlightCellId();
+    const vtkIdType HighlightCell(const vtkIdType facetId);
     virtual void ShowNode(const int visible);
     virtual void SetRepresentation(const int rep);
     virtual void SetCellColor(const double *c);
@@ -70,6 +75,7 @@ protected:
     vtkSmartPointer<vtkPolyData> poly_data_;
     vtkSmartPointer<vtkActor> actor_;
     vtkSmartPointer<vtkPolyDataMapper> mapper_;
+    vtkSmartPointer<vtkCellLocator> cell_loc_;
     int representation_{ kGREP_VTK_SURFACE };
 };
 

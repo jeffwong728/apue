@@ -20,6 +20,7 @@
 #include <vtkXMLPolyDataWriter.h>
 #include <vtkExtractSelectedFrustum.h>
 #include <vtksys/SystemTools.hxx>
+#include <vtkTypeUInt64Array.h>
 
 SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -260,6 +261,101 @@ void GLDispNode::SetVisible(const int visible)
     }
 }
 
+const vtkIdType GLDispNode::GetCellId(const vtkIdType facetId)
+{
+    vtkIdTypeArray *cellIds = vtkIdTypeArray::SafeDownCast(poly_data_->GetCellData()->GetArray("vtkOriginalCellIds"));
+    if (cellIds && facetId >=0 && facetId < cellIds->GetNumberOfTuples())
+    {
+        return cellIds->GetValue(facetId);
+    }
+    return -1;
+}
+
+const vtkIdType GLDispNode::GetHighlightCellId()
+{
+    vtkIntArray *colorIndexs = vtkIntArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
+    vtkIdTypeArray *cellIds = vtkIdTypeArray::SafeDownCast(poly_data_->GetCellData()->GetArray("vtkOriginalCellIds"));
+    return -1;
+}
+
+const vtkIdType GLDispNode::HighlightCell(const vtkIdType facetId)
+{
+    vtkIntArray *colorIndexs = vtkIntArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
+    vtkIdTypeArray *cellIds = vtkIdTypeArray::SafeDownCast(poly_data_->GetCellData()->GetArray("vtkOriginalCellIds"));
+
+    vtkIdType numSelStatusChanged = 0;
+    auto getCellId = [=](const vtkIdType facetId) { return cellIds ? cellIds->GetValue(facetId) : facetId; };
+    if (facetId >= 0 && facetId < colorIndexs->GetNumberOfTuples())
+    {
+        const vtkIdType highlightCellId = getCellId(facetId);
+        const vtkIdType numColorIndexs = colorIndexs->GetNumberOfTuples();
+        for (vtkIdType cc = 0; cc < numColorIndexs; ++cc)
+        {
+            if (highlightCellId != getCellId(cc))
+            {
+                switch (colorIndexs->GetValue(cc))
+                {
+                case kCell_Color_Index_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Normal); numSelStatusChanged += 1; break;
+                case kCell_Color_Index_Selected_And_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Selected); numSelStatusChanged += 1; break;
+                default: break;
+                }
+            }
+        }
+
+        switch (colorIndexs->GetValue(facetId))
+        {
+        case kCell_Color_Index_Normal: colorIndexs->SetValue(facetId, kCell_Color_Index_Highlight); numSelStatusChanged += 1; break;
+        case kCell_Color_Index_Selected: colorIndexs->SetValue(facetId, kCell_Color_Index_Selected_And_Highlight); numSelStatusChanged += 1; break;
+        default: break;
+        }
+
+        for (vtkIdType kk = facetId - 1; kk >= 0 && highlightCellId == getCellId(kk); --kk)
+        {
+            switch (colorIndexs->GetValue(kk))
+            {
+            case kCell_Color_Index_Normal: colorIndexs->SetValue(kk, kCell_Color_Index_Highlight); numSelStatusChanged += 1; break;
+            case kCell_Color_Index_Selected: colorIndexs->SetValue(kk, kCell_Color_Index_Selected_And_Highlight); numSelStatusChanged += 1; break;
+            default: break;
+            }
+        }
+
+        for (vtkIdType kk = facetId + 1; kk < numColorIndexs && highlightCellId == getCellId(kk); ++kk)
+        {
+            switch (colorIndexs->GetValue(kk))
+            {
+            case kCell_Color_Index_Normal: colorIndexs->SetValue(kk, kCell_Color_Index_Highlight); numSelStatusChanged += 1; break;
+            case kCell_Color_Index_Selected: colorIndexs->SetValue(kk, kCell_Color_Index_Selected_And_Highlight); numSelStatusChanged += 1; break;
+            default: break;
+            }
+        }
+
+        if (numSelStatusChanged > 0)
+        {
+            colorIndexs->Modified();
+        }
+    }
+    else
+    {
+        const vtkIdType numColorIndexs = colorIndexs->GetNumberOfTuples();
+        for (vtkIdType cc = 0; cc < numColorIndexs; ++cc)
+        {
+            switch (colorIndexs->GetValue(cc))
+            {
+            case kCell_Color_Index_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Normal); numSelStatusChanged += 1; break;
+            case kCell_Color_Index_Selected_And_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Selected); numSelStatusChanged += 1; break;
+            default: break;
+            }
+        }
+
+        if (numSelStatusChanged > 0)
+        {
+            colorIndexs->Modified();
+        }
+    }
+
+    return numSelStatusChanged;
+}
+
 void GLDispNode::ShowNode(const int visible)
 {
     if (actor_)
@@ -354,7 +450,7 @@ vtkIdType GLDispNode::SelectFacets(vtkPlanes *frustum)
     vtkIdType numSelected = 0;
     vtkIdType numSelStatusChanged = 0;
     vtkPolyData *selPolyData = vtkPolyData::SafeDownCast(extractor->GetOutput());
-    vtkFloatArray *colorIndexs = vtkFloatArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
+    vtkIntArray *colorIndexs = vtkIntArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
     if (selPolyData)
     {
         vtkSignedCharArray *cellInsidedness = vtkSignedCharArray::SafeDownCast(selPolyData->GetCellData()->GetArray("vtkInsidedness"));
@@ -368,10 +464,20 @@ vtkIdType GLDispNode::SelectFacets(vtkPlanes *frustum)
                 {
                     if (cellInsidedness->GetValue(cc) < 0)
                     {
-                        if (colorIndexs->GetValue(cc) > 0.f)
+                        switch (colorIndexs->GetValue(cc))
                         {
-                            colorIndexs->SetValue(cc, 0);
+                        case kCell_Color_Index_Selected:
+                            colorIndexs->SetValue(cc, kCell_Color_Index_Normal);
                             numSelStatusChanged += 1;
+                            break;
+
+                        case kCell_Color_Index_Selected_And_Highlight:
+                            colorIndexs->SetValue(cc, kCell_Color_Index_Highlight);
+                            numSelStatusChanged += 1;
+                            break;
+
+                        default:
+                            break;
                         }
                     }
                 }
@@ -379,10 +485,20 @@ vtkIdType GLDispNode::SelectFacets(vtkPlanes *frustum)
                 {
                     if (cellInsidedness->GetValue(cc) > 0)
                     {
-                        if (colorIndexs->GetValue(cc) < 1.f)
+                        switch (colorIndexs->GetValue(cc))
                         {
-                            colorIndexs->SetValue(cc, 1);
+                        case kCell_Color_Index_Normal:
+                            colorIndexs->SetValue(cc, kCell_Color_Index_Selected);
                             numSelStatusChanged += 1;
+                            break;
+
+                        case kCell_Color_Index_Highlight:
+                            colorIndexs->SetValue(cc, kCell_Color_Index_Selected_And_Highlight);
+                            numSelStatusChanged += 1;
+                            break;
+
+                        default:
+                            break;
                         }
 
                         if (cellIds)
@@ -390,19 +506,39 @@ vtkIdType GLDispNode::SelectFacets(vtkPlanes *frustum)
                             const vtkIdType cellId = cellIds->GetValue(cc);
                             for (vtkIdType kk = cc - 1; kk >= 0 && cellId == cellIds->GetValue(kk); --kk)
                             {
-                                if (colorIndexs->GetValue(kk) < 1.f)
+                                switch (colorIndexs->GetValue(kk))
                                 {
-                                    colorIndexs->SetValue(kk, 1);
+                                case kCell_Color_Index_Normal:
+                                    colorIndexs->SetValue(kk, kCell_Color_Index_Selected);
                                     numSelStatusChanged += 1;
+                                    break;
+
+                                case kCell_Color_Index_Highlight:
+                                    colorIndexs->SetValue(kk, kCell_Color_Index_Selected_And_Highlight);
+                                    numSelStatusChanged += 1;
+                                    break;
+
+                                default:
+                                    break;
                                 }
                             }
 
                             for (vtkIdType kk = cc + 1; kk < numInsidedness && cellId == cellIds->GetValue(kk); ++kk)
                             {
-                                if (colorIndexs->GetValue(kk) < 1.f)
+                                switch (colorIndexs->GetValue(kk))
                                 {
-                                    colorIndexs->SetValue(kk, 1);
+                                case kCell_Color_Index_Normal:
+                                    colorIndexs->SetValue(kk, kCell_Color_Index_Selected);
                                     numSelStatusChanged += 1;
+                                    break;
+
+                                case kCell_Color_Index_Highlight:
+                                    colorIndexs->SetValue(kk, kCell_Color_Index_Selected_And_Highlight);
+                                    numSelStatusChanged += 1;
+                                    break;
+
+                                default:
+                                    break;
                                 }
                             }
                         }
@@ -426,13 +562,23 @@ vtkIdType GLDispNode::SelectFacets(vtkPlanes *frustum)
 
     if (colorIndexs)
     {
-        const vtkIdType numcolorIndexs = colorIndexs->GetNumberOfTuples();
-        for (vtkIdType cc = 0; cc < numcolorIndexs; ++cc)
+        const vtkIdType numColorIndexs = colorIndexs->GetNumberOfTuples();
+        for (vtkIdType cc = 0; cc < numColorIndexs; ++cc)
         {
-            if (colorIndexs->GetValue(cc) > 0)
+            switch (colorIndexs->GetValue(cc))
             {
-                colorIndexs->SetValue(cc, 0);
+            case kCell_Color_Index_Selected:
+                colorIndexs->SetValue(cc, kCell_Color_Index_Normal);
                 numSelStatusChanged += 1;
+                break;
+
+            case kCell_Color_Index_Selected_And_Highlight:
+                colorIndexs->SetValue(cc, kCell_Color_Index_Highlight);
+                numSelStatusChanged += 1;
+                break;
+
+            default:
+                break;
             }
         }
         if (numSelStatusChanged > 0)

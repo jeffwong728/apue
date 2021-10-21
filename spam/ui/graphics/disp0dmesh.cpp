@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <epoxy/gl.h>
 #include <vtkProperty.h>
+#include <vtkFieldData.h>
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
+#include <vtkTypeUInt64Array.h>
 
 SPDispNodes GL0DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -128,4 +130,12 @@ void GL0DMeshNode::SetDefaultDisplay()
     actor_->GetProperty()->SetPointSize(5);
 
     renderer_->AddActor(actor_);
+
+    vtkNew<vtkTypeUInt64Array> guids;
+    guids->SetName("GUID_TAG");
+    guids->SetNumberOfComponents(2);
+    guids->SetNumberOfTuples(1);
+    guids->SetValue(0, guid_.part1);
+    guids->SetValue(1, guid_.part2);
+    poly_data_->GetFieldData()->AddArray(guids);
 }

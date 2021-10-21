@@ -75,6 +75,9 @@ private:
     static void on_export_body(GtkWidget *menuitem, gpointer userdata);
     static gboolean on_popup_menu(GtkWidget *treeview, gpointer userdata);
     static gboolean on_button_pressed(GtkWidget *treeview, GdkEventButton *e, gpointer userdata);
+    static gboolean on_mouse_move(GtkWidget *treeview, GdkEventMotion *e, gpointer userdata);
+    static gboolean on_mouse_enter(GtkWidget *treeview, GdkEventCrossing *e, gpointer user_data);
+    static gboolean on_mouse_leave(GtkWidget *treeview, GdkEventCrossing *e, gpointer user_data);
 
 private:
     static void view_popup_menu(GtkWidget *treeview, GdkEventButton *e, gpointer userdata);

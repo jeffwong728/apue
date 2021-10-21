@@ -56,9 +56,12 @@
 #include <vtkTextActor.h>
 #include <vtkSMPTools.h>
 #include <vtkCoordinate.h>
+#include <vtkPointData.h>
+#include <vtkCellData.h>
 #include <vtkPointPicker.h>
 #include <vtkCellPicker.h>
 #include <vtkAreaPicker.h>
+#include <vtkTypeUInt64Array.h>
 #include <vtksys/SystemTools.hxx>
 #if defined(M_PI) && defined(_WIN32)
 #undef M_PI
@@ -288,11 +291,15 @@ void wxGLAreaWidget::ImportVTK(const GLGUID &parentGuid, const std::string &inpu
     SPDispNodes newDispNodes;
     if (reader->IsFilePolyData())
     {
-        newDispNodes = GLDispNode::MakeNew(reader->GetPolyDataOutput(), rootRenderer);
+        vtkSmartPointer<vtkPolyData> spPolyData(reader->GetPolyDataOutput());
+        RemoveApexArrays(spPolyData);
+        newDispNodes = GLDispNode::MakeNew(spPolyData, rootRenderer);
     }
     else if (reader->IsFileUnstructuredGrid())
     {
-        newDispNodes = GLDispNode::MakeNew(reader->GetUnstructuredGridOutput(), rootRenderer);
+        vtkSmartPointer<vtkUnstructuredGrid> spUGrid(reader->GetUnstructuredGridOutput());
+        RemoveApexArrays(spUGrid);
+        newDispNodes = GLDispNode::MakeNew(spUGrid, rootRenderer);
     }
     else
     {
@@ -325,11 +332,15 @@ void wxGLAreaWidget::ImportVTU(const GLGUID &parentGuid, const std::string &inpu
     SPDispNodes newDispNodes;
     if (reader->GetPolyDataOutput())
     {
-        newDispNodes = GLDispNode::MakeNew(reader->GetPolyDataOutput(), rootRenderer);
+        vtkSmartPointer<vtkPolyData> spPolyData(reader->GetPolyDataOutput());
+        RemoveApexArrays(spPolyData);
+        newDispNodes = GLDispNode::MakeNew(spPolyData, rootRenderer);
     }
     else if (reader->GetUnstructuredGridOutput())
     {
-        newDispNodes = GLDispNode::MakeNew(reader->GetUnstructuredGridOutput(), rootRenderer);
+        vtkSmartPointer<vtkUnstructuredGrid> spUGrid(reader->GetUnstructuredGridOutput());
+        RemoveApexArrays(spUGrid);
+        newDispNodes = GLDispNode::MakeNew(spUGrid, rootRenderer);
     }
     else
     {
@@ -527,8 +538,7 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
             Refresh(false);
         }
     }
-
-    if (e.Dragging() && e.MiddleIsDown() && this->axisRenderer)
+    else if (e.Dragging() && e.MiddleIsDown() && this->axisRenderer)
     {
         const int* size = this->axisRenderer->GetRenderWindow()->GetSize();
 
@@ -562,11 +572,63 @@ void wxGLAreaWidget::OnMouseMotion(wxMouseEvent &e)
             Refresh(false);
         }
     }
-
-    if (e.Dragging() && e.LeftIsDown())
+    else if (e.Dragging() && e.LeftIsDown())
     {
         DrawRubberBox(e.GetPosition());
         Refresh(false);
+    }
+    else
+    {
+        const int x0 = x;
+        const int y0 = externalVTKWidget->GetRenderWindow()->GetSize()[1] - y;
+        SPDispNode pickedNode;
+        vtkNew<vtkCellPicker> cellPicker;
+
+        for (auto &dispNode : allActors_)
+        {
+            if (dispNode.second->GetCellLocator())
+            {
+                cellPicker->AddLocator(dispNode.second->GetCellLocator());
+            }
+        }
+
+        const int r = cellPicker->Pick(x0, y0, 0, rootRenderer);
+        if (r && cellPicker->GetCellId() > 0 && cellPicker->GetActor())
+        {
+            vtkDataSet *ds = cellPicker->GetDataSet();
+            if (ds && ds->GetFieldData())
+            {
+                vtkTypeUInt64Array *guids = vtkTypeUInt64Array::SafeDownCast(ds->GetFieldData()->GetArray("GUID_TAG"));
+                if (guids)
+                {
+                    GLGUID guid(guids->GetValue(0), guids->GetValue(1));
+                    auto it = allActors_.find(guid);
+                    if (it != allActors_.end())
+                    {
+                        pickedNode = it->second;
+                    }
+                }
+            }
+        }
+
+        vtkIdType numSelStatusChanged = 0;
+        for (auto &dispNode : allActors_)
+        {
+            if (dispNode.second != pickedNode)
+            {
+                numSelStatusChanged += dispNode.second->HighlightCell(-1);
+            }
+            else
+            {
+                numSelStatusChanged += dispNode.second->HighlightCell(cellPicker->GetCellId());
+            }
+        }
+
+        if (numSelStatusChanged)
+        {
+            wxLogMessage(wxString(wxT("")) << numSelStatusChanged << wxString(wxT("facets highlight status changed")));
+            Refresh(false);
+        }
     }
 
     lastPos_ = e.GetPosition();
@@ -883,6 +945,23 @@ void wxGLAreaWidget::DrawRubberBox(const wxPoint &cPos)
     rubberBoxActor->VisibilityOn();
 }
 
+void wxGLAreaWidget::RemoveApexArrays(vtkDataSet *ds)
+{
+    if (ds)
+    {
+        if (ds->GetPointData())
+        {
+            ds->GetPointData()->RemoveArray("VertexIds");
+            ds->GetPointData()->RemoveArray("VertexIndices");
+        }
+        if (ds->GetCellData())
+        {
+            ds->GetCellData()->RemoveArray("SubEntityIds");
+            ds->GetCellData()->RemoveArray("SubEntityIndices");
+            ds->GetCellData()->RemoveArray("SubEntityTypes");
+        }
+    }
+}
 
 void wxGLAreaWidget::ComputeWorldToDisplay(vtkRenderer* ren, double x, double y, double z, double displayPt[3])
 {

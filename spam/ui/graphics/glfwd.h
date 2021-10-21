@@ -22,6 +22,11 @@ class GLDispNode;
 class GLDispTree;
 class GLModelTreeView;
 
+const int kCell_Color_Index_Normal = 0;
+const int kCell_Color_Index_Selected = 1;
+const int kCell_Color_Index_Highlight = 2;
+const int kCell_Color_Index_Selected_And_Highlight = 3;
+
 enum PrimGeomShape
 {
     kPGS_BOX = 0,
