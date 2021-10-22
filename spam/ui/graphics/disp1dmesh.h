@@ -28,6 +28,9 @@ public:
     void SetEdgeColor(const double *c) override;
     void SetNodeColor(const double *c) override;
 
+public:
+    vtkIdType Select1DCells(vtkPlanes *frustum) override;
+
 protected:
     void SetDefaultDisplay() override;
 

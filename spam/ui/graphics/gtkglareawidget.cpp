@@ -465,6 +465,7 @@ void wxGLAreaWidget::OnLeftMouseUp(wxMouseEvent &e)
     vtkIdType numSelStatusChanged = 0;
     for (auto &actorItem : allActors_)
     {
+        numSelStatusChanged += actorItem.second->Select1DCells(frustum);
         numSelStatusChanged += actorItem.second->Select2DCells(frustum);
         numSelStatusChanged += actorItem.second->Select3DCells(frustum);
     }
@@ -797,19 +798,29 @@ void wxGLAreaWidget::OnEntitiesDeleted(const std::vector<GLGUID> &guids)
     }
 }
 
-void wxGLAreaWidget::OnHighlightChanged(const GLGUID &oldGuid, const GLGUID &newGuid)
+void wxGLAreaWidget::OnHighlightChanged(const std::vector<GLGUID> &oldGuids, const std::vector<GLGUID> &newGuids)
 {
-    auto itOld = allActors_.find(oldGuid);
-    auto itNew = allActors_.find(newGuid);
+
     vtkIdType numSelStatusChanged = 0;
-    if (itOld != allActors_.end())
+
+    for (const auto &oldGuid : oldGuids)
     {
-        numSelStatusChanged += itOld->second->HighlightCell(-1);
+        auto itOld = allActors_.find(oldGuid);
+        if (itOld != allActors_.end())
+        {
+            numSelStatusChanged += itOld->second->HighlightCell(-1);
+        }
     }
-    if (itNew != allActors_.end())
+
+    for (const auto &newGuid : newGuids)
     {
-        numSelStatusChanged += itNew->second->HighlightCell(-2);
+        auto itNew = allActors_.find(newGuid);
+        if (itNew != allActors_.end())
+        {
+            numSelStatusChanged += itNew->second->HighlightCell(-2);
+        }
     }
+
     if (numSelStatusChanged)
     {
         wxLogMessage(wxString(wxT("")) << numSelStatusChanged << wxString(wxT("facets highlight status changed")));

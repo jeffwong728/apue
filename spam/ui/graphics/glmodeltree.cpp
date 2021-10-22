@@ -683,9 +683,7 @@ gboolean GLModelTreeView::on_button_pressed(GtkWidget *treeview, GdkEventButton 
 
 gboolean GLModelTreeView::on_mouse_move(GtkWidget *treeview, GdkEventMotion *e, gpointer userdata)
 {
-    gint eType = -1;
-    guint64 part1 = 0;
-    guint64 part2 = 0;
+    std::vector<GLGUID> newGUIDs;
     GLModelTreeView *myself = (GLModelTreeView *)userdata;
     if (e->window == gtk_tree_view_get_bin_window(GTK_TREE_VIEW(treeview)))
     {
@@ -696,22 +694,28 @@ gboolean GLModelTreeView::on_mouse_move(GtkWidget *treeview, GdkEventMotion *e, 
             GtkTreeModel *model = gtk_tree_view_get_model(GTK_TREE_VIEW(treeview));
             if (gtk_tree_model_get_iter(model, &iter, path))
             {
-                gtk_tree_model_get(model, &iter, ENTITY_TYPE, &eType, -1);
-                gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_1, &part1, -1);
-                gtk_tree_model_get(model, &iter, ENTITY_GUID_PART_2, &part2, -1);
+                myself->GetAllChildrenGUIDs(&iter, TRUE, newGUIDs);
             }
             gtk_tree_path_free(path);
         }
     }
 
-    if (myself->highlightGUIDPart1_ != part1 || myself->highlightGUIDPart2_ != part2)
+    std::vector<GLGUID> noChangeGUIDs;
+    std::vector<GLGUID> loseHighlightGUIDs;
+    std::vector<GLGUID> gotHighlightGUIDs;
+    gotHighlightGUIDs.reserve(newGUIDs.size());
+    loseHighlightGUIDs.reserve(myself->highlightGUIDs_.size());
+    noChangeGUIDs.reserve(std::min(newGUIDs.size(), myself->highlightGUIDs_.size()));
+    std::sort(newGUIDs.begin(), newGUIDs.end());
+    std::set_intersection(newGUIDs.begin(), newGUIDs.end(), myself->highlightGUIDs_.begin(), myself->highlightGUIDs_.end(), std::back_inserter(noChangeGUIDs));
+    std::set_difference(newGUIDs.begin(), newGUIDs.end(), noChangeGUIDs.begin(), noChangeGUIDs.end(), std::back_inserter(gotHighlightGUIDs));
+    std::set_difference(myself->highlightGUIDs_.begin(), myself->highlightGUIDs_.end(), noChangeGUIDs.begin(), noChangeGUIDs.end(), std::back_inserter(loseHighlightGUIDs));
+
+    if (!loseHighlightGUIDs.empty() || !gotHighlightGUIDs.empty())
     {
-        const GLGUID oldGUID(myself->highlightGUIDPart1_, myself->highlightGUIDPart2_);
-        const GLGUID newGUID(part1, part2);
-        myself->sig_HighlightChanged(oldGUID, newGUID);
-        myself->highlightGUIDPart1_ = part1;
-        myself->highlightGUIDPart2_ = part2;
+        myself->sig_HighlightChanged(loseHighlightGUIDs, gotHighlightGUIDs);
     }
+    myself->highlightGUIDs_.swap(newGUIDs);
 
     return GDK_EVENT_PROPAGATE;
 }
@@ -720,8 +724,7 @@ gboolean GLModelTreeView::on_mouse_enter(GtkWidget *treeview, GdkEventCrossing *
 {
     wxLogMessage(wxString(wxT("Mouse entered")));
     GLModelTreeView *myself = (GLModelTreeView *)user_data;
-    myself->highlightGUIDPart1_ = 0;
-    myself->highlightGUIDPart2_ = 0;
+    myself->highlightGUIDs_.resize(0);
     return GDK_EVENT_PROPAGATE;
 }
 
@@ -729,14 +732,12 @@ gboolean GLModelTreeView::on_mouse_leave(GtkWidget* self, GdkEventCrossing *e, g
 {
     wxLogMessage(wxString(wxT("Mouse leaved")));
     GLModelTreeView *myself = (GLModelTreeView *)user_data;
-    if (myself->highlightGUIDPart1_ && myself->highlightGUIDPart1_)
+    if (!myself->highlightGUIDs_.empty())
     {
-        const GLGUID oldGUID(myself->highlightGUIDPart1_, myself->highlightGUIDPart2_);
-        const GLGUID newGUID(0, 0);
-        myself->sig_HighlightChanged(oldGUID, newGUID);
+        const std::vector<GLGUID> newGUIDs;
+        myself->sig_HighlightChanged(myself->highlightGUIDs_, newGUIDs);
     }
-    myself->highlightGUIDPart1_ = 0;
-    myself->highlightGUIDPart2_ = 0;
+    myself->highlightGUIDs_.resize(0);
     return GDK_EVENT_PROPAGATE;
 }
 

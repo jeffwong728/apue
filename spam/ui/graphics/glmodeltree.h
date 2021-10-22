@@ -32,7 +32,7 @@ public:
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_ShowNodeChanged;
     bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<int>&), bs2_dummy_mutex>::type sig_RepresentationChanged;
     bs2::signal_type<void(const std::vector<GLGUID>&), bs2_dummy_mutex>::type sig_EntitiesDeleted;
-    bs2::signal_type<void(const GLGUID, const GLGUID), bs2_dummy_mutex>::type sig_HighlightChanged;
+    bs2::signal_type<void(const std::vector<GLGUID>&, const std::vector<GLGUID>&), bs2_dummy_mutex>::type sig_HighlightChanged;
     bs2::signal_type<void(const GLGUID), bs2_dummy_mutex>::type sig_ImportModel;
     bs2::signal_type<void(const GLGUID), bs2_dummy_mutex>::type sig_ExportBody;
     bs2::signal_type<void(const GLGUID, const int), bs2_dummy_mutex>::type sig_AddGeomBody;
@@ -105,8 +105,7 @@ private:
     GdkPixbuf * mesh1dPixBuf = nullptr;
     GdkPixbuf * mesh2dPixBuf = nullptr;
     GdkPixbuf * mesh3dPixBuf = nullptr;
-    guint64 highlightGUIDPart1_{0};
-    guint64 highlightGUIDPart2_{0};
+    std::vector<GLGUID> highlightGUIDs_;
 };
 
 #endif // SPAM_UI_GRAPHICS_GL_MODEL_TREE_VIEW_H

@@ -67,7 +67,27 @@ struct GLGUID
     const guint64 part1;
     const guint64 part2;
 
+    GLGUID() : part1(0), part2(0) {}
     GLGUID(const guint64 pat1, const guint64 pat2) : part1(pat1), part2(pat2) {}
+    GLGUID(const GLGUID &o) : part1(o.part1), part2(o.part2) {}
+    GLGUID &operator=(const GLGUID &o) { const_cast<guint64 &>(part1) = o.part1; const_cast<guint64 &>(part2) = o.part2; return *this; }
+
+    bool operator<(const GLGUID &o)
+    {
+        if (part1 == o.part1)
+        {
+            return part2 < o.part2;
+        }
+        else
+        {
+            return part1 < o.part1;
+        }
+    }
+
+    bool operator==(const GLGUID &o)
+    {
+        return part1 == o.part1 && part2 == o.part2;
+    }
 
     static const GLGUID MakeNew()
     {

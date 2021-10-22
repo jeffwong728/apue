@@ -147,6 +147,11 @@ void GL2DMeshNode::SetVisible(const int visible)
     {
         actor_->SetVisibility(visible);
     }
+
+    if (elem_edge_actor_ && (kGREP_VTK_WIREFRAME == representation_ || kGREP_SURFACE_WITH_EDGE == representation_))
+    {
+        elem_edge_actor_->SetVisibility(visible);
+    }
 }
 
 void GL2DMeshNode::ShowNode(const int visible)

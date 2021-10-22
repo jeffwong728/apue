@@ -6,6 +6,8 @@
 #include <vtkAreaPicker.h>
 #include <vtkProperty.h>
 #include <vtkFieldData.h>
+#include <vtkLookupTable.h>
+#include <vtkCellData.h>
 #include <vtkExtractEdges.h>
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
@@ -145,6 +147,11 @@ void GL3DMeshNode::SetVisible(const int visible)
     if (actor_)
     {
         actor_->SetVisibility(visible);
+    }
+
+    if (elem_edge_actor_ && (kGREP_VTK_WIREFRAME == representation_ || kGREP_SURFACE_WITH_EDGE == representation_))
+    {
+        elem_edge_actor_->SetVisibility(visible);
     }
 }
 

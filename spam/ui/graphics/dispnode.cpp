@@ -430,6 +430,11 @@ void GLDispNode::SetNodeColor(const double *c)
     }
 }
 
+vtkIdType GLDispNode::Select1DCells(vtkPlanes *frustum)
+{
+    return 0;
+}
+
 vtkIdType GLDispNode::Select2DCells(vtkPlanes *frustum)
 {
     return 0;

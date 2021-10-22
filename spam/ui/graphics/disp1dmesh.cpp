@@ -4,6 +4,8 @@
 #include <epoxy/gl.h>
 #include <vtkProperty.h>
 #include <vtkFieldData.h>
+#include <vtkLookupTable.h>
+#include <vtkCellData.h>
 #include <vtkDataSetSurfaceFilter.h>
 #include <vtkUnstructuredGridGeometryFilter.h>
 #include <vtkTypeUInt64Array.h>
@@ -99,6 +101,11 @@ void GL1DMeshNode::SetCellColor(const double *c)
     if (actor_)
     {
         actor_->GetProperty()->SetDiffuseColor(c);
+        vtkLookupTable *lut = vtkLookupTable::SafeDownCast(mapper_->GetLookupTable());
+        if (lut)
+        {
+            lut->SetTableValue(0, c);
+        }
     }
 }
 
@@ -114,13 +121,18 @@ void GL1DMeshNode::SetNodeColor(const double *c)
     }
 }
 
+vtkIdType GL1DMeshNode::Select1DCells(vtkPlanes *frustum)
+{
+    return SelectFacets(frustum);
+}
+
 void GL1DMeshNode::SetDefaultDisplay()
 {
-    vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputData(poly_data_);
+    mapper_ = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper_->SetInputData(poly_data_);
 
     actor_ = vtkSmartPointer<vtkActor>::New();
-    actor_->SetMapper(mapper);
+    actor_->SetMapper(mapper_);
 
     actor_->GetProperty()->SetDiffuse(1.0);
     actor_->GetProperty()->SetSpecular(0.3);
@@ -128,6 +140,22 @@ void GL1DMeshNode::SetDefaultDisplay()
     actor_->GetProperty()->SetOpacity(1.0);
     actor_->GetProperty()->SetLineWidth(1.f);
     actor_->GetProperty()->SetPointSize(5);
+
+    vtkSmartPointer<vtkNamedColors> colors = vtkSmartPointer<vtkNamedColors>::New();
+    vtkSmartPointer<vtkIntArray> colorIndexs = vtkSmartPointer<vtkIntArray>::New();
+    vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
+    lut->SetNumberOfTableValues(4);
+    lut->Build();
+    lut->SetTableValue(0, colors->GetColor4d("Wheat").GetData());
+    lut->SetTableValue(1, colors->GetColor4d("DarkOrange").GetData());
+    lut->SetTableValue(2, colors->GetColor4d("Gold").GetData());
+    lut->SetTableValue(3, colors->GetColor4d("Orange").GetData());
+    mapper_->SetScalarRange(0, 3);
+    mapper_->SetLookupTable(lut);
+
+    colorIndexs->SetNumberOfTuples(poly_data_->GetNumberOfCells());
+    colorIndexs->FillValue(0);
+    poly_data_->GetCellData()->SetScalars(colorIndexs);
 
     renderer_->AddActor(actor_);
 

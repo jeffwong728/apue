@@ -88,7 +88,7 @@ public:
     void OnShowNodeChanged(const std::vector<GLGUID> &guids, const std::vector<int> &visibles);
     void OnRepresentationChanged(const std::vector<GLGUID> &guids, const std::vector<int> &reps);
     void OnEntitiesDeleted(const std::vector<GLGUID> &guids);
-    void OnHighlightChanged(const GLGUID &oldGuid, const GLGUID &newGuid);
+    void OnHighlightChanged(const std::vector<GLGUID> &oldGuids, const std::vector<GLGUID> &newGuids);
     void OnImportModel(const GLGUID &parentGuid);
     void OnExportBody(const GLGUID &parentGuid);
 
