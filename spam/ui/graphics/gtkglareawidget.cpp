@@ -261,6 +261,7 @@ bool wxGLAreaWidget::GetValue() const
 
 void wxGLAreaWidget::ImportSTL(const GLGUID &parentGuid, const std::string &inputFilename)
 {
+    wxBusyCursor wait;
     vtkNew<vtkSTLReader> reader;
     reader->SetFileName(inputFilename.c_str());
     reader->Update();
@@ -285,6 +286,7 @@ void wxGLAreaWidget::ImportSTL(const GLGUID &parentGuid, const std::string &inpu
 
 void wxGLAreaWidget::ImportVTK(const GLGUID &parentGuid, const std::string &inputFilename)
 {
+    wxBusyCursor wait;
     vtkNew<vtkGenericDataObjectReader> reader;
     reader->SetFileName(inputFilename.c_str());
     reader->Update();
@@ -326,6 +328,7 @@ void wxGLAreaWidget::ImportVTK(const GLGUID &parentGuid, const std::string &inpu
 
 void wxGLAreaWidget::ImportVTU(const GLGUID &parentGuid, const std::string &inputFilename)
 {
+    wxBusyCursor wait;
     vtkNew<vtkXMLGenericDataObjectReader> reader;
     reader->SetFileName(inputFilename.c_str());
     reader->Update();
@@ -367,6 +370,7 @@ void wxGLAreaWidget::ImportVTU(const GLGUID &parentGuid, const std::string &inpu
 
 void wxGLAreaWidget::ImportOBJ(const GLGUID &parentGuid, const std::string &inputFilename)
 {
+    wxBusyCursor wait;
     vtkNew<vtkOBJReader> reader;
     reader->SetFileName(inputFilename.c_str());
     reader->Update();
@@ -391,6 +395,7 @@ void wxGLAreaWidget::ImportOBJ(const GLGUID &parentGuid, const std::string &inpu
 
 void wxGLAreaWidget::ImportPLY(const GLGUID &parentGuid, const std::string &inputFilename)
 {
+    wxBusyCursor wait;
     vtkNew<vtkPLYReader> reader;
     reader->SetFileName(inputFilename.c_str());
     reader->Update();
@@ -446,32 +451,91 @@ void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
 void wxGLAreaWidget::OnLeftMouseUp(wxMouseEvent &e)
 {
     rubberBoxActor->VisibilityOff();
+    const int x = e.GetPosition().x;
+    const int y = e.GetPosition().y;
+    const int dx = x - anchorPos_.x;
+    const int dy = y - anchorPos_.y;
     lastPos_ = e.GetPosition();
 
-    const int w = externalVTKWidget->GetRenderWindow()->GetSize()[0];
-    const int h = externalVTKWidget->GetRenderWindow()->GetSize()[1];
-    const int x0 = std::min(anchorPos_.x, lastPos_.x);
-    const int x1 = std::max(anchorPos_.x, lastPos_.x);
-    const int y0 = std::min(h - anchorPos_.y, h - lastPos_.y);
-    const int y1 = std::max(h - anchorPos_.y, h - lastPos_.y);
-
-    vtkNew<vtkAreaPicker> aPicker;
-    aPicker->SetRenderer(rootRenderer);
-    aPicker->SetPickCoords(x0, y0, x1, y1);
-    aPicker->PickFromListOn();
-    aPicker->Pick();
-    vtkPlanes *frustum = aPicker->GetFrustum();
-
-    vtkIdType numSelStatusChanged = 0;
-    for (auto &actorItem : allActors_)
+    if (std::abs(dx) < 3 || std::abs(dy) < 3)
     {
-        numSelStatusChanged += actorItem.second->Select1DCells(frustum);
-        numSelStatusChanged += actorItem.second->Select2DCells(frustum);
-        numSelStatusChanged += actorItem.second->Select3DCells(frustum);
+        const int x0 = x;
+        const int y0 = externalVTKWidget->GetRenderWindow()->GetSize()[1] - y;
+        SPDispNode pickedNode;
+        vtkNew<vtkCellPicker> cellPicker;
+
+        for (auto &dispNode : allActors_)
+        {
+            if (dispNode.second->GetCellLocator())
+            {
+                cellPicker->AddLocator(dispNode.second->GetCellLocator());
+            }
+        }
+
+        const int r = cellPicker->Pick(x0, y0, 0, rootRenderer);
+        if (r && cellPicker->GetCellId() > 0 && cellPicker->GetActor())
+        {
+            vtkDataSet *ds = cellPicker->GetDataSet();
+            if (ds && ds->GetFieldData())
+            {
+                vtkTypeUInt64Array *guids = vtkTypeUInt64Array::SafeDownCast(ds->GetFieldData()->GetArray("GUID_TAG"));
+                if (guids)
+                {
+                    GLGUID guid(guids->GetValue(0), guids->GetValue(1));
+                    auto it = allActors_.find(guid);
+                    if (it != allActors_.end())
+                    {
+                        pickedNode = it->second;
+                    }
+                }
+            }
+        }
+
+        vtkIdType numSelStatusChanged = 0;
+        for (auto &dispNode : allActors_)
+        {
+            if (dispNode.second != pickedNode)
+            {
+                numSelStatusChanged += dispNode.second->SelectCell(-1);
+            }
+            else
+            {
+                numSelStatusChanged += dispNode.second->SelectCell(cellPicker->GetCellId());
+            }
+        }
+
+        if (numSelStatusChanged)
+        {
+            wxLogMessage(wxString(wxT("")) << numSelStatusChanged << wxString(wxT("facets selection status changed")));
+        }
+    }
+    else
+    {
+        const int w = externalVTKWidget->GetRenderWindow()->GetSize()[0];
+        const int h = externalVTKWidget->GetRenderWindow()->GetSize()[1];
+        const int x0 = std::min(anchorPos_.x, lastPos_.x);
+        const int x1 = std::max(anchorPos_.x, lastPos_.x);
+        const int y0 = std::min(h - anchorPos_.y, h - lastPos_.y);
+        const int y1 = std::max(h - anchorPos_.y, h - lastPos_.y);
+
+        vtkNew<vtkAreaPicker> aPicker;
+        aPicker->SetRenderer(rootRenderer);
+        aPicker->SetPickCoords(x0, y0, x1, y1);
+        aPicker->PickFromListOn();
+        aPicker->Pick();
+        vtkPlanes *frustum = aPicker->GetFrustum();
+
+        vtkIdType numSelStatusChanged = 0;
+        for (auto &actorItem : allActors_)
+        {
+            numSelStatusChanged += actorItem.second->Select1DCells(frustum);
+            numSelStatusChanged += actorItem.second->Select2DCells(frustum);
+            numSelStatusChanged += actorItem.second->Select3DCells(frustum);
+        }
+        wxLogMessage(wxString(wxT("There are ")) << numSelStatusChanged << wxString(wxT(" cells selection status changed")));
     }
 
     Refresh(false);
-    wxLogMessage(wxString(wxT("There are "))<<numSelStatusChanged<< wxString(wxT(" cells selection status changed")));
 }
 
 void wxGLAreaWidget::OnRightMouseDown(wxMouseEvent &e)
@@ -658,7 +722,7 @@ void wxGLAreaWidget::OnKillFocus(wxFocusEvent &e)
 void wxGLAreaWidget::OnAddGeomBody(const GLGUID &partGuid, const int geomShape)
 {
     vtkSmartPointer<IVtkTools_ShapeDataSource> aDS = vtkSmartPointer<IVtkTools_ShapeDataSource>::New();
-    if (kPGS_SPHERE == geomShape)
+    if (kPGS_BOX == geomShape)
     {
         const auto aShape = BRepPrimAPI_MakeBox(60, 80, 90).Shape();
         IVtkOCC_Shape::Handle aShapeImpl = new IVtkOCC_Shape(aShape);

@@ -277,6 +277,9 @@ vtkIdType GL2DMeshNode::Select2DCells(vtkPlanes *frustum)
 
 void GL2DMeshNode::SetDefaultDisplay()
 {
+    const std::string arrName("vtkOriginalCellIds");
+    SortFacets(poly_data_, arrName);
+
     mapper_ = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper_->SetInputData(poly_data_);
 

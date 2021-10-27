@@ -45,6 +45,7 @@ public:
     const vtkIdType GetCellId(const vtkIdType facetId);
     const vtkIdType GetHighlightCellId();
     const vtkIdType HighlightCell(const vtkIdType facetId);
+    const vtkIdType SelectCell(const vtkIdType facetId);
     virtual void ShowNode(const int visible);
     virtual void SetRepresentation(const int rep);
     virtual void SetCellColor(const double *c);
@@ -62,6 +63,7 @@ protected:
 
 protected:
     vtkIdType SelectFacets(vtkPlanes *frustum);
+    static void SortFacets(vtkSmartPointer<vtkPolyData> &spPolyData, const std::string &arrName);
 
 protected:
     struct this_is_private 

@@ -374,6 +374,102 @@ const vtkIdType GLDispNode::HighlightCell(const vtkIdType facetId)
     return numSelStatusChanged;
 }
 
+const vtkIdType GLDispNode::SelectCell(const vtkIdType facetId)
+{
+    vtkIntArray *colorIndexs = vtkIntArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
+    vtkIdTypeArray *cellIds = vtkIdTypeArray::SafeDownCast(poly_data_->GetCellData()->GetArray("vtkOriginalCellIds"));
+
+    vtkIdType numDispStatusChanged = 0;
+    auto getCellId = [=](const vtkIdType facetId) { return cellIds ? cellIds->GetValue(facetId) : facetId; };
+    if (facetId >= 0 && facetId < colorIndexs->GetNumberOfTuples())
+    {
+        const vtkIdType selCellId = getCellId(facetId);
+        const vtkIdType numColorIndexs = colorIndexs->GetNumberOfTuples();
+        for (vtkIdType cc = 0; cc < numColorIndexs; ++cc)
+        {
+            if (selCellId != getCellId(cc))
+            {
+                switch (colorIndexs->GetValue(cc))
+                {
+                case kCell_Color_Index_Selected: colorIndexs->SetValue(cc, kCell_Color_Index_Normal); numDispStatusChanged += 1; break;
+                case kCell_Color_Index_Selected_And_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Highlight); numDispStatusChanged += 1; break;
+                default: break;
+                }
+            }
+        }
+
+        switch (colorIndexs->GetValue(facetId))
+        {
+        case kCell_Color_Index_Normal: colorIndexs->SetValue(facetId, kCell_Color_Index_Selected); numDispStatusChanged += 1; break;
+        case kCell_Color_Index_Highlight: colorIndexs->SetValue(facetId, kCell_Color_Index_Selected_And_Highlight); numDispStatusChanged += 1; break;
+        default: break;
+        }
+
+        for (vtkIdType kk = facetId - 1; kk >= 0 && selCellId == getCellId(kk); --kk)
+        {
+            switch (colorIndexs->GetValue(kk))
+            {
+            case kCell_Color_Index_Normal: colorIndexs->SetValue(kk, kCell_Color_Index_Selected); numDispStatusChanged += 1; break;
+            case kCell_Color_Index_Highlight: colorIndexs->SetValue(kk, kCell_Color_Index_Selected_And_Highlight); numDispStatusChanged += 1; break;
+            default: break;
+            }
+        }
+
+        for (vtkIdType kk = facetId + 1; kk < numColorIndexs && selCellId == getCellId(kk); ++kk)
+        {
+            switch (colorIndexs->GetValue(kk))
+            {
+            case kCell_Color_Index_Normal: colorIndexs->SetValue(kk, kCell_Color_Index_Selected); numDispStatusChanged += 1; break;
+            case kCell_Color_Index_Highlight: colorIndexs->SetValue(kk, kCell_Color_Index_Selected_And_Highlight); numDispStatusChanged += 1; break;
+            default: break;
+            }
+        }
+
+        if (numDispStatusChanged > 0)
+        {
+            colorIndexs->Modified();
+        }
+    }
+    else if (facetId == -1)
+    {
+        const vtkIdType numColorIndexs = colorIndexs->GetNumberOfTuples();
+        for (vtkIdType cc = 0; cc < numColorIndexs; ++cc)
+        {
+            switch (colorIndexs->GetValue(cc))
+            {
+            case kCell_Color_Index_Selected: colorIndexs->SetValue(cc, kCell_Color_Index_Normal); numDispStatusChanged += 1; break;
+            case kCell_Color_Index_Selected_And_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Highlight); numDispStatusChanged += 1; break;
+            default: break;
+            }
+        }
+
+        if (numDispStatusChanged > 0)
+        {
+            colorIndexs->Modified();
+        }
+    }
+    else
+    {
+        const vtkIdType numColorIndexs = colorIndexs->GetNumberOfTuples();
+        for (vtkIdType cc = 0; cc < numColorIndexs; ++cc)
+        {
+            switch (colorIndexs->GetValue(cc))
+            {
+            case kCell_Color_Index_Normal: colorIndexs->SetValue(cc, kCell_Color_Index_Selected); numDispStatusChanged += 1; break;
+            case kCell_Color_Index_Highlight: colorIndexs->SetValue(cc, kCell_Color_Index_Selected_And_Highlight); numDispStatusChanged += 1; break;
+            default: break;
+            }
+        }
+
+        if (numDispStatusChanged > 0)
+        {
+            colorIndexs->Modified();
+        }
+    }
+
+    return numDispStatusChanged;
+}
+
 void GLDispNode::ShowNode(const int visible)
 {
     if (actor_)
@@ -611,4 +707,80 @@ vtkIdType GLDispNode::SelectFacets(vtkPlanes *frustum)
     }
 
     return numSelStatusChanged;
+}
+
+void GLDispNode::SortFacets(vtkSmartPointer<vtkPolyData> &spPolyData, const std::string &arrName)
+{
+    if (spPolyData)
+    {
+        const vtkIdType numFacets = spPolyData->GetNumberOfCells();
+        vtkIdTypeArray *cellIds = vtkIdTypeArray::SafeDownCast(spPolyData->GetCellData()->GetArray(arrName.c_str()));
+        if (numFacets && cellIds && cellIds->Begin() && !std::is_sorted(cellIds->Begin(), cellIds->End()))
+        {
+            std::vector<int> indexs(numFacets);
+            std::iota(indexs.begin(), indexs.end(), 0);
+            vtkIdType *begIndxs = cellIds->Begin();
+            std::stable_sort(indexs.begin(), indexs.end(), [=](const int i, const int j) { return begIndxs[i] < begIndxs[j]; });
+            vtkCellArray *connects = spPolyData->GetPolys();
+            if (!connects || !connects->GetNumberOfCells()) 
+            { 
+                connects = spPolyData->GetLines();
+            }
+
+            if (connects)
+            {
+                if (connects->IsStorage64Bit())
+                {
+                    vtkTypeInt64Array *offsetArray = vtkTypeInt64Array::SafeDownCast(connects->GetOffsetsArray());
+                    vtkTypeInt64Array *connectivityArray = vtkTypeInt64Array::SafeDownCast(connects->GetConnectivityArray());
+                    vtkIdType *pCellId = cellIds->Begin();
+                    vtkTypeInt64 *pFacetOffset = offsetArray->Begin();
+                    vtkTypeInt64 *pFacetConnectivity = connectivityArray->Begin();
+
+                    std::vector<vtkTypeUInt64> buffer(connectivityArray->GetNumberOfValues());
+                    vtkIdType *pBufferCellId = reinterpret_cast<vtkIdType *>(buffer.data());
+                    for (vtkIdType t=0; t < numFacets; ++t)
+                    {
+                        const int idx = indexs[t];
+                        pBufferCellId[t] = pCellId[idx];
+                    }
+                    std::memcpy(pCellId, pBufferCellId, sizeof(vtkIdType)*cellIds->GetNumberOfValues());
+
+                    vtkTypeInt64 newOffset = 0;
+                    std::vector<vtkTypeUInt64> obuffer(offsetArray->GetNumberOfValues());
+                    vtkTypeInt64 *pBufferOffset = reinterpret_cast<vtkTypeInt64 *>(obuffer.data());
+                    vtkTypeInt64 *pBufferConnectivity = reinterpret_cast<vtkTypeInt64 *>(buffer.data());
+                    for (vtkIdType t = 0; t < numFacets; ++t)
+                    {
+                        const int idx = indexs[t];
+                        const vtkTypeInt64 offset = pFacetOffset[idx];
+                        const vtkTypeInt64 noffset = pFacetOffset[idx+1];
+                        const vtkTypeInt64 numConnects = noffset - offset;
+                        pBufferOffset[t] = newOffset;
+                        for (vtkTypeInt64 f = offset, nf = newOffset; f < noffset; ++f, ++nf)
+                        {
+                            pBufferConnectivity[nf] = pFacetConnectivity[f];
+                        }
+                        newOffset += numConnects;
+                    }
+                    pBufferOffset[numFacets] = newOffset;
+                    std::memcpy(pFacetOffset, pBufferOffset, sizeof(vtkTypeInt64)*offsetArray->GetNumberOfValues());
+                    std::memcpy(pFacetConnectivity, pBufferConnectivity, sizeof(vtkTypeInt64)*connectivityArray->GetNumberOfValues());
+                }
+                else
+                {
+                    vtkTypeInt32Array *offsetArray = vtkTypeInt32Array::SafeDownCast(connects->GetOffsetsArray());
+                    vtkTypeInt32Array *connectivityArray = vtkTypeInt32Array::SafeDownCast(connects->GetConnectivityArray());
+                    vtkIdType *pCellId = cellIds->Begin();
+                    vtkTypeInt32 *pFacetOffset = offsetArray->Begin();
+                    vtkTypeInt32 *pFacetConnectivity = connectivityArray->Begin();
+
+                    for (vtkIdType t = 0; t < numFacets; ++t)
+                    {
+
+                    }
+                }
+            }
+        }
+    }
 }
