@@ -15,7 +15,7 @@ class TestContourPersistence(unittest.TestCase):
         pass
 
     def test_Save_Contour(self):
-        baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+        baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
         pathComps = self.id().split(sep='.')
         savePath = os.path.join(baseDir, *pathComps[0:-2])
         os.makedirs(savePath, exist_ok=True)
@@ -53,7 +53,7 @@ class TestContourPersistence(unittest.TestCase):
         self.assertEqual(0, r)
 
     def test_Load_Contour(self):
-        loadPath = os.path.join(os.environ['SPAM_ROOT_DIR'], 'test', "data", "model", "contour")
+        loadPath = os.path.join(os.environ['JANE_ROOT_DIR'], 'test', "data", "model", "contour")
         cont = mvlab.Contour_Load(os.path.join(loadPath, "rectangle_contour.xml.xz"))
         self.assertIsNotNone(cont)
         self.assertEqual(100, cont.Area(), cont.GetErrorStatus())
@@ -71,7 +71,7 @@ class TestContourPersistence(unittest.TestCase):
         self.assertEqual(3, cont.Count(), cont.GetErrorStatus())
 
     def test_SaveDB_Rectangle_Contour(self):
-        outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach")
+        outputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach")
         cont = mvlab.Contour_GenRectangle((0, 0, 10, 10))
 
         db = mvlab.H5DB_Open(os.path.join(outputRoot, 'database.h5'))
@@ -82,8 +82,8 @@ class TestContourPersistence(unittest.TestCase):
         self.assertEqual(0, r, g.GetErrorStatus())
 
     def test_SaveDB_Mista_Contours(self):
-        outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach")
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        outputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach")
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
@@ -97,7 +97,7 @@ class TestContourPersistence(unittest.TestCase):
         self.assertEqual(0, r, g.GetErrorStatus())
 
     def test_LoadDB_Rectangle_Contour(self):
-        inputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model")
+        inputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model")
         db = mvlab.H5DB_Open(os.path.join(inputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
@@ -107,7 +107,7 @@ class TestContourPersistence(unittest.TestCase):
         self.assertEqual(100, cont.Area(), cont.GetErrorStatus())
 
     def test_LoadDB_Mista_Contours(self):
-        inputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model")
+        inputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model")
         db = mvlab.H5DB_Open(os.path.join(inputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()

@@ -19,7 +19,7 @@ class TestClosing(unittest.TestCase):
 
     def test_Closing_Bumps(self):
         se = mvlab.Region_GenStructuringElement('circle', 11)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 0, 50)
 
@@ -31,7 +31,7 @@ class TestClosing(unittest.TestCase):
         extradata.SaveRegion(self.id(), ergn)
 
     def test_OpeningClosing_2DCode(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', '2D_2.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', '2D_2.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 0, 50)
 
@@ -45,7 +45,7 @@ class TestClosing(unittest.TestCase):
 
     def test_Closing_Circle_Mista(self):
         se = mvlab.Region_GenStructuringElement('circle', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 128, 255)
 
@@ -58,7 +58,7 @@ class TestClosing(unittest.TestCase):
 
     def test_Closing_Square_Mista(self):
         se = mvlab.Region_GenStructuringElement('square', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 128, 255)
 

@@ -59,7 +59,7 @@ class TestRegionTest(unittest.TestCase):
         self.assertFalse(rgn.TestPoint((20, 32)))
 
     def test_Point_Inside_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 151, 255)
 
@@ -70,7 +70,7 @@ class TestRegionTest(unittest.TestCase):
         self.assertTrue(r)
 
     def test_Point_Outside_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 151, 255)
 
@@ -113,7 +113,7 @@ class TestRegionTest(unittest.TestCase):
         self.assertFalse(rgn2.TestSubset(rgn1))
 
     def test_Region_Inside_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 151, 255)
         rgn2 = mvlab.Region_GenCircle((1311, 1939), 25)
@@ -125,7 +125,7 @@ class TestRegionTest(unittest.TestCase):
         self.assertTrue(r)
 
     def test_Region_Outside_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 151, 255)
         rgn2 = mvlab.Region_GenCircle((733, 1660), 10)

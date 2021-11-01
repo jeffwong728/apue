@@ -901,9 +901,15 @@ void wxGLAreaWidget::OnImportModel(const GLGUID &parentGuid)
     wildCard.Append("|PLY files (*.ply)|*.ply");
     wildCard.Append("|All files (*.*)|*.*");
 
-    wxFileDialog openFileDialog(this, wxT("Open model file"), "", "", wildCard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (!wxDirExists(lastImportDir_))
+    {
+        wxGetHomeDir(&lastImportDir_);
+    }
+
+    wxFileDialog openFileDialog(this, wxT("Open model file"), lastImportDir_, "", wildCard, wxFD_OPEN | wxFD_FILE_MUST_EXIST);
     if (openFileDialog.ShowModal() != wxID_CANCEL)
     {
+        lastImportDir_ = openFileDialog.GetDirectory();
         auto fullPath = std::string(openFileDialog.GetPath());
         std::string extension = vtksys::SystemTools::GetFilenameLastExtension(fullPath);
         if (extension == ".ply")

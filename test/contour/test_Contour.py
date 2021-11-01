@@ -57,7 +57,7 @@ class TestContour(unittest.TestCase):
         outer = rgn.GetContour()
 
     def test_Scrach_Contour(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)
@@ -68,7 +68,7 @@ class TestContour(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
     def test_Mista_Contour(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
@@ -79,7 +79,7 @@ class TestContour(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
     def test_Digits_Contour(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 151, 255)
@@ -90,7 +90,7 @@ class TestContour(unittest.TestCase):
         extradata.SavePerformanceData(self.id(), (endTime-startTime))
 
     def test_Contour_Simplify(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)

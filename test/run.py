@@ -34,7 +34,8 @@ elif args.Directory:
 else:
     pass
 
-tmplPath = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'report_template.html')
+os.environ["JANE_ROOT_DIR"] = os.path.join(os.environ["SPAM_ROOT_DIR"], 'jane')
+tmplPath = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'report_template.html')
 teml_args = {
     'perf' : extradata.perfData,
     'obj_path' : extradata.objPath,
@@ -42,12 +43,12 @@ teml_args = {
 }
 
 if tests:
-    outDir = os.path.join(os.environ["SPAM_ROOT_DIR"], 'reports')
+    outDir = os.path.join(os.environ["JANE_ROOT_DIR"], 'reports')
     runner = HtmlTestRunner.HTMLTestRunner(combine_reports=True, output=outDir, report_name="mvlab", add_timestamp=False, template=tmplPath, template_args=teml_args)
     runner.run(tests)
 
 if platform.system() == "Windows":
-    os.startfile(os.path.join(os.environ["SPAM_ROOT_DIR"], 'reports', 'mvlab.html'))
+    os.startfile(os.path.join(os.environ["JANE_ROOT_DIR"], 'reports', 'mvlab.html'))
 else:
     opener ="open" if sys.platform == "darwin" else "xdg-open"
-    subprocess.call([opener, os.path.join(os.environ["SPAM_ROOT_DIR"], 'reports', 'mvlab.html')])
+    subprocess.call([opener, os.path.join(os.environ["JANE_ROOT_DIR"], 'reports', 'mvlab.html')])

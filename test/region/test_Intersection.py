@@ -26,7 +26,7 @@ class TestRegionIntersection(unittest.TestCase):
         self.assertEqual(interRgn.CountRows(), 10)
 
     def test_Mista_Box_Intersection(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRectangle((1000, 1000, 1000, 1000))
@@ -38,7 +38,7 @@ class TestRegionIntersection(unittest.TestCase):
         extradata.SaveRegion(self.id(), interRgn, image1.shape)
 
     def test_Mista_Circle_Intersection(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenCircle((1250, 1250), 750)
@@ -50,7 +50,7 @@ class TestRegionIntersection(unittest.TestCase):
         extradata.SaveRegion(self.id(), interRgn, image1.shape)
 
     def test_Mista_RotatedEllipse_Intersection(self):
-        image1 = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image1 = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image1)
         rgn1 = mvlab.Threshold(blue, 150, 255)
         rgn2 = mvlab.Region_GenRotatedEllipse((1250, 1250), (750, 500), 30)

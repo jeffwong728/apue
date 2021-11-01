@@ -125,6 +125,7 @@ private:
     vtkNew<vtkNamedColors> colors_;
     vtkNew<vtkStringArray> colorNames_;
     vtkIdType colorIndex_ = 0;
+    wxString lastImportDir_;
     wxString lastExportDir_;
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);

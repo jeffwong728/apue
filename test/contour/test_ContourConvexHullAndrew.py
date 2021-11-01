@@ -105,7 +105,7 @@ class TestContourConvexHullAndrew(unittest.TestCase):
         self.DoTransformConvexTest(points, affMats, 4)
 
     def test_Performance_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
@@ -118,7 +118,7 @@ class TestContourConvexHullAndrew(unittest.TestCase):
         extradata.SaveContours(self.id(), [c, ch])
 
     def test_Performance_Digits(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 50, 255)
         rgns = rgn.Connect()

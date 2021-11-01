@@ -236,7 +236,7 @@ class TestRegionCreate(unittest.TestCase):
         self.verifyRegionIntegrity(rgn)
 
     def test_Create_Polygon_Bull(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)

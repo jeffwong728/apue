@@ -19,7 +19,7 @@ class TestMisc(unittest.TestCase):
 
     def test_CountResistor(self):
         se = mvlab.Region_GenStructuringElement('circle', 11)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mix-cs8svf-pcb.jpg'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mix-cs8svf-pcb.jpg'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 90, 255)
 

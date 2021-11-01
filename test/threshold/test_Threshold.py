@@ -38,7 +38,7 @@ class TestThreshold(unittest.TestCase):
                 self.assertEqual(rgn.BoundingBox(), (startCol, 0, lastCol-startCol, 1))
 
     def test_Scrach_Threshold(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
         startTime = time.perf_counter()
@@ -48,7 +48,7 @@ class TestThreshold(unittest.TestCase):
         extradata.SaveRegion(self.id(), rgn, image.shape)
 
     def test_Mista_Threshold(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         startTime = time.perf_counter()
@@ -59,7 +59,7 @@ class TestThreshold(unittest.TestCase):
         self.assertEqual(rgn.CountRuns(), 234794)
 
     def test_Digits_Threshold(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
         startTime = time.perf_counter()
@@ -69,7 +69,7 @@ class TestThreshold(unittest.TestCase):
         extradata.SaveRegion(self.id(), rgn, image.shape)
 
     def test_PCB_Layout_Threshold(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
 
         startTime = time.perf_counter()
         rgn = mvlab.Threshold(image, 0, 50)

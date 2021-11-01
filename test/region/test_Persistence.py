@@ -17,18 +17,18 @@ class TestRegionPersistence(unittest.TestCase):
         opts = mvlab.Dict_GenEmpty()
         opts.SetString('Policy', 'overwrite')
         opts.SetString('FileFormat', "text")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "empty_region.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "empty_region.txt.xz")
         rgn = mvlab.Region_GenEmpty()
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
         opts.SetString('FileFormat', "xml")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "empty_region.xml.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "empty_region.xml.xz")
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
         opts.SetString('FileFormat', "binary")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "empty_region.bin.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "empty_region.bin.xz")
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
@@ -36,18 +36,18 @@ class TestRegionPersistence(unittest.TestCase):
         opts = mvlab.Dict_GenEmpty()
         opts.SetString('Policy', 'overwrite')
         opts.SetString('FileFormat', "text")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "rectangle_region.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "rectangle_region.txt.xz")
         rgn = mvlab.Region_GenRectangle((0, 0, 10, 10))
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
         opts.SetString('FileFormat', "xml")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "rectangle_region.xml.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "rectangle_region.xml.xz")
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
         opts.SetString('FileFormat', "binary")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "rectangle_region.bin.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "rectangle_region.bin.xz")
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
@@ -55,79 +55,79 @@ class TestRegionPersistence(unittest.TestCase):
         opts = mvlab.Dict_GenEmpty()
         opts.SetString('Policy', 'overwrite')
         opts.SetString('FileFormat', "text")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "mista_region.txt.xz")
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "mista_region.txt.xz")
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
         opts.SetString('FileFormat', "xml")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "mista_region.xml.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "mista_region.xml.xz")
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
         opts.SetString('FileFormat', "binary")
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach", "mista_region.bin.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach", "mista_region.bin.xz")
         r = rgn.Save(fileName, opts)
         self.assertEqual(0, r)
 
     def test_Load_Empty_Region(self):
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "empty_region.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "empty_region.txt.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(0, rgn.Area(), rgn.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "empty_region.xml.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "empty_region.xml.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(0, rgn.Area(), rgn.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "empty_region.bin.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "empty_region.bin.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(0, rgn.Area(), rgn.GetErrorStatus())
 
     def test_Load_Rectangle_Region(self):
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "rectangle_region.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "rectangle_region.txt.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(100, rgn.Area(), rgn.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "rectangle_region.xml.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "rectangle_region.xml.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(100, rgn.Area(), rgn.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "rectangle_region.bin.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "rectangle_region.bin.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(100, rgn.Area(), rgn.GetErrorStatus())
 
     def test_Load_Mista_Region(self):
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "mista_region.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "mista_region.txt.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(1932245, rgn.Area(), rgn.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "mista_region.xml.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "mista_region.xml.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(1932245, rgn.Area(), rgn.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "mista_region.bin.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "mista_region.bin.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(1932245, rgn.Area(), rgn.GetErrorStatus())
 
         extradata.SaveRegion(self.id(), rgn.Shrink((0.25, 0.25)))
 
     def test_Load_Damaged_Region(self):
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "empty_file.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "empty_file.txt.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(0, rgn.Area(), rgn.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "damaged_region.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "damaged_region.txt.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(0, rgn.Area(), rgn.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "region", "damaged_region.xml.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "region", "damaged_region.xml.xz")
         rgn = mvlab.Region_Load(fileName)
         self.assertEqual(0, rgn.Area(), rgn.GetErrorStatus())
 
     def test_SaveDB_Rectangle_Region(self):
-        outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach")
+        outputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach")
         rgn = mvlab.Region_GenRectangle((0, 0, 10, 10))
 
         db = mvlab.H5DB_Open(os.path.join(outputRoot, 'database.h5'))
@@ -138,8 +138,8 @@ class TestRegionPersistence(unittest.TestCase):
         self.assertEqual(0, r, g.GetErrorStatus())
 
     def test_SaveDB_Mista_Regions(self):
-        outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach")
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        outputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach")
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
@@ -152,7 +152,7 @@ class TestRegionPersistence(unittest.TestCase):
         self.assertEqual(0, r, g.GetErrorStatus())
 
     def test_LoadDB_Rectangle_Region(self):
-        inputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model")
+        inputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model")
         db = mvlab.H5DB_Open(os.path.join(inputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
@@ -162,7 +162,7 @@ class TestRegionPersistence(unittest.TestCase):
         self.assertEqual(100, rgn.Area(), rgn.GetErrorStatus())
 
     def test_LoadDB_Mista_Regions(self):
-        inputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model")
+        inputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model")
         db = mvlab.H5DB_Open(os.path.join(inputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()

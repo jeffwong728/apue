@@ -53,7 +53,7 @@ def SavePerformanceData(testId, secs):
     perfData.setdefault(testId, "{0:.3f}".format(secs*1000))
 
 def SaveImage(testId, img):
-    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
     del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
@@ -63,7 +63,7 @@ def SaveImage(testId, img):
     objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
 
 def AddImage(testId, img, name):
-    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
     del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:])
@@ -75,7 +75,7 @@ def AddImage(testId, img, name):
     paths.append('/'.join(imgPathComps))
 
 def SaveRegion(testId, rgn, sz=None):
-    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
     del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
@@ -96,7 +96,7 @@ def SaveRegion(testId, rgn, sz=None):
         objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
 
 def DrawRegion(testId, rgn, image):
-    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
     del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
@@ -108,7 +108,7 @@ def DrawRegion(testId, rgn, image):
         objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
 
 def SaveRegions(testId, rgns, sz=None):
-    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
     del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
@@ -133,7 +133,7 @@ def SaveRegions(testId, rgns, sz=None):
         objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
 
 def SaveContours(testId, cturs, sz=None):
-    baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+    baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
     imgPathComps = testId.split(sep='.')
     del imgPathComps[-2]
     imgPath = os.path.join(baseDir, *imgPathComps[0:-1])
@@ -159,7 +159,7 @@ def SaveContours(testId, cturs, sz=None):
         objPath.setdefault(testId, '/'.join(imgPathComps)+'.png')
 
 def LoadTextPolygon(fileName):
-    fullFileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'plg', fileName)
+    fullFileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'plg', fileName)
     points = []
     with open(fullFileName, 'rt') as f:
         for ln in f:

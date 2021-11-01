@@ -15,7 +15,7 @@ class TestRegionTransformation(unittest.TestCase):
         pass
 
     def test_Zoom_Deer(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)
@@ -37,7 +37,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Zoom_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)
@@ -53,7 +53,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Shrink_Mista(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)
@@ -69,7 +69,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Zoom_Digits(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)
@@ -84,7 +84,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Shrink_Digits(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)
@@ -99,7 +99,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Zoom_PCB_Layout(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
         rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()
@@ -113,7 +113,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Zoom_Out_PCB_Layout(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
         rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()
@@ -127,7 +127,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Shrink_PCB_Layout(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'models', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
         rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()
@@ -141,7 +141,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveRegion(self.id(), zrgn)
 
     def test_Draw_Deer(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)
@@ -160,7 +160,7 @@ class TestRegionTransformation(unittest.TestCase):
         extradata.SaveImage(self.id(), image)
 
     def test_Affine_Deer(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Threshold(blue, 150, 255)

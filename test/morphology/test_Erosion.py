@@ -19,7 +19,7 @@ class TestErosion(unittest.TestCase):
 
     def test_Bumps(self):
         se = mvlab.Region_GenStructuringElement('circle', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 0, 50)
 
@@ -32,7 +32,7 @@ class TestErosion(unittest.TestCase):
 
     def test_RLEErosion(self):
         se = mvlab.Region_GenStructuringElement('circle', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 0, 50)
 
@@ -52,7 +52,7 @@ class TestErosion(unittest.TestCase):
 
     def test_Mista(self):
         se = mvlab.Region_GenStructuringElement('circle', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         opts = mvlab.Dict_GenEmpty()

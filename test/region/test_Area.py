@@ -53,7 +53,7 @@ class TestRegionArea(unittest.TestCase):
         extradata.SaveRegion(self.id(), rgn)
 
     def test_Mista_Area(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         rgns = rgn.Connect()
@@ -68,7 +68,7 @@ class TestRegionArea(unittest.TestCase):
         self.assertAlmostEqual(rgn.Area(), areaSum, 'Region area {0:f} not equal sum of compoent areas {1:f}'.format(rgn.Area(), areaSum))
 
     def test_Mista_Hole_Area(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)

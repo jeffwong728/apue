@@ -19,7 +19,7 @@ class TestDilation(unittest.TestCase):
 
     def test_Bumps(self):
         se = mvlab.Region_GenStructuringElement('circle', 11)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 0, 50)
 
@@ -32,7 +32,7 @@ class TestDilation(unittest.TestCase):
 
     def test_RLEDilation(self):
         se = mvlab.Region_GenStructuringElement('circle', 11)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'bumps.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 0, 50)
 
@@ -51,7 +51,7 @@ class TestDilation(unittest.TestCase):
 
     def test_Mista_Circle(self):
         se = mvlab.Region_GenStructuringElement('circle', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         opts = mvlab.Dict_GenEmpty()
@@ -93,7 +93,7 @@ class TestDilation(unittest.TestCase):
 
     def test_Mista_Square(self):
         se = mvlab.Region_GenStructuringElement('square', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         opts = mvlab.Dict_GenEmpty()
@@ -127,7 +127,7 @@ class TestDilation(unittest.TestCase):
 
     def test_Mista_Outer_Boundary(self):
         se = mvlab.Region_GenStructuringElement('square', 1)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         opts = mvlab.Dict_GenEmpty()
@@ -144,7 +144,7 @@ class TestDilation(unittest.TestCase):
 
     def test_Mista_Inner_Boundary(self):
         se = mvlab.Region_GenStructuringElement('square', 1)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'), cv2.IMREAD_UNCHANGED)
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
         opts = mvlab.Dict_GenEmpty()
@@ -161,7 +161,7 @@ class TestDilation(unittest.TestCase):
 
     def test_Digits_Circle(self):
         se = mvlab.Region_GenStructuringElement('circle', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'), cv2.IMREAD_UNCHANGED)
         rgn = mvlab.Threshold(image, 150, 255)
         opts = mvlab.Dict_GenEmpty()
 
@@ -202,7 +202,7 @@ class TestDilation(unittest.TestCase):
 
     def test_Digits_Square(self):
         se = mvlab.Region_GenStructuringElement('square', 5)
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'), cv2.IMREAD_UNCHANGED)
         rgn = mvlab.Threshold(image, 150, 255)
         opts = mvlab.Dict_GenEmpty()
 

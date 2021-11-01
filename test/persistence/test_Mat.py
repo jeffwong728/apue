@@ -19,7 +19,7 @@ class TestMatPersistence(unittest.TestCase):
     @unittest.skip("Not needed anymore")
     def test_Save_Mat(self):
         mat = numpy.zeros((32, 24, 1), dtype = "uint8")
-        db = mvlab.H5DB_Open(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'model', 'TestMatPersistence.h5'))
+        db = mvlab.H5DB_Open(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'model', 'TestMatPersistence.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
         self.assertTrue(g.Valid())
@@ -41,7 +41,7 @@ class TestMatPersistence(unittest.TestCase):
 
     def test_Load_Mat(self):
         mat = numpy.ones((32, 24), dtype = "uint8")
-        db = mvlab.H5DB_Open(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'model', 'TestMatPersistence.h5'))
+        db = mvlab.H5DB_Open(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'model', 'TestMatPersistence.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
         self.assertTrue(g.Valid())

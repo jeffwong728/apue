@@ -203,7 +203,7 @@ class TestContourFeatures(unittest.TestCase):
         e = mvlab.Contour_GenEllipse((1000, 1000), (500, 100), 5, 'negative')
         self.assertAlmostEqual(e.Circularity(), 0.2, delta=0.001)
 
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 151, 255)
         rgns = rgn.Connect()

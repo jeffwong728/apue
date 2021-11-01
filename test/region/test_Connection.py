@@ -34,7 +34,7 @@ class TestRegionConnection(unittest.TestCase):
         self.assertAlmostEqual(rgn.Area(), rgns.Area())
 
     def test_Scrach_Connection(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
 
@@ -47,7 +47,7 @@ class TestRegionConnection(unittest.TestCase):
         self.assertEqual(rgns.Count(), 94, 'Scrach component number error')
 
     def test_Mista_Connection(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'mista.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 150, 255)
 
@@ -60,7 +60,7 @@ class TestRegionConnection(unittest.TestCase):
         self.assertEqual(rgns.Count(), 941, 'Mista component number error')
 
     def test_Digits_Connection(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'digits.png'))
         blue, green, red = cv2.split(image)
         rgn = mvlab.Threshold(blue, 151, 255)
 
@@ -73,7 +73,7 @@ class TestRegionConnection(unittest.TestCase):
         self.assertEqual(rgns.Count(), 5584, 'Digits component number error')
 
     def test_PCB_Layout_Connection(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'pcb_layout.png'), cv2.IMREAD_UNCHANGED)
         rgn = mvlab.Threshold(image, 0, 50)
 
         startTime = time.perf_counter()

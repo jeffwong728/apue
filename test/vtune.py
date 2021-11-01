@@ -23,7 +23,7 @@ import mvlab
 
 def vtune_RLEDilation(times):
     se = mvlab.Region_GenStructuringElement('circle', 5)
-    image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'board', 'board-01.png'), cv2.IMREAD_UNCHANGED)
+    image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'jane', 'test', 'data', 'images', 'board', 'board-01.png'), cv2.IMREAD_UNCHANGED)
     blue = image
     rgn = mvlab.Threshold(blue, 150, 255)
     opts = mvlab.Dict_GenEmpty()

@@ -17,7 +17,7 @@ class TestTemplatePersistence(unittest.TestCase):
                     filemode='a')
 
     def test_SaveDB_Gear_ContourTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template1.jpg'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template1.jpg'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenCircle((300, 310), 100)
@@ -30,7 +30,7 @@ class TestTemplatePersistence(unittest.TestCase):
         tmpl = mvlab.ContourTemplate_GenTemplate(blue, rgn, copts)
         self.assertFalse(tmpl.Empty(), tmpl.GetErrorStatus())
 
-        outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach")
+        outputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach")
         db = mvlab.H5DB_Open(os.path.join(outputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
@@ -40,7 +40,7 @@ class TestTemplatePersistence(unittest.TestCase):
         self.assertEqual(0, r, g.GetErrorStatus())
 
     def test_SaveDB_Gear_SADTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template1.jpg'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template1.jpg'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenCircle((300, 310), 100)
@@ -52,7 +52,7 @@ class TestTemplatePersistence(unittest.TestCase):
         tmpl = mvlab.PixelTemplate_GenTemplate(blue, rgn, copts)
         self.assertFalse(tmpl.Empty(), tmpl.GetErrorStatus())
 
-        outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach")
+        outputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach")
         db = mvlab.H5DB_Open(os.path.join(outputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
@@ -62,7 +62,7 @@ class TestTemplatePersistence(unittest.TestCase):
         self.assertEqual(0, r, g.GetErrorStatus())
 
     def test_SaveDB_Gear_NCCTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template1.jpg'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template1.jpg'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenCircle((300, 310), 100)
@@ -74,7 +74,7 @@ class TestTemplatePersistence(unittest.TestCase):
         tmpl = mvlab.PixelTemplate_GenTemplate(blue, rgn, copts)
         self.assertFalse(tmpl.Empty(), tmpl.GetErrorStatus())
 
-        outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "scrach")
+        outputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "scrach")
         db = mvlab.H5DB_Open(os.path.join(outputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
@@ -84,7 +84,7 @@ class TestTemplatePersistence(unittest.TestCase):
         self.assertEqual(0, r, g.GetErrorStatus())
 
     def test_LoadDB_Gear_ContourTemplate(self):
-        inputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model")
+        inputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model")
         db = mvlab.H5DB_Open(os.path.join(inputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
@@ -95,7 +95,7 @@ class TestTemplatePersistence(unittest.TestCase):
         self.assertEqual(5, tmpl.GetPyramidLevel(), tmpl.GetErrorStatus())
 
     def test_LoadDB_Gear_SADTemplate(self):
-        inputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model")
+        inputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model")
         db = mvlab.H5DB_Open(os.path.join(inputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
@@ -106,7 +106,7 @@ class TestTemplatePersistence(unittest.TestCase):
         self.assertEqual(5, tmpl.GetPyramidLevel(), tmpl.GetErrorStatus())
 
     def test_LoadDB_Gear_NCCTemplate(self):
-        inputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model")
+        inputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model")
         db = mvlab.H5DB_Open(os.path.join(inputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()

@@ -18,7 +18,7 @@ class TestPixelTemplate(unittest.TestCase):
                     filemode='a')
 
     def test_Save_Scrach_SADTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenRectangle((272, 110, 100, 50))
@@ -29,7 +29,7 @@ class TestPixelTemplate(unittest.TestCase):
         copts.SetString("MatchMode", "sad")
         tmpl = mvlab.PixelTemplate_GenTemplate(blue, rgn, copts)
 
-        baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+        baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
         pathComps = self.id().split(sep='.')
         savePath = os.path.join(baseDir, *pathComps[0:-2])
         os.makedirs(savePath, exist_ok=True)
@@ -49,7 +49,7 @@ class TestPixelTemplate(unittest.TestCase):
         self.assertEqual(0, r, tmpl.GetErrorStatus())
 
     def test_Save_Scrach_NCCTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenRectangle((272, 110, 100, 50))
@@ -60,7 +60,7 @@ class TestPixelTemplate(unittest.TestCase):
         copts.SetString("MatchMode", "ncc")
         tmpl = mvlab.PixelTemplate_GenTemplate(blue, rgn, copts)
 
-        baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+        baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
         pathComps = self.id().split(sep='.')
         savePath = os.path.join(baseDir, *pathComps[0:-2])
         os.makedirs(savePath, exist_ok=True)
@@ -80,7 +80,7 @@ class TestPixelTemplate(unittest.TestCase):
         self.assertEqual(0, r, tmpl.GetErrorStatus())
 
     def test_Match_Gear_NCCTemplate(self):
-        inputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model")
+        inputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model")
         db = mvlab.H5DB_Open(os.path.join(inputRoot, 'database.h5'))
         self.assertTrue(db.Valid())
         g = db.GetRoot()
@@ -93,7 +93,7 @@ class TestPixelTemplate(unittest.TestCase):
 
         totalTime = 0
         for imgName in ['Template1.jpg', 'Template2.jpg']:
-            image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'gear', imgName))
+            image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'gear', imgName))
             blue, green, red = cv2.split(image)
             height, width, channels = image.shape
             opts.SetRegion("SearchRegion", mvlab.Region_GenRectangle((0, 0, width, height)))

@@ -19,7 +19,7 @@ class TestContourTemplate(unittest.TestCase):
 
     @unittest.skip("This is a debug case")
     def test_Draw_Mista_ContourTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenRectangle((272, 110, 100,50))
@@ -32,7 +32,7 @@ class TestContourTemplate(unittest.TestCase):
         copts.SetRegion('ROI', rgn)
         tmpl = mvlab.ContourTemplate_GenTemplate(blue, rgn, copts)
 
-        outputRoot = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "contour_template")
+        outputRoot = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "contour_template")
         max_trys = 10
         while os.path.exists(outputRoot) and max_trys > 0:
             shutil.rmtree(outputRoot, ignore_errors=True)
@@ -56,7 +56,7 @@ class TestContourTemplate(unittest.TestCase):
         self.assertEqual(0, r, g.GetErrorStatus())
 
     def test_Save_Scrach_ContourTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenRectangle((338, 213, 89, 97))
@@ -70,7 +70,7 @@ class TestContourTemplate(unittest.TestCase):
         tmpl = mvlab.ContourTemplate_GenTemplate(blue, rgn, copts)
         self.assertFalse(tmpl.Empty(), tmpl.GetErrorStatus())
 
-        baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+        baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
         pathComps = self.id().split(sep='.')
         savePath = os.path.join(baseDir, *pathComps[0:-2])
         os.makedirs(savePath, exist_ok=True)
@@ -90,7 +90,7 @@ class TestContourTemplate(unittest.TestCase):
         self.assertEqual(0, r, tmpl.GetErrorStatus())
 
     def test_Save_Gear_ContourTemplate(self):
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template.jpg'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'gear', 'Template.jpg'))
         blue, green, red = cv2.split(image)
 
         rgn = mvlab.Region_GenCircle((300, 310), 100)
@@ -103,7 +103,7 @@ class TestContourTemplate(unittest.TestCase):
         tmpl = mvlab.ContourTemplate_GenTemplate(blue, rgn, copts)
         self.assertFalse(tmpl.Empty(), tmpl.GetErrorStatus())
 
-        baseDir = os.path.join(os.environ['SPAM_ROOT_DIR'], 'reports')
+        baseDir = os.path.join(os.environ['JANE_ROOT_DIR'], 'reports')
         pathComps = self.id().split(sep='.')
         savePath = os.path.join(baseDir, *pathComps[0:-2])
         os.makedirs(savePath, exist_ok=True)
@@ -116,27 +116,27 @@ class TestContourTemplate(unittest.TestCase):
 
     @unittest.skip("This is a debug case")
     def test_Load_ContourTemplate(self):
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "scrach.txt")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "scrach.txt")
         tmpl = mvlab.ContourTemplate_GenEmpty()
         r = tmpl.Load(fileName)
         self.assertEqual(0, r, tmpl.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "scrach.xml")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "scrach.xml")
         tmpl = mvlab.ContourTemplate_GenEmpty()
         r = tmpl.Load(fileName)
         self.assertEqual(0, r, tmpl.GetErrorStatus())
 
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "scrach.bin")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "scrach.bin")
         tmpl = mvlab.ContourTemplate_GenEmpty()
         r = tmpl.Load(fileName)
         self.assertEqual(0, r, tmpl.GetErrorStatus())
 
     def test_Match_Scrach_ContourTemplate(self):
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "template", "scrach_contour_template.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "template", "scrach_contour_template.txt.xz")
         tmpl = mvlab.ContourTemplate_Load(fileName)
         self.assertFalse(tmpl.Empty(), tmpl.GetErrorStatus())
 
-        image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
+        image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'scrach.png'))
         blue, green, red = cv2.split(image)
         height, width, channels = image.shape
 
@@ -159,7 +159,7 @@ class TestContourTemplate(unittest.TestCase):
         extradata.SaveImage(self.id(), image)
 
     def test_Match_Gear_ContourTemplate(self):
-        fileName = os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', "data", "model", "template", "gear_contour_template.txt.xz")
+        fileName = os.path.join(os.environ["JANE_ROOT_DIR"], 'test', "data", "model", "template", "gear_contour_template.txt.xz")
         tmpl = mvlab.ContourTemplate_Load(fileName)
         self.assertFalse(tmpl.Empty(), tmpl.GetErrorStatus())
 
@@ -176,7 +176,7 @@ class TestContourTemplate(unittest.TestCase):
 
         totalTime = 0
         for imgName in ['Search1.jpg', 'Search2.jpg', 'Search3.jpg']:
-            image = cv2.imread(os.path.join(os.environ["SPAM_ROOT_DIR"], 'test', 'data', 'images', 'gear', imgName))
+            image = cv2.imread(os.path.join(os.environ["JANE_ROOT_DIR"], 'test', 'data', 'images', 'gear', imgName))
             blue, green, red = cv2.split(image)
             height, width, channels = image.shape
             opts.SetRegion("SearchRegion", mvlab.Region_GenRectangle((0, 0, width, height)))
