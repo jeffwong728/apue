@@ -6,6 +6,8 @@ const std::string CommonDef::projNode_s{ "ProjNode" };
 const std::string CommonDef::projPerspectiveAttrName_s{ "Perspective" };
 const std::string CommonDef::stationTabAttrName_s{ "TabContainerName" };
 const std::string CommonDef::dbPathCfgPath_s{ "spam.dbpath" };
+const std::string CommonDef::modelImportDirPath_s{"spam.model.dir.import"};
+const std::string CommonDef::modelExportDirPath_s{"spam.model.dir.export"};
 const std::string CommonDef::projCfgPath_s{ "spam.project" };
 const std::string CommonDef::projPanelCfgPath_s{ "spam.panels.project.perspective" };
 const std::string CommonDef::imagePanelCfgPath_s{ "spam.panels.images.perspective" };

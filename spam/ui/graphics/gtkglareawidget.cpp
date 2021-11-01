@@ -1,7 +1,9 @@
 #include "wx/wxprec.h"
 #include <wx/wx.h>
 #include <wx/log.h>
-#include <wx/filefn.h> 
+#include <wx/filefn.h>
+#include <ui/spam.h>
+#include <helper/commondef.h>
 #include "dispnode.h"
 #include "gtkglareawidget.h"
 #include "glmodeltree.h"
@@ -234,6 +236,9 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     wxLogMessage(vtkSMPTools::GetBackend());
     vtkSMPTools::SetBackend("Sequential");
     vtkLogger::LogToFile("everything.log", vtkLogger::TRUNCATE, vtkLogger::VERBOSITY_INFO);
+
+    lastImportDir_ = SpamConfig::Get<wxString>(CommonDef::GetModelImportDirPath());
+    lastExportDir_ = SpamConfig::Get<wxString>(CommonDef::GetModelExportDirPath());
 
     return true;
 }
@@ -910,6 +915,7 @@ void wxGLAreaWidget::OnImportModel(const GLGUID &parentGuid)
     if (openFileDialog.ShowModal() != wxID_CANCEL)
     {
         lastImportDir_ = openFileDialog.GetDirectory();
+        SpamConfig::Set(CommonDef::GetModelImportDirPath(), lastImportDir_);
         auto fullPath = std::string(openFileDialog.GetPath());
         std::string extension = vtksys::SystemTools::GetFilenameLastExtension(fullPath);
         if (extension == ".ply")
@@ -954,6 +960,7 @@ void wxGLAreaWidget::OnExportBody(const GLGUID &parentGuid)
         if (dialog.ShowModal() == wxID_OK)
         {
             lastExportDir_ = dialog.GetPath();
+            SpamConfig::Set(CommonDef::GetModelExportDirPath(), lastExportDir_);
             const auto dirPath = std::string(lastExportDir_);
             it->second->ExportVTK(dirPath);
         }

@@ -15,6 +15,8 @@ public:
     static const std::string &GetStationTabAttrName() { return stationTabAttrName_s; }
 
     static const std::string &GetDBPathCfgPath() { return dbPathCfgPath_s; }
+    static const std::string &GetModelImportDirPath() { return modelImportDirPath_s; }
+    static const std::string &GetModelExportDirPath() { return modelExportDirPath_s; }
     static const std::string &GetProjCfgPath() { return projCfgPath_s; }
     static const std::string &GetProjPanelCfgPath() { return projPanelCfgPath_s; }
     static const std::string &GetImagePanelCfgPath() { return imagePanelCfgPath_s; }
@@ -23,6 +25,8 @@ private:
     static const std::string typeAttrName_s;
     static const std::string projNode_s;
     static const std::string dbPathCfgPath_s;
+    static const std::string modelImportDirPath_s;
+    static const std::string modelExportDirPath_s;
     static const std::string projCfgPath_s;
     static const std::string projPanelCfgPath_s;
     static const std::string imagePanelCfgPath_s;
