@@ -56,6 +56,7 @@ public:
     virtual vtkIdType Select1DCells(vtkPlanes *frustum);
     virtual vtkIdType Select2DCells(vtkPlanes *frustum);
     virtual vtkIdType Select3DCells(vtkPlanes *frustum);
+    virtual vtkIdType HideSelectedCells();
     virtual bool ExportVTK(const std::string &dir);
 
 protected:

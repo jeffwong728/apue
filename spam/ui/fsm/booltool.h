@@ -44,6 +44,7 @@ struct UnionTool : boost::statechart::simple_state<UnionTool, Spamer, UnionToolI
     ~UnionTool() {}
     void OnMMouseDown(const EvMMouseDown &e);
     void OnEnterCanvas(const EvCanvasEnter &e);
+    void OnLeaveCanvas(const EvCanvasLeave &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, UnionTool>,
@@ -52,7 +53,7 @@ struct UnionTool : boost::statechart::simple_state<UnionTool, Spamer, UnionToolI
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
         boost::statechart::in_state_reaction<EvCanvasEnter, UnionTool, &UnionTool::OnEnterCanvas>,
-        boost::statechart::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
+        boost::statechart::in_state_reaction<EvCanvasLeave, UnionTool, &UnionTool::OnLeaveCanvas>> reactions;
 };
 
 struct UnionToolIdle : boost::statechart::simple_state<UnionToolIdle, UnionTool>
@@ -60,9 +61,11 @@ struct UnionToolIdle : boost::statechart::simple_state<UnionToolIdle, UnionTool>
     UnionToolIdle() {}
     ~UnionToolIdle() {}
 
+    void OnSafari(const EvMouseMove &e);
+
     typedef boost::mpl::list<
         boost::statechart::transition<EvLMouseDown, UnionToolDraging, UnionTool::BoxToolT, &UnionTool::BoxToolT::StartBoxing>,
-        boost::statechart::in_state_reaction<EvMouseMove, UnionTool::BoxToolT, &UnionTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvMouseMove, UnionToolIdle, &UnionToolIdle::OnSafari>,
         boost::statechart::in_state_reaction<EvMMouseDown, UnionTool, &UnionTool::OnMMouseDown>> reactions;
 };
 
@@ -84,6 +87,7 @@ struct IntersectionTool : boost::statechart::simple_state<IntersectionTool, Spam
     ~IntersectionTool() {}
     void OnMMouseDown(const EvMMouseDown &e);
     void OnEnterCanvas(const EvCanvasEnter &e);
+    void OnLeaveCanvas(const EvCanvasLeave &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, IntersectionTool>,
@@ -100,9 +104,11 @@ struct IntersectionToolIdle : boost::statechart::simple_state<IntersectionToolId
     IntersectionToolIdle() {}
     ~IntersectionToolIdle() {}
 
+    void OnSafari(const EvMouseMove &e);
+
     typedef boost::mpl::list<
         boost::statechart::transition<EvLMouseDown, IntersectionToolDraging, IntersectionTool::BoxToolT, &IntersectionTool::BoxToolT::StartBoxing>,
-        boost::statechart::in_state_reaction<EvMouseMove, IntersectionTool::BoxToolT, &IntersectionTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvMouseMove, IntersectionToolIdle, &IntersectionToolIdle::OnSafari>,
         boost::statechart::in_state_reaction<EvMMouseDown, IntersectionTool, &IntersectionTool::OnMMouseDown>> reactions;
 };
 
@@ -127,17 +133,68 @@ struct BinaryBoolOperatorDef : public boost::msm::front::state_machine_def<Binar
 
     struct Wait1stOperand : public boost::msm::front::state<> 
     {
+        template <class Event> void on_entry(Event const&, BinaryBoolOperatorDef& fsm)
+        {
+            fsm.tips.resize(0);
+            switch (fsm.binaryBoolOpType)
+            {
+            case BinaryBoolOperator::BinaryBooleanType::DiffOp:
+                fsm.tips.push_back(wxT("Select first region to minus from"));
+                break;
+
+            case BinaryBoolOperator::BinaryBooleanType::XOROp:
+                fsm.tips.push_back(wxT("Select first region to XOR"));
+                break;
+
+            default:
+                break;
+            }
+        }
         template <class Event> void on_exit(Event const&, BinaryBoolOperatorDef& fsm) {}
     };
 
     struct Wait2ndOperand : public boost::msm::front::state<>
     {
+        template <class Event> void on_entry(Event const&, BinaryBoolOperatorDef& fsm)
+        {
+            fsm.tips.resize(0);
+            switch (fsm.binaryBoolOpType)
+            {
+            case BinaryBoolOperator::BinaryBooleanType::DiffOp:
+                fsm.tips.push_back(wxT("Select second region to minus"));
+                break;
+
+            case BinaryBoolOperator::BinaryBooleanType::XOROp:
+                fsm.tips.push_back(wxT("Select second region to XOR"));
+                break;
+
+            default:
+                break;
+            }
+        }
         template <class Event> void on_exit(Event const&, BinaryBoolOperatorDef& fsm) { operand1st->RestoreColor(); }
         SPDrawableNode operand1st;
     };
 
     struct ReadyGo : public boost::msm::front::state<>
     {
+        template <class Event> void on_entry(Event const&, BinaryBoolOperatorDef& fsm)
+        {
+            fsm.tips.resize(0);
+            switch (fsm.binaryBoolOpType)
+            {
+            case BinaryBoolOperator::BinaryBooleanType::DiffOp:
+                fsm.tips.push_back(wxT("Press MMB to complete difference"));
+                break;
+
+            case BinaryBoolOperator::BinaryBooleanType::XOROp:
+                fsm.tips.push_back(wxT("Press MMB to complete XOR"));
+                break;
+
+            default:
+                break;
+            }
+        }
         template <class Event> void on_exit(Event const&, BinaryBoolOperatorDef& fsm) { operand1st->RestoreColor(); operand2nd->RestoreColor(); }
         SPDrawableNode operand1st;
         SPDrawableNode operand2nd;
@@ -197,6 +254,7 @@ struct BinaryBoolOperatorDef : public boost::msm::front::state_machine_def<Binar
     template <class FSM, class Event> void no_transition(Event const& e, FSM&, int state){}
     typedef Wait1stOperand initial_state;
     BinaryBooleanType binaryBoolOpType;
+    std::vector<wxString> tips;
 };
 
 typedef boost::msm::back::state_machine<BinaryBoolOperatorDef> BinaryBoolOperator;
@@ -210,6 +268,7 @@ struct DiffTool : boost::statechart::simple_state<DiffTool, Spamer, DiffToolIdle
     void OnMMouseDown(const EvMMouseDown &e);
     void OnEnterCanvas(const EvCanvasEnter &e);
     void OnEntityClicked(const EvEntityClicked &e);
+    void OnLeaveCanvas(const EvCanvasLeave &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, DiffTool>,
@@ -219,7 +278,7 @@ struct DiffTool : boost::statechart::simple_state<DiffTool, Spamer, DiffToolIdle
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
         boost::statechart::in_state_reaction<EvCanvasEnter, DiffTool, &DiffTool::OnEnterCanvas>,
-        boost::statechart::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
+        boost::statechart::in_state_reaction<EvCanvasLeave, DiffTool, &DiffTool::OnLeaveCanvas>> reactions;
 
     mutable std::map<std::string, BinaryBoolOperator> differs;
 };
@@ -229,9 +288,11 @@ struct DiffToolIdle : boost::statechart::simple_state<DiffToolIdle, DiffTool>
     DiffToolIdle() {}
     ~DiffToolIdle() {}
 
+    void OnSafari(const EvMouseMove &e);
+
     typedef boost::mpl::list<
         boost::statechart::transition<EvLMouseDown, DiffToolDraging, DiffTool::BoxToolT, &DiffTool::BoxToolT::StartBoxing>,
-        boost::statechart::in_state_reaction<EvMouseMove, DiffTool::BoxToolT, &DiffTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvMouseMove, DiffToolIdle, &DiffToolIdle::OnSafari>,
         boost::statechart::in_state_reaction<EvMMouseDown, DiffTool, &DiffTool::OnMMouseDown>> reactions;
 };
 
@@ -255,6 +316,7 @@ struct XORTool : boost::statechart::simple_state<XORTool, Spamer, XORToolIdle>, 
     void OnMMouseDown(const EvMMouseDown &e);
     void OnEnterCanvas(const EvCanvasEnter &e);
     void OnEntityClicked(const EvEntityClicked &e);
+    void OnLeaveCanvas(const EvCanvasLeave &e);
 
     typedef boost::mpl::list<
         boost::statechart::transition<EvReset, XORTool>,
@@ -264,7 +326,7 @@ struct XORTool : boost::statechart::simple_state<XORTool, Spamer, XORToolIdle>, 
         boost::statechart::in_state_reaction<EvDrawableDelete, BoxToolT, &BoxToolT::DeleteDrawable>,
         boost::statechart::in_state_reaction<EvDrawableSelect, BoxToolT, &BoxToolT::SelectDrawable>,
         boost::statechart::in_state_reaction<EvCanvasEnter, XORTool, &XORTool::OnEnterCanvas>,
-        boost::statechart::in_state_reaction<EvCanvasLeave, BoxToolT, &BoxToolT::LeaveCanvas>> reactions;
+        boost::statechart::in_state_reaction<EvCanvasLeave, XORTool, &XORTool::OnLeaveCanvas>> reactions;
 
     mutable std::map<std::string, BinaryBoolOperator> XORers;
 };
@@ -274,9 +336,11 @@ struct XORToolIdle : boost::statechart::simple_state<XORToolIdle, XORTool>
     XORToolIdle() {}
     ~XORToolIdle() {}
 
+    void OnSafari(const EvMouseMove &e);
+
     typedef boost::mpl::list<
         boost::statechart::transition<EvLMouseDown, XORToolDraging, XORTool::BoxToolT, &XORTool::BoxToolT::StartBoxing>,
-        boost::statechart::in_state_reaction<EvMouseMove, XORTool::BoxToolT, &XORTool::BoxToolT::Safari>,
+        boost::statechart::in_state_reaction<EvMouseMove, XORToolIdle, &XORToolIdle::OnSafari>,
         boost::statechart::in_state_reaction<EvMMouseDown, XORTool, &XORTool::OnMMouseDown>> reactions;
 };
 

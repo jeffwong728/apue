@@ -221,6 +221,7 @@ bool wxGLAreaWidget::Create(wxWindow *parent, wxWindowID id,
     Bind(wxEVT_SET_FOCUS,   &wxGLAreaWidget::OnSetFocus,        this, wxID_ANY);
     Bind(wxEVT_KILL_FOCUS,  &wxGLAreaWidget::OnKillFocus,       this, wxID_ANY);
     Bind(wxEVT_MOUSEWHEEL,  &wxGLAreaWidget::OnMouseWheel,      this, wxID_ANY);
+    Bind(wxEVT_MENU,        &wxGLAreaWidget::OnHideCells,       this, kSpamID_GRAPHICS_VIEWPORT_HIDE);
 
     modelTreeView_->sig_AddGeomBody.connect(std::bind(&wxGLAreaWidget::OnAddGeomBody, this, std::placeholders::_1, std::placeholders::_2));
     modelTreeView_->sig_ColorChanged.connect(std::bind(&wxGLAreaWidget::OnColorChanged, this, std::placeholders::_1, std::placeholders::_2));
@@ -439,12 +440,18 @@ void wxGLAreaWidget::OnSize(wxSizeEvent &e)
     {
         externalVTKWidget->GetRenderWindow()->SetSize(w, h);
     }
+
+    if (axisRenderer && w && h)
+    {
+        axisRenderer->SetViewport(0.0, 0.0, 120.0 / w, 120.0 / h);
+    }
 }
 
 void wxGLAreaWidget::OnLeftMouseDown(wxMouseEvent &e)
 {
     if (e.LeftIsDown() && e.RightIsDown())
     {
+        justReseting_ = true;
         rootRenderer->ResetCamera();
         Refresh(false);
     }
@@ -547,6 +554,7 @@ void wxGLAreaWidget::OnRightMouseDown(wxMouseEvent &e)
 {
     if (e.LeftIsDown() && e.RightIsDown())
     {
+        justReseting_ = true;
         rootRenderer->ResetCamera();
         Refresh(false);
     }
@@ -557,6 +565,23 @@ void wxGLAreaWidget::OnRightMouseDown(wxMouseEvent &e)
 
 void wxGLAreaWidget::OnRightMouseUp(wxMouseEvent &e)
 {
+    const int x = e.GetPosition().x;
+    const int y = e.GetPosition().y;
+    const int dx = x - anchorPos_.x;
+    const int dy = y - anchorPos_.y;
+    if (!dx && !dy && !justReseting_)
+    {
+        wxMenu menu;
+        menu.Append(kSpamID_GRAPHICS_VIEWPORT_HIDE, wxT("Hide"));
+        menu.Append(kSpamID_GRAPHICS_VIEWPORT_SHOW_ONLY, wxT("Show Only"));
+        menu.AppendSeparator();
+        menu.Append(kSpamID_GRAPHICS_VIEWPORT_SHOW_ALL, wxT("Show All"));
+        menu.Append(kSpamID_GRAPHICS_VIEWPORT_HIDE_ALL, wxT("Hide All"));
+
+        PopupMenu(&menu, e.GetPosition());
+    }
+
+    justReseting_ = false;
     anchorPos_ = wxPoint();
     lastPos_ = wxPoint();
 }
@@ -967,6 +992,15 @@ void wxGLAreaWidget::OnExportBody(const GLGUID &parentGuid)
     }
 }
 
+void wxGLAreaWidget::OnHideCells(wxCommandEvent &cmd)
+{
+    for (auto &dispNode : allActors_)
+    {
+        dispNode.second->HideSelectedCells();
+    }
+    Refresh(false);
+}
+
 void wxGLAreaWidget::DoApplyWidgetStyle(GtkRcStyle *style)
 {
     GTKApplyStyle(m_widget, style);
@@ -995,7 +1029,7 @@ void wxGLAreaWidget::DoApplyWidgetStyle(GtkRcStyle *style)
 
 wxSize wxGLAreaWidget::DoGetBestSize() const
 {
-    return wxSize(64, 48);
+    return wxSize(640, 480);
 }
 
 void wxGLAreaWidget::PositionAxis(const int oldx, const int oldy, const int newx, const int newy)

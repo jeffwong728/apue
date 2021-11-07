@@ -16,6 +16,7 @@
 #include <vtkLookupTable.h>
 #include <vtkCellData.h>
 #include <vtkTypeUInt64Array.h>
+#include <vtkUnsignedCharArray.h>
 
 SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -31,7 +32,7 @@ SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, 
             normalsFilter->Update();
             auto dispNode = std::make_shared<GL3DMeshNode>(this_is_private{ 0 });
             dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = normalsFilter->GetOutput();;
+            dispNode->poly_data_ = normalsFilter->GetOutput();
             dispNode->SetDefaultDisplay();
             dispNodes.push_back(std::move(dispNode));
         }
@@ -323,6 +324,23 @@ void GL3DMeshNode::SetDefaultDisplay()
     cell_loc_ = vtkSmartPointer<vtkCellLocator>::New();
     cell_loc_->SetDataSet(poly_data_);
     cell_loc_->Update();
+
+    vtkUnsignedCharArray* ghosts = poly_data_->GetCellGhostArray();
+    if (!ghosts)
+    {
+        poly_data_->AllocateCellGhostArray();
+        ghosts = poly_data_->GetCellGhostArray();
+    }
+
+    if (ghosts)
+    {
+        constexpr vtkTypeUInt8 visMask = ~vtkDataSetAttributes::HIDDENCELL;
+        const vtkIdType numVals = ghosts->GetNumberOfValues();
+        for (vtkIdType ii = 0; ii < numVals; ++ii)
+        {
+            ghosts->SetValue(ii, ghosts->GetValue(ii) & visMask);
+        }
+    }
 }
 
 void GL3DMeshNode::CreateElementEdgeActor()

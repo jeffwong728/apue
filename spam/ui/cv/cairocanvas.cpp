@@ -1703,7 +1703,7 @@ void CairoCanvas::OnTipTimer(wxTimerEvent &e)
             }
 
             wxPoint pos = ClientToScreen(tipPos_);
-            tip_->Position(pos+wxPoint(32, 0), wxSize());
+            tip_->Position(pos+wxPoint(35, 0), wxSize());
             tip_->Show();
         }
     }

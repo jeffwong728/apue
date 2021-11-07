@@ -20,6 +20,7 @@
 #include <vtkSelectionNode.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkTypeUInt64Array.h>
+#include <vtkUnsignedCharArray.h>
 #include <vtkCellLocator.h>
 
 SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
@@ -322,6 +323,23 @@ void GL2DMeshNode::SetDefaultDisplay()
     cell_loc_ = vtkSmartPointer<vtkCellLocator>::New();
     cell_loc_->SetDataSet(poly_data_);
     cell_loc_->Update();
+
+    vtkUnsignedCharArray* ghosts = poly_data_->GetCellGhostArray();
+    if (!ghosts)
+    {
+        poly_data_->AllocateCellGhostArray();
+        ghosts = poly_data_->GetCellGhostArray();
+    }
+
+    if (ghosts)
+    {
+        constexpr vtkTypeUInt8 visMask = ~vtkDataSetAttributes::HIDDENCELL;
+        const vtkIdType numVals = ghosts->GetNumberOfValues();
+        for (vtkIdType ii = 0; ii < numVals; ++ii)
+        {
+            ghosts->SetValue(ii, ghosts->GetValue(ii) & visMask);
+        }
+    }
 }
 
 void GL2DMeshNode::CreateElementEdgeActor()

@@ -21,6 +21,7 @@
 #include <vtkExtractSelectedFrustum.h>
 #include <vtksys/SystemTools.hxx>
 #include <vtkTypeUInt64Array.h>
+#include <vtkUnsignedCharArray.h>
 
 SPDispNodes GLDispNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -539,6 +540,32 @@ vtkIdType GLDispNode::Select2DCells(vtkPlanes *frustum)
 vtkIdType GLDispNode::Select3DCells(vtkPlanes *frustum)
 {
     return 0;
+}
+
+vtkIdType GLDispNode::HideSelectedCells()
+{
+    vtkIdType numSelStatusChanged = 0;
+    vtkUnsignedCharArray* ghosts = poly_data_->GetCellGhostArray();
+    vtkIntArray *colorIndexs = vtkIntArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
+    if (ghosts && colorIndexs && ghosts->GetNumberOfValues() == colorIndexs->GetNumberOfValues())
+    {
+        const vtkIdType numVals = ghosts->GetNumberOfValues();
+        for (vtkIdType ii = 0; ii < numVals; ++ii)
+        {
+            if (kCell_Color_Index_Selected == colorIndexs->GetValue(ii) || kCell_Color_Index_Selected_And_Highlight == colorIndexs->GetValue(ii))
+            {
+                ghosts->SetValue(ii, ghosts->GetValue(ii) | vtkDataSetAttributes::HIDDENCELL);
+            }
+        }
+
+        if (numSelStatusChanged > 0)
+        {
+            colorIndexs->Modified();
+            ghosts->Modified();
+        }
+    }
+
+    return numSelStatusChanged;
 }
 
 bool GLDispNode::ExportVTK(const std::string &dir)

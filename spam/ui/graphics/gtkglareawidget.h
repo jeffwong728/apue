@@ -91,6 +91,7 @@ public:
     void OnHighlightChanged(const std::vector<GLGUID> &oldGuids, const std::vector<GLGUID> &newGuids);
     void OnImportModel(const GLGUID &parentGuid);
     void OnExportBody(const GLGUID &parentGuid);
+    void OnHideCells(wxCommandEvent &cmd);
 
 protected:
     virtual void DoApplyWidgetStyle(GtkRcStyle *style) wxOVERRIDE;
@@ -127,6 +128,7 @@ private:
     vtkIdType colorIndex_ = 0;
     wxString lastImportDir_;
     wxString lastExportDir_;
+    bool justReseting_{ false };
 
     wxDECLARE_DYNAMIC_CLASS(wxGLAreaWidget);
 };
