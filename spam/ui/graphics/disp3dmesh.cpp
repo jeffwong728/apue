@@ -17,6 +17,8 @@
 #include <vtkCellData.h>
 #include <vtkTypeUInt64Array.h>
 #include <vtkUnsignedCharArray.h>
+#include <vtkSelection.h>
+#include <vtkAppendFilter.h>
 
 SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -27,14 +29,13 @@ SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, 
         const vtkIdType numCells = pdSource->GetNumberOfCells();
         if (numCells == numPolys)
         {
-            vtkNew<vtkPolyDataNormals> normalsFilter;
-            normalsFilter->SetInputData(pdSource);
-            normalsFilter->Update();
-            auto dispNode = std::make_shared<GL3DMeshNode>(this_is_private{ 0 });
-            dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = normalsFilter->GetOutput();
-            dispNode->SetDefaultDisplay();
-            dispNodes.push_back(std::move(dispNode));
+            vtkNew<vtkAppendFilter> appendFilter;
+            appendFilter->AddInputData(pdSource);
+            appendFilter->Update();
+
+            vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+            unstructuredGrid->ShallowCopy(appendFilter->GetOutput());
+            return MakeNew(unstructuredGrid, renderer);
         }
     }
 
@@ -80,6 +81,7 @@ SPDispNodes GL3DMeshNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ug
         auto dispNode = std::make_shared<GL3DMeshNode>(this_is_private{ 0 });
         dispNode->renderer_ = renderer;
         dispNode->poly_data_ = normalsFilter->GetOutput();
+        dispNode->unstructured_grid_ = ugSource;
         dispNode->SetDefaultDisplay();
 
         vtkNew<vtkExtractEdges> extractEdges;
@@ -325,11 +327,11 @@ void GL3DMeshNode::SetDefaultDisplay()
     cell_loc_->SetDataSet(poly_data_);
     cell_loc_->Update();
 
-    vtkUnsignedCharArray* ghosts = poly_data_->GetCellGhostArray();
+    vtkUnsignedCharArray* ghosts = unstructured_grid_->GetCellGhostArray();
     if (!ghosts)
     {
-        poly_data_->AllocateCellGhostArray();
-        ghosts = poly_data_->GetCellGhostArray();
+        unstructured_grid_->AllocateCellGhostArray();
+        ghosts = unstructured_grid_->GetCellGhostArray();
     }
 
     if (ghosts)

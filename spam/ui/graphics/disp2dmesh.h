@@ -30,6 +30,7 @@ public:
 
 public:
     vtkIdType Select2DCells(vtkPlanes *frustum) override;
+    vtkIdType HideSelectedCells() override;
 
 protected:
     void SetDefaultDisplay() override;
@@ -42,6 +43,7 @@ protected:
 
 private:
     void CreateElementEdgeActor();
+    void SetSelectionDefaultDisplay();
 
 private:
     vtkSmartPointer<vtkPolyData> elem_edge_poly_data_;

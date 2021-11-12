@@ -14,6 +14,7 @@
 #include <vtkNamedColors.h>
 #include <vtkFloatArray.h>
 #include <vtkCellLocator.h>
+#include <vtkUnstructuredGrid.h>
 class vtkProp;
 class vtkPlanes;
 
@@ -76,6 +77,7 @@ protected:
     const GLGUID guid_;
     const GraphicsEntityType type_;
     vtkWeakPointer<vtkOpenGLRenderer> renderer_;
+    vtkSmartPointer<vtkUnstructuredGrid> unstructured_grid_;
     vtkSmartPointer<vtkPolyData> poly_data_;
     vtkSmartPointer<vtkActor> actor_;
     vtkSmartPointer<vtkPolyDataMapper> mapper_;

@@ -22,6 +22,8 @@
 #include <vtkTypeUInt64Array.h>
 #include <vtkUnsignedCharArray.h>
 #include <vtkCellLocator.h>
+#include <vtkSelection.h>
+#include <vtkAppendFilter.h>
 
 SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, const vtkSmartPointer<vtkOpenGLRenderer> &renderer)
 {
@@ -33,15 +35,13 @@ SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkPolyData> &pdSource, 
         const vtkIdType numCells = pdSource->GetNumberOfCells();
         if (numCells == numPolys || numCells == numStrips)
         {
-            vtkNew<vtkPolyDataNormals> normalsFilter;
-            normalsFilter->SetInputData(pdSource);
-            normalsFilter->Update();
-            auto dispNode = std::make_shared<GL2DMeshNode>(this_is_private{ 0 });
-            dispNode->renderer_ = renderer;
-            dispNode->poly_data_ = normalsFilter->GetOutput();
-            dispNode->CreateElementEdgeActor();
-            dispNode->SetDefaultDisplay();
-            dispNodes.push_back(std::move(dispNode));
+            vtkNew<vtkAppendFilter> appendFilter;
+            appendFilter->AddInputData(pdSource);
+            appendFilter->Update();
+
+            vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+            unstructuredGrid->ShallowCopy(appendFilter->GetOutput());
+            return MakeNew(unstructuredGrid, renderer);
         }
     }
 
@@ -80,6 +80,7 @@ SPDispNodes GL2DMeshNode::MakeNew(const vtkSmartPointer<vtkUnstructuredGrid> &ug
         auto dispNode = std::make_shared<GL2DMeshNode>(this_is_private{ 0 });
         dispNode->renderer_ = renderer;
         dispNode->poly_data_ = normalsFilter->GetOutput();
+        dispNode->unstructured_grid_ = ugSource;
         dispNode->SetDefaultDisplay();
 
         vtkNew<vtkExtractEdges> extractEdges;
@@ -276,6 +277,54 @@ vtkIdType GL2DMeshNode::Select2DCells(vtkPlanes *frustum)
     return SelectFacets(frustum);
 }
 
+vtkIdType GL2DMeshNode::HideSelectedCells()
+{
+    vtkIdType numSelStatusChanged = 0;
+    const std::string arrName("vtkOriginalCellIds");
+    vtkUnsignedCharArray* ghosts = unstructured_grid_->GetCellGhostArray();
+    vtkIntArray *colorIndexs = vtkIntArray::SafeDownCast(poly_data_->GetCellData()->GetScalars());
+    vtkIdTypeArray *cellIds = vtkIdTypeArray::SafeDownCast(poly_data_->GetCellData()->GetArray(arrName.c_str()));
+    if (ghosts && colorIndexs && cellIds && cellIds->GetNumberOfValues() == colorIndexs->GetNumberOfValues())
+    {
+        const vtkIdType numFacets = colorIndexs->GetNumberOfValues();
+        for (vtkIdType ii = 0; ii < numFacets; ++ii)
+        {
+            if (kCell_Color_Index_Selected == colorIndexs->GetValue(ii) || kCell_Color_Index_Selected_And_Highlight == colorIndexs->GetValue(ii))
+            {
+                const vtkIdType cellId = cellIds->GetValue(ii);
+                ghosts->SetValue(cellId, ghosts->GetValue(cellId) | vtkDataSetAttributes::HIDDENCELL);
+                numSelStatusChanged += 1;
+            }
+        }
+
+        if (numSelStatusChanged > 0)
+        {
+            vtkSmartPointer<vtkDataSetSurfaceFilter> surfaceFilter = vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+            surfaceFilter->SetPassThroughCellIds(true);
+            surfaceFilter->SetPassThroughPointIds(true);
+            surfaceFilter->SetNonlinearSubdivisionLevel(1);
+            surfaceFilter->SetInputData(unstructured_grid_);
+
+            vtkNew<vtkPolyDataNormals> normalsFilter;
+            normalsFilter->SetInputConnection(surfaceFilter->GetOutputPort());
+            normalsFilter->Update();
+
+            poly_data_ = normalsFilter->GetOutput();
+            SetSelectionDefaultDisplay();
+
+            vtkNew<vtkExtractEdges> extractEdges;
+            extractEdges->SetInputData(unstructured_grid_);
+            extractEdges->Update();
+
+            elem_edge_poly_data_ = extractEdges->GetOutput();
+            elem_edge_actor_->GetMapper()->SetInputDataObject(elem_edge_poly_data_);
+            renderer_->AddActor(elem_edge_actor_);
+        }
+    }
+
+    return numSelStatusChanged;
+}
+
 void GL2DMeshNode::SetDefaultDisplay()
 {
     const std::string arrName("vtkOriginalCellIds");
@@ -324,11 +373,11 @@ void GL2DMeshNode::SetDefaultDisplay()
     cell_loc_->SetDataSet(poly_data_);
     cell_loc_->Update();
 
-    vtkUnsignedCharArray* ghosts = poly_data_->GetCellGhostArray();
+    vtkUnsignedCharArray* ghosts = unstructured_grid_->GetCellGhostArray();
     if (!ghosts)
     {
-        poly_data_->AllocateCellGhostArray();
-        ghosts = poly_data_->GetCellGhostArray();
+        unstructured_grid_->AllocateCellGhostArray();
+        ghosts = unstructured_grid_->GetCellGhostArray();
     }
 
     if (ghosts)
@@ -340,6 +389,33 @@ void GL2DMeshNode::SetDefaultDisplay()
             ghosts->SetValue(ii, ghosts->GetValue(ii) & visMask);
         }
     }
+}
+
+void GL2DMeshNode::SetSelectionDefaultDisplay()
+{
+    const std::string arrName("vtkOriginalCellIds");
+    SortFacets(poly_data_, arrName);
+
+    actor_->GetMapper()->SetInputDataObject(poly_data_);
+
+    vtkSmartPointer<vtkIntArray> colorIndexs = vtkSmartPointer<vtkIntArray>::New();
+    colorIndexs->SetNumberOfTuples(poly_data_->GetNumberOfCells());
+    colorIndexs->FillValue(0);
+
+    poly_data_->GetCellData()->SetScalars(colorIndexs);
+    renderer_->AddActor(actor_);
+
+    vtkNew<vtkTypeUInt64Array> guids;
+    guids->SetName("GUID_TAG");
+    guids->SetNumberOfComponents(2);
+    guids->SetNumberOfTuples(1);
+    guids->SetValue(0, guid_.part1);
+    guids->SetValue(1, guid_.part2);
+    poly_data_->GetFieldData()->AddArray(guids);
+
+    cell_loc_ = vtkSmartPointer<vtkCellLocator>::New();
+    cell_loc_->SetDataSet(poly_data_);
+    cell_loc_->Update();
 }
 
 void GL2DMeshNode::CreateElementEdgeActor()
