@@ -175,11 +175,11 @@ void BinaryBoolOperatorDef::do_diff::operator()(const evt_apply & e, BinaryBoolO
         {
             switch (fsm.binaryBoolOpType)
             {
-            case BinaryBoolOperator::BinaryBooleanType::DiffOp:
+            case BinaryBoolOperatorDef::BinaryBooleanType::DiffOp:
                 cav->DoDifference(s.operand1st, s.operand2nd);
                 break;
 
-            case BinaryBoolOperator::BinaryBooleanType::XOROp:
+            case BinaryBoolOperatorDef::BinaryBooleanType::XOROp:
                 cav->DoXOR(s.operand1st, s.operand2nd);
                 break;
 

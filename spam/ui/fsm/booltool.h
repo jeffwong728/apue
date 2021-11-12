@@ -138,11 +138,11 @@ struct BinaryBoolOperatorDef : public boost::msm::front::state_machine_def<Binar
             fsm.tips.resize(0);
             switch (fsm.binaryBoolOpType)
             {
-            case BinaryBoolOperator::BinaryBooleanType::DiffOp:
+            case BinaryBoolOperatorDef::BinaryBooleanType::DiffOp:
                 fsm.tips.push_back(wxT("Select first region to minus from"));
                 break;
 
-            case BinaryBoolOperator::BinaryBooleanType::XOROp:
+            case BinaryBoolOperatorDef::BinaryBooleanType::XOROp:
                 fsm.tips.push_back(wxT("Select first region to XOR"));
                 break;
 
@@ -160,11 +160,11 @@ struct BinaryBoolOperatorDef : public boost::msm::front::state_machine_def<Binar
             fsm.tips.resize(0);
             switch (fsm.binaryBoolOpType)
             {
-            case BinaryBoolOperator::BinaryBooleanType::DiffOp:
+            case BinaryBoolOperatorDef::BinaryBooleanType::DiffOp:
                 fsm.tips.push_back(wxT("Select second region to minus"));
                 break;
 
-            case BinaryBoolOperator::BinaryBooleanType::XOROp:
+            case BinaryBoolOperatorDef::BinaryBooleanType::XOROp:
                 fsm.tips.push_back(wxT("Select second region to XOR"));
                 break;
 
@@ -183,11 +183,11 @@ struct BinaryBoolOperatorDef : public boost::msm::front::state_machine_def<Binar
             fsm.tips.resize(0);
             switch (fsm.binaryBoolOpType)
             {
-            case BinaryBoolOperator::BinaryBooleanType::DiffOp:
+            case BinaryBoolOperatorDef::BinaryBooleanType::DiffOp:
                 fsm.tips.push_back(wxT("Press MMB to complete difference"));
                 break;
 
-            case BinaryBoolOperator::BinaryBooleanType::XOROp:
+            case BinaryBoolOperatorDef::BinaryBooleanType::XOROp:
                 fsm.tips.push_back(wxT("Press MMB to complete XOR"));
                 break;
 
