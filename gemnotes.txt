@@ -1,0 +1,21 @@
+https://github.com/spmallick/learnopencv.git
+https://github.com/JoeyDeVries/LearnOpenGL.git
+
+Wykobi Computational Geometry Library
+http://www.wykobi.com
+Copyright (c) 2005-2017 Arash Partow,  All Rights Reserved.
+
+https://www.geometrictools.com/
+https://jgraph.github.io/mxgraph/
+
+GPU_Caps_Viewer
+https://www.geeks3d.com/20200602/gpu-caps-viewer-1-45-0-released/
+
+Dependency Walker
+https://www.dependencywalker.com/
+
+ProcessMonitor
+https://docs.microsoft.com/en-us/sysinternals/downloads/procmon
+
+DebugView
+https://docs.microsoft.com/en-us/sysinternals/downloads/debugview
