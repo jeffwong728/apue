@@ -19,3 +19,22 @@ https://docs.microsoft.com/en-us/sysinternals/downloads/procmon
 
 DebugView
 https://docs.microsoft.com/en-us/sysinternals/downloads/debugview
+
+Dia Diagram Editor
+http://dia-installer.de/index.html.en
+
+http://www.openrce.org/articles/full_view/21
+http://www.openrce.org/articles/full_view/23
+https://www.codeproject.com/articles/2126/how-a-c-compiler-implements-exception-handling
+http://p-nand-q.com/programming/cplusplus/using_member_functions_with_c_function_pointers.html
+http://recxltd.blogspot.com/2012/02/working-with-c-dll-exports-without.html
+https://www.codeproject.com/Articles/529680/Accessing-an-API-through-a-closed-source-Cplusplus
+https://cliutils.gitlab.io/modern-cmake/
+https://www.agner.org/
+http://www-cgrl.cs.mcgill.ca/~godfried/teaching/cg-web.html
+https://iuks.in.tum.de/projects
+https://homepages.inf.ed.ac.uk/rbf/CVonline/
+https://readthedocs.org/
+http://www.htmlandcssbook.com/
+https://htmlpreview.github.io/?https://github.com/Kitware/vtk-examples/blob/gh-pages/VTKNamedColorPatches.html
+http://zetcode.com/gui/gtk2/

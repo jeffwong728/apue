@@ -1,8 +1,8 @@
 $env:VCPKG_DIR=$env:VCPKG_ROOT_DIR + "/installed/x64-windows"
 $env:CTF=$env:VCPKG_ROOT_DIR + "/scripts/buildsystems/vcpkg.cmake"
-$env:IDIR=$env:SPAM_ROOT_DIR + "/install/spam"
-$env:HDIR=$env:SPAM_ROOT_DIR + "/spam"
-$env:BDIR=$env:SPAM_ROOT_DIR + "/build/spam/msvs"
+$env:IDIR=$env:SPAM_ROOT_DIR + "/jane/install/spam"
+$env:HDIR=$env:SPAM_ROOT_DIR + "/jane/spam"
+$env:BDIR=$env:SPAM_ROOT_DIR + "/jane/build/spam/msvs"
 
 cmake --no-warn-unused-cli `
     -DCMAKE_TOOLCHAIN_FILE:STRING=$env:CTF `
