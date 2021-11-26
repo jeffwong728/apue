@@ -38,3 +38,11 @@ https://readthedocs.org/
 http://www.htmlandcssbook.com/
 https://htmlpreview.github.io/?https://github.com/Kitware/vtk-examples/blob/gh-pages/VTKNamedColorPatches.html
 http://zetcode.com/gui/gtk2/
+
+Python windows embeddable package pip install:
+1.Install pip in the embedded version: curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+2.python get-pip.py
+3.Edit pythonXX._pth by adding
+Lib
+Lib\site-packages
+4.Use pip to install other packages
