@@ -31,6 +31,7 @@ find_package(TBB CONFIG REQUIRED tbb tbbmalloc)
 find_package(double-conversion CONFIG REQUIRED)
 find_package(OpenCV REQUIRED core imgproc imgcodecs mvlab)
 find_package(Boost REQUIRED COMPONENTS locale system thread chrono filesystem unit_test_framework)
+#find_package(skia CONFIG REQUIRED)
 find_package(VTK COMPONENTS vtkCommonCore vtkCommonColor vtkCommonDataModel vtkFiltersSources vtkIOLegacy vtkIOXML
                             vtkRenderingCore vtkRenderingFreeType vtkRenderingGL2PSOpenGL2 vtkRenderingOpenGL2
                             vtkRenderingAnnotation vtkRenderingExternal vtkIOImage vtkIOGeometry vtkIOPLY vtkRenderingLabel

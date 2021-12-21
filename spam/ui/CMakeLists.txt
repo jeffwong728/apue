@@ -279,6 +279,7 @@ list(APPEND libs Boost::thread)
 list(APPEND libs 2Geom::2geom)
 list(APPEND libs OpenGL::GLU)
 
+#target_link_libraries(ui_core PRIVATE skia skia::skia)
 target_link_libraries(ui_core PUBLIC ${libs})
 target_link_libraries(ui_core PRIVATE pybind11::embed glm::glm)
 target_link_libraries(ui_core PUBLIC ${Python3_LIBRARY_RELEASE})

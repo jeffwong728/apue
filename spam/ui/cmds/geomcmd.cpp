@@ -11,9 +11,9 @@
 #ifdef realloc
 #undef realloc
 #endif
-//#include <SkString.h>
-//#include <SkParsePath.h>
-//#include <SkPathOps.h>
+//#include <skia/core/SkString.h>
+//#include <skia/utils/SkParsePath.h>
+//#include <skia/pathops/SkPathOps.h>
 
 GeomCmd::GeomCmd(ProjTreeModel *model, SPStationNode &station)
     : SpamCmd()
