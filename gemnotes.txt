@@ -50,3 +50,4 @@ Lib\site-packages
 4.Use pip to install other packages
 
 git ls-files | grep '\.h$\|\.cpp$' | xargs wc -l
+dumpbin /dependents opencv_core.dll
