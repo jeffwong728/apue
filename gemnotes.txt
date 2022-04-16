@@ -40,6 +40,7 @@ https://htmlpreview.github.io/?https://github.com/Kitware/vtk-examples/blob/gh-p
 http://zetcode.com/gui/gtk2/
 https://woboq.com/
 https://crascit.com/
+https://www.digitalocean.com/
 
 Python windows embeddable package pip install:
 1.Install pip in the embedded version: curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
@@ -51,3 +52,26 @@ Lib\site-packages
 
 git ls-files | grep '\.h$\|\.cpp$' | xargs wc -l
 dumpbin /dependents opencv_core.dll
+
+qQ23N0DajoVH
+
+L5Fy9NT5jdK!pYyJ
+
+IP Address:
+45.32.253.95
+Username:
+root
+Password:
+Sy=7cMgPh-X(7RrU
+
+https://www.digitalocean.com/
+Rf^362hiQKpon!2cmi*3
+
+db.createUser({user: "AdminJWong",pwd: "FHjY,aTa-4i@_yK6",roles: [ { role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase" ]})
+mongosh -u AdminJWong -p --authenticationDatabase admin
+mongosh "mongodb://AdminJWong@45.32.253.95:27017"
+
+curl -4 icanhazip.com
+113.110.200.102
+ufw allow from 113.110.200.102 to any port 27017
+nc -zv 45.32.253.95 27017
