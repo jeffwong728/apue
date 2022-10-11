@@ -73,6 +73,7 @@ cmake --no-warn-unused-cli `
     -C $env:CAF `
     -S $env:HDIR `
     -B $env:BDIR `
-    -G"Visual Studio 15 2017 Win64"
+    -G "Visual Studio 16 2019" `
+    -A x64
 
 cmake --open $env:BDIR
